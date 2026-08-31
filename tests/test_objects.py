@@ -6,9 +6,9 @@ before fixtures)."""
 import pytest
 import sqlalchemy as sqla
 
-from whiteout.database.tables import Instances
-from whiteout.objects import WInteger, WObject, WString
-from whiteout.objects.sessions import sessions
+from nylium.database.tables import Instances
+from nylium.objects import WInteger, WObject, WString
+from nylium.objects.sessions import sessions
 
 
 def instance_count() -> int:

@@ -12,7 +12,7 @@ export function Sidebar(props: { workspace: WorkspaceStore }): ReactElement {
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
-        <span className="brand">whiteout</span>
+        <span className="brand">nylium</span>
         <button
           className="icon-button"
           title="New type"

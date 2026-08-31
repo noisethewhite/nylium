@@ -1,4 +1,4 @@
-"""whiteout command line."""
+"""nylium command line."""
 from __future__ import annotations
 
 import argparse
@@ -11,11 +11,11 @@ class cli:
 
     DEFAULT_HOST: ClassVar[str] = "127.0.0.1"
     DEFAULT_PORT: ClassVar[int] = 8000
-    APP_FACTORY: ClassVar[str] = "whiteout.server.app:WhiteoutApp.create"
+    APP_FACTORY: ClassVar[str] = "nylium.server.app:NyliumApp.create"
 
     @classmethod
     def run(cls) -> None:
-        parser = argparse.ArgumentParser(prog="whiteout")
+        parser = argparse.ArgumentParser(prog="nylium")
         commands = parser.add_subparsers(dest="command", required=True)
         serve = commands.add_parser("serve", help="run the HTTP server")
         _ = serve.add_argument("--host", default=cls.DEFAULT_HOST)

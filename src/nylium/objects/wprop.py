@@ -11,10 +11,10 @@ from uuid import UUID, uuid4
 import sqlalchemy as sqla
 from sqlalchemy.orm import Session
 
-from whiteout.database.tables import Props
+from nylium.database.tables import Props
 
 if TYPE_CHECKING:
-    from whiteout.objects.wtype import WType
+    from nylium.objects.wtype import WType
 
 
 class WProp:
@@ -68,7 +68,7 @@ class WProp:
         return cls(row)
 
     def value_type(self, session: Session) -> "WType":
-        from whiteout.objects.wtype import WType
+        from nylium.objects.wtype import WType
 
         value_type = WType.by_uuid(session, self._row.value_type_uuid)
         if value_type is None:

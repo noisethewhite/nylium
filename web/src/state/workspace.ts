@@ -1,6 +1,6 @@
 import type { ObjectView, PropValue, TypeView } from "../contracts";
 import { TypeNames } from "../contracts";
-import { WhiteoutApi } from "../net/whiteout-api";
+import { NyliumApi } from "../net/nylium-api";
 import { Observable } from "./observable";
 
 export interface WorkspaceState {
@@ -25,9 +25,9 @@ const INITIAL_STATE: WorkspaceState = {
  * which object is being edited. All server traffic funnels through
  * here — components only call actions. */
 export class WorkspaceStore extends Observable<WorkspaceState> {
-  private readonly api: WhiteoutApi;
+  private readonly api: NyliumApi;
 
-  constructor(api: WhiteoutApi) {
+  constructor(api: NyliumApi) {
     super(INITIAL_STATE);
     this.api = api;
   }

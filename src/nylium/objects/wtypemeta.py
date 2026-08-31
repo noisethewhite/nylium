@@ -18,11 +18,11 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from whiteout.database.tables import Instances
-from whiteout.objects.sessions import sessions
-from whiteout.objects.wprop import WProp
-from whiteout.objects.wscalar import ScalarPayload, WScalar
-from whiteout.objects.wtype import WType
+from nylium.database.tables import Instances
+from nylium.objects.sessions import sessions
+from nylium.objects.wprop import WProp
+from nylium.objects.wscalar import ScalarPayload, WScalar
+from nylium.objects.wtype import WType
 
 LIST_ANNOTATION_PREFIX = "list["
 ABSTRACT_FLAG = "__abstract__"

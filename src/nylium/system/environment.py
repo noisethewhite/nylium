@@ -1,5 +1,5 @@
 from __future__ import annotations
-from whiteout.basic import EnvEnum
+from nylium.basic import EnvEnum
 
 class Environment(EnvEnum):
     database_url = "DATABASE_URL"

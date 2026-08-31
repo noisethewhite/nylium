@@ -18,11 +18,11 @@ from uuid import UUID, uuid4
 import sqlalchemy as sqla
 from sqlalchemy.orm import Session
 
-from whiteout.database.tables import ArrayValues, Instances, InstanceValues
-from whiteout.objects.wprop import WProp
-from whiteout.objects.wscalar import VALUE_PROP_KEY, ScalarPayload, WScalar
-from whiteout.objects.wtype import WType
-from whiteout.objects.wtypemeta import StoredValue, WObjectShape, WTypeMeta
+from nylium.database.tables import ArrayValues, Instances, InstanceValues
+from nylium.objects.wprop import WProp
+from nylium.objects.wscalar import VALUE_PROP_KEY, ScalarPayload, WScalar
+from nylium.objects.wtype import WType
+from nylium.objects.wtypemeta import StoredValue, WObjectShape, WTypeMeta
 
 ARRAY_INSTANCE_NAME = "array"
 

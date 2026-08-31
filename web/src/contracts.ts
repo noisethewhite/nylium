@@ -1,4 +1,4 @@
-/** Wire contract mirroring whiteout.api.views — keep the two in sync. */
+/** Wire contract mirroring nylium.api.views — keep the two in sync. */
 
 export interface PropView {
   key: string;
@@ -53,7 +53,7 @@ export abstract class PropValues {
   }
 }
 
-/** Type-name grammar of the backend — mirror of whiteout.objects. */
+/** Type-name grammar of the backend — mirror of nylium.objects. */
 export abstract class TypeNames {
   static readonly STRING = "String";
   static readonly INTEGER = "Integer";

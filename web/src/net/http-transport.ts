@@ -28,7 +28,7 @@ export abstract class HttpTransport {
   ): Promise<TResponse> {
     const response = await this.send(method, path, body);
     // trust boundary: the server honors the response models declared
-    // in whiteout.server — this cast states that contract
+    // in nylium.server — this cast states that contract
     return (await response.json()) as TResponse;
   }
 

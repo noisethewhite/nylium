@@ -4,7 +4,7 @@ from enum import StrEnum, EnumMeta
 import os
 import dotenv
 
-from whiteout.basic.namedstring import NamedString
+from nylium.basic.namedstring import NamedString
 
 class EnvEnum_Meta(EnumMeta):
     _dotenv_loaded: bool = False

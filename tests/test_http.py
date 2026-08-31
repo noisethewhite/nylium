@@ -11,12 +11,12 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from whiteout.server import WhiteoutApp
+from nylium.server import NyliumApp
 
 
 @pytest.fixture()
 def client() -> TestClient:
-    return TestClient(WhiteoutApp.create())
+    return TestClient(NyliumApp.create())
 
 
 class dsl:
@@ -205,8 +205,8 @@ def test_spa_fallback(
     (tmp_path / "assets").mkdir()
     (tmp_path / "index.html").write_text(index_text)
     (tmp_path / "assets" / "app.js").write_text(asset_text)
-    monkeypatch.setenv("WHITEOUT_WEB_DIST", str(tmp_path))
-    spa = TestClient(WhiteoutApp.create())
+    monkeypatch.setenv("NYLIUM_WEB_DIST", str(tmp_path))
+    spa = TestClient(NyliumApp.create())
 
     assert spa.get("/").text == index_text
     assert spa.get("/deep/client/route").text == index_text

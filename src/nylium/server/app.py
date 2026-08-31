@@ -1,4 +1,4 @@
-"""FastAPI application factory over the whiteout Api facade."""
+"""FastAPI application factory over the nylium Api facade."""
 from __future__ import annotations
 
 import os
@@ -7,20 +7,20 @@ from typing import ClassVar
 
 from fastapi import FastAPI, status
 
-from whiteout.api.views import ObjectView, TypeView
-from whiteout.database.database import Database
-from whiteout.database.tables import Base
-from whiteout.server.errors import errors
-from whiteout.server.routes import routes
-from whiteout.server.static import StaticSpa
+from nylium.api.views import ObjectView, TypeView
+from nylium.database.database import Database
+from nylium.database.tables import Base
+from nylium.server.errors import errors
+from nylium.server.routes import routes
+from nylium.server.static import StaticSpa
 
 
-class WhiteoutApp:
+class NyliumApp:
     """Composition root for the HTTP surface."""
 
-    TITLE: ClassVar[str] = "whiteout"
+    TITLE: ClassVar[str] = "nylium"
     API_PREFIX: ClassVar[str] = "/api"
-    DIST_ENV: ClassVar[str] = "WHITEOUT_WEB_DIST"
+    DIST_ENV: ClassVar[str] = "NYLIUM_WEB_DIST"
     DEFAULT_DIST: ClassVar[Path] = Path("web") / "dist"
 
     @classmethod

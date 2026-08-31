@@ -2,7 +2,7 @@
 Classes live inside tests — see test_objects.py for why."""
 import pytest
 
-from whiteout.api import (
+from nylium.api import (
     Api,
     ArrayValue,
     ObjectRef,
@@ -11,7 +11,7 @@ from whiteout.api import (
     ScalarValue,
     TypeView,
 )
-from whiteout.objects import WInteger, WObject, WString
+from nylium.objects import WInteger, WObject, WString
 
 
 def person_class() -> type[WObject]:

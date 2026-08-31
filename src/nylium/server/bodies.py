@@ -14,7 +14,7 @@ from dataclasses import field
 from pydantic import ConfigDict
 from pydantic.dataclasses import dataclass
 
-from whiteout.api.views import PropValue
+from nylium.api.views import PropValue
 
 _CONFIG = ConfigDict(extra="ignore")
 

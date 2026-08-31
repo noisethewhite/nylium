@@ -1,4 +1,4 @@
-"""Display DTOs for the whiteout API.
+"""Display DTOs for the nylium API.
 
 pydantic dataclasses with extra="ignore", the morebuttons convention:
 they validate on construction and serialize straight to JSON later,
@@ -14,7 +14,7 @@ from uuid import UUID
 from pydantic import ConfigDict
 from pydantic.dataclasses import dataclass
 
-from whiteout.objects.wscalar import ScalarPayload
+from nylium.objects.wscalar import ScalarPayload
 
 _CONFIG = ConfigDict(extra="ignore")
 

@@ -9,9 +9,9 @@ from __future__ import annotations
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 
-from whiteout.api.api import Api, PropInput
-from whiteout.api.views import ArrayValue, PropValue, RefValue, ScalarValue
-from whiteout.objects.wscalar import (
+from nylium.api.api import Api, PropInput
+from nylium.api.views import ArrayValue, PropValue, RefValue, ScalarValue
+from nylium.objects.wscalar import (
     ScalarPayload,
     WBoolean,
     WDatetime,
@@ -20,7 +20,7 @@ from whiteout.objects.wscalar import (
     WScalar,
     WString,
 )
-from whiteout.objects.wtype import WType
+from nylium.objects.wtype import WType
 
 
 class PropCodec:

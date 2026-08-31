@@ -7,14 +7,14 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from whiteout.api.api import Api
-from whiteout.api.views import ObjectView, TypeView
-from whiteout.server.bodies import (
+from nylium.api.api import Api
+from nylium.api.views import ObjectView, TypeView
+from nylium.server.bodies import (
     CreateObjectBody,
     CreateTypeBody,
     UpdateObjectBody,
 )
-from whiteout.server.codec import PropCodec
+from nylium.server.codec import PropCodec
 
 
 class routes:

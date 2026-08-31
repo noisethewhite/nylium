@@ -1,4 +1,4 @@
-"""WObject: an instance of a whiteout type, backed by the tables.py graph.
+"""WObject: an instance of a nylium type, backed by the tables.py graph.
 
 Subclass it with WScalar/WObject/list[...] annotations; the metaclass
 materializes the type and its props in the database. Attribute
@@ -25,13 +25,13 @@ from uuid import UUID, uuid4
 import sqlalchemy as sqla
 from sqlalchemy.orm import Session
 
-from whiteout.database.tables import ArrayValues, Instances, InstanceValues
-from whiteout.objects.sessions import sessions
-from whiteout.objects.warray import WArray
-from whiteout.objects.wprop import WProp
-from whiteout.objects.wscalar import ScalarPayload, ScalarTable, WScalar
-from whiteout.objects.wtype import WType
-from whiteout.objects.wtypemeta import StoredValue, WTypeMeta
+from nylium.database.tables import ArrayValues, Instances, InstanceValues
+from nylium.objects.sessions import sessions
+from nylium.objects.warray import WArray
+from nylium.objects.wprop import WProp
+from nylium.objects.wscalar import ScalarPayload, ScalarTable, WScalar
+from nylium.objects.wtype import WType
+from nylium.objects.wtypemeta import StoredValue, WTypeMeta
 
 INSTANCE_NAME_FORMAT = "{type_name}:{short_uuid}"
 SHORT_UUID_LENGTH = 8
@@ -277,7 +277,7 @@ class WObject(metaclass=WTypeMeta):
                 session.delete(inst)
 
     def _owned_array_uuids(self, session: Session) -> list[UUID]:
-        from whiteout.database.tables import Props, Types
+        from nylium.database.tables import Props, Types
 
         return list(
             session.scalars(

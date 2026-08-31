@@ -15,7 +15,7 @@ from uuid import UUID, uuid4
 import sqlalchemy as sqla
 from sqlalchemy.orm import Session
 
-from whiteout.api.views import (
+from nylium.api.views import (
     ArrayValue,
     ObjectRef,
     ObjectView,
@@ -25,13 +25,13 @@ from whiteout.api.views import (
     ScalarValue,
     TypeView,
 )
-from whiteout.database.tables import Instances, Types
-from whiteout.objects.sessions import sessions
-from whiteout.objects.wobject import INSTANCE_NAME_FORMAT, SHORT_UUID_LENGTH, WObject
-from whiteout.objects.wprop import WProp
-from whiteout.objects.wscalar import ScalarPayload, WScalar
-from whiteout.objects.wtype import WType
-from whiteout.objects.wtypemeta import StoredValue, WTypeMeta
+from nylium.database.tables import Instances, Types
+from nylium.objects.sessions import sessions
+from nylium.objects.wobject import INSTANCE_NAME_FORMAT, SHORT_UUID_LENGTH, WObject
+from nylium.objects.wprop import WProp
+from nylium.objects.wscalar import ScalarPayload, WScalar
+from nylium.objects.wtype import WType
+from nylium.objects.wtypemeta import StoredValue, WTypeMeta
 
 # What callers may hand in for a prop: stored values, plus links as
 # UUID/ObjectRef (resolved to WObject here). A string forward ref inside

@@ -1,7 +1,7 @@
 """Display/CRUD facade over the object layer — the seam a future
 FastAPI app mounts. Views, UUIDs and plain values in and out."""
-from whiteout.api.api import Api
-from whiteout.api.views import (
+from nylium.api.api import Api
+from nylium.api.views import (
     ArrayValue,
     ObjectRef,
     ObjectView,
@@ -11,7 +11,7 @@ from whiteout.api.views import (
     ScalarValue,
     TypeView,
 )
-from whiteout.objects.wscalar import ScalarPayload
+from nylium.objects.wscalar import ScalarPayload
 
 __all__ = [
     "Api",

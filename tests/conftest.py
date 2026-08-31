@@ -6,8 +6,8 @@ import os
 
 import pytest
 
-from whiteout.database.database import Database
-from whiteout.database.tables import Base
+from nylium.database.database import Database
+from nylium.database.tables import Base
 
 
 @pytest.fixture(autouse=True)

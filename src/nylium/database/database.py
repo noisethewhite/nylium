@@ -2,8 +2,8 @@ from __future__ import annotations
 import sqlalchemy as sqla
 from typing import TypeVar, overload
 
-from whiteout.singleton import singleton, singletonmethod, singletonproperty
-from whiteout.system import Environment
+from nylium.singleton import singleton, singletonmethod, singletonproperty
+from nylium.system import Environment
 
 
 _T = TypeVar(name="_T")

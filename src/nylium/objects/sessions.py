@@ -1,10 +1,10 @@
 """Session factory namespace. Owns the one place that knows how a
-whiteout objects session is built."""
+nylium objects session is built."""
 from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
-from whiteout.database.database import Database
+from nylium.database.database import Database
 
 
 class sessions:

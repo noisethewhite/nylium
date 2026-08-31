@@ -1,7 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./components/app";
-import { WhiteoutApi } from "./net/whiteout-api";
+import { NyliumApi } from "./net/nylium-api";
 import { WorkspaceStore } from "./state/workspace";
 import "./styles/tokens.css";
 import "./styles/app.css";
@@ -11,7 +11,7 @@ const container = document.getElementById("root");
 if (container === null) {
   throw new Error("root element missing");
 }
-const api = new WhiteoutApi();
+const api = new NyliumApi();
 const workspace = new WorkspaceStore(api);
 void workspace.init();
 

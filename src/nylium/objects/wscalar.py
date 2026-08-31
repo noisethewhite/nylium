@@ -2,11 +2,11 @@
 
 These are marker classes, not value wrappers: annotate props with them
 (`name: WString`), assign plain python values (`obj.name = "Max"`).
-Each peer owns its binding to the whiteout type system (TYPE_NAME),
+Each peer owns its binding to the nylium type system (TYPE_NAME),
 the accepted python type (PYTHON_TYPE) and its storage table (TABLE).
 
 File-level exception to one-class-per-file: these are peer types
-mirroring the scalar set of whiteout's own `types` table.
+mirroring the scalar set of nylium's own `types` table.
 
 The resolver accepts ONLY WScalar subclasses, WObject subclasses and
 list[...] of those — the prop type world is closed by construction.
@@ -19,7 +19,7 @@ from typing import ClassVar, final
 
 from sqlalchemy.orm import Session
 
-from whiteout.database.tables import (
+from nylium.database.tables import (
     BooleanValues,
     DatetimeValues,
     IntegerValues,
@@ -76,8 +76,8 @@ class WScalar:
 
     @classmethod
     def ensure_builtins(cls, session: Session) -> None:
-        from whiteout.objects.wprop import WProp
-        from whiteout.objects.wtype import WType
+        from nylium.objects.wprop import WProp
+        from nylium.objects.wtype import WType
 
         for scalar in cls.all():
             type_row = WType.ensure(session, scalar.TYPE_NAME)

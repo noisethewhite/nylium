@@ -15,7 +15,7 @@ from uuid import UUID, uuid4
 import sqlalchemy as sqla
 from sqlalchemy.orm import Session
 
-from whiteout.database.tables import Types
+from nylium.database.tables import Types
 
 
 class WType:

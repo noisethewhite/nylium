@@ -1,12 +1,12 @@
 import type { ObjectView, PropValue, TypeView } from "../contracts";
 import { HttpTransport } from "./http-transport";
 
-/** Typed client for the whiteout HTTP surface. */
-export class WhiteoutApi extends HttpTransport {
+/** Typed client for the nylium HTTP surface. */
+export class NyliumApi extends HttpTransport {
   private static readonly BASE_URL = "/api";
 
   constructor() {
-    super(WhiteoutApi.BASE_URL);
+    super(NyliumApi.BASE_URL);
   }
 
   listTypes(): Promise<TypeView[]> {
