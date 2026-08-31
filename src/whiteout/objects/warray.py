@@ -5,22 +5,24 @@ type, so scalars, links and nested arrays ride the same mechanism.
 Boxes (instances of scalar or Array<...> types) are owned by their array:
 rewriting or destroying the array destroys them recursively. Linked
 WObjects of user types are never boxes and are never deleted here.
+
+Never imports wobject: link wrapping goes through WTypeMeta.root()
+and link values are narrowed to the WObjectShape protocol. That's what
+keeps the objects package acyclic.
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+from typing import cast
 from uuid import UUID, uuid4
 
 import sqlalchemy as sqla
 from sqlalchemy.orm import Session
 
 from whiteout.database.tables import ArrayValues, Instances, InstanceValues
-from whiteout.objects.wscalar import ScalarPayload, WScalar
+from whiteout.objects.wprop import WProp
+from whiteout.objects.wscalar import VALUE_PROP_KEY, ScalarPayload, WScalar
 from whiteout.objects.wtype import WType
-
-if TYPE_CHECKING:
-    from whiteout.objects.wobject import StoredValue
-    from whiteout.objects.wprop import WProp
+from whiteout.objects.wtypemeta import StoredValue, WObjectShape, WTypeMeta
 
 ARRAY_INSTANCE_NAME = "array"
 
@@ -40,12 +42,10 @@ class WArray:
         cls,
         session: Session,
         owner_uuid: UUID,
-        prop: "WProp",
+        prop: WProp,
         elem_type: str,
         values: list[StoredValue],
     ) -> None:
-        if not isinstance(values, list):
-            raise TypeError(f"expected list, got {type(values).__name__}")
         array_uuid = cls._ensure_array_instance(session, owner_uuid, prop, elem_type)
         cls._fill(session, array_uuid, elem_type, values)
 
@@ -53,7 +53,7 @@ class WArray:
     def destroy(cls, session: Session, array_uuid: UUID) -> None:
         """Delete the array instance and every box it owns, recursively."""
         cls._destroy_boxes(session, array_uuid)
-        session.execute(
+        _ = session.execute(
             sqla.delete(InstanceValues).where(InstanceValues.uuid == array_uuid)
         )
         instance = session.get(Instances, array_uuid)
@@ -87,7 +87,7 @@ class WArray:
         )
         # detach pointer rows first: FK array_values.value_uuid -> instances
         # forbids deleting a box that is still referenced
-        session.execute(
+        _ = session.execute(
             sqla.delete(ArrayValues).where(ArrayValues.inst_uuid == array_uuid)
         )
         session.flush()
@@ -112,7 +112,7 @@ class WArray:
 
     @classmethod
     def _ensure_array_instance(
-        cls, session: Session, owner_uuid: UUID, prop: "WProp", elem_type: str
+        cls, session: Session, owner_uuid: UUID, prop: WProp, elem_type: str
     ) -> UUID:
         link = session.scalar(
             sqla.select(InstanceValues).where(
@@ -145,20 +145,18 @@ class WArray:
             return cls.read(session, uuid, WType.element_name(type_name))
         scalar = WScalar.by_type_name(type_name)
         if scalar is None:
-            from whiteout.objects.wobject import WObject
-
-            return WObject.wrap(uuid)
+            return WTypeMeta.root().wrap(uuid)
         inst = session.get(Instances, uuid)
         if inst is None:
             raise KeyError(f"no instance {uuid}")
         owner = WType.by_uuid(session, inst.type_uuid)
         if owner is None:
             raise RuntimeError(f"instance {uuid} has dangling type")
-        value_prop = owner.prop(session, "value")
+        value_prop = WProp.by_key(session, owner, VALUE_PROP_KEY)
         if value_prop is None:
             raise RuntimeError(f"scalar type {type_name} lost its 'value' prop")
         row = session.get(scalar.TABLE, (uuid, value_prop.uuid))
-        return None if row is None else cast(ScalarPayload, row.value)
+        return None if row is None else row.value
 
     @classmethod
     def _box(cls, session: Session, type_name: str, value: StoredValue) -> UUID:
@@ -172,17 +170,14 @@ class WArray:
             return array_uuid
         scalar = WScalar.by_type_name(type_name)
         if scalar is None:
-            from whiteout.objects.wobject import WObject
-            from whiteout.objects.wtypemeta import WTypeMeta
-
             WTypeMeta.check_link(session, type_name, value)
-            return cast(WObject, value)._uuid
+            return cast(WObjectShape, value).uuid
         WScalar.validate(type_name, cast(ScalarPayload | None, value))
         box_uuid = uuid4()
         owner = WType.ensure(session, type_name)
         session.add(Instances(uuid=box_uuid, type_uuid=owner.uuid, name=str(value)))
         session.flush()
-        value_prop = owner.prop(session, "value")
+        value_prop = WProp.by_key(session, owner, VALUE_PROP_KEY)
         if value_prop is None:
             raise RuntimeError(f"scalar type {type_name} lost its 'value' prop")
         session.add(

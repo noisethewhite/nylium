@@ -13,7 +13,8 @@ class singletonproperty(Generic[_T, _R]):
     _fget: Callable[[_T], _R] | None
     _fset: Callable[[_T, object], None] | None
     _fdel: Callable[[_T], None] | None
-    _owner: type[_T]
+    # None until __set_name__ binds the descriptor to its owner class
+    _owner: type[_T] | None
     _lock: threading.Lock
 
     def __set_name__(self, owner: type[_T], _: str) -> None:
@@ -29,11 +30,14 @@ class singletonproperty(Generic[_T, _R]):
         self._fget = fget
         self._fset = fset
         self._fdel = fdel
+        self._owner = None
         self._lock = threading.Lock()
         self.__doc__ = doc if doc is not None else (fget.__doc__ if fget else None)
 
     @property
     def _instance(self) -> _T:
+        if self._owner is None:
+            raise TypeError("singletonproperty used before __set_name__ bound it.")
         if self._owner not in SingletonRegistry.data.keys():
             raise TypeError("singletonproperty must only be used inside a singleton.")
         return self._owner()

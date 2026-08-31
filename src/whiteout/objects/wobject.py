@@ -19,7 +19,7 @@ performance one.
 from __future__ import annotations
 
 from collections.abc import ItemsView
-from typing import TypeAlias, Union, cast
+from typing import ClassVar, cast, override
 from uuid import UUID, uuid4
 
 import sqlalchemy as sqla
@@ -31,14 +31,7 @@ from whiteout.objects.warray import WArray
 from whiteout.objects.wprop import WProp
 from whiteout.objects.wscalar import ScalarPayload, ScalarTable, WScalar
 from whiteout.objects.wtype import WType
-from whiteout.objects.wtypemeta import WTypeMeta
-
-# The closed union of everything a prop can hold: scalar payloads,
-# WObject links, (nested) lists of those. None means "never set".
-# Union+forward refs instead of the PEP 695 `type` statement: parses
-# on 3.11 tooling too, and lives here because warray needs it without
-# a new import cycle (warray already touches wobject).
-StoredValue: TypeAlias = Union[ScalarPayload, "WObject", list["StoredValue"], None]
+from whiteout.objects.wtypemeta import StoredValue, WTypeMeta
 
 INSTANCE_NAME_FORMAT = "{type_name}:{short_uuid}"
 SHORT_UUID_LENGTH = 8
@@ -46,12 +39,14 @@ PRIVATE_PREFIX = "_"
 
 
 class WObject(metaclass=WTypeMeta):
-    __abstract__ = True
+    __abstract__: ClassVar[bool] = True
 
     _uuid: UUID
 
     def __init__(self, _uuid: UUID | None = None, **props: StoredValue) -> None:
-        object.__setattr__(self, "_uuid", _uuid or uuid4())
+        # plain assignment: __setattr__ routes "_" names to object.__setattr__,
+        # and the checker gets to see _uuid initialized
+        self._uuid = _uuid or uuid4()
         if _uuid is not None:
             return
         with sessions.new() as session, session.begin():
@@ -103,7 +98,7 @@ class WObject(metaclass=WTypeMeta):
         klass = WTypeMeta.python_class(type_name) or WObject
         wrapped = klass.__new__(klass)
         object.__setattr__(wrapped, "_uuid", uuid)
-        return wrapped
+        return cast("WObject", wrapped)
 
     @property
     def uuid(self) -> UUID:
@@ -119,7 +114,8 @@ class WObject(metaclass=WTypeMeta):
             if owner is None:
                 return {}
             return {
-                prop.key: prop.value_type(session).name for prop in owner.props(session)
+                prop.key: prop.value_type(session).name
+                for prop in WProp.all_for(session, owner)
             }
 
     def to_dict(self) -> dict[str, StoredValue]:
@@ -129,6 +125,7 @@ class WObject(metaclass=WTypeMeta):
     def items(self) -> ItemsView[str, StoredValue]:
         return self.to_dict().items()
 
+    @override
     def __repr__(self) -> str:
         try:
             parts = ", ".join(
@@ -138,11 +135,13 @@ class WObject(metaclass=WTypeMeta):
             return f"<{type(self).__name__} {self._uuid} (gone)>"
         return f"{type(self).__name__}({parts})"
 
+    @override
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, WObject):
             return NotImplemented
         return self._uuid == other._uuid
 
+    @override
     def __hash__(self) -> int:
         return hash(self._uuid)
 
@@ -155,7 +154,7 @@ class WObject(metaclass=WTypeMeta):
         owner = WType.by_uuid(session, inst.type_uuid)
         if owner is None:
             raise RuntimeError(f"instance {self._uuid} has dangling type")
-        prop = owner.prop(session, key)
+        prop = WProp.by_key(session, owner, key)
         if prop is None:
             raise AttributeError(f"{owner.name} has no prop {key!r}")
         return prop, prop.value_type(session).name
@@ -174,6 +173,7 @@ class WObject(metaclass=WTypeMeta):
                 return WArray.read(session, link.uuid, WType.element_name(value_type))
             return WObject.wrap(link.uuid)
 
+    @override
     def __setattr__(self, key: str, value: StoredValue) -> None:
         if key.startswith(PRIVATE_PREFIX):
             object.__setattr__(self, key, value)
@@ -198,6 +198,7 @@ class WObject(metaclass=WTypeMeta):
                 self._write_link(session, prop, cast("WObject", value))
             self._touch(session)
 
+    @override
     def __delattr__(self, key: str) -> None:
         if key.startswith(PRIVATE_PREFIX):
             object.__delattr__(self, key)
@@ -221,7 +222,7 @@ class WObject(metaclass=WTypeMeta):
             self._touch(session)
 
     def _touch(self, session: Session) -> None:
-        session.execute(
+        _ = session.execute(
             sqla.update(Instances)
             .where(Instances.uuid == self._uuid)
             .values(modified_at=sqla.func.now())
@@ -250,14 +251,14 @@ class WObject(metaclass=WTypeMeta):
         if row is None:
             session.add(table(inst_uuid=self._uuid, prop_uuid=prop.uuid, value=value))
             return
-        session.execute(
+        _ = session.execute(
             sqla.update(table)
             .where(table.inst_uuid == self._uuid, table.prop_uuid == prop.uuid)
             .values(value=value)
         )
 
     def _write_link(self, session: Session, prop: WProp, value: "WObject") -> None:
-        session.merge(
+        _ = session.merge(
             InstanceValues(uuid=value._uuid, prop_uuid=prop.uuid, inst_uuid=self._uuid)
         )
 
@@ -265,10 +266,10 @@ class WObject(metaclass=WTypeMeta):
         with sessions.new() as session, session.begin():
             for array_uuid in self._owned_array_uuids(session):
                 WArray.destroy(session, array_uuid)
-            session.execute(
+            _ = session.execute(
                 sqla.delete(InstanceValues).where(InstanceValues.uuid == self._uuid)
             )
-            session.execute(
+            _ = session.execute(
                 sqla.delete(ArrayValues).where(ArrayValues.value_uuid == self._uuid)
             )
             inst = session.get(Instances, self._uuid)

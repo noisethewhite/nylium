@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from decimal import Decimal
-from typing import ClassVar
+from typing import ClassVar, final
 
 from sqlalchemy.orm import Session
 
@@ -76,37 +76,43 @@ class WScalar:
 
     @classmethod
     def ensure_builtins(cls, session: Session) -> None:
+        from whiteout.objects.wprop import WProp
         from whiteout.objects.wtype import WType
 
         for scalar in cls.all():
             type_row = WType.ensure(session, scalar.TYPE_NAME)
-            type_row.ensure_prop(session, VALUE_PROP_KEY, type_row)
+            _ = WProp.ensure(session, type_row, VALUE_PROP_KEY, type_row)
 
 
+@final
 class WString(WScalar):
     TYPE_NAME = "String"
     PYTHON_TYPE = str
     TABLE = StringValues
 
 
+@final
 class WInteger(WScalar):
     TYPE_NAME = "Integer"
     PYTHON_TYPE = int
     TABLE = IntegerValues
 
 
+@final
 class WNumeric(WScalar):
     TYPE_NAME = "Numeric"
     PYTHON_TYPE = Decimal
     TABLE = NumericValues
 
 
+@final
 class WBoolean(WScalar):
     TYPE_NAME = "Boolean"
     PYTHON_TYPE = bool
     TABLE = BooleanValues
 
 
+@final
 class WDatetime(WScalar):
     TYPE_NAME = "Datetime"
     PYTHON_TYPE = datetime

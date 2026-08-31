@@ -1,7 +1,11 @@
-"""WProp: handle on a row of the `props` table."""
+"""WProp: handle on a row of the `props` table.
+
+Owns every query against `props` — WType deliberately does not import
+WProp, so the dependency direction is wprop -> wtype and nothing cycles.
+"""
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 from uuid import UUID, uuid4
 
 import sqlalchemy as sqla
@@ -14,7 +18,9 @@ if TYPE_CHECKING:
 
 
 class WProp:
-    ROW = Props
+    ROW: ClassVar[type[Props]] = Props
+
+    _row: Props
 
     def __init__(self, row: Props):
         self._row = row
@@ -35,6 +41,13 @@ class WProp:
             )
         )
         return None if row is None else cls(row)
+
+    @classmethod
+    def all_for(cls, session: Session, owner: "WType") -> "list[WProp]":
+        rows = session.scalars(
+            sqla.select(Props).where(Props.owner_type_uuid == owner.uuid)
+        ).all()
+        return [cls(row) for row in rows]
 
     @classmethod
     def ensure(

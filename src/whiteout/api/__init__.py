@@ -8,10 +8,10 @@ from whiteout.api.views import (
     PropValue,
     PropView,
     RefValue,
-    ScalarPayload,
     ScalarValue,
     TypeView,
 )
+from whiteout.objects.wscalar import ScalarPayload
 
 __all__ = [
     "Api",

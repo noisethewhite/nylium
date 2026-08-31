@@ -9,7 +9,7 @@ WObject layer, so all type validation applies here too.
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TypeAlias, Union, cast
+from typing import TypeAlias, cast
 from uuid import UUID, uuid4
 
 import sqlalchemy as sqla
@@ -27,20 +27,16 @@ from whiteout.api.views import (
 )
 from whiteout.database.tables import Instances, Types
 from whiteout.objects.sessions import sessions
-from whiteout.objects.wobject import (
-    INSTANCE_NAME_FORMAT,
-    SHORT_UUID_LENGTH,
-    StoredValue,
-    WObject,
-)
+from whiteout.objects.wobject import INSTANCE_NAME_FORMAT, SHORT_UUID_LENGTH, WObject
+from whiteout.objects.wprop import WProp
 from whiteout.objects.wscalar import ScalarPayload, WScalar
 from whiteout.objects.wtype import WType
-from whiteout.objects.wtypemeta import WTypeMeta
+from whiteout.objects.wtypemeta import StoredValue, WTypeMeta
 
 # What callers may hand in for a prop: stored values, plus links as
-# UUID/ObjectRef (resolved to WObject here). Union+forward refs keep
-# this 3.11-parseable; the recursion covers arrays of links.
-PropInput: TypeAlias = Union[StoredValue, UUID, ObjectRef, list["PropInput"]]
+# UUID/ObjectRef (resolved to WObject here). A string forward ref inside
+# list[...] keeps the recursion 3.11-parseable without typing.Union.
+PropInput: TypeAlias = StoredValue | UUID | ObjectRef | list["PropInput"]
 
 
 class Api:
@@ -65,7 +61,7 @@ class Api:
         with sessions.new() as session, session.begin():
             owner = WType.ensure(session, name)
             for key, value_type_name in (props or {}).items():
-                _ = owner.ensure_prop(session, key, WType.ensure(session, value_type_name))
+                _ = WProp.ensure(session, owner, key, WType.ensure(session, value_type_name))
             return cls._type_view(session, name)
 
     @classmethod
@@ -171,7 +167,7 @@ class Api:
 
     @classmethod
     def _prop_type_name(cls, session: Session, owner: WType, key: str) -> str:
-        prop = owner.prop(session, key)
+        prop = WProp.by_key(session, owner, key)
         if prop is None:
             raise KeyError(f"type {owner.name!r} has no prop {key!r}")
         return prop.value_type(session).name
@@ -200,7 +196,7 @@ class Api:
             name=name,
             props=[
                 PropView(key=prop.key, value_type=prop.value_type(session).name)
-                for prop in owner.props(session)
+                for prop in WProp.all_for(session, owner)
             ],
         )
 
@@ -240,10 +236,10 @@ class Api:
         props = {
             prop.key: cls._render(
                 session,
-                getattr(wrapper, prop.key),
+                cast(StoredValue, getattr(wrapper, prop.key)),
                 prop.value_type(session).name,
             )
-            for prop in owner.props(session)
+            for prop in WProp.all_for(session, owner)
         }
         return ObjectView(uuid=uuid, type_name=owner.name, props=props)
 

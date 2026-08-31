@@ -1,28 +1,55 @@
 """WTypeMeta: metaclass that materializes a WObject subclass into the
 `types`/`props` tables at class-definition time, keeps the
 type name -> python class registry for wrap(), and enforces link type
-conformance at write time."""
+conformance at write time.
+
+Dependency-inversion note: every layer below WObject (warray included)
+needs *something* it can wrap links into, but importing WObject from
+here would close an import cycle (WObject's metaclass is WTypeMeta).
+So this module owns the abstraction instead: the WObjectShape protocol,
+the StoredValue union built on it, and a registry slot for the WObject
+root class, which the metaclass records when WObject itself is created.
+WObject conforms structurally; nothing here imports it.
+"""
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast, get_args, get_origin
+from typing import ClassVar, Protocol, TypeAlias, cast, get_args, get_origin
+from uuid import UUID
 
 from sqlalchemy.orm import Session
 
 from whiteout.database.tables import Instances
 from whiteout.objects.sessions import sessions
-from whiteout.objects.wscalar import WScalar
+from whiteout.objects.wprop import WProp
+from whiteout.objects.wscalar import ScalarPayload, WScalar
 from whiteout.objects.wtype import WType
-
-if TYPE_CHECKING:
-    from whiteout.objects.wobject import WObject
 
 LIST_ANNOTATION_PREFIX = "list["
 ABSTRACT_FLAG = "__abstract__"
 PRIVATE_PREFIX = "_"
+WOBJECT_ROOT_NAME = "WObject"
+
+
+class WObjectShape(Protocol):
+    """The slice of WObject that lower layers are allowed to rely on."""
+
+    @classmethod
+    def wrap(cls, uuid: UUID) -> "WObjectShape": ...
+
+    @property
+    def uuid(self) -> UUID: ...
+
+
+# The closed union of everything a prop can hold: scalar payloads,
+# WObject links (structurally), (nested) lists of those. None means
+# "never set". A string forward ref inside list[...] keeps the
+# recursion parseable without typing.Union or the PEP 695 `type` stmt.
+StoredValue: TypeAlias = ScalarPayload | WObjectShape | list["StoredValue"] | None
 
 
 class WTypeMeta(type):
-    _python_classes: dict[str, "type[WObject]"] = {}
+    _python_classes: ClassVar[dict[str, type[WObjectShape]]] = {}
+    _root: ClassVar[type[WObjectShape] | None] = None
 
     def __new__(
         mcls,
@@ -35,22 +62,30 @@ class WTypeMeta(type):
         **kwargs: object,
     ):
         cls = super().__new__(mcls, name, bases, namespace, **kwargs)
+        if name == WOBJECT_ROOT_NAME and mcls._root is None:
+            mcls._root = cast(type[WObjectShape], cls)
         if namespace.get(ABSTRACT_FLAG):
             return cls
-        typed_cls = cast("type[WObject]", cls)
-        mcls._python_classes[name] = typed_cls
-        mcls._materialize(typed_cls)
+        mcls._python_classes[name] = cast(type[WObjectShape], cls)
+        mcls._materialize(cast(type[WObjectShape], cls))
         return cls
 
     @classmethod
-    def python_class(mcls, type_name: str) -> "type[WObject] | None":
+    def python_class(mcls, type_name: str) -> type[WObjectShape] | None:
         return mcls._python_classes.get(type_name)
 
     @classmethod
-    def check_link(mcls, session: Session, expected_name: str, value: object) -> None:
-        from whiteout.objects.wobject import WObject
+    def root(mcls) -> type[WObjectShape]:
+        """The WObject base class itself. Registered when the metaclass
+        created it; wrap() on it resolves registered subclasses."""
+        if mcls._root is None:
+            raise RuntimeError("WObject root requested before WObject was created")
+        return mcls._root
 
-        if not isinstance(value, WObject):
+    @classmethod
+    def check_link(mcls, session: Session, expected_name: str, value: object) -> None:
+        root = mcls.root()
+        if not isinstance(value, root):
             raise TypeError(
                 f"{expected_name} prop takes a WObject, got {type(value).__name__}"
             )
@@ -69,7 +104,7 @@ class WTypeMeta(type):
             )
 
     @classmethod
-    def _materialize(mcls, cls: "type[WObject]") -> None:
+    def _materialize(mcls, cls: type[WObjectShape]) -> None:
         with sessions.new() as session, session.begin():
             WScalar.ensure_builtins(session)
             owner = WType.ensure(session, cls.__name__)
@@ -78,14 +113,14 @@ class WTypeMeta(type):
                 if key.startswith(PRIVATE_PREFIX):
                     continue
                 value_type = WType.ensure(session, mcls.resolve_annotation(annotation))
-                _ = owner.ensure_prop(session, key, value_type)
+                _ = WProp.ensure(session, owner, key, value_type)
 
     @classmethod
     def resolve_annotation(mcls, annotation: object) -> str:
         if isinstance(annotation, str):
             return mcls._resolve_string_annotation(annotation)
         if get_origin(annotation) is list:
-            element = mcls.resolve_annotation(get_args(annotation)[0])
+            element = mcls.resolve_annotation(cast(object, get_args(annotation)[0]))
             return WType.array_name(element)
         if isinstance(annotation, type) and issubclass(annotation, WScalar):
             return annotation.TYPE_NAME

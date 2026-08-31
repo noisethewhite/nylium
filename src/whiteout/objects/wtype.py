@@ -2,10 +2,14 @@
 
 Owns the type-name conventions, including the generic array type name
 (`Array<Element>`) shared by class materialization and attribute IO.
+
+Prop queries live on WProp, not here: wprop imports wtype (for
+value_type), so wtype must not import wprop back — that keeps the
+objects package a DAG.
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import ClassVar
 from uuid import UUID, uuid4
 
 import sqlalchemy as sqla
@@ -13,12 +17,11 @@ from sqlalchemy.orm import Session
 
 from whiteout.database.tables import Types
 
-if TYPE_CHECKING:
-    from whiteout.objects.wprop import WProp
-
 
 class WType:
-    ARRAY_TYPE_PREFIX = "Array<"
+    ARRAY_TYPE_PREFIX: ClassVar[str] = "Array<"
+
+    _row: Types
 
     def __init__(self, row: Types):
         self._row = row
@@ -66,23 +69,3 @@ class WType:
         session.add(row)
         session.flush()
         return cls(row)
-
-    # --- props of this type ---
-
-    def prop(self, session: Session, key: str) -> "WProp | None":
-        from whiteout.objects.wprop import WProp
-
-        return WProp.by_key(session, self, key)
-
-    def props(self, session: Session) -> "list[WProp]":
-        from whiteout.objects.wprop import WProp
-
-        rows = session.scalars(
-            sqla.select(WProp.ROW).where(WProp.ROW.owner_type_uuid == self.uuid)
-        ).all()
-        return [WProp(row) for row in rows]
-
-    def ensure_prop(self, session: Session, key: str, value_type: "WType") -> "WProp":
-        from whiteout.objects.wprop import WProp
-
-        return WProp.ensure(session, self, key, value_type)
