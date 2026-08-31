@@ -8,6 +8,8 @@ from typing import ClassVar
 from fastapi import FastAPI, status
 
 from whiteout.api.views import ObjectView, TypeView
+from whiteout.database.database import Database
+from whiteout.database.tables import Base
 from whiteout.server.errors import errors
 from whiteout.server.routes import routes
 from whiteout.server.static import StaticSpa
@@ -23,11 +25,18 @@ class WhiteoutApp:
 
     @classmethod
     def create(cls) -> FastAPI:
+        cls._ensure_schema()
         app = FastAPI(title=cls.TITLE)
         cls._mount_api(app)
         errors.register(app)
         StaticSpa.mount(app, cls._dist_dir())
         return app
+
+    @classmethod
+    def _ensure_schema(cls) -> None:
+        """create_all is idempotent — the server is self-sufficient on
+        a fresh database and a no-op on an existing one."""
+        Base.metadata.create_all(Database().engine)
 
     @classmethod
     def _dist_dir(cls) -> Path:
