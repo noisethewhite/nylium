@@ -4,7 +4,7 @@ type name -> python class registry for wrap(), and enforces link type
 conformance at write time."""
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast, get_args, get_origin
+from typing import TYPE_CHECKING, Any, cast, get_args, get_origin
 
 from sqlalchemy.orm import Session
 
@@ -24,7 +24,13 @@ PRIVATE_PREFIX = "_"
 class WTypeMeta(type):
     _python_classes: dict[str, "type[WObject]"] = {}
 
-    def __new__(mcls, name, bases, namespace, **kwargs):
+    def __new__(
+        mcls,
+        name: str,
+        bases: tuple[type, ...],
+        namespace: dict[str, Any],
+        **kwargs: Any,
+    ):
         cls = super().__new__(mcls, name, bases, namespace, **kwargs)
         if namespace.get(ABSTRACT_FLAG):
             return cls
@@ -38,7 +44,7 @@ class WTypeMeta(type):
         return mcls._python_classes.get(type_name)
 
     @classmethod
-    def check_link(mcls, session: Session, expected_name: str, value) -> None:
+    def check_link(mcls, session: Session, expected_name: str, value: object) -> None:
         from whiteout.objects.wobject import WObject
 
         if not isinstance(value, WObject):
@@ -49,16 +55,14 @@ class WTypeMeta(type):
         if expected_cls is not None:
             if not isinstance(value, expected_cls):
                 raise TypeError(
-                    f"{expected_name} prop takes {expected_name}, "
-                    f"got {type(value).__name__}"
+                    f"{expected_name} prop takes {expected_name}, got {type(value).__name__}"
                 )
             return
         inst = session.get(Instances, value.uuid)
         actual = None if inst is None else WType.by_uuid(session, inst.type_uuid)
         if actual is None or actual.name != expected_name:
             raise TypeError(
-                f"{expected_name} prop takes {expected_name}, "
-                f"got {'<missing instance>' if actual is None else actual.name}"
+                f"{expected_name} prop takes {expected_name}, got {'<missing instance>' if actual is None else actual.name}"
             )
 
     @classmethod
@@ -66,11 +70,12 @@ class WTypeMeta(type):
         with sessions.new() as session, session.begin():
             WScalar.ensure_builtins(session)
             owner = WType.ensure(session, cls.__name__)
-            for key, annotation in getattr(cls, "__annotations__", {}).items():
+            annotations: dict[str, object] = getattr(cls, "__annotations__", {})
+            for key, annotation in annotations.items():
                 if key.startswith(PRIVATE_PREFIX):
                     continue
                 value_type = WType.ensure(session, mcls.resolve_annotation(annotation))
-                owner.ensure_prop(session, key, value_type)
+                _ = owner.ensure_prop(session, key, value_type)
 
     @classmethod
     def resolve_annotation(mcls, annotation: object) -> str:
@@ -84,8 +89,7 @@ class WTypeMeta(type):
         if isinstance(annotation, WTypeMeta):
             return annotation.__name__
         raise TypeError(
-            f"unsupported prop annotation: {annotation!r}; "
-            "props take WScalar subclasses, WObject subclasses or list[...] of those"
+            f"unsupported prop annotation: {annotation!r}; props take WScalar subclasses, WObject subclasses or list[...] of those"
         )
 
     @classmethod

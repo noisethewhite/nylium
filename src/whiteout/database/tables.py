@@ -3,7 +3,6 @@ from datetime import datetime
 from decimal import Decimal
 
 from sqlalchemy import DateTime, ForeignKey, Text, UniqueConstraint, func, Integer
-from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -20,7 +19,7 @@ class Types(Base):
 
 class Props(Base):
     __tablename__: str = "props"
-    __table_args__ = (
+    __table_args__: tuple[UniqueConstraint, ...] = (
         # One key can't be defined twice on the same owner type
         UniqueConstraint("owner_type_uuid", "key"),
     )

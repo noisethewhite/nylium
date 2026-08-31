@@ -68,8 +68,7 @@ class WScalar:
             raise TypeError(f"{type_name!r} is not a scalar type")
         if type(value) is not scalar.PYTHON_TYPE:
             raise TypeError(
-                f"{type_name} prop takes {scalar.PYTHON_TYPE.__name__}, "
-                f"got {type(value).__name__}"
+                f"{type_name} prop takes {scalar.PYTHON_TYPE.__name__}, got {type(value).__name__}"
             )
 
     @classmethod
