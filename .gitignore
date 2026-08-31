@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+build/
+dist/
+
+# Env / secrets
+.env
+
+# Editors
+.vscode/
+.idea/
+.DS_Store
+
+# Test DB
+/.pgdata
+pg.log
