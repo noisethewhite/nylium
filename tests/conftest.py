@@ -4,12 +4,13 @@ fixture drops and recreates all tables around each test.
 """
 import os
 
-import dotenv
 import pytest
 
-# Load .env up front: EnvEnum loads dotenv lazily on first attribute access,
-# but the skip check below reads os.environ before any Environment access.
-dotenv.load_dotenv()
+from nylium.system import Environment
+
+# EnvEnum loads .env lazily on first attribute access, but the skip check
+# below reads os.environ before any Environment access — load it up front.
+Environment.load_dotenv()
 
 from nylium.database.database import Database
 from nylium.database.tables import Base
