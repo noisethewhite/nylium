@@ -59,6 +59,7 @@ class Api:
     def create_type(cls, name: str, props: dict[str, str] | None = None) -> TypeView:
         """props maps key -> value type name. Missing value types are created."""
         with sessions.new() as session, session.begin():
+            WScalar.ensure_builtins(session)
             owner = WType.ensure(session, name)
             for key, value_type_name in (props or {}).items():
                 _ = WProp.ensure(session, owner, key, WType.ensure(session, value_type_name))
