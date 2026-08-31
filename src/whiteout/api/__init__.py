@@ -1,6 +1,27 @@
 """Display/CRUD facade over the object layer — the seam a future
 FastAPI app mounts. Views, UUIDs and plain values in and out."""
 from whiteout.api.api import Api
-from whiteout.api.views import ObjectRef, ObjectView, PropView, TypeView
+from whiteout.api.views import (
+    ArrayValue,
+    ObjectRef,
+    ObjectView,
+    PropValue,
+    PropView,
+    RefValue,
+    ScalarPayload,
+    ScalarValue,
+    TypeView,
+)
 
-__all__ = ["Api", "ObjectRef", "ObjectView", "PropView", "TypeView"]
+__all__ = [
+    "Api",
+    "ArrayValue",
+    "ObjectRef",
+    "ObjectView",
+    "PropValue",
+    "PropView",
+    "RefValue",
+    "ScalarPayload",
+    "ScalarValue",
+    "TypeView",
+]

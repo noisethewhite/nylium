@@ -2,7 +2,15 @@
 Classes live inside tests — see test_objects.py for why."""
 import pytest
 
-from whiteout.api import Api, ObjectRef, ObjectView, TypeView
+from whiteout.api import (
+    Api,
+    ArrayValue,
+    ObjectRef,
+    ObjectView,
+    RefValue,
+    ScalarValue,
+    TypeView,
+)
 from whiteout.objects import WInteger, WObject, WString
 
 
@@ -36,13 +44,14 @@ def test_object_crud_round_trip():
     created = Api.create_object("Person", {"name": "Max", "age": 26})
     assert isinstance(created, ObjectView)
     assert created.type_name == "Person"
-    assert created.props["name"] == "Max"
+    assert created.props["name"] == ScalarValue(value="Max")
+    assert created.props["tags"] == ArrayValue(items=None)  # set vs unset
 
     fetched = Api.get_object(created.uuid)
-    assert fetched is not None and fetched.props["age"] == 26
+    assert fetched is not None and fetched.props["age"] == ScalarValue(value=26)
 
     updated = Api.update_object(created.uuid, {"age": 27})
-    assert updated.props["age"] == 27
+    assert updated.props["age"] == ScalarValue(value=27)
 
     listing = Api.list_objects("Person")
     assert [view.uuid for view in listing] == [created.uuid]
@@ -63,9 +72,11 @@ def test_links_and_arrays_render_as_views():
     view = Api.get_object(oleg.uuid)
     assert view is not None
     friend = view.props["friend"]
-    assert isinstance(friend, ObjectRef)
-    assert friend.uuid == maxim.uuid and friend.type_name == "Person"
-    assert view.props["tags"] == ["admin", "owner"]
+    assert isinstance(friend, RefValue) and friend.ref is not None
+    assert friend.ref.uuid == maxim.uuid and friend.ref.type_name == "Person"
+    assert view.props["tags"] == ArrayValue(
+        items=[ScalarValue(value="admin"), ScalarValue(value="owner")]
+    )
 
 
 def test_db_only_type_created_through_api():
@@ -73,7 +84,7 @@ def test_db_only_type_created_through_api():
     assert view.name == "Note"
 
     note = Api.create_object("Note", {"body": "hello"})
-    assert note.props["body"] == "hello"
+    assert note.props["body"] == ScalarValue(value="hello")
 
     with pytest.raises(TypeError):
         Api.create_object("Note", {"body": 42})

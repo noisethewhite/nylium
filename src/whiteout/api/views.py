@@ -9,13 +9,19 @@ of the same facade, mirroring the type/object graph they render.
 """
 from __future__ import annotations
 
-from typing import Any
+from datetime import datetime
+from decimal import Decimal
 from uuid import UUID
 
 from pydantic import ConfigDict
 from pydantic.dataclasses import dataclass
 
 _CONFIG = ConfigDict(extra="ignore")
+
+ScalarPayload = str | int | Decimal | bool | datetime
+
+
+# --- type schema views ---
 
 
 @dataclass(config=_CONFIG)
@@ -30,6 +36,9 @@ class TypeView:
     props: list[PropView]
 
 
+# --- object data views ---
+
+
 @dataclass(config=_CONFIG)
 class ObjectRef:
     """A link target rendered for display: who it is, not its whole body."""
@@ -39,10 +48,34 @@ class ObjectRef:
 
 
 @dataclass(config=_CONFIG)
+class ScalarValue:
+    """None means the prop was never set."""
+
+    value: ScalarPayload | None
+
+
+@dataclass(config=_CONFIG)
+class RefValue:
+    """None means the link was never set (or the target is gone)."""
+
+    ref: ObjectRef | None
+
+
+@dataclass(config=_CONFIG)
+class ArrayValue:
+    """None means the prop was never set; [] means set to empty."""
+
+    items: list[PropValue] | None
+
+
+PropValue = ScalarValue | RefValue | ArrayValue
+
+
+@dataclass(config=_CONFIG)
 class ObjectView:
-    """Snapshot of one instance. Scalars as-is, links as ObjectRef,
-    arrays as lists of either."""
+    """Snapshot of one instance: every prop rendered as a typed
+    ScalarValue / RefValue / ArrayValue — no Any escapes."""
 
     uuid: UUID
     type_name: str
-    props: dict[str, Any]
+    props: dict[str, PropValue]

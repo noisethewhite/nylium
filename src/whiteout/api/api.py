@@ -14,7 +14,16 @@ from uuid import UUID, uuid4
 import sqlalchemy as sqla
 from sqlalchemy.orm import Session
 
-from whiteout.api.views import ObjectRef, ObjectView, PropView, TypeView
+from whiteout.api.views import (
+    ArrayValue,
+    ObjectRef,
+    ObjectView,
+    PropValue,
+    PropView,
+    RefValue,
+    ScalarValue,
+    TypeView,
+)
 from whiteout.database.tables import Instances, Types
 from whiteout.objects.sessions import sessions
 from whiteout.objects.wobject import INSTANCE_NAME_FORMAT, SHORT_UUID_LENGTH, WObject
@@ -209,18 +218,35 @@ class Api:
             raise RuntimeError(f"instance {uuid} has dangling type")
         wrapper = WObject.wrap(uuid)
         props = {
-            prop.key: cls._render(session, getattr(wrapper, prop.key))
+            prop.key: cls._render(
+                session,
+                getattr(wrapper, prop.key),
+                prop.value_type(session).name,
+            )
             for prop in owner.props(session)
         }
         return ObjectView(uuid=uuid, type_name=owner.name, props=props)
 
     @classmethod
-    def _render(cls, session: Session, value: Any) -> Any:
-        if isinstance(value, WObject):
-            return ObjectRef(uuid=value.uuid, type_name=cls._type_name_of(session, value.uuid))
-        if isinstance(value, list):
-            return [cls._render(session, item) for item in value]
-        return value
+    def _render(cls, session: Session, value: Any, type_name: str) -> PropValue:
+        """The declared prop type disambiguates None: an unset scalar,
+        an unset link and an unset array are three different views."""
+        if WScalar.by_type_name(type_name) is not None:
+            return ScalarValue(value=value)
+        if WType.is_array_name(type_name):
+            element_name = WType.element_name(type_name)
+            if value is None:
+                return ArrayValue(items=None)
+            return ArrayValue(
+                items=[cls._render(session, item, element_name) for item in value]
+            )
+        if value is None:
+            return RefValue(ref=None)
+        if not isinstance(value, WObject):
+            raise TypeError(f"link prop rendered a {type(value).__name__}")
+        return RefValue(
+            ref=ObjectRef(uuid=value.uuid, type_name=cls._type_name_of(session, value.uuid))
+        )
 
     @classmethod
     def _type_name_of(cls, session: Session, uuid: UUID) -> str:
