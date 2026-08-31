@@ -1,16 +1,16 @@
 """WObject: an instance of a whiteout type, backed by the tables.py graph.
 
-Subclass it with plain annotations; the metaclass materializes the type
-and its props in the database. Attribute reads/writes translate into
-queries/upserts against the *values tables:
+Subclass it with WScalar/WObject/list[...] annotations; the metaclass
+materializes the type and its props in the database. Attribute
+reads/writes translate into queries/upserts against the *values tables:
 
     class Person(WObject):
-        name: str
+        name: WString
         friend: "Person"
-        tags: list[str]
+        tags: list[WString]
 
     oleg = Person(name="Oleg")
-    oleg.friend = maxim   # -> instance_values row
+    oleg.friend = maxim   # -> instance_values row, type-checked
     oleg.tags = ["a"]     # -> array instance + array_values rows
 
 Session-per-operation on purpose: this is the correctness layer, not the
@@ -24,10 +24,10 @@ import sqlalchemy as sqla
 from sqlalchemy.orm import Session
 
 from whiteout.database.tables import ArrayValues, Instances, InstanceValues
-from whiteout.objects.scalars import scalars
 from whiteout.objects.sessions import sessions
 from whiteout.objects.warray import WArray
 from whiteout.objects.wprop import WProp
+from whiteout.objects.wscalar import WScalar
 from whiteout.objects.wtype import WType
 from whiteout.objects.wtypemeta import WTypeMeta
 
@@ -65,9 +65,21 @@ class WObject(metaclass=WTypeMeta):
     @classmethod
     def get(cls, uuid: UUID) -> "WObject | None":
         with sessions.new() as session:
-            if session.get(Instances, uuid) is None:
+            inst = session.get(Instances, uuid)
+            if inst is None:
                 return None
-        return cls(_uuid=uuid)
+            owner = WType.by_uuid(session, inst.type_uuid)
+            if owner is None:
+                raise RuntimeError(f"instance {uuid} has dangling type")
+            actual_name = owner.name
+        if cls is WObject:
+            return cls(_uuid=uuid)
+        actual_cls = WTypeMeta.python_class(actual_name)
+        if actual_cls is not None and issubclass(actual_cls, cls):
+            return cls(_uuid=uuid)
+        if actual_cls is None and actual_name == cls.__name__:
+            return cls(_uuid=uuid)
+        raise TypeError(f"instance {uuid} is {actual_name}, not {cls.__name__}")
 
     @classmethod
     def wrap(cls, uuid: UUID) -> "WObject":
@@ -142,8 +154,9 @@ class WObject(metaclass=WTypeMeta):
     def __getattr__(self, key: str):
         with sessions.new() as session:
             prop, value_type = self._prop_and_type(session, key)
-            if scalars.is_scalar(value_type):
-                row = session.get(scalars.table(value_type), (self._uuid, prop.uuid))
+            scalar = WScalar.by_type_name(value_type)
+            if scalar is not None:
+                row = session.get(scalar.TABLE, (self._uuid, prop.uuid))
                 return None if row is None else row.value
             link = self._link(session, prop)
             if link is None:
@@ -158,13 +171,16 @@ class WObject(metaclass=WTypeMeta):
             return
         with sessions.new() as session, session.begin():
             prop, value_type = self._prop_and_type(session, key)
-            if scalars.is_scalar(value_type):
-                self._write_scalar(session, prop, scalars.table(value_type), value)
-                return
-            if WType.is_array_name(value_type):
+            scalar = WScalar.by_type_name(value_type)
+            if scalar is not None:
+                WScalar.validate(value_type, value)
+                self._write_scalar(session, prop, scalar.TABLE, value)
+            elif WType.is_array_name(value_type):
                 WArray.write(session, self._uuid, prop, WType.element_name(value_type), value)
-                return
-            self._write_link(session, prop, value)
+            else:
+                WTypeMeta.check_link(session, value_type, value)
+                self._write_link(session, prop, value)
+            self._touch(session)
 
     def __delattr__(self, key: str) -> None:
         if key.startswith(PRIVATE_PREFIX):
@@ -172,17 +188,28 @@ class WObject(metaclass=WTypeMeta):
             return
         with sessions.new() as session, session.begin():
             prop, value_type = self._prop_and_type(session, key)
-            if scalars.is_scalar(value_type):
-                row = session.get(scalars.table(value_type), (self._uuid, prop.uuid))
+            scalar = WScalar.by_type_name(value_type)
+            if scalar is not None:
+                row = session.get(scalar.TABLE, (self._uuid, prop.uuid))
                 if row is not None:
                     session.delete(row)
+                    self._touch(session)
                 return
-            session.execute(
-                sqla.delete(InstanceValues).where(
-                    InstanceValues.inst_uuid == self._uuid,
-                    InstanceValues.prop_uuid == prop.uuid,
-                )
-            )
+            link = self._link(session, prop)
+            if link is None:
+                return
+            if WType.is_array_name(value_type):
+                WArray.destroy(session, link.uuid)
+            else:
+                session.delete(link)
+            self._touch(session)
+
+    def _touch(self, session: Session) -> None:
+        session.execute(
+            sqla.update(Instances)
+            .where(Instances.uuid == self._uuid)
+            .values(modified_at=sqla.func.now())
+        )
 
     # --- reads ---
 
@@ -204,14 +231,14 @@ class WObject(metaclass=WTypeMeta):
         row.value = value
 
     def _write_link(self, session: Session, prop: WProp, value: "WObject") -> None:
-        if not isinstance(value, WObject):
-            raise TypeError(f"expected WObject, got {type(value)}")
         session.merge(
             InstanceValues(uuid=value._uuid, prop_uuid=prop.uuid, inst_uuid=self._uuid)
         )
 
     def delete(self) -> None:
         with sessions.new() as session, session.begin():
+            for array_uuid in self._owned_array_uuids(session):
+                WArray.destroy(session, array_uuid)
             session.execute(
                 sqla.delete(InstanceValues).where(InstanceValues.uuid == self._uuid)
             )
@@ -221,3 +248,18 @@ class WObject(metaclass=WTypeMeta):
             inst = session.get(Instances, self._uuid)
             if inst is not None:
                 session.delete(inst)
+
+    def _owned_array_uuids(self, session: Session) -> list[UUID]:
+        from whiteout.database.tables import Props, Types
+
+        return list(
+            session.scalars(
+                sqla.select(InstanceValues.uuid)
+                .join(Props, InstanceValues.prop_uuid == Props.uuid)
+                .join(Types, Props.value_type_uuid == Types.uuid)
+                .where(
+                    InstanceValues.inst_uuid == self._uuid,
+                    Types.name.like(WType.ARRAY_TYPE_PREFIX + "%"),
+                )
+            ).all()
+        )
