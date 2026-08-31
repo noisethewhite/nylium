@@ -30,7 +30,6 @@ class singletonproperty(Generic[_T, _R]):
         self._fset = fset
         self._fdel = fdel
         self._lock = threading.Lock()
-        self._owner = self._owner
         self.__doc__ = doc if doc is not None else (fget.__doc__ if fget else None)
 
     @property
