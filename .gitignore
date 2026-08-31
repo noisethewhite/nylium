@@ -17,3 +17,7 @@ dist/
 # Test DB
 /.pgdata
 pg.log
+
+# Frontend
+node_modules/
+web/dist/

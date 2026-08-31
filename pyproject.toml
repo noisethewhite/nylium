@@ -27,6 +27,12 @@ whiteout = "whiteout.cli:main"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
+# Gate scope is src: tests use the declarative WObject DSL (class-level
+# prop declarations) that static analysis cannot see through; pytest is
+# their gate.
+[tool.basedpyright]
+include = ["src"]
+
 [dependency-groups]
 dev = [
     "basedpyright>=1.39.10",
