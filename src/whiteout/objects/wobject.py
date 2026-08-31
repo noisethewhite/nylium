@@ -18,6 +18,8 @@ performance one.
 """
 from __future__ import annotations
 
+from collections.abc import ItemsView
+from typing import TypeAlias, Union, cast
 from uuid import UUID, uuid4
 
 import sqlalchemy as sqla
@@ -27,9 +29,16 @@ from whiteout.database.tables import ArrayValues, Instances, InstanceValues
 from whiteout.objects.sessions import sessions
 from whiteout.objects.warray import WArray
 from whiteout.objects.wprop import WProp
-from whiteout.objects.wscalar import WScalar
+from whiteout.objects.wscalar import ScalarPayload, ScalarTable, WScalar
 from whiteout.objects.wtype import WType
 from whiteout.objects.wtypemeta import WTypeMeta
+
+# The closed union of everything a prop can hold: scalar payloads,
+# WObject links, (nested) lists of those. None means "never set".
+# Union+forward refs instead of the PEP 695 `type` statement: parses
+# on 3.11 tooling too, and lives here because warray needs it without
+# a new import cycle (warray already touches wobject).
+StoredValue: TypeAlias = Union[ScalarPayload, "WObject", list["StoredValue"], None]
 
 INSTANCE_NAME_FORMAT = "{type_name}:{short_uuid}"
 SHORT_UUID_LENGTH = 8
@@ -41,7 +50,7 @@ class WObject(metaclass=WTypeMeta):
 
     _uuid: UUID
 
-    def __init__(self, _uuid: UUID | None = None, **props):
+    def __init__(self, _uuid: UUID | None = None, **props: StoredValue) -> None:
         object.__setattr__(self, "_uuid", _uuid or uuid4())
         if _uuid is not None:
             return
@@ -113,11 +122,11 @@ class WObject(metaclass=WTypeMeta):
                 prop.key: prop.value_type(session).name for prop in owner.props(session)
             }
 
-    def to_dict(self) -> dict[str, object]:
+    def to_dict(self) -> dict[str, StoredValue]:
         """Snapshot of all props. Links come back as WObject, arrays as lists."""
-        return {key: getattr(self, key) for key in type(self).fields()}
+        return {key: cast(StoredValue, getattr(self, key)) for key in type(self).fields()}
 
-    def items(self):
+    def items(self) -> ItemsView[str, StoredValue]:
         return self.to_dict().items()
 
     def __repr__(self) -> str:
@@ -151,7 +160,7 @@ class WObject(metaclass=WTypeMeta):
             raise AttributeError(f"{owner.name} has no prop {key!r}")
         return prop, prop.value_type(session).name
 
-    def __getattr__(self, key: str):
+    def __getattr__(self, key: str) -> StoredValue:
         with sessions.new() as session:
             prop, value_type = self._prop_and_type(session, key)
             scalar = WScalar.by_type_name(value_type)
@@ -165,7 +174,7 @@ class WObject(metaclass=WTypeMeta):
                 return WArray.read(session, link.uuid, WType.element_name(value_type))
             return WObject.wrap(link.uuid)
 
-    def __setattr__(self, key: str, value) -> None:
+    def __setattr__(self, key: str, value: StoredValue) -> None:
         if key.startswith(PRIVATE_PREFIX):
             object.__setattr__(self, key, value)
             return
@@ -173,13 +182,20 @@ class WObject(metaclass=WTypeMeta):
             prop, value_type = self._prop_and_type(session, key)
             scalar = WScalar.by_type_name(value_type)
             if scalar is not None:
-                WScalar.validate(value_type, value)
-                self._write_scalar(session, prop, scalar.TABLE, value)
+                payload = cast(ScalarPayload | None, value)
+                WScalar.validate(value_type, payload)
+                self._write_scalar(session, prop, scalar.TABLE, payload)
             elif WType.is_array_name(value_type):
-                WArray.write(session, self._uuid, prop, WType.element_name(value_type), value)
+                WArray.write(
+                    session,
+                    self._uuid,
+                    prop,
+                    WType.element_name(value_type),
+                    cast(list[StoredValue], value),
+                )
             else:
                 WTypeMeta.check_link(session, value_type, value)
-                self._write_link(session, prop, value)
+                self._write_link(session, prop, cast("WObject", value))
             self._touch(session)
 
     def __delattr__(self, key: str) -> None:
@@ -223,12 +239,22 @@ class WObject(metaclass=WTypeMeta):
 
     # --- writes ---
 
-    def _write_scalar(self, session: Session, prop: WProp, table, value) -> None:
+    def _write_scalar(
+        self,
+        session: Session,
+        prop: WProp,
+        table: type[ScalarTable],
+        value: ScalarPayload | None,
+    ) -> None:
         row = session.get(table, (self._uuid, prop.uuid))
         if row is None:
             session.add(table(inst_uuid=self._uuid, prop_uuid=prop.uuid, value=value))
             return
-        row.value = value
+        session.execute(
+            sqla.update(table)
+            .where(table.inst_uuid == self._uuid, table.prop_uuid == prop.uuid)
+            .values(value=value)
+        )
 
     def _write_link(self, session: Session, prop: WProp, value: "WObject") -> None:
         session.merge(

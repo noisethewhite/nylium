@@ -8,17 +8,18 @@ WObjects of user types are never boxes and are never deleted here.
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 from uuid import UUID, uuid4
 
 import sqlalchemy as sqla
 from sqlalchemy.orm import Session
 
 from whiteout.database.tables import ArrayValues, Instances, InstanceValues
-from whiteout.objects.wscalar import WScalar
+from whiteout.objects.wscalar import ScalarPayload, WScalar
 from whiteout.objects.wtype import WType
 
 if TYPE_CHECKING:
+    from whiteout.objects.wobject import StoredValue
     from whiteout.objects.wprop import WProp
 
 ARRAY_INSTANCE_NAME = "array"
@@ -26,7 +27,7 @@ ARRAY_INSTANCE_NAME = "array"
 
 class WArray:
     @classmethod
-    def read(cls, session: Session, array_uuid: UUID, elem_type: str) -> list:
+    def read(cls, session: Session, array_uuid: UUID, elem_type: str) -> list[StoredValue]:
         rows = session.scalars(
             sqla.select(ArrayValues)
             .where(ArrayValues.inst_uuid == array_uuid)
@@ -41,7 +42,7 @@ class WArray:
         owner_uuid: UUID,
         prop: "WProp",
         elem_type: str,
-        values: list,
+        values: list[StoredValue],
     ) -> None:
         if not isinstance(values, list):
             raise TypeError(f"expected list, got {type(values).__name__}")
@@ -63,7 +64,7 @@ class WArray:
 
     @classmethod
     def _fill(
-        cls, session: Session, array_uuid: UUID, elem_type: str, values: list
+        cls, session: Session, array_uuid: UUID, elem_type: str, values: list[StoredValue]
     ) -> None:
         cls._destroy_boxes(session, array_uuid)
         for index, item in enumerate(values):
@@ -139,7 +140,7 @@ class WArray:
         return array_uuid
 
     @classmethod
-    def _unwrap(cls, session: Session, uuid: UUID, type_name: str):
+    def _unwrap(cls, session: Session, uuid: UUID, type_name: str) -> StoredValue:
         if WType.is_array_name(type_name):
             return cls.read(session, uuid, WType.element_name(type_name))
         scalar = WScalar.by_type_name(type_name)
@@ -157,10 +158,10 @@ class WArray:
         if value_prop is None:
             raise RuntimeError(f"scalar type {type_name} lost its 'value' prop")
         row = session.get(scalar.TABLE, (uuid, value_prop.uuid))
-        return None if row is None else row.value
+        return None if row is None else cast(ScalarPayload, row.value)
 
     @classmethod
-    def _box(cls, session: Session, type_name: str, value) -> UUID:
+    def _box(cls, session: Session, type_name: str, value: StoredValue) -> UUID:
         if WType.is_array_name(type_name):
             if not isinstance(value, list):
                 raise TypeError(
@@ -171,11 +172,12 @@ class WArray:
             return array_uuid
         scalar = WScalar.by_type_name(type_name)
         if scalar is None:
+            from whiteout.objects.wobject import WObject
             from whiteout.objects.wtypemeta import WTypeMeta
 
             WTypeMeta.check_link(session, type_name, value)
-            return value._uuid
-        WScalar.validate(type_name, value)
+            return cast(WObject, value)._uuid
+        WScalar.validate(type_name, cast(ScalarPayload | None, value))
         box_uuid = uuid4()
         owner = WType.ensure(session, type_name)
         session.add(Instances(uuid=box_uuid, type_uuid=owner.uuid, name=str(value)))

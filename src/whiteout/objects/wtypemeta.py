@@ -4,7 +4,7 @@ type name -> python class registry for wrap(), and enforces link type
 conformance at write time."""
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, cast, get_args, get_origin
+from typing import TYPE_CHECKING, cast, get_args, get_origin
 
 from sqlalchemy.orm import Session
 
@@ -28,8 +28,11 @@ class WTypeMeta(type):
         mcls,
         name: str,
         bases: tuple[type, ...],
-        namespace: dict[str, Any],
-        **kwargs: Any,
+        # object, not a domain union: a class namespace genuinely holds
+        # arbitrary attributes (methods, annotations dict, flags). Any
+        # would lie by permitting unchecked ops; object forces gates.
+        namespace: dict[str, object],
+        **kwargs: object,
     ):
         cls = super().__new__(mcls, name, bases, namespace, **kwargs)
         if namespace.get(ABSTRACT_FLAG):

@@ -9,16 +9,14 @@ of the same facade, mirroring the type/object graph they render.
 """
 from __future__ import annotations
 
-from datetime import datetime
-from decimal import Decimal
 from uuid import UUID
 
 from pydantic import ConfigDict
 from pydantic.dataclasses import dataclass
 
-_CONFIG = ConfigDict(extra="ignore")
+from whiteout.objects.wscalar import ScalarPayload
 
-ScalarPayload = str | int | Decimal | bool | datetime
+_CONFIG = ConfigDict(extra="ignore")
 
 
 # --- type schema views ---

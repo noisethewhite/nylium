@@ -8,7 +8,8 @@ WObject layer, so all type validation applies here too.
 """
 from __future__ import annotations
 
-from typing import Any
+from collections.abc import Callable
+from typing import TypeAlias, Union, cast
 from uuid import UUID, uuid4
 
 import sqlalchemy as sqla
@@ -26,10 +27,20 @@ from whiteout.api.views import (
 )
 from whiteout.database.tables import Instances, Types
 from whiteout.objects.sessions import sessions
-from whiteout.objects.wobject import INSTANCE_NAME_FORMAT, SHORT_UUID_LENGTH, WObject
-from whiteout.objects.wscalar import WScalar
+from whiteout.objects.wobject import (
+    INSTANCE_NAME_FORMAT,
+    SHORT_UUID_LENGTH,
+    StoredValue,
+    WObject,
+)
+from whiteout.objects.wscalar import ScalarPayload, WScalar
 from whiteout.objects.wtype import WType
 from whiteout.objects.wtypemeta import WTypeMeta
+
+# What callers may hand in for a prop: stored values, plus links as
+# UUID/ObjectRef (resolved to WObject here). Union+forward refs keep
+# this 3.11-parseable; the recursion covers arrays of links.
+PropInput: TypeAlias = Union[StoredValue, UUID, ObjectRef, list["PropInput"]]
 
 
 class Api:
@@ -103,11 +114,16 @@ class Api:
             return cls._object_view(session, uuid)
 
     @classmethod
-    def create_object(cls, type_name: str, props: dict[str, Any] | None = None) -> ObjectView:
+    def create_object(
+        cls, type_name: str, props: dict[str, PropInput] | None = None
+    ) -> ObjectView:
         normalized = cls._normalize_props(type_name, props or {})
         klass = WTypeMeta.python_class(type_name)
         if klass is not None:
-            instance_uuid = klass(**normalized).uuid
+            # **props forwarding: the dict can't collide with _uuid in
+            # practice (prop keys), but the checker can't prove it
+            ctor = cast(Callable[..., WObject], klass)
+            instance_uuid = ctor(**normalized).uuid
         else:
             instance_uuid = cls._create_db_only(type_name, normalized)
         view = cls.get_object(instance_uuid)
@@ -116,7 +132,7 @@ class Api:
         return view
 
     @classmethod
-    def update_object(cls, uuid: UUID, props: dict[str, Any]) -> ObjectView:
+    def update_object(cls, uuid: UUID, props: dict[str, PropInput]) -> ObjectView:
         wrapper = WObject.wrap(uuid)
         with sessions.new() as session:
             type_name = cls._type_name_of(session, uuid)
@@ -139,7 +155,9 @@ class Api:
     # --- internals ---
 
     @classmethod
-    def _normalize_props(cls, type_name: str, props: dict[str, Any]) -> dict[str, Any]:
+    def _normalize_props(
+        cls, type_name: str, props: dict[str, PropInput]
+    ) -> dict[str, StoredValue]:
         """Callers hand links over as UUID/ObjectRef (that's all they have);
         the object layer wants WObject wrappers. Resolve by prop type."""
         with sessions.new() as session:
@@ -159,17 +177,19 @@ class Api:
         return prop.value_type(session).name
 
     @classmethod
-    def _normalize_value(cls, session: Session, value: Any, type_name: str) -> Any:
+    def _normalize_value(cls, session: Session, value: PropInput, type_name: str) -> StoredValue:
         if WScalar.by_type_name(type_name) is not None:
-            return value
+            return cast(StoredValue, value)
         if WType.is_array_name(type_name):
+            if not isinstance(value, list):
+                raise TypeError(f"array prop takes list, got {type(value).__name__}")
             element_name = WType.element_name(type_name)
             return [cls._normalize_value(session, item, element_name) for item in value]
         if isinstance(value, ObjectRef):
             return WObject.wrap(value.uuid)
         if isinstance(value, UUID):
             return WObject.wrap(value)
-        return value  # WObject passes through; anything else fails in setattr
+        return cast(StoredValue, value)  # anything else fails in setattr
 
     @classmethod
     def _type_view(cls, session: Session, name: str) -> TypeView:
@@ -185,7 +205,7 @@ class Api:
         )
 
     @classmethod
-    def _create_db_only(cls, type_name: str, props: dict[str, Any]) -> UUID:
+    def _create_db_only(cls, type_name: str, props: dict[str, StoredValue]) -> UUID:
         """Types with no registered python class: bare instance row, then
         writes through the generic WObject wrapper — same validation."""
         with sessions.new() as session, session.begin():
@@ -228,15 +248,17 @@ class Api:
         return ObjectView(uuid=uuid, type_name=owner.name, props=props)
 
     @classmethod
-    def _render(cls, session: Session, value: Any, type_name: str) -> PropValue:
+    def _render(cls, session: Session, value: StoredValue, type_name: str) -> PropValue:
         """The declared prop type disambiguates None: an unset scalar,
         an unset link and an unset array are three different views."""
         if WScalar.by_type_name(type_name) is not None:
-            return ScalarValue(value=value)
+            return ScalarValue(value=cast(ScalarPayload | None, value))
         if WType.is_array_name(type_name):
             element_name = WType.element_name(type_name)
             if value is None:
                 return ArrayValue(items=None)
+            if not isinstance(value, list):
+                raise TypeError(f"array prop rendered a {type(value).__name__}")
             return ArrayValue(
                 items=[cls._render(session, item, element_name) for item in value]
             )

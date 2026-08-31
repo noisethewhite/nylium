@@ -29,11 +29,14 @@ from whiteout.database.tables import (
 
 VALUE_PROP_KEY = "value"
 
+ScalarPayload = str | int | Decimal | bool | datetime
+ScalarTable = StringValues | IntegerValues | NumericValues | BooleanValues | DatetimeValues
+
 
 class WScalar:
     TYPE_NAME: ClassVar[str]
-    PYTHON_TYPE: ClassVar[type]
-    TABLE: ClassVar[type]
+    PYTHON_TYPE: ClassVar[type[ScalarPayload]]
+    TABLE: ClassVar[type[ScalarTable]]
 
     @classmethod
     def all(cls) -> "list[type[WScalar]]":
@@ -58,7 +61,7 @@ class WScalar:
         return cls.by_type_name(type_name) is not None
 
     @classmethod
-    def validate(cls, type_name: str, value) -> None:
+    def validate(cls, type_name: str, value: ScalarPayload | None) -> None:
         """None passes (unset semantics); otherwise exact python type match.
         Exactness keeps True out of Integer and 1 out of Boolean."""
         if value is None:
