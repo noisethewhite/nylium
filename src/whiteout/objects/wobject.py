@@ -24,15 +24,15 @@ import sqlalchemy as sqla
 from sqlalchemy.orm import Session
 
 from whiteout.database.tables import ArrayValues, Instances, InstanceValues
-from whiteout.objects.scalars import VALUE_PROP_KEY, scalars
+from whiteout.objects.scalars import scalars
 from whiteout.objects.sessions import sessions
+from whiteout.objects.warray import WArray
 from whiteout.objects.wprop import WProp
 from whiteout.objects.wtype import WType
 from whiteout.objects.wtypemeta import WTypeMeta
 
 INSTANCE_NAME_FORMAT = "{type_name}:{short_uuid}"
 SHORT_UUID_LENGTH = 8
-ARRAY_INSTANCE_NAME = "array"
 PRIVATE_PREFIX = "_"
 
 
@@ -149,7 +149,7 @@ class WObject(metaclass=WTypeMeta):
             if link is None:
                 return None
             if WType.is_array_name(value_type):
-                return self._read_array(session, link.uuid, WType.element_name(value_type))
+                return WArray.read(session, link.uuid, WType.element_name(value_type))
             return WObject.wrap(link.uuid)
 
     def __setattr__(self, key: str, value) -> None:
@@ -162,7 +162,7 @@ class WObject(metaclass=WTypeMeta):
                 self._write_scalar(session, prop, scalars.table(value_type), value)
                 return
             if WType.is_array_name(value_type):
-                self._write_array(session, prop, WType.element_name(value_type), value)
+                WArray.write(session, self._uuid, prop, WType.element_name(value_type), value)
                 return
             self._write_link(session, prop, value)
 
@@ -194,29 +194,6 @@ class WObject(metaclass=WTypeMeta):
             )
         )
 
-    def _read_array(self, session: Session, array_uuid: UUID, elem_type: str):
-        rows = session.scalars(
-            sqla.select(ArrayValues)
-            .where(ArrayValues.inst_uuid == array_uuid)
-            .order_by(ArrayValues.index)
-        ).all()
-        return [self._unwrap(session, row.value_uuid, elem_type) for row in rows]
-
-    def _unwrap(self, session: Session, uuid: UUID, type_name: str):
-        if not scalars.is_scalar(type_name):
-            return WObject.wrap(uuid)
-        inst = session.get(Instances, uuid)
-        if inst is None:
-            raise KeyError(f"no instance {uuid}")
-        owner = WType.by_uuid(session, inst.type_uuid)
-        if owner is None:
-            raise RuntimeError(f"instance {uuid} has dangling type")
-        value_prop = owner.prop(session, VALUE_PROP_KEY)
-        if value_prop is None:
-            raise RuntimeError(f"scalar type {type_name} lost its {VALUE_PROP_KEY!r} prop")
-        row = session.get(scalars.table(type_name), (uuid, value_prop.uuid))
-        return None if row is None else row.value
-
     # --- writes ---
 
     def _write_scalar(self, session: Session, prop: WProp, table, value) -> None:
@@ -232,58 +209,6 @@ class WObject(metaclass=WTypeMeta):
         session.merge(
             InstanceValues(uuid=value._uuid, prop_uuid=prop.uuid, inst_uuid=self._uuid)
         )
-
-    def _write_array(
-        self, session: Session, prop: WProp, elem_type: str, values: list
-    ) -> None:
-        if not isinstance(values, list):
-            raise TypeError(f"expected list, got {type(values)}")
-        link = self._link(session, prop)
-        array_uuid = link.uuid if link is not None else uuid4()
-        if link is None:
-            array_type = WType.ensure(session, WType.array_name(elem_type))
-            session.add(
-                Instances(
-                    uuid=array_uuid, type_uuid=array_type.uuid, name=ARRAY_INSTANCE_NAME
-                )
-            )
-            session.flush()
-            session.add(
-                InstanceValues(
-                    uuid=array_uuid, prop_uuid=prop.uuid, inst_uuid=self._uuid
-                )
-            )
-        session.execute(
-            sqla.delete(ArrayValues).where(ArrayValues.inst_uuid == array_uuid)
-        )
-        for index, item in enumerate(values):
-            session.add(
-                ArrayValues(
-                    inst_uuid=array_uuid,
-                    index=index,
-                    value_uuid=self._box(session, elem_type, item),
-                )
-            )
-
-    def _box(self, session: Session, type_name: str, value) -> UUID:
-        if isinstance(value, WObject):
-            return value._uuid
-        box_uuid = uuid4()
-        owner = WType.ensure(session, type_name)
-        session.add(Instances(uuid=box_uuid, type_uuid=owner.uuid, name=str(value)))
-        session.flush()
-        if scalars.is_scalar(type_name):
-            value_prop = owner.prop(session, VALUE_PROP_KEY)
-            if value_prop is None:
-                raise RuntimeError(
-                    f"scalar type {type_name} lost its {VALUE_PROP_KEY!r} prop"
-                )
-            session.add(
-                scalars.table(type_name)(
-                    inst_uuid=box_uuid, prop_uuid=value_prop.uuid, value=value
-                )
-            )
-        return box_uuid
 
     def delete(self) -> None:
         with sessions.new() as session, session.begin():
