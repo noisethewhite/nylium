@@ -14,12 +14,7 @@ class Database:
     _engine: sqla.Engine
 
     def __init__(self) -> None:
-        # First, we have to make sure that the URL starts with "postgresql://",
-        # not "postgres://", because that's not what SQLAlchemy expects
-        url = Environment.database_url
-        if url.startswith("postgres://"):
-            url = url.replace("postgres://", "postgresql://", 1)
-        self._engine = sqla.create_engine(url, pool_pre_ping=True, echo=False)
+        self._engine = sqla.create_engine(Environment.database_url, pool_pre_ping=True, echo=False)
 
     @singletonproperty
     def engine(self) -> sqla.Engine:
