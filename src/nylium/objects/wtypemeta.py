@@ -13,6 +13,7 @@ WObject conforms structurally; nothing here imports it.
 """
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import ClassVar, Protocol, TypeAlias, cast, get_args, get_origin
 from uuid import UUID
 
@@ -27,6 +28,9 @@ from nylium.objects.wtype import WType
 LIST_ANNOTATION_PREFIX = "list["
 ABSTRACT_FLAG = "__abstract__"
 PRIVATE_PREFIX = "_"
+# annotationlib.Format.VALUE (PEP 649): evaluate __annotate_func__ to real objects.
+# Mirrored as a constant instead of importing annotationlib, which only exists on 3.14+.
+_ANNOTATE_FORMAT_VALUE = 1
 WOBJECT_ROOT_NAME = "WObject"
 
 
@@ -67,7 +71,7 @@ class WTypeMeta(type):
         if namespace.get(ABSTRACT_FLAG):
             return cls
         mcls._python_classes[name] = cast(type[WObjectShape], cls)
-        mcls._materialize(cast(type[WObjectShape], cls))
+        mcls._materialize(cast(type[WObjectShape], cls), namespace)
         return cls
 
     @classmethod
@@ -104,12 +108,11 @@ class WTypeMeta(type):
             )
 
     @classmethod
-    def _materialize(mcls, cls: type[WObjectShape]) -> None:
+    def _materialize(mcls, cls: type[WObjectShape], namespace: dict[str, object]) -> None:
         with sessions.new() as session, session.begin():
             WScalar.ensure_builtins(session)
             owner = WType.ensure(session, cls.__name__)
-            annotations: dict[str, object] = getattr(cls, "__annotations__", {})
-            for key, annotation in annotations.items():
+            for key, annotation in mcls._class_annotations(namespace).items():
                 if key.startswith(PRIVATE_PREFIX):
                     continue
                 value_type = WType.ensure(session, mcls.resolve_annotation(annotation))
@@ -129,6 +132,21 @@ class WTypeMeta(type):
         raise TypeError(
             f"unsupported prop annotation: {annotation!r}; props take WScalar subclasses, WObject subclasses or list[...] of those"
         )
+
+    @classmethod
+    def _class_annotations(mcls, namespace: dict[str, object]) -> dict[str, object]:
+        # PEP 649 (3.14): annotations are lazy — the class namespace carries
+        # `__annotate_func__` instead of the eager dict, and getattr(cls, "__annotations__")
+        # during metaclass __new__ resolves to the PARENT's annotations. Read the dict
+        # when present (<=3.13), otherwise evaluate __annotate_func__ in VALUE format.
+        raw = namespace.get("__annotations__")
+        if isinstance(raw, dict):
+            return cast(dict[str, object], raw)
+        annotate = namespace.get("__annotate_func__")
+        if callable(annotate):
+            annotate_fn = cast(Callable[[int], dict[str, object]], annotate)
+            return dict(annotate_fn(_ANNOTATE_FORMAT_VALUE))
+        return {}
 
     @classmethod
     def _resolve_string_annotation(mcls, annotation: str) -> str:
