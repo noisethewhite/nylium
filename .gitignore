@@ -14,11 +14,6 @@ dist/
 .idea/
 .DS_Store
 
-# Test DB
-/pgdata
-/.pgdata
-pg.log
-
 # Frontend
 node_modules/
 web/dist/
