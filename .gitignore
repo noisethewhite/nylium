@@ -15,6 +15,7 @@ dist/
 .DS_Store
 
 # Test DB
+/pgdata
 /.pgdata
 pg.log
 
