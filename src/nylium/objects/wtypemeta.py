@@ -87,6 +87,7 @@ class WTypeMeta(type):
         return mcls._root
 
     @classmethod
+    @Database.sessionmethod
     def check_link(mcls, session: Session, expected_name: str, value: object) -> None:
         root = mcls.root()
         if not isinstance(value, root):
@@ -101,22 +102,21 @@ class WTypeMeta(type):
                 )
             return
         inst = session.get(Instances, value.uuid)
-        actual = None if inst is None else WType.by_uuid(session, inst.type_uuid)
+        actual = None if inst is None else WType.by_uuid(inst.type_uuid)
         if actual is None or actual.name != expected_name:
             raise TypeError(
                 f"{expected_name} prop takes {expected_name}, got {'<missing instance>' if actual is None else actual.name}"
             )
 
     @classmethod
-    @Database.sessionmethod_begin
-    def _materialize(mcls, session: Session, cls: type[WObjectShape], namespace: dict[str, object]) -> None:
-        WScalar.ensure_builtins(session)
-        owner = WType.ensure(session, cls.__name__)
+    def _materialize(mcls, cls: type[WObjectShape], namespace: dict[str, object]) -> None:
+        WScalar.ensure_builtins()
+        owner = WType.ensure(cls.__name__)
         for key, annotation in mcls._class_annotations(namespace).items():
             if key.startswith(PRIVATE_PREFIX):
                 continue
-            value_type = WType.ensure(session, mcls.resolve_annotation(annotation))
-            _ = WProp.ensure(session, owner, key, value_type)
+            value_type = WType.ensure(mcls.resolve_annotation(annotation))
+            _ = WProp.ensure(owner, key, value_type)
 
     @classmethod
     def resolve_annotation(mcls, annotation: object) -> str:

@@ -55,7 +55,7 @@ class WObject(metaclass=WTypeMeta):
 
     @Database.sessionmethod_begin
     def _register(self, session: Session) -> None:
-        owner = WType.ensure(session, type(self).__name__)
+        owner = WType.ensure(type(self).__name__)
         session.add(
             Instances(
                 uuid=self._uuid,
@@ -75,7 +75,7 @@ class WObject(metaclass=WTypeMeta):
         inst = session.get(Instances, uuid)
         if inst is None:
             return None
-        owner = WType.by_uuid(session, inst.type_uuid)
+        owner = WType.by_uuid(inst.type_uuid)
         if owner is None:
             raise RuntimeError(f"instance {uuid} has dangling type")
         actual_name = owner.name
@@ -94,7 +94,7 @@ class WObject(metaclass=WTypeMeta):
         inst = session.get(Instances, uuid)
         if inst is None:
             raise KeyError(f"no instance {uuid}")
-        owner = WType.by_uuid(session, inst.type_uuid)
+        owner = WType.by_uuid(inst.type_uuid)
         if owner is None:
             raise KeyError(f"instance {uuid} has dangling type {inst.type_uuid}")
         klass = WTypeMeta.python_class(owner.name) or WObject
@@ -109,15 +109,14 @@ class WObject(metaclass=WTypeMeta):
     # --- dataclass-like facade for UI rendering ---
 
     @classmethod
-    @Database.sessionmethod
-    def fields(cls, session: Session) -> dict[str, str]:
+    def fields(cls) -> dict[str, str]:
         """prop key -> value type name, e.g. {'tags': 'Array<String>'}"""
-        owner = WType.by_name(session, cls.__name__)
+        owner = WType.by_name(cls.__name__)
         if owner is None:
             return {}
         return {
-            prop.key: prop.value_type(session).name
-            for prop in WProp.all_for(session, owner)
+            prop.key: prop.value_type().name
+            for prop in WProp.all_for(owner)
         }
 
     def to_dict(self) -> dict[str, StoredValue]:
@@ -149,30 +148,31 @@ class WObject(metaclass=WTypeMeta):
 
     # --- attribute machinery ---
 
+    @Database.sessionmethod
     def _prop_and_type(self, session: Session, key: str) -> tuple[WProp, str]:
         inst = session.get(Instances, self._uuid)
         if inst is None:
             raise AttributeError(f"instance {self._uuid} does not exist")
-        owner = WType.by_uuid(session, inst.type_uuid)
+        owner = WType.by_uuid(inst.type_uuid)
         if owner is None:
             raise RuntimeError(f"instance {self._uuid} has dangling type")
-        prop = WProp.by_key(session, owner, key)
+        prop = WProp.by_key(owner, key)
         if prop is None:
             raise AttributeError(f"{owner.name} has no prop {key!r}")
-        return prop, prop.value_type(session).name
+        return prop, prop.value_type().name
 
     @Database.sessionmethod
     def __getattr__(self, session: Session, key: str) -> StoredValue:
-        prop, value_type = self._prop_and_type(session, key)
+        prop, value_type = self._prop_and_type(key)
         scalar = WScalar.by_type_name(value_type)
         if scalar is not None:
             row = session.get(scalar.TABLE, (self._uuid, prop.uuid))
             return None if row is None else row.value
-        link = self._link(session, prop)
+        link = self._link(prop)
         if link is None:
             return None
         if WType.is_array_name(value_type):
-            return WArray.read(session, link.uuid, WType.element_name(value_type))
+            return WArray.read(link.uuid, WType.element_name(value_type))
         return WObject.wrap(link.uuid)
 
     @override
@@ -181,24 +181,23 @@ class WObject(metaclass=WTypeMeta):
         if key.startswith(PRIVATE_PREFIX):
             object.__setattr__(self, key, value)
             return
-        prop, value_type = self._prop_and_type(session, key)
+        prop, value_type = self._prop_and_type(key)
         scalar = WScalar.by_type_name(value_type)
         if scalar is not None:
             payload = cast(ScalarPayload | None, value)
             WScalar.validate(value_type, payload)
-            self._write_scalar(session, prop, scalar.TABLE, payload)
+            self._write_scalar(prop, scalar.TABLE, payload)
         elif WType.is_array_name(value_type):
             WArray.write(
-                session,
                 self._uuid,
                 prop,
                 WType.element_name(value_type),
                 cast(list[StoredValue], value),
             )
         else:
-            WTypeMeta.check_link(session, value_type, value)
-            self._write_link(session, prop, cast("WObject", value))
-        self._touch(session)
+            WTypeMeta.check_link(value_type, value)
+            self._write_link(prop, cast("WObject", value))
+        self._touch()
 
     @override
     @Database.sessionmethod_begin
@@ -206,23 +205,24 @@ class WObject(metaclass=WTypeMeta):
         if key.startswith(PRIVATE_PREFIX):
             object.__delattr__(self, key)
             return
-        prop, value_type = self._prop_and_type(session, key)
+        prop, value_type = self._prop_and_type(key)
         scalar = WScalar.by_type_name(value_type)
         if scalar is not None:
             row = session.get(scalar.TABLE, (self._uuid, prop.uuid))
             if row is not None:
                 session.delete(row)
-                self._touch(session)
+                self._touch()
             return
-        link = self._link(session, prop)
+        link = self._link(prop)
         if link is None:
             return
         if WType.is_array_name(value_type):
-            WArray.destroy(session, link.uuid)
+            WArray.destroy( link.uuid)
         else:
             session.delete(link)
-        self._touch(session)
+        self._touch()
 
+    @Database.sessionmethod_begin
     def _touch(self, session: Session) -> None:
         _ = session.execute(
             sqla.update(Instances)
@@ -232,6 +232,7 @@ class WObject(metaclass=WTypeMeta):
 
     # --- reads ---
 
+    @Database.sessionmethod
     def _link(self, session: Session, prop: WProp) -> InstanceValues | None:
         return session.scalar(
             sqla.select(InstanceValues).where(
@@ -242,6 +243,7 @@ class WObject(metaclass=WTypeMeta):
 
     # --- writes ---
 
+    @Database.sessionmethod_begin
     def _write_scalar(
         self,
         session: Session,
@@ -259,6 +261,7 @@ class WObject(metaclass=WTypeMeta):
             .values(value=value)
         )
 
+    @Database.sessionmethod
     def _write_link(self, session: Session, prop: WProp, value: "WObject") -> None:
         _ = session.merge(
             InstanceValues(uuid=value._uuid, prop_uuid=prop.uuid, inst_uuid=self._uuid)
@@ -266,8 +269,8 @@ class WObject(metaclass=WTypeMeta):
 
     @Database.sessionmethod_begin
     def delete(self, session: Session) -> None:
-        for array_uuid in self._owned_array_uuids(session):
-            WArray.destroy(session, array_uuid)
+        for array_uuid in self._owned_array_uuids():
+            WArray.destroy(array_uuid)
         _ = session.execute(
             sqla.delete(InstanceValues).where(InstanceValues.uuid == self._uuid)
         )
@@ -278,6 +281,7 @@ class WObject(metaclass=WTypeMeta):
         if inst is not None:
             session.delete(inst)
 
+    @Database.sessionmethod
     def _owned_array_uuids(self, session: Session) -> list[UUID]:
         from nylium.database.tables import Props, Types
 

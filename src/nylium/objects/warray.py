@@ -18,7 +18,7 @@ from uuid import UUID, uuid4
 import sqlalchemy as sqla
 from sqlalchemy.orm import Session
 
-from nylium.database.tables import ArrayValues, Instances, InstanceValues
+from nylium.database import Database, ArrayValues, Instances, InstanceValues
 from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import VALUE_PROP_KEY, ScalarPayload, WScalar
 from nylium.objects.wtype import WType
@@ -29,30 +29,31 @@ ARRAY_INSTANCE_NAME = "array"
 
 class WArray:
     @classmethod
+    @Database.sessionmethod
     def read(cls, session: Session, array_uuid: UUID, elem_type: str) -> list[StoredValue]:
         rows = session.scalars(
             sqla.select(ArrayValues)
             .where(ArrayValues.inst_uuid == array_uuid)
             .order_by(ArrayValues.index)
         ).all()
-        return [cls._unwrap(session, row.value_uuid, elem_type) for row in rows]
+        return [cls._unwrap(row.value_uuid, elem_type) for row in rows]
 
     @classmethod
     def write(
         cls,
-        session: Session,
         owner_uuid: UUID,
         prop: WProp,
         elem_type: str,
         values: list[StoredValue],
     ) -> None:
-        array_uuid = cls._ensure_array_instance(session, owner_uuid, prop, elem_type)
-        cls._fill(session, array_uuid, elem_type, values)
+        array_uuid = cls._ensure_array_instance(owner_uuid, prop, elem_type)
+        cls._fill(array_uuid, elem_type, values)
 
     @classmethod
+    @Database.sessionmethod_begin
     def destroy(cls, session: Session, array_uuid: UUID) -> None:
         """Delete the array instance and every box it owns, recursively."""
-        cls._destroy_boxes(session, array_uuid)
+        cls._destroy_boxes(array_uuid)
         _ = session.execute(
             sqla.delete(InstanceValues).where(InstanceValues.uuid == array_uuid)
         )
@@ -63,20 +64,22 @@ class WArray:
     # --- internals ---
 
     @classmethod
+    @Database.sessionmethod_begin
     def _fill(
         cls, session: Session, array_uuid: UUID, elem_type: str, values: list[StoredValue]
     ) -> None:
-        cls._destroy_boxes(session, array_uuid)
+        cls._destroy_boxes(array_uuid)
         for index, item in enumerate(values):
             session.add(
                 ArrayValues(
                     inst_uuid=array_uuid,
                     index=index,
-                    value_uuid=cls._box(session, elem_type, item),
+                    value_uuid=cls._box(elem_type, item),
                 )
             )
 
     @classmethod
+    @Database.sessionmethod_begin
     def _destroy_boxes(cls, session: Session, array_uuid: UUID) -> None:
         box_uuids = list(
             session.scalars(
@@ -92,25 +95,27 @@ class WArray:
         )
         session.flush()
         for box_uuid in box_uuids:
-            cls._destroy_box(session, box_uuid)
+            cls._destroy_box(box_uuid)
 
     @classmethod
+    @Database.sessionmethod_begin
     def _destroy_box(cls, session: Session, box_uuid: UUID) -> None:
         inst = session.get(Instances, box_uuid)
         if inst is None:
             return
-        owner = WType.by_uuid(session, inst.type_uuid)
+        owner = WType.by_uuid(inst.type_uuid)
         if owner is None:
             raise RuntimeError(f"instance {box_uuid} has dangling type")
         if WScalar.is_scalar(owner.name):
             session.delete(inst)  # its scalar values cascade on inst_uuid
             return
         if WType.is_array_name(owner.name):
-            cls.destroy(session, box_uuid)
+            cls.destroy(box_uuid)
             return
         # user-type instance referenced from the array: not a box, keep it
 
     @classmethod
+    @Database.sessionmethod_begin
     def _ensure_array_instance(
         cls, session: Session, owner_uuid: UUID, prop: WProp, elem_type: str
     ) -> UUID:
@@ -122,7 +127,7 @@ class WArray:
         )
         if link is not None:
             return link.uuid
-        array_uuid = cls._create_array_instance(session, WType.array_name(elem_type))
+        array_uuid = cls._create_array_instance(WType.array_name(elem_type))
         session.add(
             InstanceValues(uuid=array_uuid, prop_uuid=prop.uuid, inst_uuid=owner_uuid)
         )
@@ -130,9 +135,10 @@ class WArray:
         return array_uuid
 
     @classmethod
+    @Database.sessionmethod_begin
     def _create_array_instance(cls, session: Session, array_type_name: str) -> UUID:
         array_uuid = uuid4()
-        array_type = WType.ensure(session, array_type_name)
+        array_type = WType.ensure(array_type_name)
         session.add(
             Instances(uuid=array_uuid, type_uuid=array_type.uuid, name=ARRAY_INSTANCE_NAME)
         )
@@ -140,44 +146,46 @@ class WArray:
         return array_uuid
 
     @classmethod
+    @Database.sessionmethod
     def _unwrap(cls, session: Session, uuid: UUID, type_name: str) -> StoredValue:
         if WType.is_array_name(type_name):
-            return cls.read(session, uuid, WType.element_name(type_name))
+            return cls.read(uuid, WType.element_name(type_name))
         scalar = WScalar.by_type_name(type_name)
         if scalar is None:
             return WTypeMeta.root().wrap(uuid)
         inst = session.get(Instances, uuid)
         if inst is None:
             raise KeyError(f"no instance {uuid}")
-        owner = WType.by_uuid(session, inst.type_uuid)
+        owner = WType.by_uuid(inst.type_uuid)
         if owner is None:
             raise RuntimeError(f"instance {uuid} has dangling type")
-        value_prop = WProp.by_key(session, owner, VALUE_PROP_KEY)
+        value_prop = WProp.by_key(owner, VALUE_PROP_KEY)
         if value_prop is None:
             raise RuntimeError(f"scalar type {type_name} lost its 'value' prop")
         row = session.get(scalar.TABLE, (uuid, value_prop.uuid))
         return None if row is None else row.value
 
     @classmethod
+    @Database.sessionmethod_begin
     def _box(cls, session: Session, type_name: str, value: StoredValue) -> UUID:
         if WType.is_array_name(type_name):
             if not isinstance(value, list):
                 raise TypeError(
                     f"{type_name} element takes list, got {type(value).__name__}"
                 )
-            array_uuid = cls._create_array_instance(session, type_name)
-            cls._fill(session, array_uuid, WType.element_name(type_name), value)
+            array_uuid = cls._create_array_instance(type_name)
+            cls._fill(array_uuid, WType.element_name(type_name), value)
             return array_uuid
         scalar = WScalar.by_type_name(type_name)
         if scalar is None:
-            WTypeMeta.check_link(session, type_name, value)
+            WTypeMeta.check_link(type_name, value)
             return cast(WObjectShape, value).uuid
         WScalar.validate(type_name, cast(ScalarPayload | None, value))
         box_uuid = uuid4()
-        owner = WType.ensure(session, type_name)
+        owner = WType.ensure(type_name)
         session.add(Instances(uuid=box_uuid, type_uuid=owner.uuid, name=str(value)))
         session.flush()
-        value_prop = WProp.by_key(session, owner, VALUE_PROP_KEY)
+        value_prop = WProp.by_key(owner, VALUE_PROP_KEY)
         if value_prop is None:
             raise RuntimeError(f"scalar type {type_name} lost its 'value' prop")
         session.add(

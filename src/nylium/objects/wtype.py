@@ -15,7 +15,7 @@ from uuid import UUID, uuid4
 import sqlalchemy as sqla
 from sqlalchemy.orm import Session
 
-from nylium.database.tables import Types
+from nylium.database import Database, Types
 
 
 class WType:
@@ -51,18 +51,21 @@ class WType:
     # --- row access ---
 
     @classmethod
+    @Database.sessionmethod
     def by_name(cls, session: Session, name: str) -> "WType | None":
         row = session.scalar(sqla.select(Types).where(Types.name == name))
         return None if row is None else cls(row)
 
     @classmethod
+    @Database.sessionmethod
     def by_uuid(cls, session: Session, uuid: UUID) -> "WType | None":
         row = session.get(Types, uuid)
         return None if row is None else cls(row)
 
     @classmethod
+    @Database.sessionmethod_begin
     def ensure(cls, session: Session, name: str) -> "WType":
-        existing = cls.by_name(session, name)
+        existing = cls.by_name(name)
         if existing is not None:
             return existing
         row = Types(uuid=uuid4(), name=name)

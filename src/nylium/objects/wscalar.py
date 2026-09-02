@@ -17,9 +17,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import ClassVar, final
 
-from sqlalchemy.orm import Session
-
-from nylium.database.tables import (
+from nylium.database import (
     BooleanValues,
     DatetimeValues,
     IntegerValues,
@@ -75,13 +73,13 @@ class WScalar:
             )
 
     @classmethod
-    def ensure_builtins(cls, session: Session) -> None:
+    def ensure_builtins(cls) -> None:
         from nylium.objects.wprop import WProp
         from nylium.objects.wtype import WType
 
         for scalar in cls.all():
-            type_row = WType.ensure(session, scalar.TYPE_NAME)
-            _ = WProp.ensure(session, type_row, VALUE_PROP_KEY, type_row)
+            type_row = WType.ensure(scalar.TYPE_NAME)
+            _ = WProp.ensure(type_row, VALUE_PROP_KEY, type_row)
 
 
 @final

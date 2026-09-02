@@ -48,20 +48,18 @@ class Api:
         return [cls._type_view(name) for name in names]
 
     @classmethod
-    @Database.sessionmethod
-    def get_type(cls, session: Session, name: str) -> TypeView | None:
-        if WType.by_name(session, name) is None:
+    def get_type(cls,  name: str) -> TypeView | None:
+        if WType.by_name(name) is None:
             return None
         return cls._type_view(name)
 
     @classmethod
-    @Database.sessionmethod_begin
-    def create_type(cls, session: Session, name: str, props: dict[str, str] | None = None) -> TypeView:
+    def create_type(cls, name: str, props: dict[str, str] | None = None) -> TypeView:
         """props maps key -> value type name. Missing value types are created."""
-        WScalar.ensure_builtins(session)
-        owner = WType.ensure(session, name)
+        WScalar.ensure_builtins()
+        owner = WType.ensure(name)
         for key, value_type_name in (props or {}).items():
-            _ = WProp.ensure(session, owner, key, WType.ensure(session, value_type_name))
+            _ = WProp.ensure(owner, key, WType.ensure(value_type_name))
         return cls._type_view(name)
 
     @classmethod
@@ -69,7 +67,7 @@ class Api:
     def delete_type(cls, session: Session, name: str) -> bool:
         """Refuses while instances exist; other types referencing this one
         as a prop value type are stopped by the FK, on purpose."""
-        owner = WType.by_name(session, name)
+        owner = WType.by_name(name)
         if owner is None:
             return False
         instance_count = session.scalar(
@@ -91,7 +89,7 @@ class Api:
     @classmethod
     @Database.sessionmethod
     def list_objects(cls, session: Session, type_name: str) -> list[ObjectView]:
-        owner = WType.by_name(session, type_name)
+        owner = WType.by_name(type_name)
         if owner is None:
             return []
         uuids = list(
@@ -149,13 +147,10 @@ class Api:
     # --- internals ---
 
     @classmethod
-    @Database.sessionmethod
-    def _normalize_props(
-        cls, session: Session, type_name: str, props: dict[str, PropInput]
-    ) -> dict[str, StoredValue]:
+    def _normalize_props(cls, type_name: str, props: dict[str, PropInput]) -> dict[str, StoredValue]:
         """Callers hand links over as UUID/ObjectRef (that's all they have);
         the object layer wants WObject wrappers. Resolve by prop type."""
-        owner = WType.by_name(session, type_name)
+        owner = WType.by_name(type_name)
         if owner is None:
             raise KeyError(f"no type {type_name!r}")
         return {
@@ -164,12 +159,11 @@ class Api:
         }
 
     @classmethod
-    @Database.sessionmethod
-    def _prop_type_name(cls, session: Session, owner: WType, key: str) -> str:
-        prop = WProp.by_key(session, owner, key)
+    def _prop_type_name(cls, owner: WType, key: str) -> str:
+        prop = WProp.by_key(owner, key)
         if prop is None:
             raise KeyError(f"type {owner.name!r} has no prop {key!r}")
-        return prop.value_type(session).name
+        return prop.value_type().name
 
     @classmethod
     def _normalize_value(cls, value: PropInput, type_name: str) -> StoredValue:
@@ -187,16 +181,15 @@ class Api:
         return cast(StoredValue, value)  # anything else fails in setattr
 
     @classmethod
-    @Database.sessionmethod
-    def _type_view(cls, session: Session, name: str) -> TypeView:
-        owner = WType.by_name(session, name)
+    def _type_view(cls, name: str) -> TypeView:
+        owner = WType.by_name(name)
         if owner is None:
             raise KeyError(f"no type {name!r}")
         return TypeView(
             name=name,
             props=[
-                PropView(key=prop.key, value_type=prop.value_type(session).name)
-                for prop in WProp.all_for(session, owner)
+                PropView(key=prop.key, value_type=prop.value_type().name)
+                for prop in WProp.all_for(owner)
             ],
         )
 
@@ -205,7 +198,7 @@ class Api:
     def _create_db_only(cls, session: Session, type_name: str, props: dict[str, StoredValue]) -> UUID:
         """Types with no registered python class: bare instance row, then
         writes through the generic WObject wrapper — same validation."""
-        owner = WType.by_name(session, type_name)
+        owner = WType.by_name(type_name)
         if owner is None:
             raise KeyError(f"no type {type_name!r}")
         instance_uuid = uuid4()
@@ -230,16 +223,16 @@ class Api:
         inst = session.get(Instances, uuid)
         if inst is None:
             return None
-        owner = WType.by_uuid(session, inst.type_uuid)
+        owner = WType.by_uuid(inst.type_uuid)
         if owner is None:
             raise RuntimeError(f"instance {uuid} has dangling type")
         wrapper = WObject.wrap(uuid)
         props = {
             prop.key: cls._render(
                 cast(StoredValue, getattr(wrapper, prop.key)),
-                prop.value_type(session).name,
+                prop.value_type().name,
             )
-            for prop in WProp.all_for(session, owner)
+            for prop in WProp.all_for(owner)
         }
         return ObjectView(uuid=uuid, type_name=owner.name, props=props)
 
@@ -272,5 +265,5 @@ class Api:
         inst = session.get(Instances, uuid)
         if inst is None:
             return "<gone>"
-        owner = WType.by_uuid(session, inst.type_uuid)
+        owner = WType.by_uuid(inst.type_uuid)
         return "<dangling>" if owner is None else owner.name

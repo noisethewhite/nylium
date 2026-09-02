@@ -11,7 +11,7 @@ from uuid import UUID, uuid4
 import sqlalchemy as sqla
 from sqlalchemy.orm import Session
 
-from nylium.database.tables import Props
+from nylium.database import Database, Props
 
 if TYPE_CHECKING:
     from nylium.objects.wtype import WType
@@ -34,6 +34,7 @@ class WProp:
         return self._row.key
 
     @classmethod
+    @Database.sessionmethod
     def by_key(cls, session: Session, owner: "WType", key: str) -> "WProp | None":
         row = session.scalar(
             sqla.select(Props).where(
@@ -43,6 +44,7 @@ class WProp:
         return None if row is None else cls(row)
 
     @classmethod
+    @Database.sessionmethod
     def all_for(cls, session: Session, owner: "WType") -> "list[WProp]":
         rows = session.scalars(
             sqla.select(Props).where(Props.owner_type_uuid == owner.uuid)
@@ -50,10 +52,11 @@ class WProp:
         return [cls(row) for row in rows]
 
     @classmethod
+    @Database.sessionmethod_begin
     def ensure(
         cls, session: Session, owner: "WType", key: str, value_type: "WType"
     ) -> "WProp":
-        existing = cls.by_key(session, owner, key)
+        existing = cls.by_key(owner, key)
         if existing is not None:
             existing._row.value_type_uuid = value_type.uuid
             return existing
@@ -67,10 +70,10 @@ class WProp:
         session.flush()
         return cls(row)
 
-    def value_type(self, session: Session) -> "WType":
+    def value_type(self) -> "WType":
         from nylium.objects.wtype import WType
 
-        value_type = WType.by_uuid(session, self._row.value_type_uuid)
+        value_type = WType.by_uuid(self._row.value_type_uuid)
         if value_type is None:
             raise RuntimeError(f"prop {self.key!r} has dangling value type")
         return value_type
