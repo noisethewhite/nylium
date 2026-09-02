@@ -23,15 +23,26 @@ class WProp:
     _row: Props
 
     def __init__(self, row: Props):
+        # snapshot for reads (session-independent); _row is kept only for
+        # the write path in ensure() and is guarded there
         self._row = row
+        self._uuid: UUID = row.uuid
+        self._key: str = row.key
+        self._value_type_uuid: UUID = row.value_type_uuid
 
     @property
     def uuid(self) -> UUID:
-        return self._row.uuid
+        return self._uuid
 
     @property
     def key(self) -> str:
-        return self._row.key
+        return self._key
+
+    def _live_row(self) -> Props:
+        if sqla.inspect(self._row).detached:
+            msg = f"prop {self._key!r} wraps a row whose session is gone — writes must run inside a sessionmethod chain"
+            raise RuntimeError(msg)
+        return self._row
 
     @classmethod
     @Database.sessionmethod
@@ -58,7 +69,7 @@ class WProp:
     ) -> "WProp":
         existing = cls.by_key(owner, key)
         if existing is not None:
-            existing._row.value_type_uuid = value_type.uuid
+            existing._live_row().value_type_uuid = value_type.uuid
             return existing
         row = Props(
             uuid=uuid4(),
@@ -74,7 +85,7 @@ class WProp:
     def value_type(self, _session: Session) -> "WType":
         from nylium.objects.wtype import WType
 
-        value_type = WType.by_uuid(self._row.value_type_uuid)
+        value_type = WType.by_uuid(self._value_type_uuid)
         if value_type is None:
             raise RuntimeError(f"prop {self.key!r} has dangling value type")
         return value_type

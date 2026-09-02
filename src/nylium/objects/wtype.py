@@ -21,18 +21,19 @@ from nylium.database import Database, Types
 class WType:
     ARRAY_TYPE_PREFIX: ClassVar[str] = "Array<"
 
-    _row: Types
-
     def __init__(self, row: Types):
-        self._row = row
+        # snapshot, not a live row: reads must not depend on the session
+        # that fetched the row still being open
+        self._uuid: UUID = row.uuid
+        self._name: str = row.name
 
     @property
     def uuid(self) -> UUID:
-        return self._row.uuid
+        return self._uuid
 
     @property
     def name(self) -> str:
-        return self._row.name
+        return self._name
 
     # --- type-name conventions ---
 
