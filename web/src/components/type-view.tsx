@@ -10,7 +10,12 @@ export function TypeViewPanel(props: {
   return (
     <div className="tab-content">
       <header className="type-header">
-        <h1>{props.schema.name}</h1>
+        <h1>
+          {props.schema.name}
+          {props.schema.plural_name !== null && (
+            <span className="dim type-plural">{props.schema.plural_name}</span>
+          )}
+        </h1>
         <button
           className="button button-primary"
           onClick={() => void props.workspace.createObject(props.schema.name)}

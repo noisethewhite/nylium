@@ -26,6 +26,7 @@ class WType:
         # that fetched the row still being open
         self._uuid: UUID = row.uuid
         self._name: str = row.name
+        self._plural_name: str | None = row.plural_name
 
     @property
     def uuid(self) -> UUID:
@@ -34,6 +35,10 @@ class WType:
     @property
     def name(self) -> str:
         return self._name
+
+    @property
+    def plural_name(self) -> str | None:
+        return self._plural_name
 
     # --- type-name conventions ---
 
@@ -65,11 +70,13 @@ class WType:
 
     @classmethod
     @Database.sessionmethod(bundled=False, commit=True)
-    def ensure(cls, session: Session, name: str) -> "WType":
+    def ensure(
+        cls, session: Session, name: str, plural_name: str | None = None
+    ) -> "WType":
         existing = cls.by_name(name)
         if existing is not None:
             return existing
-        row = Types(uuid=uuid4(), name=name)
+        row = Types(uuid=uuid4(), name=name, plural_name=plural_name)
         session.add(row)
         session.flush()
         return cls(row)

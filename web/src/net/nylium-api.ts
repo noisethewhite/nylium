@@ -13,8 +13,12 @@ export class NyliumApi extends HttpTransport {
     return this.request("GET", "/types");
   }
 
-  createType(name: string, props: Record<string, string>): Promise<TypeView> {
-    return this.request("POST", "/types", { name, props });
+  createType(
+    name: string,
+    pluralName: string,
+    props: Record<string, string>,
+  ): Promise<TypeView> {
+    return this.request("POST", "/types", { name, plural_name: pluralName, props });
   }
 
   deleteType(name: string): Promise<void> {

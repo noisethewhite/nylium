@@ -543,3 +543,9 @@ body {
   color: var(--fg-dim);
   font-size: 13px;
 }
+
+.type-plural {
+  font-size: 0.6em;
+  font-weight: normal;
+  margin-left: var(--space-2);
+}

@@ -35,6 +35,7 @@ class PropView:
 @dataclass(config=_CONFIG)
 class TypeView:
     name: str
+    plural_name: str | None
     props: list[PropView]
 
     @classmethod
@@ -45,6 +46,7 @@ class TypeView:
             raise KeyError(f"no type {name!r}")
         return cls(
             name=name,
+            plural_name=owner.plural_name,
             props=[
                 PropView(key=prop.key, value_type=prop.value_type().name)
                 for prop in WProp.all_for(owner)

@@ -88,9 +88,13 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
     this.setState({ ...state, tabs, activeTab });
   }
 
-  async createType(name: string, props: Record<string, string>): Promise<void> {
+  async createType(
+    name: string,
+    pluralName: string,
+    props: Record<string, string>,
+  ): Promise<void> {
     await this.guard(async () => {
-      const created = await this.api.createType(name, props);
+      const created = await this.api.createType(name, pluralName, props);
       const state = this.getSnapshot();
       const tabs = state.tabs.filter((tab) => tab.kind !== "create-type");
       const tab: Tab = { kind: "type", name: created.name };

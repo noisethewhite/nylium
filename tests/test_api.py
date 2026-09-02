@@ -80,8 +80,9 @@ def test_links_and_arrays_render_as_views():
 
 
 def test_db_only_type_created_through_api():
-    view = Api.create_type("Note", {"body": "String"})
+    view = Api.create_type("Note", {"body": "String"}, "Notes")
     assert view.name == "Note"
+    assert view.plural_name == "Notes"
 
     note = Api.create_object("Note", {"body": "hello"})
     assert note.props["body"] == ScalarValue(value="hello")

@@ -15,6 +15,7 @@ export function TypeCreateForm(props: {
   workspace: WorkspaceStore;
 }): ReactElement {
   const [name, setName] = useState("");
+  const [pluralName, setPluralName] = useState("");
   const [propsDraft, setPropsDraft] = useState<PropDraft[]>([{ ...EMPTY_PROP }]);
 
   const updateProp = (index: number, patch: Partial<PropDraft>): void => {
@@ -32,16 +33,22 @@ export function TypeCreateForm(props: {
         propsRecord[draft.key] = draft.valueType;
       }
     }
-    void props.workspace.createType(name, propsRecord);
+    void props.workspace.createType(name, pluralName, propsRecord);
   };
 
   return (
     <div className="type-create-form">
       <input
         className="input"
-        placeholder="Type name"
+        placeholder="Name (singular)"
         value={name}
         onChange={(event) => setName(event.target.value)}
+      />
+      <input
+        className="input"
+        placeholder="Name (plural)"
+        value={pluralName}
+        onChange={(event) => setPluralName(event.target.value)}
       />
       {propsDraft.map((draft, index) => (
         <div className="prop-draft-row" key={index}>
@@ -78,7 +85,7 @@ export function TypeCreateForm(props: {
         </button>
         <button
           className="button button-primary"
-          disabled={name === ""}
+          disabled={name === "" || pluralName === ""}
           onClick={submit}
         >
           Create

@@ -24,6 +24,7 @@ class CreateTypeBody:
     """props maps prop key -> value type name, like Api.create_type."""
 
     name: str
+    plural_name: str
     props: dict[str, str] = field(default_factory=dict)
 
 

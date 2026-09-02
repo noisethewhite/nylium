@@ -28,6 +28,8 @@ class Types(Base):
 
     uuid: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     name: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
+    # NULL for builtins and array types — only user types carry both forms
+    plural_name: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     @classmethod
     @Database.sessionmethod(bundled=False, commit=False)

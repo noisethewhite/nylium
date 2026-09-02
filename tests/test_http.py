@@ -20,9 +20,20 @@ class dsl:
 
     @classmethod
     def create_type(
-        cls, auth_client: TestClient, name: str, props: dict[str, str]
+        cls,
+        auth_client: TestClient,
+        name: str,
+        props: dict[str, str],
+        plural_name: str | None = None,
     ) -> dict[str, Any]:
-        response = auth_client.post("/api/types", json={"name": name, "props": props})
+        response = auth_client.post(
+            "/api/types",
+            json={
+                "name": name,
+                "plural_name": plural_name if plural_name is not None else f"{name}s",
+                "props": props,
+            },
+        )
         assert response.status_code == 201, response.text
         return response.json()  # type: ignore[no-any-return]
 
@@ -47,6 +58,7 @@ def test_types_roundtrip(auth_client: TestClient) -> None:
         auth_client, "Book", {"title": "String", "pages": "Integer"}
     )
     assert created["name"] == "Book"
+    assert created["plural_name"] == "Books"
     assert {prop["key"] for prop in created["props"]} == {"title", "pages"}
 
     names = {view["name"] for view in auth_client.get("/api/types").json()}

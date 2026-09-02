@@ -36,7 +36,7 @@ class routes:
 
     @classmethod
     def create_type(cls, body: CreateTypeBody) -> TypeView:
-        return Api.create_type(body.name, body.props)
+        return Api.create_type(body.name, body.props, body.plural_name)
 
     @classmethod
     def delete_type(cls, name: str) -> None:

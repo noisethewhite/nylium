@@ -7,6 +7,8 @@ export interface PropView {
 
 export interface TypeView {
   name: string;
+  /** null for builtins and array types — only user types carry both forms */
+  plural_name: string | null;
   props: PropView[];
 }
 

@@ -46,10 +46,15 @@ class Api:
 
     @classmethod
     @Database.sessionmethod(bundled=True, commit=True)
-    def create_type(cls, name: str, props: dict[str, str] | None = None) -> TypeView:
+    def create_type(
+        cls,
+        name: str,
+        props: dict[str, str] | None = None,
+        plural_name: str | None = None,
+    ) -> TypeView:
         """props maps key -> value type name. Missing value types are created."""
         WScalar.ensure_builtins()
-        owner = WType.ensure(name)
+        owner = WType.ensure(name, plural_name)
         for key, value_type_name in (props or {}).items():
             _ = WProp.ensure(owner, key, WType.ensure(value_type_name))
         return TypeView.from_name(name)
