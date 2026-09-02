@@ -48,13 +48,15 @@ class Api:
         return [cls._type_view(name) for name in names]
 
     @classmethod
-    def get_type(cls,  name: str) -> TypeView | None:
+    @Database.sessionmethod
+    def get_type(cls, _session: Session, name: str) -> TypeView | None:
         if WType.by_name(name) is None:
             return None
         return cls._type_view(name)
 
     @classmethod
-    def create_type(cls, name: str, props: dict[str, str] | None = None) -> TypeView:
+    @Database.sessionmethod_begin
+    def create_type(cls, _session: Session, name: str, props: dict[str, str] | None = None) -> TypeView:
         """props maps key -> value type name. Missing value types are created."""
         WScalar.ensure_builtins()
         owner = WType.ensure(name)
@@ -147,7 +149,10 @@ class Api:
     # --- internals ---
 
     @classmethod
-    def _normalize_props(cls, type_name: str, props: dict[str, PropInput]) -> dict[str, StoredValue]:
+    @Database.sessionmethod
+    def _normalize_props(
+        cls, _session: Session, type_name: str, props: dict[str, PropInput]
+    ) -> dict[str, StoredValue]:
         """Callers hand links over as UUID/ObjectRef (that's all they have);
         the object layer wants WObject wrappers. Resolve by prop type."""
         owner = WType.by_name(type_name)
@@ -159,7 +164,8 @@ class Api:
         }
 
     @classmethod
-    def _prop_type_name(cls, owner: WType, key: str) -> str:
+    @Database.sessionmethod
+    def _prop_type_name(cls, _session: Session, owner: WType, key: str) -> str:
         prop = WProp.by_key(owner, key)
         if prop is None:
             raise KeyError(f"type {owner.name!r} has no prop {key!r}")
@@ -181,7 +187,8 @@ class Api:
         return cast(StoredValue, value)  # anything else fails in setattr
 
     @classmethod
-    def _type_view(cls, name: str) -> TypeView:
+    @Database.sessionmethod
+    def _type_view(cls, _session: Session, name: str) -> TypeView:
         owner = WType.by_name(name)
         if owner is None:
             raise KeyError(f"no type {name!r}")

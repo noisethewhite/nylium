@@ -35,7 +35,9 @@ class Database:
         session = getattr(_local, "session", None)
         if session is not None:
             return session, False
-        session = Session(Database.engine())
+        # expire_on_commit=False: wrappers hand ORM rows back to callers,
+        # and a committed row must stay readable after the session closes
+        session = Session(Database.engine(), expire_on_commit=False)
         _local.session = session
         return session, True
 

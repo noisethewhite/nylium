@@ -109,7 +109,8 @@ class WObject(metaclass=WTypeMeta):
     # --- dataclass-like facade for UI rendering ---
 
     @classmethod
-    def fields(cls) -> dict[str, str]:
+    @Database.sessionmethod
+    def fields(cls, _session: Session) -> dict[str, str]:
         """prop key -> value type name, e.g. {'tags': 'Array<String>'}"""
         owner = WType.by_name(cls.__name__)
         if owner is None:

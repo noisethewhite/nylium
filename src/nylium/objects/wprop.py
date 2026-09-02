@@ -70,7 +70,8 @@ class WProp:
         session.flush()
         return cls(row)
 
-    def value_type(self) -> "WType":
+    @Database.sessionmethod
+    def value_type(self, _session: Session) -> "WType":
         from nylium.objects.wtype import WType
 
         value_type = WType.by_uuid(self._row.value_type_uuid)

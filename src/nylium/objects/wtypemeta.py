@@ -109,7 +109,8 @@ class WTypeMeta(type):
             )
 
     @classmethod
-    def _materialize(mcls, cls: type[WObjectShape], namespace: dict[str, object]) -> None:
+    @Database.sessionmethod_begin
+    def _materialize(mcls, _session: Session, cls: type[WObjectShape], namespace: dict[str, object]) -> None:
         WScalar.ensure_builtins()
         owner = WType.ensure(cls.__name__)
         for key, annotation in mcls._class_annotations(namespace).items():

@@ -39,8 +39,10 @@ class WArray:
         return [cls._unwrap(row.value_uuid, elem_type) for row in rows]
 
     @classmethod
+    @Database.sessionmethod_begin
     def write(
         cls,
+        _session: Session,
         owner_uuid: UUID,
         prop: WProp,
         elem_type: str,
