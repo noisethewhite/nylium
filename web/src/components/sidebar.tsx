@@ -1,17 +1,16 @@
 import type { ReactElement } from "react";
-import { useState } from "react";
 import { AuthStore } from "../state/auth";
 import { useObservable } from "../state/use-observable";
 import { WorkspaceStore } from "../state/workspace";
-import { TypeCreateForm } from "./type-create-form";
+import { ObjectLabels } from "./object-labels";
 
+/** Temporary explorer: every type and every object, flat. */
 export function Sidebar(props: {
   workspace: WorkspaceStore;
   auth: AuthStore;
 }): ReactElement {
   const state = useObservable(props.workspace);
   const authState = useObservable(props.auth);
-  const [creating, setCreating] = useState(false);
   const types = props.workspace.userTypes();
 
   return (
@@ -21,30 +20,18 @@ export function Sidebar(props: {
         <button
           className="icon-button"
           title="New type"
-          onClick={() => setCreating((open) => !open)}
+          onClick={() => props.workspace.openCreateType()}
         >
           +
         </button>
       </div>
-      {creating && (
-        <TypeCreateForm
-          workspace={props.workspace}
-          onDone={() => setCreating(false)}
-        />
-      )}
-      <nav className="type-list">
+      <nav className="sidebar-scroll">
+        <div className="sidebar-section">Types</div>
         {types.map((view) => (
-          <div
-            key={view.name}
-            className={
-              view.name === state.selectedTypeName
-                ? "type-row type-row-selected"
-                : "type-row"
-            }
-          >
+          <div className="type-row" key={view.name}>
             <button
               className="type-row-name"
-              onClick={() => void props.workspace.selectType(view.name)}
+              onClick={() => props.workspace.openType(view.name)}
             >
               {view.name}
             </button>
@@ -56,6 +43,18 @@ export function Sidebar(props: {
               ×
             </button>
           </div>
+        ))}
+        <div className="sidebar-section">Objects</div>
+        {state.objects.map((view) => (
+          <button
+            className="type-row object-entry"
+            key={view.uuid}
+            title={view.uuid}
+            onClick={() => props.workspace.openObject(view.uuid)}
+          >
+            <span className="type-row-name">{ObjectLabels.of(view)}</span>
+            <span className="dim">{view.type_name}</span>
+          </button>
         ))}
       </nav>
       <div className="sidebar-footer">

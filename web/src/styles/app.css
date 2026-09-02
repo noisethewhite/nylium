@@ -280,14 +280,92 @@ body {
   padding: var(--space-2) var(--space-3);
 }
 
-/* --- type panel --- */
+/* --- tab bar --- */
 
-.type-panel {
-  flex: 1;
+.tab-bar {
   display: flex;
-  flex-direction: column;
+  align-items: stretch;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--separator);
+  flex-shrink: 0;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0 var(--space-2) 0 var(--space-4);
+  border-right: 1px solid var(--separator);
+  color: var(--fg-dim);
+  white-space: nowrap;
+}
+
+.tab-active {
+  color: var(--fg);
+  background: var(--bg-raised);
+  box-shadow: inset 0 2px 0 var(--accent);
+}
+
+.tab-label {
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  padding: var(--space-2) 0;
+  cursor: pointer;
+}
+
+.tab-close {
+  visibility: hidden;
+}
+
+.tab:hover .tab-close,
+.tab-active .tab-close {
+  visibility: visible;
+}
+
+.tab-content {
+  flex: 1;
+  overflow-y: auto;
   min-height: 0;
 }
+
+.create-type-page {
+  max-width: 560px;
+  padding: var(--space-6);
+}
+
+/* --- sidebar sections --- */
+
+.sidebar-scroll {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.sidebar-section {
+  padding: var(--space-3) var(--space-4) var(--space-1);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+
+.object-entry {
+  width: 100%;
+  text-align: left;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  background: none;
+  border: none;
+  color: var(--fg);
+  font: inherit;
+  cursor: pointer;
+}
+
+/* --- type view --- */
 
 .type-header {
   display: flex;
@@ -303,50 +381,19 @@ body {
   font-weight: 600;
 }
 
-.type-body {
-  flex: 1;
-  display: flex;
-  min-height: 0;
-}
-
-.object-list {
-  width: 320px;
-  flex-shrink: 0;
-  overflow-y: auto;
-  border-right: 1px solid var(--separator);
-  padding: var(--space-3);
+.schema-props {
+  padding: var(--space-4) var(--space-6);
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
 }
 
-.object-row {
+.schema-prop-row {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  gap: var(--space-3);
-  background: none;
-  border: none;
-  color: var(--fg);
-  font: inherit;
-  text-align: left;
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-small);
-  cursor: pointer;
-}
-
-.object-row:hover {
-  background: var(--bg-hover);
-}
-
-.object-row-selected {
-  background: var(--accent-dim);
-}
-
-.object-row-uuid {
-  color: var(--fg-faint);
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
+  background: var(--bg-raised);
 }
 
 /* --- object editor --- */

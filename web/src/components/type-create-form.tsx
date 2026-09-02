@@ -13,7 +13,6 @@ const EMPTY_PROP: PropDraft = { key: "", valueType: TypeNames.STRING };
 
 export function TypeCreateForm(props: {
   workspace: WorkspaceStore;
-  onDone: () => void;
 }): ReactElement {
   const [name, setName] = useState("");
   const [propsDraft, setPropsDraft] = useState<PropDraft[]>([{ ...EMPTY_PROP }]);
@@ -34,7 +33,6 @@ export function TypeCreateForm(props: {
       }
     }
     void props.workspace.createType(name, propsRecord);
-    props.onDone();
   };
 
   return (

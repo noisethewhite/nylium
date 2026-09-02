@@ -8,22 +8,22 @@ import { FieldEditor } from "./field-editors";
 
 export function ObjectEditor(props: {
   workspace: WorkspaceStore;
-  schema: TypeView;
+  object: ObjectView;
 }): ReactElement {
   const state = useObservable(props.workspace);
-  const object =
-    state.objects.find((view) => view.uuid === state.selectedObjectUuid) ?? null;
+  const schema =
+    state.types.find((view) => view.name === props.object.type_name) ?? null;
 
-  if (object === null) {
-    return <div className="object-editor object-editor-empty" />;
+  if (schema === null) {
+    return <div className="empty-state dim">Type is gone.</div>;
   }
   // key remounts the inner editor per object — drafts never leak
   // between objects
   return (
     <ObjectEditorInner
-      key={object.uuid}
-      object={object}
-      schema={props.schema}
+      key={props.object.uuid}
+      object={props.object}
+      schema={schema}
       workspace={props.workspace}
     />
   );
