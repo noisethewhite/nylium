@@ -5,29 +5,21 @@ This is the seam a future HTTP app (FastAPI) mounts. It never leaks
 WObject wrappers or SQLAlchemy rows to callers: everything in and out
 is a view, a UUID, or a plain python value. Writes go through the
 WObject layer, so all type validation applies here too.
+
+Table access lives on the table classes themselves (Types/Instances/
+Props helpers); this file only orchestrates and adapts caller input.
 """
 from __future__ import annotations
 
 from collections.abc import Callable
 from typing import TypeAlias, cast
-from uuid import UUID, uuid4
+from uuid import UUID
 
-import sqlalchemy as sqla
-from sqlalchemy.orm import Session
-
-from nylium.api.views import (
-    ArrayValue,
-    ObjectRef,
-    ObjectView,
-    PropValue,
-    RefValue,
-    ScalarValue,
-    TypeView,
-)
+from nylium.api.views import ObjectRef, ObjectView, TypeView
 from nylium.database import Database, Instances, Props, Types
-from nylium.objects.wobject import INSTANCE_NAME_FORMAT, SHORT_UUID_LENGTH, WObject
+from nylium.objects.wobject import WObject
 from nylium.objects.wprop import WProp
-from nylium.objects.wscalar import ScalarPayload, WScalar
+from nylium.objects.wscalar import WScalar
 from nylium.objects.wtype import WType
 from nylium.objects.wtypemeta import StoredValue, WTypeMeta
 
@@ -41,10 +33,9 @@ class Api:
     # --- types ---
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
-    def list_types(cls, session: Session) -> list[TypeView]:
-        names = list(session.scalars(sqla.select(Types.name)).all())
-        return [TypeView.from_name(name) for name in names]
+    @Database.sessionmethod(bundled=True, commit=False)
+    def list_types(cls) -> list[TypeView]:
+        return [TypeView.from_name(name) for name in Types.all_names()]
 
     @classmethod
     @Database.sessionmethod(bundled=True, commit=False)
@@ -64,48 +55,38 @@ class Api:
         return TypeView.from_name(name)
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=True)
-    def delete_type(cls, session: Session, name: str) -> bool:
+    @Database.sessionmethod(bundled=True, commit=True)
+    def delete_type(cls, name: str) -> bool:
         """Refuses while instances exist; other types referencing this one
         as a prop value type are stopped by the FK, on purpose."""
         owner = WType.by_name(name)
         if owner is None:
             return False
-        instance_count = session.scalar(
-            sqla.select(sqla.func.count())
-            .select_from(Instances)
-            .where(Instances.type_uuid == owner.uuid)
-        )
+        instance_count = Instances.count_of_type(owner.uuid)
         if instance_count:
             raise ValueError(
                 f"type {name!r} still has {instance_count} instances"
             )
-        row = session.get(Types, owner.uuid)
-        if row is not None:
-            session.delete(row)  # its props cascade
+        Types.delete_by_uuid(owner.uuid)
         return True
 
     # --- objects ---
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
-    def list_objects(cls, session: Session, type_name: str) -> list[ObjectView]:
+    @Database.sessionmethod(bundled=True, commit=False)
+    def list_objects(cls, type_name: str) -> list[ObjectView]:
         owner = WType.by_name(type_name)
         if owner is None:
             return []
-        uuids = list(
-            session.scalars(
-                sqla.select(Instances.uuid).where(
-                    Instances.type_uuid == owner.uuid
-                )
-            ).all()
-        )
-        views = [cls._object_view(uuid) for uuid in uuids]
+        views = [
+            ObjectView.from_uuid(uuid)
+            for uuid in Instances.uuids_of_type(owner.uuid)
+        ]
         return [view for view in views if view is not None]
 
     @classmethod
     def get_object(cls, uuid: UUID) -> ObjectView | None:
-        return cls._object_view(uuid)
+        return ObjectView.from_uuid(uuid)
 
     @classmethod
     @Database.sessionmethod(bundled=True, commit=True)
@@ -120,7 +101,7 @@ class Api:
             ctor = cast(Callable[..., WObject], klass)
             instance_uuid = ctor(**normalized).uuid
         else:
-            instance_uuid = cls._create_db_only(type_name, normalized)
+            instance_uuid = WObject.create_db_only(type_name, normalized)
         view = cls.get_object(instance_uuid)
         if view is None:
             raise RuntimeError(f"created {type_name} instance {instance_uuid} vanished")
@@ -140,9 +121,9 @@ class Api:
         return view
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=True)
-    def delete_object(cls, session: Session, uuid: UUID) -> bool:
-        if session.get(Instances, uuid) is None:
+    @Database.sessionmethod(bundled=True, commit=True)
+    def delete_object(cls, uuid: UUID) -> bool:
+        if not Instances.exists(uuid):
             return False
         WObject.wrap(uuid).delete()
         return True
@@ -178,69 +159,3 @@ class Api:
         if isinstance(value, UUID):
             return WObject.wrap(value)
         return cast(StoredValue, value)  # anything else fails in setattr
-
-    @classmethod
-    @Database.sessionmethod(bundled=False, commit=True)
-    def _create_db_only(cls, session: Session, type_name: str, props: dict[str, StoredValue]) -> UUID:
-        """Types with no registered python class: bare instance row, then
-        writes through the generic WObject wrapper — same validation."""
-        owner = WType.by_name(type_name)
-        if owner is None:
-            raise KeyError(f"no type {type_name!r}")
-        instance_uuid = uuid4()
-        session.add(
-            Instances(
-                uuid=instance_uuid,
-                type_uuid=owner.uuid,
-                name=INSTANCE_NAME_FORMAT.format(
-                    type_name=type_name,
-                    short_uuid=str(instance_uuid)[:SHORT_UUID_LENGTH],
-                ),
-            )
-        )
-        wrapper = WObject.wrap(instance_uuid)
-        for key, value in props.items():
-            setattr(wrapper, key, value)
-        return instance_uuid
-
-    @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
-    def _object_view(cls, session: Session, uuid: UUID) -> ObjectView | None:
-        inst = session.get(Instances, uuid)
-        if inst is None:
-            return None
-        owner = WType.by_uuid(inst.type_uuid)
-        if owner is None:
-            raise RuntimeError(f"instance {uuid} has dangling type")
-        wrapper = WObject.wrap(uuid)
-        props = {
-            prop.key: cls._render(
-                cast(StoredValue, getattr(wrapper, prop.key)),
-                prop.value_type().name,
-            )
-            for prop in WProp.all_for(owner)
-        }
-        return ObjectView(uuid=uuid, type_name=owner.name, props=props)
-
-    @classmethod
-    def _render(cls, value: StoredValue, type_name: str) -> PropValue:
-        """The declared prop type disambiguates None: an unset scalar,
-        an unset link and an unset array are three different views."""
-        if WScalar.by_type_name(type_name) is not None:
-            return ScalarValue(value=cast(ScalarPayload | None, value))
-        if WType.is_array_name(type_name):
-            element_name = WType.element_name(type_name)
-            if value is None:
-                return ArrayValue(items=None)
-            if not isinstance(value, list):
-                raise TypeError(f"array prop rendered a {type(value).__name__}")
-            return ArrayValue(
-                items=[cls._render(item, element_name) for item in value]
-            )
-        if value is None:
-            return RefValue(ref=None)
-        if not isinstance(value, WObject):
-            raise TypeError(f"link prop rendered a {type(value).__name__}")
-        return RefValue(
-            ref=ObjectRef(uuid=value.uuid, type_name=Instances.get_type_name(value.uuid))
-        )

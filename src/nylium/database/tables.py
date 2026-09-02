@@ -35,6 +35,18 @@ class Types(Base):
         )
         return None if row is None else row.uuid
 
+    @classmethod
+    @Database.sessionmethod(bundled=False, commit=False)
+    def all_names(cls, session: Session) -> list[str]:
+        return list(session.scalars(sqla.select(cls.name)).all())
+
+    @classmethod
+    @Database.sessionmethod(bundled=False, commit=True)
+    def delete_by_uuid(cls, session: Session, uuid: UUID) -> None:
+        row = session.get(cls, uuid)
+        if row is not None:
+            session.delete(row)  # its props cascade
+
 
 class Props(Base):
     __tablename__: str = "props"
@@ -93,6 +105,40 @@ class Instances(Base):
             return "<gone>"
         name = Types.name_by_uuid(inst.type_uuid)
         return "<dangling>" if name is None else name
+
+    @classmethod
+    @Database.sessionmethod(bundled=False, commit=False)
+    def exists(cls, session: Session, uuid: UUID) -> bool:
+        return session.get(cls, uuid) is not None
+
+    @classmethod
+    @Database.sessionmethod(bundled=False, commit=False)
+    def type_uuid_of(cls, session: Session, uuid: UUID) -> UUID | None:
+        inst = session.get(cls, uuid)
+        return None if inst is None else inst.type_uuid
+
+    @classmethod
+    @Database.sessionmethod(bundled=False, commit=False)
+    def uuids_of_type(cls, session: Session, type_uuid: UUID) -> list[UUID]:
+        return list(
+            session.scalars(
+                sqla.select(cls.uuid).where(cls.type_uuid == type_uuid)
+            ).all()
+        )
+
+    @classmethod
+    @Database.sessionmethod(bundled=False, commit=False)
+    def count_of_type(cls, session: Session, type_uuid: UUID) -> int:
+        return session.scalar(
+            sqla.select(sqla.func.count())
+            .select_from(cls)
+            .where(cls.type_uuid == type_uuid)
+        ) or 0
+
+    @classmethod
+    @Database.sessionmethod(bundled=False, commit=True)
+    def register(cls, session: Session, uuid: UUID, type_uuid: UUID, name: str) -> None:
+        session.add(cls(uuid=uuid, type_uuid=type_uuid, name=name))
 
 
 # === Values ===

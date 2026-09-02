@@ -54,19 +54,39 @@ class WObject(metaclass=WTypeMeta):
         for key, value in props.items():
             setattr(self, key, value)
 
-    @Database.sessionmethod(bundled=False, commit=True)
-    def _register(self, session: Session) -> None:
+    @Database.sessionmethod(bundled=True, commit=True)
+    def _register(self) -> None:
         owner = WType.ensure(type(self).__name__)
-        session.add(
-            Instances(
-                uuid=self._uuid,
-                type_uuid=owner.uuid,
-                name=INSTANCE_NAME_FORMAT.format(
-                    type_name=type(self).__name__,
-                    short_uuid=str(self._uuid)[:SHORT_UUID_LENGTH],
-                ),
-            )
+        Instances.register(
+            self._uuid,
+            owner.uuid,
+            INSTANCE_NAME_FORMAT.format(
+                type_name=type(self).__name__,
+                short_uuid=str(self._uuid)[:SHORT_UUID_LENGTH],
+            ),
         )
+
+    @classmethod
+    @Database.sessionmethod(bundled=True, commit=True)
+    def create_db_only(cls, type_name: str, props: dict[str, StoredValue]) -> UUID:
+        """Types with no registered python class: bare instance row, then
+        writes through the generic WObject wrapper — same validation."""
+        owner = WType.by_name(type_name)
+        if owner is None:
+            raise KeyError(f"no type {type_name!r}")
+        instance_uuid = uuid4()
+        Instances.register(
+            instance_uuid,
+            owner.uuid,
+            INSTANCE_NAME_FORMAT.format(
+                type_name=type_name,
+                short_uuid=str(instance_uuid)[:SHORT_UUID_LENGTH],
+            ),
+        )
+        wrapper = cls.wrap(instance_uuid)
+        for key, value in props.items():
+            setattr(wrapper, key, value)
+        return instance_uuid
 
     # --- retrieval ---
 
