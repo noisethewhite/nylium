@@ -14,59 +14,54 @@ from fastapi.testclient import TestClient
 from nylium.server import NyliumApp
 
 
-@pytest.fixture()
-def client() -> TestClient:
-    return TestClient(NyliumApp.create())
-
-
 class dsl:
     """Namespace for repeated request sequences (JSON is untyped at
     this boundary — hence Any, scoped to tests)."""
 
     @classmethod
     def create_type(
-        cls, client: TestClient, name: str, props: dict[str, str]
+        cls, auth_client: TestClient, name: str, props: dict[str, str]
     ) -> dict[str, Any]:
-        response = client.post("/api/types", json={"name": name, "props": props})
+        response = auth_client.post("/api/types", json={"name": name, "props": props})
         assert response.status_code == 201, response.text
         return response.json()  # type: ignore[no-any-return]
 
     @classmethod
     def create_object(
-        cls, client: TestClient, type_name: str, props: dict[str, Any]
+        cls, auth_client: TestClient, type_name: str, props: dict[str, Any]
     ) -> dict[str, Any]:
-        response = client.post(
+        response = auth_client.post(
             "/api/objects", json={"type_name": type_name, "props": props}
         )
         assert response.status_code == 201, response.text
         return response.json()  # type: ignore[no-any-return]
 
     @classmethod
-    def create_book(cls, client: TestClient, title: str) -> str:
-        book = cls.create_object(client, "Book", {"title": {"value": title}})
+    def create_book(cls, auth_client: TestClient, title: str) -> str:
+        book = cls.create_object(auth_client, "Book", {"title": {"value": title}})
         return str(book["uuid"])
 
 
-def test_types_roundtrip(client: TestClient) -> None:
+def test_types_roundtrip(auth_client: TestClient) -> None:
     created = dsl.create_type(
-        client, "Book", {"title": "String", "pages": "Integer"}
+        auth_client, "Book", {"title": "String", "pages": "Integer"}
     )
     assert created["name"] == "Book"
     assert {prop["key"] for prop in created["props"]} == {"title", "pages"}
 
-    names = {view["name"] for view in client.get("/api/types").json()}
+    names = {view["name"] for view in auth_client.get("/api/types").json()}
     assert "Book" in names
 
-    fetched = client.get("/api/types/Book")
+    fetched = auth_client.get("/api/types/Book")
     assert fetched.status_code == 200
     assert fetched.json()["name"] == "Book"
 
-    assert client.get("/api/types/Nope").status_code == 404
+    assert auth_client.get("/api/types/Nope").status_code == 404
 
 
-def test_object_scalars_roundtrip(client: TestClient) -> None:
+def test_object_scalars_roundtrip(auth_client: TestClient) -> None:
     dsl.create_type(
-        client,
+        auth_client,
         "Book",
         {
             "title": "String",
@@ -77,7 +72,7 @@ def test_object_scalars_roundtrip(client: TestClient) -> None:
         },
     )
     book = dsl.create_object(
-        client,
+        auth_client,
         "Book",
         {
             "title": {"value": "Dune"},
@@ -95,15 +90,15 @@ def test_object_scalars_roundtrip(client: TestClient) -> None:
     assert props["available"]["value"] is True
     assert str(props["published"]["value"]).startswith("1965-08-01T00:00:00")
 
-    listed = client.get("/api/objects", params={"type_name": "Book"})
+    listed = auth_client.get("/api/objects", params={"type_name": "Book"})
     assert listed.status_code == 200
     assert [item["uuid"] for item in listed.json()] == [book["uuid"]]
 
 
-def test_object_link_and_arrays(client: TestClient) -> None:
-    dsl.create_type(client, "Book", {"title": "String"})
+def test_object_link_and_arrays(auth_client: TestClient) -> None:
+    dsl.create_type(auth_client, "Book", {"title": "String"})
     dsl.create_type(
-        client,
+        auth_client,
         "Shelf",
         {
             "label": "String",
@@ -112,10 +107,10 @@ def test_object_link_and_arrays(client: TestClient) -> None:
             "tags": "Array<String>",
         },
     )
-    book_uuid = dsl.create_book(client, "Dune")
+    book_uuid = dsl.create_book(auth_client, "Dune")
     ref = {"ref": {"uuid": book_uuid, "type_name": "Book"}}
     shelf = dsl.create_object(
-        client,
+        auth_client,
         "Shelf",
         {
             "label": {"value": "sci-fi"},
@@ -130,38 +125,38 @@ def test_object_link_and_arrays(client: TestClient) -> None:
     assert [item["value"] for item in props["tags"]["items"]] == ["a", "b"]
 
 
-def test_update_object_partial_and_array_semantics(client: TestClient) -> None:
+def test_update_object_partial_and_array_semantics(auth_client: TestClient) -> None:
     dsl.create_type(
-        client, "Book", {"title": "String", "tags": "Array<String>"}
+        auth_client, "Book", {"title": "String", "tags": "Array<String>"}
     )
     book = dsl.create_object(
-        client, "Book", {"tags": {"items": [{"value": "x"}]}}
+        auth_client, "Book", {"tags": {"items": [{"value": "x"}]}}
     )
     uuid = str(book["uuid"])
 
-    patched = client.patch(
+    patched = auth_client.patch(
         f"/api/objects/{uuid}", json={"props": {"title": {"value": "Dune"}}}
     )
     assert patched.status_code == 200, patched.text
     assert patched.json()["props"]["title"]["value"] == "Dune"
     assert [i["value"] for i in patched.json()["props"]["tags"]["items"]] == ["x"]
 
-    cleared = client.patch(
+    cleared = auth_client.patch(
         f"/api/objects/{uuid}", json={"props": {"tags": {"items": []}}}
     )
     assert cleared.status_code == 200
     assert cleared.json()["props"]["tags"]["items"] == []
 
-    unset = client.patch(
+    unset = auth_client.patch(
         f"/api/objects/{uuid}", json={"props": {"tags": {"items": None}}}
     )
     assert unset.status_code == 422
 
 
-def test_wire_shape_mismatch_is_422(client: TestClient) -> None:
-    dsl.create_type(client, "Book", {"title": "String"})
-    dsl.create_type(client, "Shelf", {"favorite": "Book"})
-    response = client.post(
+def test_wire_shape_mismatch_is_422(auth_client: TestClient) -> None:
+    dsl.create_type(auth_client, "Book", {"title": "String"})
+    dsl.create_type(auth_client, "Shelf", {"favorite": "Book"})
+    response = auth_client.post(
         "/api/objects",
         json={
             "type_name": "Shelf",
@@ -171,34 +166,34 @@ def test_wire_shape_mismatch_is_422(client: TestClient) -> None:
     assert response.status_code == 422
 
 
-def test_unknown_keys_and_types_are_404(client: TestClient) -> None:
-    dsl.create_type(client, "Book", {"title": "String"})
-    unknown_prop = client.post(
+def test_unknown_keys_and_types_are_404(auth_client: TestClient) -> None:
+    dsl.create_type(auth_client, "Book", {"title": "String"})
+    unknown_prop = auth_client.post(
         "/api/objects",
         json={"type_name": "Book", "props": {"nope": {"value": "x"}}},
     )
     assert unknown_prop.status_code == 404
-    unknown_type = client.post("/api/objects", json={"type_name": "Nope"})
+    unknown_type = auth_client.post("/api/objects", json={"type_name": "Nope"})
     assert unknown_type.status_code == 404
 
 
-def test_delete_flows(client: TestClient) -> None:
-    dsl.create_type(client, "Book", {"title": "String"})
-    book_uuid = dsl.create_book(client, "Dune")
+def test_delete_flows(auth_client: TestClient) -> None:
+    dsl.create_type(auth_client, "Book", {"title": "String"})
+    book_uuid = dsl.create_book(auth_client, "Dune")
 
-    busy = client.delete("/api/types/Book")
+    busy = auth_client.delete("/api/types/Book")
     assert busy.status_code == 409
 
-    assert client.delete(f"/api/objects/{book_uuid}").status_code == 204
-    assert client.get(f"/api/objects/{book_uuid}").status_code == 404
+    assert auth_client.delete(f"/api/objects/{book_uuid}").status_code == 204
+    assert auth_client.get(f"/api/objects/{book_uuid}").status_code == 404
 
-    assert client.delete("/api/types/Book").status_code == 204
-    assert client.get("/api/types/Book").status_code == 404
-    assert client.delete("/api/types/Book").status_code == 404
+    assert auth_client.delete("/api/types/Book").status_code == 204
+    assert auth_client.get("/api/types/Book").status_code == 404
+    assert auth_client.delete("/api/types/Book").status_code == 404
 
 
 def test_spa_fallback(
-    client: TestClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    auth_client: TestClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     index_text = "<html>spa</html>"
     asset_text = "console.log('x')"
@@ -209,7 +204,7 @@ def test_spa_fallback(
     spa = TestClient(NyliumApp.create())
 
     assert spa.get("/").text == index_text
-    assert spa.get("/deep/client/route").text == index_text
+    assert spa.get("/deep/auth_client/route").text == index_text
     assert spa.get("/assets/app.js").text == asset_text
 
     api_miss = spa.get("/api/definitely-not-a-route")

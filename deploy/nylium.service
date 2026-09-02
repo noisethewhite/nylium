@@ -1,0 +1,14 @@
+[Unit]
+Description=nylium (FastAPI + SPA on 127.0.0.1:8474)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/services/nylium
+EnvironmentFile=%h/services/nylium/.env
+ExecStart=%h/services/nylium/.venv/bin/nylium serve --host 127.0.0.1 --port 8474
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=default.target

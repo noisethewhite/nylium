@@ -18,6 +18,11 @@ class errors:
         app.add_exception_handler(KeyError, cls.not_found)
         app.add_exception_handler(ValueError, cls.conflict)
         app.add_exception_handler(TypeError, cls.unprocessable)
+        app.add_exception_handler(PermissionError, cls.unauthorized)
+
+    @classmethod
+    def unauthorized(cls, _request: Request, exc: Exception) -> JSONResponse:
+        return cls._json(status.HTTP_401_UNAUTHORIZED, exc)
 
     @classmethod
     def not_found(cls, _request: Request, exc: Exception) -> JSONResponse:

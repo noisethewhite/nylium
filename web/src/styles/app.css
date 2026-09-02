@@ -336,3 +336,77 @@ body {
   display: flex;
   gap: var(--space-3);
 }
+
+/* --- auth --- */
+
+.app-loading {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--fg-faint);
+}
+
+.login-screen {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-card {
+  width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-6);
+  background: var(--bg-raised);
+  border-radius: var(--radius);
+}
+
+.login-card .brand {
+  font-size: 20px;
+}
+
+.login-card .error-banner {
+  border: none;
+  border-radius: var(--radius-small);
+}
+
+.login-button {
+  width: 100%;
+}
+
+.login-register {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.login-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--fg-dim);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: center;
+}
+
+.login-link:hover {
+  color: var(--fg);
+}
+
+.sidebar-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--separator);
+}
+
+.sidebar-user {
+  color: var(--fg-dim);
+  font-size: 13px;
+}

@@ -1,6 +1,7 @@
 import type { ObjectView, PropValue, TypeView } from "../contracts";
 import { TypeNames } from "../contracts";
 import { NyliumApi } from "../net/nylium-api";
+import { HttpError } from "../net/http-transport";
 import { Observable } from "./observable";
 
 export interface WorkspaceState {
@@ -26,10 +27,12 @@ const INITIAL_STATE: WorkspaceState = {
  * here — components only call actions. */
 export class WorkspaceStore extends Observable<WorkspaceState> {
   private readonly api: NyliumApi;
+  private readonly onUnauthorized: () => void;
 
-  constructor(api: NyliumApi) {
+  constructor(api: NyliumApi, onUnauthorized: () => void) {
     super(INITIAL_STATE);
     this.api = api;
+    this.onUnauthorized = onUnauthorized;
   }
 
   async init(): Promise<void> {
@@ -142,6 +145,11 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
       await action();
       this.setState({ ...this.getSnapshot(), error: null });
     } catch (caught: unknown) {
+      if (caught instanceof HttpError && caught.status === 401) {
+        // session expired mid-flight — the auth store flips the screen
+        this.onUnauthorized();
+        return;
+      }
       const message = caught instanceof Error ? caught.message : String(caught);
       this.setState({ ...this.getSnapshot(), error: message });
     }

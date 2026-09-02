@@ -1,11 +1,16 @@
 import type { ReactElement } from "react";
 import { useState } from "react";
+import { AuthStore } from "../state/auth";
 import { useObservable } from "../state/use-observable";
 import { WorkspaceStore } from "../state/workspace";
 import { TypeCreateForm } from "./type-create-form";
 
-export function Sidebar(props: { workspace: WorkspaceStore }): ReactElement {
+export function Sidebar(props: {
+  workspace: WorkspaceStore;
+  auth: AuthStore;
+}): ReactElement {
   const state = useObservable(props.workspace);
+  const authState = useObservable(props.auth);
   const [creating, setCreating] = useState(false);
   const types = props.workspace.userTypes();
 
@@ -53,6 +58,16 @@ export function Sidebar(props: { workspace: WorkspaceStore }): ReactElement {
           </div>
         ))}
       </nav>
+      <div className="sidebar-footer">
+        <span className="sidebar-user">{authState.userName}</span>
+        <button
+          className="icon-button"
+          title="Sign out"
+          onClick={() => void props.auth.logout()}
+        >
+          ⏻
+        </button>
+      </div>
     </aside>
   );
 }

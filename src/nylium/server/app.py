@@ -5,8 +5,10 @@ import os
 from pathlib import Path
 from typing import ClassVar
 
-from fastapi import FastAPI, status
+from fastapi import Depends, FastAPI, status
 
+from nylium.auth.guard import require_user
+from nylium.auth.routes import auth_routes
 from nylium.api.views import ObjectView, TypeView
 from nylium.database.database import Database
 from nylium.database.tables import Base
@@ -47,39 +49,63 @@ class NyliumApp:
         prefix = cls.API_PREFIX
         created = status.HTTP_201_CREATED
         no_content = status.HTTP_204_NO_CONTENT
+        guard = [Depends(require_user)]
+        app.add_api_route(
+            f"{prefix}/auth/register/start", auth_routes.register_start,
+            methods=["POST"],
+        )
+        app.add_api_route(
+            f"{prefix}/auth/register/finish", auth_routes.register_finish,
+            methods=["POST"],
+        )
+        app.add_api_route(
+            f"{prefix}/auth/login/start", auth_routes.login_start,
+            methods=["POST"],
+        )
+        app.add_api_route(
+            f"{prefix}/auth/login/finish", auth_routes.login_finish,
+            methods=["POST"],
+        )
+        app.add_api_route(
+            f"{prefix}/auth/logout", auth_routes.logout, methods=["POST"],
+        )
+        app.add_api_route(
+            f"{prefix}/auth/me", auth_routes.me, methods=["GET"],
+            dependencies=guard,
+        )
         app.add_api_route(
             f"{prefix}/types", routes.list_types, methods=["GET"],
-            response_model=list[TypeView],
+            response_model=list[TypeView], dependencies=guard,
         )
         app.add_api_route(
             f"{prefix}/types", routes.create_type, methods=["POST"],
-            status_code=created, response_model=TypeView,
+            status_code=created, response_model=TypeView, dependencies=guard,
         )
         app.add_api_route(
             f"{prefix}/types/{{name}}", routes.get_type, methods=["GET"],
-            response_model=TypeView,
+            response_model=TypeView, dependencies=guard,
         )
         app.add_api_route(
             f"{prefix}/types/{{name}}", routes.delete_type, methods=["DELETE"],
-            status_code=no_content,
+            status_code=no_content, dependencies=guard,
         )
         app.add_api_route(
             f"{prefix}/objects", routes.list_objects, methods=["GET"],
-            response_model=list[ObjectView],
+            response_model=list[ObjectView], dependencies=guard,
         )
         app.add_api_route(
             f"{prefix}/objects", routes.create_object, methods=["POST"],
-            status_code=created, response_model=ObjectView,
+            status_code=created, response_model=ObjectView, dependencies=guard,
         )
         app.add_api_route(
             f"{prefix}/objects/{{object_uuid}}", routes.get_object, methods=["GET"],
-            response_model=ObjectView,
+            response_model=ObjectView, dependencies=guard,
         )
         app.add_api_route(
             f"{prefix}/objects/{{object_uuid}}", routes.update_object, methods=["PATCH"],
-            response_model=ObjectView,
+            response_model=ObjectView, dependencies=guard,
         )
         app.add_api_route(
             f"{prefix}/objects/{{object_uuid}}", routes.delete_object, methods=["DELETE"],
-            status_code=no_content,
+            status_code=no_content, dependencies=guard,
         )
