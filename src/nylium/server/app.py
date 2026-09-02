@@ -36,7 +36,7 @@ class NyliumApp:
     def _ensure_schema(cls) -> None:
         """create_all is idempotent — the server is self-sufficient on
         a fresh database and a no-op on an existing one."""
-        Base.metadata.create_all(Database().engine)
+        Base.metadata.create_all(Database.engine())
 
     @classmethod
     def _dist_dir(cls) -> Path:

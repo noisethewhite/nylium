@@ -139,7 +139,7 @@ class Api:
         return view
 
     @classmethod
-    @Database.sessionmethod
+    @Database.sessionmethod_begin
     def delete_object(cls, session: Session, uuid: UUID) -> bool:
         if session.get(Instances, uuid) is None:
             return False

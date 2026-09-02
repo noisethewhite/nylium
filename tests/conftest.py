@@ -15,7 +15,7 @@ def _fresh_schema():
         _ = Environment.database_url
     except RuntimeError:
         pytest.skip("DATABASE_URL not set — tests need a live Postgres")
-    engine = Database().engine
+    engine = Database.engine()
     Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
     yield

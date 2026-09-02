@@ -19,8 +19,8 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from nylium.database import Database
 from nylium.database.tables import Instances
-from nylium.objects.sessions import sessions
 from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import ScalarPayload, WScalar
 from nylium.objects.wtype import WType
@@ -108,15 +108,15 @@ class WTypeMeta(type):
             )
 
     @classmethod
-    def _materialize(mcls, cls: type[WObjectShape], namespace: dict[str, object]) -> None:
-        with sessions.new() as session, session.begin():
-            WScalar.ensure_builtins(session)
-            owner = WType.ensure(session, cls.__name__)
-            for key, annotation in mcls._class_annotations(namespace).items():
-                if key.startswith(PRIVATE_PREFIX):
-                    continue
-                value_type = WType.ensure(session, mcls.resolve_annotation(annotation))
-                _ = WProp.ensure(session, owner, key, value_type)
+    @Database.sessionmethod_begin
+    def _materialize(mcls, session: Session, cls: type[WObjectShape], namespace: dict[str, object]) -> None:
+        WScalar.ensure_builtins(session)
+        owner = WType.ensure(session, cls.__name__)
+        for key, annotation in mcls._class_annotations(namespace).items():
+            if key.startswith(PRIVATE_PREFIX):
+                continue
+            value_type = WType.ensure(session, mcls.resolve_annotation(annotation))
+            _ = WProp.ensure(session, owner, key, value_type)
 
     @classmethod
     def resolve_annotation(mcls, annotation: object) -> str:

@@ -1,14 +1,18 @@
 from __future__ import annotations
+
+import threading
+from collections.abc import Callable
+from functools import wraps
+from typing import Concatenate, ParamSpec, TypeVar
+
 import sqlalchemy as sqla
 from sqlalchemy.orm import Session
-from collections.abc import Callable
-from typing import TypeVar, ParamSpec, Concatenate
+
 from nylium.system import Environment
-from functools import wraps
 
 
 _engine: sqla.Engine | None = None
-_session: Session | None = None
+_local = threading.local()
 
 
 _C = TypeVar("_C")
@@ -18,35 +22,58 @@ _P = ParamSpec("_P")
 
 class Database:
     @staticmethod
-    def _get_engine() -> sqla.Engine:
+    def engine() -> sqla.Engine:
         global _engine
         if _engine is None:
             _engine = sqla.create_engine(Environment.database_url, pool_pre_ping=True, echo=False)
         return _engine
 
     @staticmethod
-    def sessionmethod(func: Callable[Concatenate[_C, Session, _P], _R]) -> Callable[Concatenate[_C, _P], _R]:
-        def wrapper(cls: _C, *args: _P.args, **kwargs: _P.kwargs) -> _R:
-            global _session
-            duty_to_close = False
-            if _session is None:
-                _session = Session(Database._get_engine())
-                duty_to_close = True
-            value = func(cls, _session, *args, **kwargs)
-            if duty_to_close:
-                _session.close()
-                _session = None
-            return value
-        return wrapper
+    def _session_for_thread() -> tuple[Session, bool]:
+        # One Session per thread; nested sessionmethod calls share it and
+        # only the outermost call owns closing/committing.
+        session = getattr(_local, "session", None)
+        if session is not None:
+            return session, False
+        session = Session(Database.engine())
+        _local.session = session
+        return session, True
 
     @staticmethod
-    def _beginmethod(func: Callable[Concatenate[_C, Session, _P], _R]) -> Callable[Concatenate[_C, Session, _P], _R]:
+    def _close_session(session: Session) -> None:
+        # close() rolls back any uncommitted transaction
+        try:
+            session.close()
+        finally:
+            _local.session = None
+
+    @staticmethod
+    def sessionmethod(func: Callable[Concatenate[_C, Session, _P], _R]) -> Callable[Concatenate[_C, _P], _R]:
         @wraps(func)
-        def wrapper(cls: _C, session: Session, *args: _P.args, **kwargs: _P.kwargs) -> _R:
-            with session.begin_nested():
+        def wrapper(cls: _C, *args: _P.args, **kwargs: _P.kwargs) -> _R:
+            session, duty_to_close = Database._session_for_thread()
+            try:
                 return func(cls, session, *args, **kwargs)
+            finally:
+                if duty_to_close:
+                    Database._close_session(session)
+
         return wrapper
 
     @staticmethod
     def sessionmethod_begin(func: Callable[Concatenate[_C, Session, _P], _R]) -> Callable[Concatenate[_C, _P], _R]:
-        return Database.sessionmethod(Database._beginmethod(func))
+        # Plain commit, not begin_nested: the outermost call commits once,
+        # nested calls no-op, so a public call stays one atomic transaction.
+        @wraps(func)
+        def wrapper(cls: _C, *args: _P.args, **kwargs: _P.kwargs) -> _R:
+            session, duty_to_close = Database._session_for_thread()
+            try:
+                value = func(cls, session, *args, **kwargs)
+                if duty_to_close:
+                    session.commit()
+                return value
+            finally:
+                if duty_to_close:
+                    Database._close_session(session)
+
+        return wrapper
