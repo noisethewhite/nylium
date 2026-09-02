@@ -43,7 +43,8 @@ class WObject(metaclass=WTypeMeta):
 
     _uuid: UUID
 
-    def __init__(self, _uuid: UUID | None = None, **props: StoredValue) -> None:
+    @Database.sessionmethod_begin
+    def __init__(self, _session: Session, _uuid: UUID | None = None, **props: StoredValue) -> None:
         # plain assignment: __setattr__ routes "_" names to object.__setattr__,
         # and the checker gets to see _uuid initialized
         self._uuid = _uuid or uuid4()

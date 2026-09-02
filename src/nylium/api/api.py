@@ -109,8 +109,9 @@ class Api:
         return cls._object_view(uuid)
 
     @classmethod
+    @Database.sessionmethod_begin
     def create_object(
-        cls, type_name: str, props: dict[str, PropInput] | None = None
+        cls, _session: Session, type_name: str, props: dict[str, PropInput] | None = None
     ) -> ObjectView:
         normalized = cls._normalize_props(type_name, props or {})
         klass = WTypeMeta.python_class(type_name)
@@ -127,7 +128,8 @@ class Api:
         return view
 
     @classmethod
-    def update_object(cls, uuid: UUID, props: dict[str, PropInput]) -> ObjectView:
+    @Database.sessionmethod_begin
+    def update_object(cls, _session: Session, uuid: UUID, props: dict[str, PropInput]) -> ObjectView:
         wrapper = WObject.wrap(uuid)
         type_name = cls._type_name_of(uuid)
         normalized = cls._normalize_props(type_name, props)
