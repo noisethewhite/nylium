@@ -4,11 +4,11 @@ import threading
 from collections.abc import Callable
 from functools import wraps
 from typing import Concatenate, ParamSpec, TypeVar
-
 import sqlalchemy as sqla
 from sqlalchemy.orm import Session
 
 from nylium.system import Environment
+from nylium.database.localsession import LocalSession
 
 
 _engine: sqla.Engine | None = None
@@ -20,46 +20,25 @@ _R = TypeVar("_R")
 _P = ParamSpec("_P")
 
 
-class Database:
-    @staticmethod
-    def engine() -> sqla.Engine:
+class _DatabaseMeta(type):
+    @property
+    def engine(cls) -> sqla.Engine:
         global _engine
         if _engine is None:
             _engine = sqla.create_engine(Environment.database_url, pool_pre_ping=True, echo=False)
         return _engine
 
-    @staticmethod
-    def _session_for_thread() -> tuple[Session, bool]:
-        # One Session per thread; nested sessionmethod calls share it and
-        # only the outermost call owns closing/committing.
-        session = getattr(_local, "session", None)
-        if session is not None:
-            return session, False
-        # expire_on_commit=False: wrappers hand ORM rows back to callers,
-        # and a committed row must stay readable after the session closes
-        session = Session(Database.engine(), expire_on_commit=False)
-        _local.session = session
-        return session, True
 
-    @staticmethod
-    def _close_session(session: Session) -> None:
-        # close() rolls back any uncommitted transaction
-        try:
-            session.close()
-        finally:
-            _local.session = None
-
+class Database(metaclass=_DatabaseMeta):
     @staticmethod
     def sessionmethod(func: Callable[Concatenate[_C, Session, _P], _R]) -> Callable[Concatenate[_C, _P], _R]:
         @wraps(func)
         def wrapper(cls: _C, *args: _P.args, **kwargs: _P.kwargs) -> _R:
-            session, duty_to_close = Database._session_for_thread()
+            local_session = LocalSession(Database.engine)
             try:
-                return func(cls, session, *args, **kwargs)
+                return func(cls, local_session.value, *args, **kwargs)
             finally:
-                if duty_to_close:
-                    Database._close_session(session)
-
+                local_session.close()
         return wrapper
 
     @staticmethod
@@ -68,14 +47,11 @@ class Database:
         # nested calls no-op, so a public call stays one atomic transaction.
         @wraps(func)
         def wrapper(cls: _C, *args: _P.args, **kwargs: _P.kwargs) -> _R:
-            session, duty_to_close = Database._session_for_thread()
+            local_session = LocalSession(Database.engine)
             try:
-                value = func(cls, session, *args, **kwargs)
-                if duty_to_close:
-                    session.commit()
+                value = func(cls, local_session.value, *args, **kwargs)
+                local_session.commit()
                 return value
             finally:
-                if duty_to_close:
-                    Database._close_session(session)
-
+                local_session.close()
         return wrapper
