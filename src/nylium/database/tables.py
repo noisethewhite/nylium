@@ -2,8 +2,11 @@ from uuid import UUID, uuid4
 from datetime import datetime
 from decimal import Decimal
 
+import sqlalchemy as sqla
 from sqlalchemy import DateTime, ForeignKey, Text, UniqueConstraint, func, Integer
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
+
+from nylium.database.database import Database
 
 
 class Base(DeclarativeBase):
@@ -15,6 +18,22 @@ class Types(Base):
 
     uuid: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     name: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
+
+    @classmethod
+    @Database.sessionmethod(bundled=False, commit=False)
+    def name_by_uuid(cls, session: Session, uuid: UUID) -> str | None:
+        row = session.get(cls, uuid)
+        return None if row is None else row.name
+
+    @classmethod
+    @Database.sessionmethod(bundled=False, commit=False)
+    def uuid_by_name(cls, session: Session, name: str) -> UUID | None:
+        row = session.scalar(
+            sqla.select(cls).where(
+                cls.name == name
+            )
+        )
+        return None if row is None else row.uuid
 
 
 class Props(Base):
@@ -33,6 +52,21 @@ class Props(Base):
         ForeignKey("types.uuid"), nullable=False
     )
 
+    @classmethod
+    @Database.sessionmethod(bundled=False, commit=False)
+    def get_type_name(cls, session: Session, owner_type_uuid: UUID, key: str) -> str:
+        row = session.scalar(
+            sqla.select(cls).where(
+                cls.owner_type_uuid == owner_type_uuid, cls.key == key
+            )
+        )
+        if row is None:
+            raise KeyError(f"type {Types.name_by_uuid(owner_type_uuid)!r} has no prop {key!r}")
+        value_type = Types.name_by_uuid(row.value_type_uuid)
+        if value_type is None:
+            raise KeyError(f"Type with UUID {row.value_type_uuid} does not exist")
+        return value_type
+
 
 # Instances of types
 # (Both arrays and scalars are considered types, too)
@@ -50,6 +84,15 @@ class Instances(Base):
     modified_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
+
+    @classmethod
+    @Database.sessionmethod(bundled=False, commit=False)
+    def get_type_name(cls, session: Session, uuid: UUID) -> str:
+        inst = session.get(cls, uuid)
+        if inst is None:
+            return "<gone>"
+        name = Types.name_by_uuid(inst.type_uuid)
+        return "<dangling>" if name is None else name
 
 
 # === Values ===

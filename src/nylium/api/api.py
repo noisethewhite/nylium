@@ -20,12 +20,11 @@ from nylium.api.views import (
     ObjectRef,
     ObjectView,
     PropValue,
-    PropView,
     RefValue,
     ScalarValue,
     TypeView,
 )
-from nylium.database import Database, Instances, Types
+from nylium.database import Database, Instances, Props, Types
 from nylium.objects.wobject import INSTANCE_NAME_FORMAT, SHORT_UUID_LENGTH, WObject
 from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import ScalarPayload, WScalar
@@ -45,14 +44,14 @@ class Api:
     @Database.sessionmethod(bundled=False, commit=False)
     def list_types(cls, session: Session) -> list[TypeView]:
         names = list(session.scalars(sqla.select(Types.name)).all())
-        return [cls._type_view(name) for name in names]
+        return [TypeView.from_name(name) for name in names]
 
     @classmethod
     @Database.sessionmethod(bundled=True, commit=False)
     def get_type(cls, name: str) -> TypeView | None:
         if WType.by_name(name) is None:
             return None
-        return cls._type_view(name)
+        return TypeView.from_name(name)
 
     @classmethod
     @Database.sessionmethod(bundled=True, commit=True)
@@ -62,7 +61,7 @@ class Api:
         owner = WType.ensure(name)
         for key, value_type_name in (props or {}).items():
             _ = WProp.ensure(owner, key, WType.ensure(value_type_name))
-        return cls._type_view(name)
+        return TypeView.from_name(name)
 
     @classmethod
     @Database.sessionmethod(bundled=False, commit=True)
@@ -131,7 +130,7 @@ class Api:
     @Database.sessionmethod(bundled=True, commit=True)
     def update_object(cls, uuid: UUID, props: dict[str, PropInput]) -> ObjectView:
         wrapper = WObject.wrap(uuid)
-        type_name = cls._type_name_of(uuid)
+        type_name = Instances.get_type_name(uuid)
         normalized = cls._normalize_props(type_name, props)
         for key, value in normalized.items():
             setattr(wrapper, key, value)
@@ -157,21 +156,13 @@ class Api:
     ) -> dict[str, StoredValue]:
         """Callers hand links over as UUID/ObjectRef (that's all they have);
         the object layer wants WObject wrappers. Resolve by prop type."""
-        owner = WType.by_name(type_name)
-        if owner is None:
+        owner_type_uuid = Types.uuid_by_name(type_name)
+        if owner_type_uuid is None:
             raise KeyError(f"no type {type_name!r}")
         return {
-            key: cls._normalize_value(value, cls._prop_type_name(owner, key))
+            key: cls._normalize_value(value, Props.get_type_name(owner_type_uuid, key))
             for key, value in props.items()
         }
-
-    @classmethod
-    @Database.sessionmethod(bundled=True, commit=False)
-    def _prop_type_name(cls, owner: WType, key: str) -> str:
-        prop = WProp.by_key(owner, key)
-        if prop is None:
-            raise KeyError(f"type {owner.name!r} has no prop {key!r}")
-        return prop.value_type().name
 
     @classmethod
     def _normalize_value(cls, value: PropInput, type_name: str) -> StoredValue:
@@ -187,20 +178,6 @@ class Api:
         if isinstance(value, UUID):
             return WObject.wrap(value)
         return cast(StoredValue, value)  # anything else fails in setattr
-
-    @classmethod
-    @Database.sessionmethod(bundled=True, commit=False)
-    def _type_view(cls, name: str) -> TypeView:
-        owner = WType.by_name(name)
-        if owner is None:
-            raise KeyError(f"no type {name!r}")
-        return TypeView(
-            name=name,
-            props=[
-                PropView(key=prop.key, value_type=prop.value_type().name)
-                for prop in WProp.all_for(owner)
-            ],
-        )
 
     @classmethod
     @Database.sessionmethod(bundled=False, commit=True)
@@ -265,14 +242,5 @@ class Api:
         if not isinstance(value, WObject):
             raise TypeError(f"link prop rendered a {type(value).__name__}")
         return RefValue(
-            ref=ObjectRef(uuid=value.uuid, type_name=cls._type_name_of(value.uuid))
+            ref=ObjectRef(uuid=value.uuid, type_name=Instances.get_type_name(value.uuid))
         )
-
-    @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
-    def _type_name_of(cls, session: Session, uuid: UUID) -> str:
-        inst = session.get(Instances, uuid)
-        if inst is None:
-            return "<gone>"
-        owner = WType.by_uuid(inst.type_uuid)
-        return "<dangling>" if owner is None else owner.name

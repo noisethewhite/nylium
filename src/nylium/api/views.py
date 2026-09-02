@@ -11,9 +11,12 @@ from __future__ import annotations
 
 from uuid import UUID
 
+from typing import Self
 from pydantic import ConfigDict
 from pydantic.dataclasses import dataclass
 
+from nylium.database import Database
+from nylium.objects import WProp, WType
 from nylium.objects.wscalar import ScalarPayload
 
 _CONFIG = ConfigDict(extra="ignore")
@@ -32,6 +35,20 @@ class PropView:
 class TypeView:
     name: str
     props: list[PropView]
+
+    @classmethod
+    @Database.sessionmethod(bundled=True, commit=False)
+    def from_name(cls, name: str) -> Self:
+        owner = WType.by_name(name)
+        if owner is None:
+            raise KeyError(f"no type {name!r}")
+        return cls(
+            name=name,
+            props=[
+                PropView(key=prop.key, value_type=prop.value_type().name)
+                for prop in WProp.all_for(owner)
+            ],
+        )
 
 
 # --- object data views ---
