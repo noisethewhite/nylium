@@ -25,8 +25,7 @@ from nylium.api.views import (
     ScalarValue,
     TypeView,
 )
-from nylium.database.tables import Instances, Types
-from nylium.objects.sessions import sessions
+from nylium.database import Database, Instances, Types
 from nylium.objects.wobject import INSTANCE_NAME_FORMAT, SHORT_UUID_LENGTH, WObject
 from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import ScalarPayload, WScalar
@@ -43,72 +42,71 @@ class Api:
     # --- types ---
 
     @classmethod
-    def list_types(cls) -> list[TypeView]:
-        with sessions.new() as session:
-            names = list(session.scalars(sqla.select(Types.name)).all())
-            return [cls._type_view(session, name) for name in names]
+    @Database.sessionmethod
+    def list_types(cls, session: Session) -> list[TypeView]:
+        names = list(session.scalars(sqla.select(Types.name)).all())
+        return [cls._type_view(name) for name in names]
 
     @classmethod
-    def get_type(cls, name: str) -> TypeView | None:
-        with sessions.new() as session:
-            if WType.by_name(session, name) is None:
-                return None
-            return cls._type_view(session, name)
+    @Database.sessionmethod
+    def get_type(cls, session: Session, name: str) -> TypeView | None:
+        if WType.by_name(session, name) is None:
+            return None
+        return cls._type_view(name)
 
     @classmethod
-    def create_type(cls, name: str, props: dict[str, str] | None = None) -> TypeView:
+    @Database.sessionmethod_begin
+    def create_type(cls, session: Session, name: str, props: dict[str, str] | None = None) -> TypeView:
         """props maps key -> value type name. Missing value types are created."""
-        with sessions.new() as session, session.begin():
-            WScalar.ensure_builtins(session)
-            owner = WType.ensure(session, name)
-            for key, value_type_name in (props or {}).items():
-                _ = WProp.ensure(session, owner, key, WType.ensure(session, value_type_name))
-            return cls._type_view(session, name)
+        WScalar.ensure_builtins(session)
+        owner = WType.ensure(session, name)
+        for key, value_type_name in (props or {}).items():
+            _ = WProp.ensure(session, owner, key, WType.ensure(session, value_type_name))
+        return cls._type_view(name)
 
     @classmethod
-    def delete_type(cls, name: str) -> bool:
+    @Database.sessionmethod_begin
+    def delete_type(cls, session: Session, name: str) -> bool:
         """Refuses while instances exist; other types referencing this one
         as a prop value type are stopped by the FK, on purpose."""
-        with sessions.new() as session, session.begin():
-            owner = WType.by_name(session, name)
-            if owner is None:
-                return False
-            instance_count = session.scalar(
-                sqla.select(sqla.func.count())
-                .select_from(Instances)
-                .where(Instances.type_uuid == owner.uuid)
+        owner = WType.by_name(session, name)
+        if owner is None:
+            return False
+        instance_count = session.scalar(
+            sqla.select(sqla.func.count())
+            .select_from(Instances)
+            .where(Instances.type_uuid == owner.uuid)
+        )
+        if instance_count:
+            raise ValueError(
+                f"type {name!r} still has {instance_count} instances"
             )
-            if instance_count:
-                raise ValueError(
-                    f"type {name!r} still has {instance_count} instances"
-                )
-            row = session.get(Types, owner.uuid)
-            if row is not None:
-                session.delete(row)  # its props cascade
-            return True
+        row = session.get(Types, owner.uuid)
+        if row is not None:
+            session.delete(row)  # its props cascade
+        return True
 
     # --- objects ---
 
     @classmethod
-    def list_objects(cls, type_name: str) -> list[ObjectView]:
-        with sessions.new() as session:
-            owner = WType.by_name(session, type_name)
-            if owner is None:
-                return []
-            uuids = list(
-                session.scalars(
-                    sqla.select(Instances.uuid).where(
-                        Instances.type_uuid == owner.uuid
-                    )
-                ).all()
-            )
-            views = [cls._object_view(session, uuid) for uuid in uuids]
-            return [view for view in views if view is not None]
+    @Database.sessionmethod
+    def list_objects(cls, session: Session, type_name: str) -> list[ObjectView]:
+        owner = WType.by_name(session, type_name)
+        if owner is None:
+            return []
+        uuids = list(
+            session.scalars(
+                sqla.select(Instances.uuid).where(
+                    Instances.type_uuid == owner.uuid
+                )
+            ).all()
+        )
+        views = [cls._object_view(uuid) for uuid in uuids]
+        return [view for view in views if view is not None]
 
     @classmethod
     def get_object(cls, uuid: UUID) -> ObjectView | None:
-        with sessions.new() as session:
-            return cls._object_view(session, uuid)
+        return cls._object_view(uuid)
 
     @classmethod
     def create_object(
@@ -131,8 +129,7 @@ class Api:
     @classmethod
     def update_object(cls, uuid: UUID, props: dict[str, PropInput]) -> ObjectView:
         wrapper = WObject.wrap(uuid)
-        with sessions.new() as session:
-            type_name = cls._type_name_of(session, uuid)
+        type_name = cls._type_name_of(uuid)
         normalized = cls._normalize_props(type_name, props)
         for key, value in normalized.items():
             setattr(wrapper, key, value)
@@ -142,31 +139,32 @@ class Api:
         return view
 
     @classmethod
-    def delete_object(cls, uuid: UUID) -> bool:
-        with sessions.new() as session:
-            if session.get(Instances, uuid) is None:
-                return False
+    @Database.sessionmethod
+    def delete_object(cls, session: Session, uuid: UUID) -> bool:
+        if session.get(Instances, uuid) is None:
+            return False
         WObject.wrap(uuid).delete()
         return True
 
     # --- internals ---
 
     @classmethod
+    @Database.sessionmethod
     def _normalize_props(
-        cls, type_name: str, props: dict[str, PropInput]
+        cls, session: Session, type_name: str, props: dict[str, PropInput]
     ) -> dict[str, StoredValue]:
         """Callers hand links over as UUID/ObjectRef (that's all they have);
         the object layer wants WObject wrappers. Resolve by prop type."""
-        with sessions.new() as session:
-            owner = WType.by_name(session, type_name)
-            if owner is None:
-                raise KeyError(f"no type {type_name!r}")
-            return {
-                key: cls._normalize_value(session, value, cls._prop_type_name(session, owner, key))
-                for key, value in props.items()
-            }
+        owner = WType.by_name(session, type_name)
+        if owner is None:
+            raise KeyError(f"no type {type_name!r}")
+        return {
+            key: cls._normalize_value(value, cls._prop_type_name(owner, key))
+            for key, value in props.items()
+        }
 
     @classmethod
+    @Database.sessionmethod
     def _prop_type_name(cls, session: Session, owner: WType, key: str) -> str:
         prop = WProp.by_key(session, owner, key)
         if prop is None:
@@ -174,14 +172,14 @@ class Api:
         return prop.value_type(session).name
 
     @classmethod
-    def _normalize_value(cls, session: Session, value: PropInput, type_name: str) -> StoredValue:
+    def _normalize_value(cls, value: PropInput, type_name: str) -> StoredValue:
         if WScalar.by_type_name(type_name) is not None:
             return cast(StoredValue, value)
         if WType.is_array_name(type_name):
             if not isinstance(value, list):
                 raise TypeError(f"array prop takes list, got {type(value).__name__}")
             element_name = WType.element_name(type_name)
-            return [cls._normalize_value(session, item, element_name) for item in value]
+            return [cls._normalize_value(item, element_name) for item in value]
         if isinstance(value, ObjectRef):
             return WObject.wrap(value.uuid)
         if isinstance(value, UUID):
@@ -189,6 +187,7 @@ class Api:
         return cast(StoredValue, value)  # anything else fails in setattr
 
     @classmethod
+    @Database.sessionmethod
     def _type_view(cls, session: Session, name: str) -> TypeView:
         owner = WType.by_name(session, name)
         if owner is None:
@@ -202,30 +201,31 @@ class Api:
         )
 
     @classmethod
-    def _create_db_only(cls, type_name: str, props: dict[str, StoredValue]) -> UUID:
+    @Database.sessionmethod_begin
+    def _create_db_only(cls, session: Session, type_name: str, props: dict[str, StoredValue]) -> UUID:
         """Types with no registered python class: bare instance row, then
         writes through the generic WObject wrapper — same validation."""
-        with sessions.new() as session, session.begin():
-            owner = WType.by_name(session, type_name)
-            if owner is None:
-                raise KeyError(f"no type {type_name!r}")
-            instance_uuid = uuid4()
-            session.add(
-                Instances(
-                    uuid=instance_uuid,
-                    type_uuid=owner.uuid,
-                    name=INSTANCE_NAME_FORMAT.format(
-                        type_name=type_name,
-                        short_uuid=str(instance_uuid)[:SHORT_UUID_LENGTH],
-                    ),
-                )
+        owner = WType.by_name(session, type_name)
+        if owner is None:
+            raise KeyError(f"no type {type_name!r}")
+        instance_uuid = uuid4()
+        session.add(
+            Instances(
+                uuid=instance_uuid,
+                type_uuid=owner.uuid,
+                name=INSTANCE_NAME_FORMAT.format(
+                    type_name=type_name,
+                    short_uuid=str(instance_uuid)[:SHORT_UUID_LENGTH],
+                ),
             )
+        )
         wrapper = WObject.wrap(instance_uuid)
         for key, value in props.items():
             setattr(wrapper, key, value)
         return instance_uuid
 
     @classmethod
+    @Database.sessionmethod
     def _object_view(cls, session: Session, uuid: UUID) -> ObjectView | None:
         inst = session.get(Instances, uuid)
         if inst is None:
@@ -236,7 +236,6 @@ class Api:
         wrapper = WObject.wrap(uuid)
         props = {
             prop.key: cls._render(
-                session,
                 cast(StoredValue, getattr(wrapper, prop.key)),
                 prop.value_type(session).name,
             )
@@ -245,7 +244,7 @@ class Api:
         return ObjectView(uuid=uuid, type_name=owner.name, props=props)
 
     @classmethod
-    def _render(cls, session: Session, value: StoredValue, type_name: str) -> PropValue:
+    def _render(cls, value: StoredValue, type_name: str) -> PropValue:
         """The declared prop type disambiguates None: an unset scalar,
         an unset link and an unset array are three different views."""
         if WScalar.by_type_name(type_name) is not None:
@@ -257,17 +256,18 @@ class Api:
             if not isinstance(value, list):
                 raise TypeError(f"array prop rendered a {type(value).__name__}")
             return ArrayValue(
-                items=[cls._render(session, item, element_name) for item in value]
+                items=[cls._render(item, element_name) for item in value]
             )
         if value is None:
             return RefValue(ref=None)
         if not isinstance(value, WObject):
             raise TypeError(f"link prop rendered a {type(value).__name__}")
         return RefValue(
-            ref=ObjectRef(uuid=value.uuid, type_name=cls._type_name_of(session, value.uuid))
+            ref=ObjectRef(uuid=value.uuid, type_name=cls._type_name_of(value.uuid))
         )
 
     @classmethod
+    @Database.sessionmethod
     def _type_name_of(cls, session: Session, uuid: UUID) -> str:
         inst = session.get(Instances, uuid)
         if inst is None:
