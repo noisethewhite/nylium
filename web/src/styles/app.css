@@ -166,6 +166,12 @@ body {
   align-items: center;
 }
 
+.prop-draft-row > .input {
+  width: auto;
+  flex: 1;
+  min-width: 0;
+}
+
 .type-create-actions {
   display: flex;
   justify-content: space-between;
