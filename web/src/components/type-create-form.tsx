@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import { useState } from "react";
 import { TypeNames } from "../contracts";
 import { WorkspaceStore } from "../state/workspace";
+import { TypePicker } from "./type-picker";
 
 interface PropDraft {
   key: string;
@@ -16,15 +17,6 @@ export function TypeCreateForm(props: {
 }): ReactElement {
   const [name, setName] = useState("");
   const [propsDraft, setPropsDraft] = useState<PropDraft[]>([{ ...EMPTY_PROP }]);
-
-  const typeOptions = TypeNames.SCALARS.flatMap((scalar) => [
-    scalar,
-    TypeNames.arrayOf(scalar),
-  ]).concat(
-    props.workspace
-      .userTypes()
-      .flatMap((view) => [view.name, TypeNames.arrayOf(view.name)]),
-  );
 
   const updateProp = (index: number, patch: Partial<PropDraft>): void => {
     setPropsDraft((drafts) =>
@@ -61,17 +53,11 @@ export function TypeCreateForm(props: {
             value={draft.key}
             onChange={(event) => updateProp(index, { key: event.target.value })}
           />
-          <select
-            className="input"
+          <TypePicker
+            workspace={props.workspace}
             value={draft.valueType}
-            onChange={(event) => updateProp(index, { valueType: event.target.value })}
-          >
-            {typeOptions.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
+            onChange={(valueType) => updateProp(index, { valueType })}
+          />
           <button
             className="icon-button"
             title="Remove prop"
