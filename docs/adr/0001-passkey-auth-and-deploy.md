@@ -1,6 +1,14 @@
-# ADR-0001: Passkey auth + deployment to atos
+# ADR-0001: Passkey auth + deployment
 
-Status: proposed
+Status: accepted (2026-09-02). Amended 2026-09-02: deploy target moved from
+atos to personal_vps (217.160.4.50, Debian 13, root). Domain changed to
+`nylium.noisethewhite.dev` — RP_ID/RP_ORIGIN follow the domain, so passkeys
+registered under the old RP are invalid. Runtime is now a system unit
+(`/etc/systemd/system/nylium.service`, `WorkingDirectory=/opt/nylium`,
+`Restart=always`); Postgres runs natively on the VPS (Debian postgresql-17,
+data in `/var/lib/postgresql`), no Docker. Caddy on the VPS terminates TLS.
+GH secrets: `VPS_SSH_KEY`; vars: `VPS_HOST`, `VPS_USER`. The `systemd --user`
++ atos specifics below are superseded.
 Date: 2026-09-02
 
 ## Context

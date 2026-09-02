@@ -1,8 +1,10 @@
 name: Deploy
 
-# Deploys to atos after CI is green on main: rsync the tree, sync the
-# venv, restart the user unit, probe the SPA. Secrets: ATOS_SSH_KEY
-# (ed25519 private key), ATOS_HOST, ATOS_USER.
+# Deploys to personal_vps after CI is green on main: rsync the tree, sync the
+# venv, restart the system unit, probe the SPA. Secrets: VPS_SSH_KEY
+# (ed25519 private key). Vars: VPS_HOST, VPS_USER.
+# Data lives on the VPS: Postgres at /var/lib/postgresql, .env at
+# /opt/nylium/.env (excluded from rsync).
 
 on:
   workflow_run:
@@ -30,11 +32,11 @@ jobs:
       - name: Set up SSH
         run: |
           mkdir -p ~/.ssh
-          printf '%s\n' "${{ secrets.ATOS_SSH_KEY }}" > ~/.ssh/atos_ed25519
-          chmod 600 ~/.ssh/atos_ed25519
-          ssh-keyscan -H "${{ vars.ATOS_HOST }}" >> ~/.ssh/known_hosts
+          printf '%s\n' "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/vps_ed25519
+          chmod 600 ~/.ssh/vps_ed25519
+          ssh-keyscan -H "${{ vars.VPS_HOST }}" >> ~/.ssh/known_hosts
 
-      - name: Rsync to atos
+      - name: Rsync to VPS
         run: |
           rsync -az --delete \
             --exclude .git \
@@ -44,16 +46,22 @@ jobs:
             --exclude __pycache__ \
             --exclude .pytest_cache \
             --exclude .ruff_cache \
-            -e "ssh -i ~/.ssh/atos_ed25519" \
-            ./ "${{ vars.ATOS_USER }}@${{ vars.ATOS_HOST }}:~/services/nylium/"
+            -e "ssh -i ~/.ssh/vps_ed25519" \
+            ./ "${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:/tmp/nylium-stage/"
+          ssh -i ~/.ssh/vps_ed25519 "${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}" '
+            set -e
+            rsync -a --delete --exclude .env /tmp/nylium-stage/ /opt/nylium/
+            rm -rf /tmp/nylium-stage
+          '
 
       - name: Restart and healthcheck
         run: |
-          ssh -i ~/.ssh/atos_ed25519 "${{ vars.ATOS_USER }}@${{ vars.ATOS_HOST }}" '
+          ssh -i ~/.ssh/vps_ed25519 "${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}" '
             set -e
-            cd ~/services/nylium
+            export PATH=$HOME/.local/bin:$PATH
+            cd /opt/nylium
             uv sync --frozen
-            systemctl --user restart nylium
+            systemctl restart nylium
             for i in $(seq 1 15); do
               sleep 1
               if curl -fsS -o /dev/null http://127.0.0.1:8474/; then
@@ -61,6 +69,6 @@ jobs:
               fi
             done
             echo "nylium did not come up" >&2
-            systemctl --user status nylium --no-pager >&2 || true
+            systemctl status nylium --no-pager >&2 || true
             exit 1
           '
