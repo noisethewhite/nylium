@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import threading
 from collections.abc import Callable
-from functools import wraps
-from typing import Concatenate, ParamSpec, TypeVar
+from typing import Concatenate, ParamSpec, TypeVar, Literal, cast, overload
 import sqlalchemy as sqla
 from sqlalchemy.orm import Session
 
@@ -30,51 +29,28 @@ class _DatabaseMeta(type):
 
 
 class Database(metaclass=_DatabaseMeta):
-    class sessionmethod:
-        @staticmethod
-        def no_commit(func: Callable[Concatenate[_C, Session, _P], _R]) -> Callable[Concatenate[_C, _P], _R]:
-            @wraps(func)
-            def wrapper(cls: _C, *args: _P.args, **kwargs: _P.kwargs) -> _R:
-                local_session = LocalSession(Database.engine)
-                try:
-                    return func(cls, local_session.value, *args, **kwargs)
-                finally:
-                    local_session.close()
-            return wrapper
+    @staticmethod
+    @overload
+    def sessionmethod(*, bundled: Literal[False], commit: bool) -> Callable[[Callable[Concatenate[_C, Session, _P], _R]], Callable[Concatenate[_C, _P], _R]]: ...
 
-        @staticmethod
-        def bundled_no_commit(func: Callable[Concatenate[_C, _P], _R]) -> Callable[Concatenate[_C, _P], _R]:
-            @wraps(func)
-            def wrapper(cls: _C, *args: _P.args, **kwargs: _P.kwargs) -> _R:
-                local_session = LocalSession(Database.engine)
-                try:
-                    return func(cls, *args, **kwargs)
-                finally:
-                    local_session.close()
-            return wrapper
+    @staticmethod
+    @overload
+    def sessionmethod(*, bundled: Literal[True], commit: bool) -> Callable[[Callable[Concatenate[_C, _P], _R]], Callable[Concatenate[_C, _P], _R]]: ...
 
-        @staticmethod
-        def with_commit(func: Callable[Concatenate[_C, Session, _P], _R]) -> Callable[Concatenate[_C, _P], _R]:
-            @wraps(func)
+    @staticmethod
+    def sessionmethod(*, bundled: bool, commit: bool) -> Callable[[Callable[Concatenate[_C, Session, _P], _R]], Callable[Concatenate[_C, _P], _R]] | Callable[[Callable[Concatenate[_C, _P], _R]], Callable[Concatenate[_C, _P], _R]]:
+        def decorator(func: Callable[Concatenate[_C, Session, _P], _R] | Callable[Concatenate[_C, _P], _R]) -> Callable[Concatenate[_C, _P], _R]:
             def wrapper(cls: _C, *args: _P.args, **kwargs: _P.kwargs) -> _R:
                 local_session = LocalSession(Database.engine)
                 try:
-                    value = func(cls, local_session.value, *args, **kwargs)
-                    local_session.commit()
+                    if bundled:
+                        value = cast(Callable[Concatenate[_C, _P], _R], func)(cls, *args, **kwargs)
+                    else:
+                        value = cast(Callable[Concatenate[_C, Session, _P], _R], func)(cls, local_session.value, *args, **kwargs)
+                    if commit:
+                        local_session.commit()
                     return value
                 finally:
                     local_session.close()
             return wrapper
-
-        @staticmethod
-        def bundled_with_commit(func: Callable[Concatenate[_C, _P], _R]) -> Callable[Concatenate[_C, _P], _R]:
-            @wraps(func)
-            def wrapper(cls: _C, *args: _P.args, **kwargs: _P.kwargs) -> _R:
-                local_session = LocalSession(Database.engine)
-                try:
-                    value = func(cls, *args, **kwargs)
-                    local_session.commit()
-                    return value
-                finally:
-                    local_session.close()
-            return wrapper
+        return decorator

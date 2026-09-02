@@ -42,20 +42,20 @@ class Api:
     # --- types ---
 
     @classmethod
-    @Database.sessionmethod.no_commit
+    @Database.sessionmethod(bundled=False, commit=False)
     def list_types(cls, session: Session) -> list[TypeView]:
         names = list(session.scalars(sqla.select(Types.name)).all())
         return [cls._type_view(name) for name in names]
 
     @classmethod
-    @Database.sessionmethod.bundled_no_commit
+    @Database.sessionmethod(bundled=True, commit=False)
     def get_type(cls, name: str) -> TypeView | None:
         if WType.by_name(name) is None:
             return None
         return cls._type_view(name)
 
     @classmethod
-    @Database.sessionmethod.bundled_with_commit
+    @Database.sessionmethod(bundled=True, commit=True)
     def create_type(cls, name: str, props: dict[str, str] | None = None) -> TypeView:
         """props maps key -> value type name. Missing value types are created."""
         WScalar.ensure_builtins()
@@ -65,7 +65,7 @@ class Api:
         return cls._type_view(name)
 
     @classmethod
-    @Database.sessionmethod.with_commit
+    @Database.sessionmethod(bundled=False, commit=True)
     def delete_type(cls, session: Session, name: str) -> bool:
         """Refuses while instances exist; other types referencing this one
         as a prop value type are stopped by the FK, on purpose."""
@@ -89,7 +89,7 @@ class Api:
     # --- objects ---
 
     @classmethod
-    @Database.sessionmethod.no_commit
+    @Database.sessionmethod(bundled=False, commit=False)
     def list_objects(cls, session: Session, type_name: str) -> list[ObjectView]:
         owner = WType.by_name(type_name)
         if owner is None:
@@ -109,7 +109,7 @@ class Api:
         return cls._object_view(uuid)
 
     @classmethod
-    @Database.sessionmethod.bundled_with_commit
+    @Database.sessionmethod(bundled=True, commit=True)
     def create_object(
         cls, type_name: str, props: dict[str, PropInput] | None = None
     ) -> ObjectView:
@@ -128,7 +128,7 @@ class Api:
         return view
 
     @classmethod
-    @Database.sessionmethod.bundled_with_commit
+    @Database.sessionmethod(bundled=True, commit=True)
     def update_object(cls, uuid: UUID, props: dict[str, PropInput]) -> ObjectView:
         wrapper = WObject.wrap(uuid)
         type_name = cls._type_name_of(uuid)
@@ -141,7 +141,7 @@ class Api:
         return view
 
     @classmethod
-    @Database.sessionmethod.with_commit
+    @Database.sessionmethod(bundled=False, commit=True)
     def delete_object(cls, session: Session, uuid: UUID) -> bool:
         if session.get(Instances, uuid) is None:
             return False
@@ -151,7 +151,7 @@ class Api:
     # --- internals ---
 
     @classmethod
-    @Database.sessionmethod.bundled_no_commit
+    @Database.sessionmethod(bundled=True, commit=False)
     def _normalize_props(
         cls, type_name: str, props: dict[str, PropInput]
     ) -> dict[str, StoredValue]:
@@ -166,7 +166,7 @@ class Api:
         }
 
     @classmethod
-    @Database.sessionmethod.bundled_no_commit
+    @Database.sessionmethod(bundled=True, commit=False)
     def _prop_type_name(cls, owner: WType, key: str) -> str:
         prop = WProp.by_key(owner, key)
         if prop is None:
@@ -189,7 +189,7 @@ class Api:
         return cast(StoredValue, value)  # anything else fails in setattr
 
     @classmethod
-    @Database.sessionmethod.bundled_no_commit
+    @Database.sessionmethod(bundled=True, commit=False)
     def _type_view(cls, name: str) -> TypeView:
         owner = WType.by_name(name)
         if owner is None:
@@ -203,7 +203,7 @@ class Api:
         )
 
     @classmethod
-    @Database.sessionmethod.with_commit
+    @Database.sessionmethod(bundled=False, commit=True)
     def _create_db_only(cls, session: Session, type_name: str, props: dict[str, StoredValue]) -> UUID:
         """Types with no registered python class: bare instance row, then
         writes through the generic WObject wrapper — same validation."""
@@ -227,7 +227,7 @@ class Api:
         return instance_uuid
 
     @classmethod
-    @Database.sessionmethod.no_commit
+    @Database.sessionmethod(bundled=False, commit=False)
     def _object_view(cls, session: Session, uuid: UUID) -> ObjectView | None:
         inst = session.get(Instances, uuid)
         if inst is None:
@@ -269,7 +269,7 @@ class Api:
         )
 
     @classmethod
-    @Database.sessionmethod.no_commit
+    @Database.sessionmethod(bundled=False, commit=False)
     def _type_name_of(cls, session: Session, uuid: UUID) -> str:
         inst = session.get(Instances, uuid)
         if inst is None:

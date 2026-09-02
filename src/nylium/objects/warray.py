@@ -29,7 +29,7 @@ ARRAY_INSTANCE_NAME = "array"
 
 class WArray:
     @classmethod
-    @Database.sessionmethod.no_commit
+    @Database.sessionmethod(bundled=False, commit=False)
     def read(cls, session: Session, array_uuid: UUID, elem_type: str) -> list[StoredValue]:
         rows = session.scalars(
             sqla.select(ArrayValues)
@@ -39,7 +39,7 @@ class WArray:
         return [cls._unwrap(row.value_uuid, elem_type) for row in rows]
 
     @classmethod
-    @Database.sessionmethod.bundled_with_commit
+    @Database.sessionmethod(bundled=True, commit=True)
     def write(
         cls,
         owner_uuid: UUID,
@@ -51,7 +51,7 @@ class WArray:
         cls._fill(array_uuid, elem_type, values)
 
     @classmethod
-    @Database.sessionmethod.with_commit
+    @Database.sessionmethod(bundled=False, commit=True)
     def destroy(cls, session: Session, array_uuid: UUID) -> None:
         """Delete the array instance and every box it owns, recursively."""
         cls._destroy_boxes(array_uuid)
@@ -65,7 +65,7 @@ class WArray:
     # --- internals ---
 
     @classmethod
-    @Database.sessionmethod.with_commit
+    @Database.sessionmethod(bundled=False, commit=True)
     def _fill(
         cls, session: Session, array_uuid: UUID, elem_type: str, values: list[StoredValue]
     ) -> None:
@@ -80,7 +80,7 @@ class WArray:
             )
 
     @classmethod
-    @Database.sessionmethod.with_commit
+    @Database.sessionmethod(bundled=False, commit=True)
     def _destroy_boxes(cls, session: Session, array_uuid: UUID) -> None:
         box_uuids = list(
             session.scalars(
@@ -99,7 +99,7 @@ class WArray:
             cls._destroy_box(box_uuid)
 
     @classmethod
-    @Database.sessionmethod.with_commit
+    @Database.sessionmethod(bundled=False, commit=True)
     def _destroy_box(cls, session: Session, box_uuid: UUID) -> None:
         inst = session.get(Instances, box_uuid)
         if inst is None:
@@ -116,7 +116,7 @@ class WArray:
         # user-type instance referenced from the array: not a box, keep it
 
     @classmethod
-    @Database.sessionmethod.with_commit
+    @Database.sessionmethod(bundled=False, commit=True)
     def _ensure_array_instance(
         cls, session: Session, owner_uuid: UUID, prop: WProp, elem_type: str
     ) -> UUID:
@@ -136,7 +136,7 @@ class WArray:
         return array_uuid
 
     @classmethod
-    @Database.sessionmethod.with_commit
+    @Database.sessionmethod(bundled=False, commit=True)
     def _create_array_instance(cls, session: Session, array_type_name: str) -> UUID:
         array_uuid = uuid4()
         array_type = WType.ensure(array_type_name)
@@ -147,7 +147,7 @@ class WArray:
         return array_uuid
 
     @classmethod
-    @Database.sessionmethod.no_commit
+    @Database.sessionmethod(bundled=False, commit=False)
     def _unwrap(cls, session: Session, uuid: UUID, type_name: str) -> StoredValue:
         if WType.is_array_name(type_name):
             return cls.read(uuid, WType.element_name(type_name))
@@ -167,7 +167,7 @@ class WArray:
         return None if row is None else row.value
 
     @classmethod
-    @Database.sessionmethod.with_commit
+    @Database.sessionmethod(bundled=False, commit=True)
     def _box(cls, session: Session, type_name: str, value: StoredValue) -> UUID:
         if WType.is_array_name(type_name):
             if not isinstance(value, list):

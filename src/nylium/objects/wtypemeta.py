@@ -87,7 +87,7 @@ class WTypeMeta(type):
         return mcls._root
 
     @classmethod
-    @Database.sessionmethod.no_commit
+    @Database.sessionmethod(bundled=False, commit=False)
     def check_link(mcls, session: Session, expected_name: str, value: object) -> None:
         root = mcls.root()
         if not isinstance(value, root):
@@ -109,7 +109,7 @@ class WTypeMeta(type):
             )
 
     @classmethod
-    @Database.sessionmethod.bundled_with_commit
+    @Database.sessionmethod(bundled=True, commit=True)
     def _materialize(mcls, cls: type[WObjectShape], namespace: dict[str, object]) -> None:
         WScalar.ensure_builtins()
         owner = WType.ensure(cls.__name__)

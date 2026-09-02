@@ -52,19 +52,19 @@ class WType:
     # --- row access ---
 
     @classmethod
-    @Database.sessionmethod.no_commit
+    @Database.sessionmethod(bundled=False, commit=False)
     def by_name(cls, session: Session, name: str) -> "WType | None":
         row = session.scalar(sqla.select(Types).where(Types.name == name))
         return None if row is None else cls(row)
 
     @classmethod
-    @Database.sessionmethod.no_commit
+    @Database.sessionmethod(bundled=False, commit=False)
     def by_uuid(cls, session: Session, uuid: UUID) -> "WType | None":
         row = session.get(Types, uuid)
         return None if row is None else cls(row)
 
     @classmethod
-    @Database.sessionmethod.with_commit
+    @Database.sessionmethod(bundled=False, commit=True)
     def ensure(cls, session: Session, name: str) -> "WType":
         existing = cls.by_name(name)
         if existing is not None:

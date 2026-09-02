@@ -74,7 +74,7 @@ class WScalar:
             )
 
     @classmethod
-    @Database.sessionmethod.bundled_with_commit
+    @Database.sessionmethod(bundled=True, commit=True)
     def ensure_builtins(cls) -> None:
         from nylium.objects.wprop import WProp
         from nylium.objects.wtype import WType

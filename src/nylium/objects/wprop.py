@@ -45,7 +45,7 @@ class WProp:
         return self._row
 
     @classmethod
-    @Database.sessionmethod.no_commit
+    @Database.sessionmethod(bundled=False, commit=False)
     def by_key(cls, session: Session, owner: "WType", key: str) -> "WProp | None":
         row = session.scalar(
             sqla.select(Props).where(
@@ -55,7 +55,7 @@ class WProp:
         return None if row is None else cls(row)
 
     @classmethod
-    @Database.sessionmethod.no_commit
+    @Database.sessionmethod(bundled=False, commit=False)
     def all_for(cls, session: Session, owner: "WType") -> "list[WProp]":
         rows = session.scalars(
             sqla.select(Props).where(Props.owner_type_uuid == owner.uuid)
@@ -63,7 +63,7 @@ class WProp:
         return [cls(row) for row in rows]
 
     @classmethod
-    @Database.sessionmethod.with_commit
+    @Database.sessionmethod(bundled=False, commit=True)
     def ensure(
         cls, session: Session, owner: "WType", key: str, value_type: "WType"
     ) -> "WProp":
@@ -81,7 +81,7 @@ class WProp:
         session.flush()
         return cls(row)
 
-    @Database.sessionmethod.bundled_no_commit
+    @Database.sessionmethod(bundled=True, commit=False)
     def value_type(self) -> "WType":
         from nylium.objects.wtype import WType
 

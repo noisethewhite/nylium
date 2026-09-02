@@ -43,7 +43,7 @@ class WObject(metaclass=WTypeMeta):
 
     _uuid: UUID
 
-    @Database.sessionmethod.bundled_with_commit
+    @Database.sessionmethod(bundled=True, commit=True)
     def __init__(self, _uuid: UUID | None = None, **props: StoredValue) -> None:
         # plain assignment: __setattr__ routes "_" names to object.__setattr__,
         # and the checker gets to see _uuid initialized
@@ -54,7 +54,7 @@ class WObject(metaclass=WTypeMeta):
         for key, value in props.items():
             setattr(self, key, value)
 
-    @Database.sessionmethod.with_commit
+    @Database.sessionmethod(bundled=False, commit=True)
     def _register(self, session: Session) -> None:
         owner = WType.ensure(type(self).__name__)
         session.add(
@@ -71,7 +71,7 @@ class WObject(metaclass=WTypeMeta):
     # --- retrieval ---
 
     @classmethod
-    @Database.sessionmethod.no_commit
+    @Database.sessionmethod(bundled=False, commit=False)
     def get(cls, session: Session, uuid: UUID) -> "WObject | None":
         inst = session.get(Instances, uuid)
         if inst is None:
@@ -90,7 +90,7 @@ class WObject(metaclass=WTypeMeta):
         raise TypeError(f"instance {uuid} is {actual_name}, not {cls.__name__}")
 
     @classmethod
-    @Database.sessionmethod.no_commit
+    @Database.sessionmethod(bundled=False, commit=False)
     def wrap(cls, session: Session, uuid: UUID) -> "WObject":
         inst = session.get(Instances, uuid)
         if inst is None:
@@ -110,7 +110,7 @@ class WObject(metaclass=WTypeMeta):
     # --- dataclass-like facade for UI rendering ---
 
     @classmethod
-    @Database.sessionmethod.bundled_no_commit
+    @Database.sessionmethod(bundled=True, commit=False)
     def fields(cls) -> dict[str, str]:
         """prop key -> value type name, e.g. {'tags': 'Array<String>'}"""
         owner = WType.by_name(cls.__name__)
@@ -150,7 +150,7 @@ class WObject(metaclass=WTypeMeta):
 
     # --- attribute machinery ---
 
-    @Database.sessionmethod.no_commit
+    @Database.sessionmethod(bundled=False, commit=False)
     def _prop_and_type(self, session: Session, key: str) -> tuple[WProp, str]:
         inst = session.get(Instances, self._uuid)
         if inst is None:
@@ -163,7 +163,7 @@ class WObject(metaclass=WTypeMeta):
             raise AttributeError(f"{owner.name} has no prop {key!r}")
         return prop, prop.value_type().name
 
-    @Database.sessionmethod.no_commit
+    @Database.sessionmethod(bundled=False, commit=False)
     def __getattr__(self, session: Session, key: str) -> StoredValue:
         prop, value_type = self._prop_and_type(key)
         scalar = WScalar.by_type_name(value_type)
@@ -178,7 +178,7 @@ class WObject(metaclass=WTypeMeta):
         return WObject.wrap(link.uuid)
 
     @override
-    @Database.sessionmethod.with_commit
+    @Database.sessionmethod(bundled=False, commit=True)
     def __setattr__(self, session: Session, key: str, value: StoredValue) -> None:
         if key.startswith(PRIVATE_PREFIX):
             object.__setattr__(self, key, value)
@@ -202,7 +202,7 @@ class WObject(metaclass=WTypeMeta):
         self._touch()
 
     @override
-    @Database.sessionmethod.with_commit
+    @Database.sessionmethod(bundled=False, commit=True)
     def __delattr__(self, session: Session, key: str) -> None:
         if key.startswith(PRIVATE_PREFIX):
             object.__delattr__(self, key)
@@ -224,7 +224,7 @@ class WObject(metaclass=WTypeMeta):
             session.delete(link)
         self._touch()
 
-    @Database.sessionmethod.with_commit
+    @Database.sessionmethod(bundled=False, commit=True)
     def _touch(self, session: Session) -> None:
         _ = session.execute(
             sqla.update(Instances)
@@ -234,7 +234,7 @@ class WObject(metaclass=WTypeMeta):
 
     # --- reads ---
 
-    @Database.sessionmethod.no_commit
+    @Database.sessionmethod(bundled=False, commit=False)
     def _link(self, session: Session, prop: WProp) -> InstanceValues | None:
         return session.scalar(
             sqla.select(InstanceValues).where(
@@ -245,7 +245,7 @@ class WObject(metaclass=WTypeMeta):
 
     # --- writes ---
 
-    @Database.sessionmethod.with_commit
+    @Database.sessionmethod(bundled=False, commit=True)
     def _write_scalar(
         self,
         session: Session,
@@ -263,13 +263,13 @@ class WObject(metaclass=WTypeMeta):
             .values(value=value)
         )
 
-    @Database.sessionmethod.no_commit
+    @Database.sessionmethod(bundled=False, commit=False)
     def _write_link(self, session: Session, prop: WProp, value: "WObject") -> None:
         _ = session.merge(
             InstanceValues(uuid=value._uuid, prop_uuid=prop.uuid, inst_uuid=self._uuid)
         )
 
-    @Database.sessionmethod.with_commit
+    @Database.sessionmethod(bundled=False, commit=True)
     def delete(self, session: Session) -> None:
         for array_uuid in self._owned_array_uuids():
             WArray.destroy(array_uuid)
@@ -283,7 +283,7 @@ class WObject(metaclass=WTypeMeta):
         if inst is not None:
             session.delete(inst)
 
-    @Database.sessionmethod.no_commit
+    @Database.sessionmethod(bundled=False, commit=False)
     def _owned_array_uuids(self, session: Session) -> list[UUID]:
         from nylium.database.tables import Props, Types
 
