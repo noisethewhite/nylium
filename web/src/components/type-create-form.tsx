@@ -54,7 +54,7 @@ export function TypeCreateForm(props: {
         <div className="prop-draft-row" key={index}>
           <input
             className="input"
-            placeholder="prop"
+            placeholder="Property Name"
             value={draft.key}
             onChange={(event) => updateProp(index, { key: event.target.value })}
           />
@@ -81,7 +81,7 @@ export function TypeCreateForm(props: {
           className="button"
           onClick={() => setPropsDraft((drafts) => [...drafts, { ...EMPTY_PROP }])}
         >
-          + prop
+          Add Property
         </button>
         <button
           className="button button-primary"
