@@ -10,6 +10,8 @@ export interface TypeView {
   name: string;
   /** null for builtins and array types — only user types carry both forms */
   plural_name: string | null;
+  icon: string;
+  color: string;
   props: PropView[];
 }
 

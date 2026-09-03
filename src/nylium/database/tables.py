@@ -32,6 +32,14 @@ class Types(Base):
     name: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
     # NULL for builtins and array types — only user types carry both forms
     plural_name: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # lucide icon name + palette key, rendered monochrome by the UI;
+    # server defaults backfill existing rows on ALTER
+    icon: Mapped[str] = mapped_column(
+        Text, nullable=False, default="box", server_default="box"
+    )
+    color: Mapped[str] = mapped_column(
+        Text, nullable=False, default="gray", server_default="gray"
+    )
 
     @classmethod
     @Database.sessionmethod(bundled=False, commit=False)
@@ -56,12 +64,22 @@ class Types(Base):
 
     @classmethod
     @Database.sessionmethod(bundled=False, commit=True)
-    def rename(cls, session: Session, uuid: UUID, name: str, plural_name: str | None) -> None:
+    def update(
+        cls,
+        session: Session,
+        uuid: UUID,
+        name: str,
+        plural_name: str | None,
+        icon: str,
+        color: str,
+    ) -> None:
         row = session.get(cls, uuid)
         if row is None:
             raise KeyError(f"no type with uuid {uuid}")
         row.name = name
         row.plural_name = plural_name
+        row.icon = icon
+        row.color = color
         session.flush()
 
     @classmethod

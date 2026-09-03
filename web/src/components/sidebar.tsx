@@ -3,6 +3,7 @@ import { AuthStore } from "../state/auth";
 import { useObservable } from "../state/use-observable";
 import { WorkspaceStore } from "../state/workspace";
 import { ObjectLabels } from "./object-labels";
+import { TypeIcon } from "./type-icon";
 
 /** Temporary explorer: every type and every object, flat. */
 export function Sidebar(props: {
@@ -33,7 +34,8 @@ export function Sidebar(props: {
               className="type-row-name"
               onClick={() => props.workspace.openType(view.name)}
             >
-              {view.name}
+              <TypeIcon icon={view.icon} color={view.color} />
+              <span>{view.name}</span>
             </button>
             <button
               className="icon-button type-row-delete"

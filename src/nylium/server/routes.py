@@ -40,7 +40,9 @@ class routes:
 
     @classmethod
     def create_type(cls, body: CreateTypeBody) -> TypeView:
-        return Api.create_type(body.name, body.props, body.plural_name)
+        return Api.create_type(
+            body.name, body.props, body.plural_name, body.icon, body.color
+        )
 
     @classmethod
     def delete_type(cls, name: str) -> None:
@@ -59,7 +61,7 @@ class routes:
 
     @classmethod
     def update_type(cls, name: str, body: UpdateTypeBody) -> TypeView:
-        return Api.rename_type(name, body.name, body.plural_name)
+        return Api.rename_type(name, body.name, body.plural_name, body.icon, body.color)
 
     # --- objects ---
 

@@ -44,6 +44,8 @@ class WScalar:
     TYPE_NAME: ClassVar[str]
     PYTHON_TYPE: ClassVar[type[ScalarPayload]]
     TABLE: ClassVar[type[ScalarTable]]
+    # lucide icon name, rendered gray and immutable for builtins
+    ICON: ClassVar[str]
 
     @classmethod
     def all(cls) -> "list[type[WScalar]]":
@@ -99,7 +101,7 @@ class WScalar:
         from nylium.objects.wtype import WType
 
         for scalar in cls.all():
-            type_row = WType.ensure(scalar.TYPE_NAME)
+            type_row = WType.ensure(scalar.TYPE_NAME, icon=scalar.ICON)
             _ = WProp.ensure(type_row, VALUE_PROP_KEY, type_row)
 
 
@@ -108,6 +110,7 @@ class WString(WScalar):
     TYPE_NAME = "String"
     PYTHON_TYPE = str
     TABLE = StringValues
+    ICON = "type"
 
 
 @final
@@ -115,6 +118,7 @@ class WInteger(WScalar):
     TYPE_NAME = "Integer"
     PYTHON_TYPE = int
     TABLE = IntegerValues
+    ICON = "hash"
 
 
 @final
@@ -122,6 +126,7 @@ class WNumeric(WScalar):
     TYPE_NAME = "Numeric"
     PYTHON_TYPE = Decimal
     TABLE = NumericValues
+    ICON = "percent"
 
 
 @final
@@ -129,6 +134,7 @@ class WBoolean(WScalar):
     TYPE_NAME = "Boolean"
     PYTHON_TYPE = bool
     TABLE = BooleanValues
+    ICON = "toggle-left"
 
 
 @final
@@ -136,6 +142,7 @@ class WDatetime(WScalar):
     TYPE_NAME = "Datetime"
     PYTHON_TYPE = datetime
     TABLE = DatetimeValues
+    ICON = "calendar-clock"
 
 
 @final
@@ -143,6 +150,7 @@ class WDate(WScalar):
     TYPE_NAME = "Date"
     PYTHON_TYPE = date
     TABLE = DateValues
+    ICON = "calendar"
 
 
 @final
@@ -150,6 +158,7 @@ class WTime(WScalar):
     TYPE_NAME = "Time"
     PYTHON_TYPE = time
     TABLE = TimeValues
+    ICON = "clock"
 
 
 @final
@@ -159,6 +168,7 @@ class WMonthDay(WScalar):
     TYPE_NAME = "MonthDay"
     PYTHON_TYPE = MonthDay
     TABLE = MonthDayValues
+    ICON = "calendar-day"
 
     @override
     @classmethod
@@ -178,6 +188,7 @@ class WMonthDayTime(WScalar):
     TYPE_NAME = "MonthDayTime"
     PYTHON_TYPE = MonthDayTime
     TABLE = MonthDayTimeValues
+    ICON = "alarm-clock"
 
     @override
     @classmethod

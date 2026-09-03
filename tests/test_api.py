@@ -243,3 +243,17 @@ def test_rename_type_guards():
         Api.rename_type("String", "Text")  # builtins are immutable
     with pytest.raises(KeyError):
         Api.rename_type("NoSuchType", "Memo")
+
+
+def test_type_icon_and_color():
+    view = Api.create_type("Tagged", {"name": "String"}, "Tagged", icon="star", color="red")
+    assert (view.icon, view.color) == ("star", "red")
+    plain = Api.create_type("Plain", {"name": "String"}, "Plains")
+    assert (plain.icon, plain.color) == ("box", "gray")
+    updated = Api.rename_type("Tagged", icon="heart", color="pink")
+    assert (updated.name, updated.icon, updated.color) == ("Tagged", "heart", "pink")
+    builtin = Api.get_type("String")
+    assert builtin is not None
+    assert (builtin.icon, builtin.color) == ("type", "gray")
+    with pytest.raises(ValidationError):
+        Api.rename_type("String", icon="x")

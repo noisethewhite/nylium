@@ -27,6 +27,8 @@ class WType:
         self._uuid: UUID = row.uuid
         self._name: str = row.name
         self._plural_name: str | None = row.plural_name
+        self._icon: str = row.icon
+        self._color: str = row.color
 
     @property
     def uuid(self) -> UUID:
@@ -39,6 +41,14 @@ class WType:
     @property
     def plural_name(self) -> str | None:
         return self._plural_name
+
+    @property
+    def icon(self) -> str:
+        return self._icon
+
+    @property
+    def color(self) -> str:
+        return self._color
 
     # --- type-name conventions ---
 
@@ -71,12 +81,18 @@ class WType:
     @classmethod
     @Database.sessionmethod(bundled=False, commit=True)
     def ensure(
-        cls, session: Session, name: str, plural_name: str | None = None
+        cls,
+        session: Session,
+        name: str,
+        plural_name: str | None = None,
+        icon: str | None = None,
     ) -> "WType":
         existing = cls.by_name(name)
         if existing is not None:
             return existing
         row = Types(uuid=uuid4(), name=name, plural_name=plural_name)
+        if icon is not None:
+            row.icon = icon
         session.add(row)
         session.flush()
         return cls(row)

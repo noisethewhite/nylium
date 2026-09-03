@@ -56,6 +56,8 @@ class Api:
         name: str,
         props: dict[str, str] | None = None,
         plural_name: str | None = None,
+        icon: str = "box",
+        color: str = "gray",
     ) -> TypeView:
         """props maps key -> value type name. Missing value types are created.
         Dict order becomes the schema's display order (positions).
@@ -76,6 +78,7 @@ class Api:
         owner = WType.ensure(name, plural_name)
         for position, (key, value_type_name) in enumerate(props.items()):
             _ = WProp.ensure(owner, key, WType.ensure(value_type_name), position)
+        Types.update(owner.uuid, owner.name, owner.plural_name, icon, color)
         return TypeView.from_name(name)
 
     @classmethod
@@ -146,10 +149,15 @@ class Api:
     @classmethod
     @Database.sessionmethod(bundled=True, commit=True)
     def rename_type(
-        cls, name: str, new_name: str | None = None, plural_name: str | None = None
+        cls,
+        name: str,
+        new_name: str | None = None,
+        plural_name: str | None = None,
+        icon: str | None = None,
+        color: str | None = None,
     ) -> TypeView:
-        """Rename a user type and/or its plural form. Builtins and array
-        types (no plural form) are immutable identities."""
+        """Edit a user type's identity: name, plural form, icon, color.
+        Builtins and array types (no plural form) are immutable."""  # noqa: E501
         from nylium.server.errors import ValidationError
 
         owner = WType.by_name(name)
@@ -164,7 +172,9 @@ class Api:
         if collision is not None and collision != owner.uuid:
             raise ValueError(f"type {final_name!r} already exists")
         final_plural = owner.plural_name if plural_name is None else plural_name
-        Types.rename(owner.uuid, final_name, final_plural)
+        final_icon = owner.icon if icon is None else icon
+        final_color = owner.color if color is None else color
+        Types.update(owner.uuid, final_name, final_plural, final_icon, final_color)
         return TypeView.from_name(final_name)
 
     @classmethod

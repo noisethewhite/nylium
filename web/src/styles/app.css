@@ -67,6 +67,9 @@ body {
 
 .type-row-name {
   flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   text-align: left;
   background: none;
   border: none;
@@ -203,6 +206,109 @@ select.input option {
   min-width: 0;
 }
 
+/* the prop key is a field — underline makes that legible in a borderless UI */
+.prop-draft-row > .input:first-child {
+  border-bottom: 1px solid var(--separator);
+  padding-bottom: var(--space-1);
+}
+
+.prop-draft-row > .input:first-child:focus {
+  border-bottom-color: var(--accent, var(--fg-dim));
+}
+
+/* --- icon picker --- */
+
+.icon-picker {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.icon-picker-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-small);
+  cursor: pointer;
+}
+
+.icon-picker-trigger:hover {
+  background: var(--bg-hover);
+}
+
+.icon-picker-menu {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  left: 0;
+  z-index: 11;
+  width: 300px;
+  background: var(--bg-raised);
+  border: 1px solid var(--separator);
+  border-radius: var(--radius-small);
+  padding: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.icon-picker-search {
+  border-bottom: 1px solid var(--separator);
+  padding-bottom: var(--space-1);
+}
+
+.icon-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 2px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.icon-picker-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-small);
+  cursor: pointer;
+}
+
+.icon-picker-cell:hover {
+  background: var(--bg-hover);
+}
+
+.icon-picker-cell.selected {
+  background: var(--bg-hover);
+  outline: 1px solid var(--separator);
+}
+
+.icon-picker-swatches {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-picker-swatch {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.icon-picker-swatch.selected {
+  outline: 2px solid var(--fg);
+  outline-offset: 2px;
+}
+
 .type-create-actions {
   display: flex;
   justify-content: space-between;
@@ -248,6 +354,27 @@ select.input option {
 .type-picker-trigger {
   text-align: left;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.type-picker-value {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.type-picker-chevron {
+  color: var(--fg-dim);
+  flex-shrink: 0;
+}
+
+.type-menu-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .type-picker-backdrop {
@@ -350,6 +477,9 @@ select.input option {
   font: inherit;
   padding: var(--space-2) 0;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .tab-close {

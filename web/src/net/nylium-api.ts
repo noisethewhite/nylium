@@ -18,8 +18,12 @@ export class NyliumApi extends HttpTransport {
     name: string,
     pluralName: string,
     props: Record<string, string>,
+    icon?: string,
+    color?: string,
   ): Promise<TypeView> {
-    return this.request("POST", "/types", { name, plural_name: pluralName, props });
+    return this.request("POST", "/types", {
+      name, plural_name: pluralName, props, icon, color,
+    });
   }
 
   /** Persist a new prop order — keys must cover the whole schema. */
@@ -39,7 +43,8 @@ export class NyliumApi extends HttpTransport {
   }
 
   updateType(
-    name: string, patch: { name?: string; plural_name?: string },
+    name: string,
+    patch: { name?: string; plural_name?: string; icon?: string; color?: string },
   ): Promise<TypeView> {
     return this.request<TypeView>(
       "PATCH", `/types/${encodeURIComponent(name)}`, patch,

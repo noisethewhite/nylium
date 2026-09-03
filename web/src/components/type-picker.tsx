@@ -1,7 +1,9 @@
 import type { ReactElement } from "react";
 import { useState } from "react";
+import { ChevronDown } from "lucide-react";
 import { TypeLabels, TypeNames } from "../contracts";
 import { WorkspaceStore } from "../state/workspace";
+import { TypeIcon } from "./type-icon";
 
 /** Submenu the two bottom buttons open — same view, different wrapping. */
 type ObjectMode = "single" | "array";
@@ -59,7 +61,8 @@ export function TypePicker(props: {
               pick(mode === "array" ? TypeNames.arrayOf(view.name) : view.name)
             }
           >
-            {mode === "array" ? TypeNames.arrayOf(view.name) : view.name}
+            <TypeIcon icon={view.icon} color={view.color} size={15} />
+            <span>{mode === "array" ? TypeNames.arrayOf(view.name) : view.name}</span>
           </button>
         ))}
         {matches.length === 0 && <div className="type-menu-empty dim">No types</div>}
@@ -78,12 +81,20 @@ export function TypePicker(props: {
       <div className="type-menu-list">
         {TypeNames.CALENDAR.map((name) => (
           <button key={name} className="type-menu-row" onClick={() => pick(name)}>
-            {TypeLabels[name] ?? name}
+            {scalarIcon(name)}
+            <span>{TypeLabels[name] ?? name}</span>
           </button>
         ))}
       </div>
     </>
   );
+
+  const scalarIcon = (name: string): ReactElement => {
+    const view = props.workspace.typeView(name);
+    // builtins render gray by rule — their stored color IS gray, but
+    // force it here so a stale backend value can't sneak color in
+    return <TypeIcon icon={view?.icon ?? "box"} color="gray" size={15} />;
+  };
 
   return (
     <div className="type-picker">
@@ -91,7 +102,9 @@ export function TypePicker(props: {
         className="input type-picker-trigger"
         onClick={() => (open ? close() : setOpen(true))}
       >
-        {props.value}
+        <ChevronDown size={14} className="type-picker-chevron" aria-hidden />
+        {scalarIcon(props.value)}
+        <span className="type-picker-value">{props.value}</span>
       </button>
       {open && (
         <>
@@ -110,14 +123,16 @@ export function TypePicker(props: {
                       className="type-menu-row"
                       onClick={() => pick(scalar)}
                     >
-                      {scalar}
+                      {scalarIcon(scalar)}
+                      <span>{scalar}</span>
                     </button>
                   ))}
                   <button
                     className="type-menu-row"
                     onClick={() => setCalendarOpen(true)}
                   >
-                    Date &amp; time →
+                    {scalarIcon(TypeNames.DATE)}
+                    <span>Date &amp; time →</span>
                   </button>
                 </div>
                 <div className="type-menu-divider" />

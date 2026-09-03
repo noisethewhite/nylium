@@ -90,9 +90,11 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
     name: string,
     pluralName: string,
     props: Record<string, string>,
+    icon?: string,
+    color?: string,
   ): Promise<void> {
     await this.guard(async () => {
-      const created = await this.api.createType(name, pluralName, props);
+      const created = await this.api.createType(name, pluralName, props, icon, color);
       const state = this.getSnapshot();
       const tabs = state.tabs.filter((tab) => tab.kind !== "create-type");
       const tab: Tab = { kind: "type", name: created.name };
@@ -150,7 +152,7 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
    * list and the objects whose values a retype/delete may have wiped. */
   async saveTypeEdits(
     typeName: string,
-    patch: { name: string; plural_name: string },
+    patch: { name: string; plural_name: string; icon: string; color: string },
     props: { uuid: string | null; key: string; value_type: string }[],
   ): Promise<void> {
     await this.guard(async () => {
@@ -159,13 +161,24 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
         return;
       }
       let schema = current;
-      if (patch.name !== current.name || patch.plural_name !== current.plural_name) {
-        const rename: { name?: string; plural_name?: string } = {};
+      const metaChanged =
+        patch.name !== current.name ||
+        patch.plural_name !== current.plural_name ||
+        patch.icon !== current.icon ||
+        patch.color !== current.color;
+      if (metaChanged) {
+        const rename: { name?: string; plural_name?: string; icon?: string; color?: string } = {};
         if (patch.name !== current.name) {
           rename.name = patch.name;
         }
         if (patch.plural_name !== current.plural_name) {
           rename.plural_name = patch.plural_name;
+        }
+        if (patch.icon !== current.icon) {
+          rename.icon = patch.icon;
+        }
+        if (patch.color !== current.color) {
+          rename.color = patch.color;
         }
         schema = await this.api.updateType(typeName, rename);
       }
@@ -234,6 +247,11 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
 
   userTypes(): readonly TypeView[] {
     return this.getSnapshot().types.filter((view) => TypeNames.isUserType(view.name));
+  }
+
+  /** Any type by name, builtins included — pickers render their icons. */
+  typeView(name: string): TypeView | undefined {
+    return this.getSnapshot().types.find((view) => view.name === name);
   }
 
   /** Read-through for the editor's ref pickers — components never

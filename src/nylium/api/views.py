@@ -38,6 +38,8 @@ class PropView:
 class TypeView:
     name: str
     plural_name: str | None
+    icon: str
+    color: str
     props: list[PropView]
 
     @classmethod
@@ -49,6 +51,8 @@ class TypeView:
         return cls(
             name=name,
             plural_name=owner.plural_name,
+            icon=owner.icon,
+            color=owner.color,
             props=[
                 PropView(uuid=prop.uuid, key=prop.key, value_type=prop.value_type().name)
                 for prop in WProp.all_for(owner)

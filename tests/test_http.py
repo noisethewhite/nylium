@@ -25,15 +25,19 @@ class dsl:
         name: str,
         props: dict[str, str],
         plural_name: str | None = None,
+        icon: str | None = None,
+        color: str | None = None,
     ) -> dict[str, Any]:
-        response = auth_client.post(
-            "/api/types",
-            json={
-                "name": name,
-                "plural_name": plural_name if plural_name is not None else f"{name}s",
-                "props": props,
-            },
-        )
+        payload: dict[str, Any] = {
+            "name": name,
+            "plural_name": plural_name if plural_name is not None else f"{name}s",
+            "props": props,
+        }
+        if icon is not None:
+            payload["icon"] = icon
+        if color is not None:
+            payload["color"] = color
+        response = auth_client.post("/api/types", json=payload)
         assert response.status_code == 201, response.text
         return response.json()  # type: ignore[no-any-return]
 
@@ -457,3 +461,14 @@ def test_update_type_guards(auth_client: TestClient) -> None:
     assert builtin.status_code == 422
     missing = auth_client.patch("/api/types/Nope", json={"name": "Memo"})
     assert missing.status_code == 404
+
+
+def test_type_icon_and_color_over_http(auth_client):
+    dsl.create_type(auth_client, "Tagged", {"name": "String"}, icon="star", color="red")
+    view = auth_client.get("/api/types/Tagged").json()
+    assert (view["icon"], view["color"]) == ("star", "red")
+    response = auth_client.patch("/api/types/Tagged", json={"icon": "heart", "color": "pink"})
+    assert response.status_code == 200
+    assert (response.json()["icon"], response.json()["color"]) == ("heart", "pink")
+    builtin = auth_client.get("/api/types/String").json()
+    assert (builtin["icon"], builtin["color"]) == ("type", "gray")

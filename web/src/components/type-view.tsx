@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import type { TypeView } from "../contracts";
 import { TypeNames } from "../contracts";
 import { WorkspaceStore } from "../state/workspace";
+import { IconPicker } from "./icon-picker";
 import { TypePicker } from "./type-picker";
 
 /** One row of the editor's draft — uuid null marks a not-yet-created
@@ -45,6 +46,8 @@ export function TypeViewPanel(props: {
   const { workspace, schema } = props;
   const [nameDraft, setNameDraft] = useState(schema.name);
   const [pluralDraft, setPluralDraft] = useState(schema.plural_name ?? "");
+  const [iconDraft, setIconDraft] = useState(schema.icon);
+  const [colorDraft, setColorDraft] = useState(schema.color);
   const [rows, setRows] = useState<PropDraft[]>(() => draftsOf(schema));
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [overIndex, setOverIndex] = useState<number | null>(null);
@@ -52,6 +55,8 @@ export function TypeViewPanel(props: {
   useEffect(() => {
     setNameDraft(schema.name);
     setPluralDraft(schema.plural_name ?? "");
+    setIconDraft(schema.icon);
+    setColorDraft(schema.color);
     setRows(draftsOf(schema));
   }, [schema]);
 
@@ -103,6 +108,8 @@ export function TypeViewPanel(props: {
   const pristine =
     nameDraft === schema.name &&
     pluralDraft === (schema.plural_name ?? "") &&
+    iconDraft === schema.icon &&
+    colorDraft === schema.color &&
     JSON.stringify(rows) === JSON.stringify(draftsOf(schema));
   const keys = rows.map((row) => row.key);
   const invalid =
@@ -113,7 +120,7 @@ export function TypeViewPanel(props: {
   const save = (): void => {
     void workspace.saveTypeEdits(
       schema.name,
-      { name: nameDraft.trim(), plural_name: pluralDraft },
+      { name: nameDraft.trim(), plural_name: pluralDraft, icon: iconDraft, color: colorDraft },
       rows.map((row) => ({ uuid: row.uuid, key: row.key, value_type: row.valueType })),
     );
   };
@@ -121,6 +128,15 @@ export function TypeViewPanel(props: {
   return (
     <div className="tab-content">
       <div className="type-header">
+        <IconPicker
+          icon={iconDraft}
+          color={colorDraft}
+          size={22}
+          onChange={(icon, color) => {
+            setIconDraft(icon);
+            setColorDraft(color);
+          }}
+        />
         <input
           className="input type-name-input"
           value={nameDraft}

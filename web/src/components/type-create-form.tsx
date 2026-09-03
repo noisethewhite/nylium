@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import { useState } from "react";
 import { TypeNames } from "../contracts";
 import { WorkspaceStore } from "../state/workspace";
+import { DEFAULT_COLOR, DEFAULT_ICON, IconPicker } from "./icon-picker";
 import { TypePicker } from "./type-picker";
 
 interface PropDraft {
@@ -16,6 +17,8 @@ export function TypeCreateForm(props: {
 }): ReactElement {
   const [name, setName] = useState("");
   const [pluralName, setPluralName] = useState("");
+  const [icon, setIcon] = useState(DEFAULT_ICON);
+  const [color, setColor] = useState(DEFAULT_COLOR);
   const [propsDraft, setPropsDraft] = useState<PropDraft[]>([{ ...EMPTY_PROP }]);
 
   const updateProp = (index: number, patch: Partial<PropDraft>): void => {
@@ -34,18 +37,29 @@ export function TypeCreateForm(props: {
         propsRecord[draft.key] = draft.valueType;
       }
     }
-    void props.workspace.createType(name, pluralName, propsRecord);
+    void props.workspace.createType(name, pluralName, propsRecord, icon, color);
   };
 
   return (
     <div className="type-create-form">
-      {/* the title IS the name field — borderless, heading-sized */}
-      <input
-        className="input type-name-input"
-        placeholder="Type name"
-        value={name}
-        onChange={(event) => setName(event.target.value)}
-      />
+      <div className="type-header">
+        <IconPicker
+          icon={icon}
+          color={color}
+          size={22}
+          onChange={(nextIcon, nextColor) => {
+            setIcon(nextIcon);
+            setColor(nextColor);
+          }}
+        />
+        {/* the title IS the name field — borderless, heading-sized */}
+        <input
+          className="input type-name-input"
+          placeholder="Type name"
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+        />
+      </div>
       <input
         className="input"
         placeholder="Name (plural)"

@@ -27,6 +27,8 @@ class CreateTypeBody:
     name: str
     plural_name: str
     props: dict[str, str] = field(default_factory=dict)
+    icon: str = "box"
+    color: str = "gray"
 
 
 @dataclass(config=_CONFIG)
@@ -72,3 +74,5 @@ class UpdateTypeBody:
 
     name: str | None = None
     plural_name: str | None = None
+    icon: str | None = None
+    color: str | None = None

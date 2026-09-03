@@ -3,6 +3,7 @@ import { useObservable } from "../state/use-observable";
 import type { Tab } from "../state/workspace";
 import { sameTab, WorkspaceStore } from "../state/workspace";
 import { ObjectLabels } from "./object-labels";
+import { TypeIcon } from "./type-icon";
 
 export function TabBar(props: { workspace: WorkspaceStore }): ReactElement {
   const state = useObservable(props.workspace);
@@ -16,6 +17,17 @@ export function TabBar(props: { workspace: WorkspaceStore }): ReactElement {
     }
     const object = state.objects.find((view) => view.uuid === tab.uuid);
     return object === undefined ? tab.uuid.slice(0, 8) : ObjectLabels.of(object);
+  };
+
+  const iconOf = (tab: Tab): ReactElement | null => {
+    if (tab.kind !== "type") {
+      return null;
+    }
+    const view = state.types.find((type) => type.name === tab.name);
+    if (view === undefined) {
+      return null;
+    }
+    return <TypeIcon icon={view.icon} color={view.color} size={14} />;
   };
 
   const activate = (tab: Tab): void => {
@@ -42,7 +54,8 @@ export function TabBar(props: { workspace: WorkspaceStore }): ReactElement {
           }
         >
           <button className="tab-label" onClick={() => activate(tab)}>
-            {labelOf(tab)}
+            {iconOf(tab)}
+            <span>{labelOf(tab)}</span>
           </button>
           <button
             className="icon-button tab-close"
