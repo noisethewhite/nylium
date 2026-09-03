@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import ClassVar
 
 from fastapi import Depends, FastAPI, status
+from sqlalchemy import text
 
 from nylium.auth.guard import require_user
 from nylium.auth.routes import auth_routes
@@ -37,8 +38,21 @@ class NyliumApp:
     @classmethod
     def _ensure_schema(cls) -> None:
         """create_all is idempotent — the server is self-sufficient on
-        a fresh database and a no-op on an existing one."""
+        a fresh database. Existing deployments get in-place ALTERs below
+        for columns added after their first boot."""
         Base.metadata.create_all(Database.engine)
+        cls._migrate_schema()
+
+    @classmethod
+    def _migrate_schema(cls) -> None:
+        """Idempotent column backfills; each clause is a no-op once applied."""
+        statements = [
+            "ALTER TABLE types ADD COLUMN IF NOT EXISTS icon TEXT NOT NULL DEFAULT 'box'",
+            "ALTER TABLE types ADD COLUMN IF NOT EXISTS color TEXT NOT NULL DEFAULT 'gray'",
+        ]
+        with Database.engine.begin() as connection:
+            for statement in statements:
+                _ = connection.execute(text(statement))
 
     @classmethod
     def _dist_dir(cls) -> Path:
