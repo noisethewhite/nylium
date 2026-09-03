@@ -104,6 +104,12 @@ export class ObjectEditorStore extends Observable<EditorState> {
     await this.workspace.deleteObject(this.getSnapshot().object.uuid);
   }
 
+  /** Candidates of a ref target type for the chip picker — array-level,
+   * where no per-item RefFieldModel exists to carry them. */
+  async refOptionsOf(typeName: string): Promise<readonly ObjectView[]> {
+    return this.workspace.listObjectsOfType(typeName);
+  }
+
   /** Every RefFieldModel (top-level or inside arrays) gets candidates
    * of its target type. */
   private async loadRefOptions(): Promise<void> {

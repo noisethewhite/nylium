@@ -1,6 +1,9 @@
 import type { ChangeEvent, ReactElement } from "react";
+import { useEffect, useState } from "react";
+import type { ObjectView } from "../contracts";
 import { ArrayFieldModel, RefFieldModel } from "../fields/composite-fields";
 import { EnumFieldModel } from "../fields/enum-fields";
+import { FieldFactory } from "../fields/field-factory";
 import { FloatingMenu } from "./floating-menu";
 import { NameSearch } from "./name-search";
 import { FieldModel } from "../fields/field-model";
@@ -526,6 +529,10 @@ function RefInput({ field, editor }: { field: RefFieldModel; editor: ObjectEdito
 }
 
 function ArrayEditor({ field, editor }: { field: ArrayFieldModel; editor: ObjectEditorStore }): ReactElement {
+  const chipKind = chipKindOf(field);
+  if (chipKind !== null) {
+    return <ChipArrayInput field={field} editor={editor} kind={chipKind} />;
+  }
   return (
     <div className="field field-array">
       <span className="field-label">
@@ -551,6 +558,141 @@ function ArrayEditor({ field, editor }: { field: ArrayFieldModel; editor: Object
             </button>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+type ChipKind = "ref" | "enum";
+
+/** Arrays of refs/enums render as token chips; scalar arrays keep rows. */
+function chipKindOf(field: ArrayFieldModel): ChipKind | null {
+  const probe =
+    field.items[0] ??
+    FieldFactory.createForType(field.key, field.elementType, undefined, field.enumOptionsOf);
+  if (probe instanceof RefFieldModel) {
+    return "ref";
+  }
+  if (probe instanceof EnumFieldModel) {
+    return "enum";
+  }
+  return null;
+}
+
+/** Email-recipient style editor: picked values become oval chips with a
+ * remove ×, adding goes through the shared NameSearch. */
+function ChipArrayInput({
+  field,
+  editor,
+  kind,
+}: {
+  field: ArrayFieldModel;
+  editor: ObjectEditorStore;
+  kind: ChipKind;
+}): ReactElement {
+  const [refOptions, setRefOptions] = useState<readonly ObjectView[]>([]);
+  useEffect(() => {
+    if (kind !== "ref") {
+      return;
+    }
+    let alive = true;
+    void editor.refOptionsOf(field.elementType).then((options) => {
+      if (alive) {
+        setRefOptions(options);
+      }
+    });
+    return () => {
+      alive = false;
+    };
+  }, [editor, field.elementType, kind]);
+
+  const enumOptions =
+    kind === "enum" ? (field.enumOptionsOf?.(field.elementType) ?? []) : [];
+  const takenUuids = new Set(
+    field.items.map((item) => (item instanceof RefFieldModel ? item.selectedUuid : null)),
+  );
+  const takenOptions = new Set(
+    field.items.map((item) => (item instanceof EnumFieldModel ? item.selected : null)),
+  );
+
+  const labelOf = (item: FieldModel): string => {
+    if (item instanceof RefFieldModel) {
+      const found = refOptions.find((option) => option.uuid === item.selectedUuid);
+      if (found !== undefined) {
+        return ObjectLabels.of(found);
+      }
+      return item.selectedUuid?.slice(0, 8) ?? "—";
+    }
+    if (item instanceof EnumFieldModel) {
+      return item.selected ?? "—";
+    }
+    return "?";
+  };
+
+  const addPick = (pick: ObjectView | string): void => {
+    const item = field.addItem();
+    if (item instanceof RefFieldModel && typeof pick !== "string") {
+      item.selectedUuid = pick.uuid;
+    }
+    if (item instanceof EnumFieldModel && typeof pick === "string") {
+      item.selected = pick;
+    }
+    editor.touch();
+  };
+
+  return (
+    <div className="field field-array">
+      <span className="field-label">
+        {field.key} <span className="dim">→ {field.elementType}</span>
+      </span>
+      <div className="field-body">
+        <div className="chip-field">
+          {field.items.map((item, index) => (
+            <span className="chip" key={index}>
+              {labelOf(item)}
+              <button
+                className="chip-remove"
+                title="Remove"
+                onClick={() => editor.removeArrayItem(field, index)}
+              >
+                ×
+              </button>
+            </span>
+          ))}
+          <FloatingMenu
+            wrapperClassName="chip-add"
+            triggerClassName="chip chip-add-trigger"
+            menuClassName="type-menu"
+            title={`Add ${field.elementType}`}
+            trigger={<span className="dim">+</span>}
+          >
+            {(close) =>
+              kind === "ref" ? (
+                <NameSearch
+                  items={refOptions.filter((option) => !takenUuids.has(option.uuid))}
+                  getKey={(option) => option.uuid}
+                  getLabel={(option) => ObjectLabels.of(option)}
+                  placeholder="Search objects…"
+                  onPick={(option) => {
+                    addPick(option);
+                    close();
+                  }}
+                />
+              ) : (
+                <NameSearch
+                  items={enumOptions.filter((option) => !takenOptions.has(option))}
+                  getKey={(option) => option}
+                  getLabel={(option) => option}
+                  placeholder="Search options…"
+                  onPick={(option) => {
+                    addPick(option);
+                    close();
+                  }}
+                />
+              )
+            }
+          </FloatingMenu>
+        </div>
       </div>
     </div>
   );

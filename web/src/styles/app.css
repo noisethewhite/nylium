@@ -760,6 +760,50 @@ select.input option {
   flex: 1;
 }
 
+/* --- chip (token) array editor: refs/enums as email-recipient ovals --- */
+
+.chip-field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-3);
+  border-radius: 999px;
+  background: var(--bg-raised);
+  border: 1px solid var(--separator);
+  font-size: 13px;
+}
+
+.chip-remove {
+  background: none;
+  border: none;
+  color: var(--fg-dim);
+  font: inherit;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.chip-remove:hover {
+  color: var(--fg);
+}
+
+.chip-add-trigger {
+  cursor: pointer;
+  color: var(--fg-dim);
+}
+
+.chip-add-trigger:hover {
+  color: var(--fg);
+  border-color: var(--fg-faint);
+}
+
 .object-editor-actions {
   display: flex;
   gap: var(--space-3);
