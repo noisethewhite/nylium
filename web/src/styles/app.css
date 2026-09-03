@@ -441,6 +441,32 @@ body {
   font-size: 13px;
 }
 
+/* red plaque under a field whose draft broke its regex */
+.field-error {
+  background: rgba(224, 108, 91, 0.12);
+  color: var(--danger);
+  font-size: 12px;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-small);
+}
+
+/* month/day/time controls of the year-less date editors in one row */
+.field-row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.field-row .input {
+  flex: 1;
+  min-width: 0;
+}
+
+.type-menu-title {
+  align-self: center;
+  font-size: 13px;
+}
+
 .field-array {
   border-left: 2px solid var(--separator);
   padding-left: var(--space-3);

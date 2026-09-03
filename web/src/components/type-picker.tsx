@@ -1,10 +1,14 @@
 import type { ReactElement } from "react";
 import { useState } from "react";
-import { TypeNames } from "../contracts";
+import { TypeLabels, TypeNames } from "../contracts";
 import { WorkspaceStore } from "../state/workspace";
 
 /** Submenu the two bottom buttons open — same view, different wrapping. */
 type ObjectMode = "single" | "array";
+
+/** Scalars listed flat in the menu — the calendar family hides behind
+ * its own submenu so five variants don't flood the list. */
+const FLAT_SCALARS = [TypeNames.STRING, TypeNames.INTEGER, TypeNames.NUMERIC, TypeNames.BOOLEAN];
 
 export function TypePicker(props: {
   workspace: WorkspaceStore;
@@ -13,11 +17,13 @@ export function TypePicker(props: {
 }): ReactElement {
   const [open, setOpen] = useState(false);
   const [objectMode, setObjectMode] = useState<ObjectMode | null>(null);
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [query, setQuery] = useState("");
 
   const close = (): void => {
     setOpen(false);
     setObjectMode(null);
+    setCalendarOpen(false);
     setQuery("");
   };
 
@@ -61,6 +67,24 @@ export function TypePicker(props: {
     </>
   );
 
+  const renderCalendar = (): ReactElement => (
+    <>
+      <div className="type-menu-search">
+        <button className="icon-button" title="Back" onClick={() => setCalendarOpen(false)}>
+          ←
+        </button>
+        <span className="dim type-menu-title">Date &amp; time</span>
+      </div>
+      <div className="type-menu-list">
+        {TypeNames.CALENDAR.map((name) => (
+          <button key={name} className="type-menu-row" onClick={() => pick(name)}>
+            {TypeLabels[name] ?? name}
+          </button>
+        ))}
+      </div>
+    </>
+  );
+
   return (
     <div className="type-picker">
       <button
@@ -73,10 +97,14 @@ export function TypePicker(props: {
         <>
           <div className="type-picker-backdrop" onClick={close} />
           <div className="type-menu">
-            {objectMode === null ? (
+            {objectMode !== null ? (
+              renderObjectSearch(objectMode)
+            ) : calendarOpen ? (
+              renderCalendar()
+            ) : (
               <>
                 <div className="type-menu-list">
-                  {TypeNames.SCALARS.map((scalar) => (
+                  {FLAT_SCALARS.map((scalar) => (
                     <button
                       key={scalar}
                       className="type-menu-row"
@@ -85,6 +113,12 @@ export function TypePicker(props: {
                       {scalar}
                     </button>
                   ))}
+                  <button
+                    className="type-menu-row"
+                    onClick={() => setCalendarOpen(true)}
+                  >
+                    Date &amp; time →
+                  </button>
                 </div>
                 <div className="type-menu-divider" />
                 <div className="type-menu-footer">
@@ -102,8 +136,6 @@ export function TypePicker(props: {
                   </button>
                 </div>
               </>
-            ) : (
-              renderObjectSearch(objectMode)
             )}
           </div>
         </>

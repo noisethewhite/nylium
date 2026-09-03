@@ -24,4 +24,10 @@ export abstract class FieldModel {
   }
 
   abstract toWire(): PropValue;
+
+  /** Live input-time regex check; null = draft is fine. Empty drafts
+   * mean "unset" and always pass — toWire stays the hard save gate. */
+  validationError(): string | null {
+    return null;
+  }
 }

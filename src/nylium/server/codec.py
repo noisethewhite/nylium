@@ -6,19 +6,24 @@ which coercion applies — that's why decoding needs the schema.
 """
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime, time
 from decimal import Decimal, InvalidOperation
 
 from nylium.api.api import Api, PropInput
 from nylium.api.views import ArrayValue, PropValue, RefValue, ScalarValue
+from nylium.objects.monthday import MonthDay, MonthDayTime
 from nylium.objects.wscalar import (
     ScalarPayload,
     WBoolean,
+    WDate,
     WDatetime,
     WInteger,
+    WMonthDay,
+    WMonthDayTime,
     WNumeric,
     WScalar,
     WString,
+    WTime,
 )
 from nylium.objects.wtype import WType
 
@@ -89,6 +94,38 @@ class PropCodec:
             if type(raw) is str:
                 try:
                     return datetime.fromisoformat(raw)
+                except ValueError:
+                    raise TypeError(f"value {raw!r} is not a valid {type_name}") from None
+        if scalar is WDate:
+            if type(raw) is date:
+                return raw
+            if type(raw) is str:
+                try:
+                    return date.fromisoformat(raw)
+                except ValueError:
+                    raise TypeError(f"value {raw!r} is not a valid {type_name}") from None
+        if scalar is WTime:
+            if type(raw) is time:
+                return raw
+            if type(raw) is str:
+                try:
+                    return time.fromisoformat(raw)
+                except ValueError:
+                    raise TypeError(f"value {raw!r} is not a valid {type_name}") from None
+        if scalar is WMonthDay:
+            if type(raw) is MonthDay:
+                return raw
+            if type(raw) is str:
+                try:
+                    return MonthDay.parse(raw)
+                except ValueError:
+                    raise TypeError(f"value {raw!r} is not a valid {type_name}") from None
+        if scalar is WMonthDayTime:
+            if type(raw) is MonthDayTime:
+                return raw
+            if type(raw) is str:
+                try:
+                    return MonthDayTime.parse(raw)
                 except ValueError:
                     raise TypeError(f"value {raw!r} is not a valid {type_name}") from None
         raise TypeError(f"value {raw!r} is not a valid {type_name}")

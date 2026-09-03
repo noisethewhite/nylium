@@ -13,23 +13,31 @@ list[...] of those — the prop type world is closed by construction.
 """
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime, time
 from decimal import Decimal
-from typing import ClassVar, final
+from typing import ClassVar, cast, final, override
 
 from nylium.database import (
     Database,
     BooleanValues,
+    DateValues,
     DatetimeValues,
     IntegerValues,
+    MonthDayTimeValues,
+    MonthDayValues,
     NumericValues,
     StringValues,
+    TimeValues,
 )
+from nylium.objects.monthday import MonthDay, MonthDayTime
 
 VALUE_PROP_KEY = "value"
 
-ScalarPayload = str | int | Decimal | bool | datetime
-ScalarTable = StringValues | IntegerValues | NumericValues | BooleanValues | DatetimeValues
+ScalarPayload = str | int | Decimal | bool | datetime | date | time | MonthDay | MonthDayTime
+ScalarTable = (
+    StringValues | IntegerValues | NumericValues | BooleanValues | DatetimeValues
+    | DateValues | TimeValues | MonthDayValues | MonthDayTimeValues
+)
 
 
 class WScalar:
@@ -72,6 +80,17 @@ class WScalar:
             raise TypeError(
                 f"{type_name} prop takes {scalar.PYTHON_TYPE.__name__}, got {type(value).__name__}"
             )
+
+    @classmethod
+    def to_storage(cls, value: ScalarPayload) -> object:
+        """Value -> column payload. Identity for the native column
+        types; the year-less calendar types travel as text stamps."""
+        return value
+
+    @classmethod
+    def from_storage(cls, raw: object) -> ScalarPayload:
+        """Column payload -> value, the to_storage inverse."""
+        return cast(ScalarPayload, raw)
 
     @classmethod
     @Database.sessionmethod(bundled=True, commit=True)
@@ -117,3 +136,55 @@ class WDatetime(WScalar):
     TYPE_NAME = "Datetime"
     PYTHON_TYPE = datetime
     TABLE = DatetimeValues
+
+
+@final
+class WDate(WScalar):
+    TYPE_NAME = "Date"
+    PYTHON_TYPE = date
+    TABLE = DateValues
+
+
+@final
+class WTime(WScalar):
+    TYPE_NAME = "Time"
+    PYTHON_TYPE = time
+    TABLE = TimeValues
+
+
+@final
+class WMonthDay(WScalar):
+    """Month/day without a year, stored as its "MM-DD" stamp."""
+
+    TYPE_NAME = "MonthDay"
+    PYTHON_TYPE = MonthDay
+    TABLE = MonthDayValues
+
+    @override
+    @classmethod
+    def to_storage(cls, value: ScalarPayload) -> object:
+        return str(value)
+
+    @override
+    @classmethod
+    def from_storage(cls, raw: object) -> ScalarPayload:
+        return MonthDay.parse(str(raw))
+
+
+@final
+class WMonthDayTime(WScalar):
+    """Month/day plus wall-clock time, stored as "MM-DDTHH:MM"."""
+
+    TYPE_NAME = "MonthDayTime"
+    PYTHON_TYPE = MonthDayTime
+    TABLE = MonthDayTimeValues
+
+    @override
+    @classmethod
+    def to_storage(cls, value: ScalarPayload) -> object:
+        return str(value)
+
+    @override
+    @classmethod
+    def from_storage(cls, raw: object) -> ScalarPayload:
+        return MonthDayTime.parse(str(raw))

@@ -107,6 +107,44 @@ def test_object_scalars_roundtrip(auth_client: TestClient) -> None:
     assert [item["uuid"] for item in listed.json()] == [book["uuid"]]
 
 
+def test_calendar_scalar_family_roundtrip(auth_client: TestClient) -> None:
+    dsl.create_type(
+        auth_client,
+        "Event",
+        {
+            "on": "Date",
+            "at": "Time",
+            "starts": "Datetime",
+            "birthday": "MonthDay",
+            "alarm": "MonthDayTime",
+        },
+    )
+    event = dsl.create_object(
+        auth_client,
+        "Event",
+        {
+            "on": {"value": "2026-09-03"},
+            "at": {"value": "14:30"},
+            "starts": {"value": "2026-09-03T14:30:00"},
+            "birthday": {"value": "02-29"},
+            "alarm": {"value": "12-25T08:00"},
+        },
+    )
+    props = event["props"]
+    assert props["on"]["value"] == "2026-09-03"
+    assert str(props["at"]["value"]).startswith("14:30")
+    assert str(props["starts"]["value"]).startswith("2026-09-03T14:30:00")
+    assert props["birthday"]["value"] == "02-29"
+    assert props["alarm"]["value"] == "12-25T08:00"
+
+    # impossible calendar stamps are rejected at the codec
+    bad = auth_client.post(
+        "/api/objects",
+        json={"type_name": "Event", "props": {"birthday": {"value": "02-31"}}},
+    )
+    assert bad.status_code == 422
+
+
 def test_object_link_and_arrays(auth_client: TestClient) -> None:
     dsl.create_type(auth_client, "Book", {"title": "String"})
     dsl.create_type(

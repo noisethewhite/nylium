@@ -29,7 +29,7 @@ from nylium.database import Database
 from nylium.database.tables import ArrayValues, Instances, InstanceValues
 from nylium.objects.warray import WArray
 from nylium.objects.wprop import WProp
-from nylium.objects.wscalar import ScalarPayload, ScalarTable, WScalar
+from nylium.objects.wscalar import ScalarPayload, WScalar
 from nylium.objects.wtype import WType
 from nylium.objects.wtypemeta import StoredValue, WTypeMeta
 
@@ -189,7 +189,7 @@ class WObject(metaclass=WTypeMeta):
         scalar = WScalar.by_type_name(value_type)
         if scalar is not None:
             row = session.get(scalar.TABLE, (self._uuid, prop.uuid))
-            return None if row is None else row.value
+            return None if row is None else scalar.from_storage(row.value)
         link = self._link(prop)
         if link is None:
             return None
@@ -208,7 +208,7 @@ class WObject(metaclass=WTypeMeta):
         if scalar is not None:
             payload = cast(ScalarPayload | None, value)
             WScalar.validate(value_type, payload)
-            self._write_scalar(prop, scalar.TABLE, payload)
+            self._write_scalar(prop, scalar, payload)
         elif WType.is_array_name(value_type):
             WArray.write(
                 self._uuid,
@@ -270,17 +270,19 @@ class WObject(metaclass=WTypeMeta):
         self,
         session: Session,
         prop: WProp,
-        table: type[ScalarTable],
+        scalar: type[WScalar],
         value: ScalarPayload | None,
     ) -> None:
+        table = scalar.TABLE
+        stored = None if value is None else scalar.to_storage(value)
         row = session.get(table, (self._uuid, prop.uuid))
         if row is None:
-            session.add(table(inst_uuid=self._uuid, prop_uuid=prop.uuid, value=value))
+            session.add(table(inst_uuid=self._uuid, prop_uuid=prop.uuid, value=stored))
             return
         _ = session.execute(
             sqla.update(table)
             .where(table.inst_uuid == self._uuid, table.prop_uuid == prop.uuid)
-            .values(value=value)
+            .values(value=stored)
         )
 
     @Database.sessionmethod(bundled=False, commit=False)

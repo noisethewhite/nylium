@@ -62,12 +62,28 @@ export abstract class TypeNames {
   static readonly NUMERIC = "Numeric";
   static readonly BOOLEAN = "Boolean";
   static readonly DATETIME = "Datetime";
+  static readonly DATE = "Date";
+  static readonly TIME = "Time";
+  static readonly MONTH_DAY = "MonthDay";
+  static readonly MONTH_DAY_TIME = "MonthDayTime";
   static readonly SCALARS: readonly string[] = [
     TypeNames.STRING,
     TypeNames.INTEGER,
     TypeNames.NUMERIC,
     TypeNames.BOOLEAN,
     TypeNames.DATETIME,
+    TypeNames.DATE,
+    TypeNames.TIME,
+    TypeNames.MONTH_DAY,
+    TypeNames.MONTH_DAY_TIME,
+  ];
+  /** The calendar family — the picker groups it under one submenu. */
+  static readonly CALENDAR: readonly string[] = [
+    TypeNames.TIME,
+    TypeNames.DATE,
+    TypeNames.DATETIME,
+    TypeNames.MONTH_DAY,
+    TypeNames.MONTH_DAY_TIME,
   ];
   private static readonly ARRAY_PREFIX = "Array<";
 
@@ -92,3 +108,13 @@ export abstract class TypeNames {
     return !TypeNames.isScalar(name) && !TypeNames.isArray(name);
   }
 }
+
+/** Human-facing labels for the calendar family — everything else
+ * shows its raw type name. */
+export const TypeLabels: Readonly<Record<string, string>> = {
+  [TypeNames.TIME]: "Time",
+  [TypeNames.DATE]: "Date",
+  [TypeNames.DATETIME]: "Date & time",
+  [TypeNames.MONTH_DAY]: "Date, no year",
+  [TypeNames.MONTH_DAY_TIME]: "Date, no year & time",
+};

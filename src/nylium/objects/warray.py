@@ -164,7 +164,7 @@ class WArray:
         if value_prop is None:
             raise RuntimeError(f"scalar type {type_name} lost its 'value' prop")
         row = session.get(scalar.TABLE, (uuid, value_prop.uuid))
-        return None if row is None else row.value
+        return None if row is None else scalar.from_storage(row.value)
 
     @classmethod
     @Database.sessionmethod(bundled=False, commit=True)
@@ -190,6 +190,6 @@ class WArray:
         if value_prop is None:
             raise RuntimeError(f"scalar type {type_name} lost its 'value' prop")
         session.add(
-            scalar.TABLE(inst_uuid=box_uuid, prop_uuid=value_prop.uuid, value=value)
+            scalar.TABLE(inst_uuid=box_uuid, prop_uuid=value_prop.uuid, value=scalar.to_storage(cast(ScalarPayload, value)))
         )
         return box_uuid

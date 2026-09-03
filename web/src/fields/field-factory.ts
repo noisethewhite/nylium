@@ -4,10 +4,14 @@ import { ArrayFieldModel, RefFieldModel } from "./composite-fields";
 import { FieldModel } from "./field-model";
 import {
   BooleanFieldModel,
+  DateFieldModel,
   DatetimeFieldModel,
   DecimalFieldModel,
   IntegerFieldModel,
+  MonthDayFieldModel,
+  MonthDayTimeFieldModel,
   TextFieldModel,
+  TimeFieldModel,
 } from "./scalar-fields";
 
 /** Declared type name -> the right FieldModel kind. The single place
@@ -33,6 +37,14 @@ export abstract class FieldFactory {
         return BooleanFieldModel.fromWire(key, value);
       case TypeNames.DATETIME:
         return DatetimeFieldModel.fromWire(key, value);
+      case TypeNames.DATE:
+        return DateFieldModel.fromWire(key, value);
+      case TypeNames.TIME:
+        return TimeFieldModel.fromWire(key, value);
+      case TypeNames.MONTH_DAY:
+        return MonthDayFieldModel.fromWire(key, value);
+      case TypeNames.MONTH_DAY_TIME:
+        return MonthDayTimeFieldModel.fromWire(key, value);
       default:
         if (TypeNames.isArray(valueType)) {
           return ArrayFieldModel.fromWire(key, valueType, value);

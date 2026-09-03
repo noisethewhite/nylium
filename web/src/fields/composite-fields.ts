@@ -64,6 +64,17 @@ export class ArrayFieldModel extends FieldModel {
     this.items = this.items.filter((_, position) => position !== index);
   }
 
+  /** First failing item wins — the plaque inside the array marks it. */
+  override validationError(): string | null {
+    for (const item of this.items) {
+      const error = item.validationError();
+      if (error !== null) {
+        return error;
+      }
+    }
+    return null;
+  }
+
   toWire(): ArrayValue {
     return { items: this.items.map((item) => item.toWire()) };
   }

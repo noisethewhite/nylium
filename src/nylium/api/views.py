@@ -17,6 +17,7 @@ from pydantic.dataclasses import dataclass
 
 from nylium.database import Database, Instances
 from nylium.objects import WObject, WProp, WType
+from nylium.objects.monthday import MonthDay, MonthDayTime
 from nylium.objects.wscalar import ScalarPayload, WScalar
 from nylium.objects.wtypemeta import StoredValue
 
@@ -123,6 +124,9 @@ class ObjectView:
         """The declared prop type disambiguates None: an unset scalar,
         an unset link and an unset array are three different views."""
         if WScalar.by_type_name(type_name) is not None:
+            # year-less calendar values cross the wire as their stamps
+            if isinstance(value, (MonthDay, MonthDayTime)):
+                return ScalarValue(value=str(value))
             return ScalarValue(value=cast(ScalarPayload | None, value))
         if WType.is_array_name(type_name):
             element_name = WType.element_name(type_name)

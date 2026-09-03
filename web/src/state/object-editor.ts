@@ -61,6 +61,13 @@ export class ObjectEditorStore extends Observable<EditorState> {
 
   async save(): Promise<void> {
     const { object, fields } = this.getSnapshot();
+    for (const field of fields) {
+      const invalid = field.validationError();
+      if (invalid !== null) {
+        this.setState({ ...this.getSnapshot(), error: `${field.key}: ${invalid}` });
+        return;
+      }
+    }
     const props: Record<string, PropValue> = {};
     try {
       for (const field of fields) {
