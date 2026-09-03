@@ -181,33 +181,107 @@ function formatDateDraft(draft: string): string {
   return `${month} ${Number.parseInt(dayNumber, 10)}, ${year}`;
 }
 
-/** Typed text -> canonical draft. Accepts "August 8, 1995" (comma
- * optional) and ISO passthrough; unparseable text passes through raw
- * so the regex plaque explains what went wrong. */
-function parseDateText(text: string): string {
-  const trimmed = text.trim();
-  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
-    return trimmed;
+/** Resolve a month token — full name or an unambiguous 3+ letter prefix,
+ * case-insensitive. Returns the 1-based month number or null. */
+function monthOf(token: string): number | null {
+  const needle = token.toLowerCase();
+  if (needle.length < 3) {
+    return null;
   }
-  const match = /^([A-Za-z]+)\s+(\d{1,2}),?\s+(\d{4})$/.exec(trimmed);
-  if (match === null) {
-    return text;
-  }
-  const [, monthName = "", dayText = "", yearText = ""] = match;
-  const monthIndex = MONTH_NAMES.findIndex(
-    (name) => name.toLowerCase() === monthName.toLowerCase(),
+  const index = MONTH_NAMES.findIndex((name) =>
+    name.toLowerCase().startsWith(needle),
   );
-  if (monthIndex < 0) {
-    return text;
-  }
+  return index < 0 ? null : index + 1;
+}
+
+/** Two-digit years pivot at 50: "95" -> 1995, "05" -> 2005. */
+function fullYear(yearText: string): number {
   const year = Number.parseInt(yearText, 10);
-  const day = Number.parseInt(dayText, 10);
-  const maxDay = new Date(year, monthIndex + 1, 0).getDate();
-  if (day < 1 || day > maxDay) {
-    return text;
+  if (yearText.length !== 2) {
+    return year;
   }
-  const month = String(monthIndex + 1).padStart(2, "0");
-  return `${yearText}-${month}-${String(day).padStart(2, "0")}`;
+  return year < 50 ? 2000 + year : 1900 + year;
+}
+
+/** Validate and render canonical "YYYY-MM-DD"; null when the date is
+ * not real (month 13, February 30, ...). */
+function canonicalDate(year: number, month: number, day: number): string | null {
+  if (month < 1 || month > 12 || year < 1) {
+    return null;
+  }
+  const maxDay = new Date(year, month, 0).getDate();
+  if (day < 1 || day > maxDay) {
+    return null;
+  }
+  const mm = String(month).padStart(2, "0");
+  const dd = String(day).padStart(2, "0");
+  return `${String(year).padStart(4, "0")}-${mm}-${dd}`;
+}
+
+const MONTH_TOKEN = "[A-Za-z]{3,9}";
+const ORDINAL = "(?:st|nd|rd|th)?";
+const YEAR_TOKEN = "(\\d{4}|\\d{2})";
+
+/** Typed text -> canonical draft. Accepts about anything a human would
+ * call a date and converts it on the spot:
+ *   "1995-08-08" / "1995/8/8"     ISO-ish, year first
+ *   "August 8, 1995" / "Aug 8 95" prose, month first
+ *   "8 August 1995" / "8th Aug 95" prose, day first
+ *   "8/8/1995" / "08.08.95"       numeric, day-first (a > 12 or b > 12
+ *                                 disambiguates either way)
+ * Unparseable text passes through raw so the user's keystrokes are
+ * never eaten and the regex plaque can explain what went wrong. */
+export function parseDateText(text: string): string {
+  const trimmed = text.trim();
+
+  // year first: 1995-08-08, 1995/8/8, 1995.8.8
+  let match = /^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/.exec(trimmed);
+  if (match !== null) {
+    const parsed = canonicalDate(Number(match[1]), Number(match[2]), Number(match[3]));
+    return parsed ?? text;
+  }
+
+  // prose, month first: August 8, 1995 / Aug 8th 95
+  match = new RegExp(
+    `^(${MONTH_TOKEN})\\s+(\\d{1,2})${ORDINAL},?\\s+${YEAR_TOKEN}$`,
+    "i",
+  ).exec(trimmed);
+  if (match !== null) {
+    const month = monthOf(match[1] ?? "");
+    const parsed =
+      month === null
+        ? null
+        : canonicalDate(fullYear(match[3] ?? ""), month, Number(match[2]));
+    return parsed ?? text;
+  }
+
+  // prose, day first: 8 August 1995 / 8th Aug, 95
+  match = new RegExp(
+    `^(\\d{1,2})${ORDINAL}\\s+(${MONTH_TOKEN}),?\\s+${YEAR_TOKEN}$`,
+    "i",
+  ).exec(trimmed);
+  if (match !== null) {
+    const month = monthOf(match[2] ?? "");
+    const parsed =
+      month === null
+        ? null
+        : canonicalDate(fullYear(match[3] ?? ""), month, Number(match[1]));
+    return parsed ?? text;
+  }
+
+  // numeric: 8/8/1995, 08.08.95 — a > 12 or b > 12 decides the order,
+  // otherwise day-first (the user writes European dates)
+  match = /^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2}|\d{4})$/.exec(trimmed);
+  if (match !== null) {
+    const a = Number(match[1]);
+    const b = Number(match[2]);
+    const year = fullYear(match[3] ?? "");
+    const [day, month] = a > 12 ? [a, b] : b > 12 ? [b, a] : [a, b];
+    const parsed = canonicalDate(year, month, day);
+    return parsed ?? text;
+  }
+
+  return text;
 }
 
 /** Date edited as prose — "August 8, 1995" — while the draft stays
