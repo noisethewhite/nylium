@@ -13,6 +13,7 @@ from nylium.auth.routes import auth_routes
 from nylium.api.views import ObjectView, TypeView
 from nylium.database.database import Database
 from nylium.database.tables import Base
+from nylium.objects.wscalar import WScalar
 from nylium.server.errors import errors
 from nylium.server.routes import routes
 from nylium.server.static import StaticSpa
@@ -29,6 +30,8 @@ class NyliumApp:
     @classmethod
     def create(cls) -> FastAPI:
         cls._ensure_schema()
+        # re-stamp builtin scalar icons on every boot — they are canonical
+        WScalar.ensure_builtins()
         app = FastAPI(title=cls.TITLE)
         cls._mount_api(app)
         errors.register(app)
