@@ -89,6 +89,10 @@ class WType:
     ) -> "WType":
         existing = cls.by_name(name)
         if existing is not None:
+            # builtins re-ensure on every boot: keep their icon canonical
+            if icon is not None and existing.icon != icon:
+                Types.update(existing.uuid, existing.name, existing.plural_name, icon, existing.color)
+                return cls.by_name(name) or existing
             return existing
         row = Types(uuid=uuid4(), name=name, plural_name=plural_name)
         if icon is not None:
