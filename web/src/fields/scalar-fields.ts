@@ -177,7 +177,7 @@ export class DateFieldModel extends ScalarFieldModel {
   }
 
   protected override hint(): string {
-    return "YYYY-MM-DD expected";
+    return 'e.g. "August 8, 1995"';
   }
 
   toWire(): ScalarValue {

@@ -463,24 +463,29 @@ select.input option {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  max-width: 520px;
+  max-width: 640px;
 }
 
+/* MoreButtons layout: grey label pinned left, value on the right */
 .field {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.field-inline {
   flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-3);
 }
 
 .field-label {
+  flex: 0 0 150px;
   color: var(--fg-dim);
   font-size: 13px;
+}
+
+.field-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
 }
 
 /* red plaque under a field whose draft broke its regex */
@@ -509,18 +514,10 @@ select.input option {
   font-size: 13px;
 }
 
-.field-array {
-  border-left: 2px solid var(--separator);
-  padding-left: var(--space-3);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
 .field-array-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
 }
 
 .field-array-item {

@@ -72,10 +72,23 @@ function ErrorPlaque({ error }: { error: string | null }): ReactElement | null {
   return <div className="field-error">{error}</div>;
 }
 
-function TextInput({ field, editor }: { field: TextFieldModel; editor: ObjectEditorStore }): ReactElement {
+/** Field chrome shared by every editor: grey label pinned left (the
+ * MoreButtons layout), control + error plaque stacked on the right. */
+function FieldShell(props: {
+  label: ReactElement | string;
+  children: ReactElement | (ReactElement | null)[];
+}): ReactElement {
   return (
     <label className="field">
-      <span className="field-label">{field.key}</span>
+      <span className="field-label">{props.label}</span>
+      <span className="field-body">{props.children}</span>
+    </label>
+  );
+}
+
+function TextInput({ field, editor }: { field: TextFieldModel; editor: ObjectEditorStore }): ReactElement {
+  return (
+    <FieldShell label={field.key}>
       <input
         className="input"
         value={field.draft}
@@ -85,7 +98,7 @@ function TextInput({ field, editor }: { field: TextFieldModel; editor: ObjectEdi
         }}
       />
       <ErrorPlaque error={field.validationError()} />
-    </label>
+    </FieldShell>
   );
 }
 
@@ -108,8 +121,7 @@ function DraftInput(props: {
   };
 
   return (
-    <label className="field">
-      <span className="field-label">{props.field.key}</span>
+    <FieldShell label={props.field.key}>
       <input
         className="input"
         type="text"
@@ -121,14 +133,13 @@ function DraftInput(props: {
         }}
       />
       <ErrorPlaque error={props.field.validationError()} />
-    </label>
+    </FieldShell>
   );
 }
 
 function DatetimeInput({ field, editor }: { field: DatetimeFieldModel; editor: ObjectEditorStore }): ReactElement {
   return (
-    <label className="field">
-      <span className="field-label">{field.key}</span>
+    <FieldShell label={field.key}>
       <input
         className="input"
         type="datetime-local"
@@ -139,43 +150,7 @@ function DatetimeInput({ field, editor }: { field: DatetimeFieldModel; editor: O
         }}
       />
       <ErrorPlaque error={field.validationError()} />
-    </label>
-  );
-}
-
-function DateInput({ field, editor }: { field: DateFieldModel; editor: ObjectEditorStore }): ReactElement {
-  return (
-    <label className="field">
-      <span className="field-label">{field.key}</span>
-      <input
-        className="input"
-        type="date"
-        value={field.draft}
-        onChange={(event) => {
-          field.draft = event.target.value;
-          draftChanged(editor);
-        }}
-      />
-      <ErrorPlaque error={field.validationError()} />
-    </label>
-  );
-}
-
-function TimeInput({ field, editor }: { field: TimeFieldModel; editor: ObjectEditorStore }): ReactElement {
-  return (
-    <label className="field">
-      <span className="field-label">{field.key}</span>
-      <input
-        className="input"
-        type="time"
-        value={field.draft}
-        onChange={(event) => {
-          field.draft = event.target.value;
-          draftChanged(editor);
-        }}
-      />
-      <ErrorPlaque error={field.validationError()} />
-    </label>
+    </FieldShell>
   );
 }
 
@@ -193,6 +168,84 @@ const MONTH_NAMES = [
   "November",
   "December",
 ];
+
+/** Canonical "YYYY-MM-DD" draft -> "August 8, 1995"; anything else is
+ * shown as typed so the user's keystrokes never get eaten. */
+function formatDateDraft(draft: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(draft);
+  if (match === null) {
+    return draft;
+  }
+  const [, year = "", monthNumber = "", dayNumber = ""] = match;
+  const month = MONTH_NAMES[Number.parseInt(monthNumber, 10) - 1] ?? "";
+  return `${month} ${Number.parseInt(dayNumber, 10)}, ${year}`;
+}
+
+/** Typed text -> canonical draft. Accepts "August 8, 1995" (comma
+ * optional) and ISO passthrough; unparseable text passes through raw
+ * so the regex plaque explains what went wrong. */
+function parseDateText(text: string): string {
+  const trimmed = text.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return trimmed;
+  }
+  const match = /^([A-Za-z]+)\s+(\d{1,2}),?\s+(\d{4})$/.exec(trimmed);
+  if (match === null) {
+    return text;
+  }
+  const [, monthName = "", dayText = "", yearText = ""] = match;
+  const monthIndex = MONTH_NAMES.findIndex(
+    (name) => name.toLowerCase() === monthName.toLowerCase(),
+  );
+  if (monthIndex < 0) {
+    return text;
+  }
+  const year = Number.parseInt(yearText, 10);
+  const day = Number.parseInt(dayText, 10);
+  const maxDay = new Date(year, monthIndex + 1, 0).getDate();
+  if (day < 1 || day > maxDay) {
+    return text;
+  }
+  const month = String(monthIndex + 1).padStart(2, "0");
+  return `${yearText}-${month}-${String(day).padStart(2, "0")}`;
+}
+
+/** Date edited as prose — "August 8, 1995" — while the draft stays
+ * canonical "YYYY-MM-DD" for the wire and the regex guard. */
+function DateInput({ field, editor }: { field: DateFieldModel; editor: ObjectEditorStore }): ReactElement {
+  return (
+    <FieldShell label={field.key}>
+      <input
+        className="input"
+        type="text"
+        placeholder="August 8, 1995"
+        value={formatDateDraft(field.draft)}
+        onChange={(event) => {
+          field.draft = parseDateText(event.target.value);
+          draftChanged(editor);
+        }}
+      />
+      <ErrorPlaque error={field.validationError()} />
+    </FieldShell>
+  );
+}
+
+function TimeInput({ field, editor }: { field: TimeFieldModel; editor: ObjectEditorStore }): ReactElement {
+  return (
+    <FieldShell label={field.key}>
+      <input
+        className="input"
+        type="time"
+        value={field.draft}
+        onChange={(event) => {
+          field.draft = event.target.value;
+          draftChanged(editor);
+        }}
+      />
+      <ErrorPlaque error={field.validationError()} />
+    </FieldShell>
+  );
+}
 
 /** Leap-year based day count — year-less dates may be Feb 29. */
 function daysInMonth(month: string): number {
@@ -239,51 +292,52 @@ function MonthDayInput(props: {
   return (
     <div className="field">
       <span className="field-label">{props.field.key}</span>
-      <div className="field-row">
-        <select
-          className="input"
-          value={month}
-          onChange={(event) =>
-            commit(event.target.value, clampDay(event.target.value, day), clock)
-          }
-        >
-          <option value="">month</option>
-          {MONTH_NAMES.map((name, index) => (
-            <option key={name} value={String(index + 1).padStart(2, "0")}>
-              {name}
-            </option>
-          ))}
-        </select>
-        <select
-          className="input"
-          value={day}
-          onChange={(event) => commit(month, event.target.value, clock)}
-        >
-          <option value="">day</option>
-          {days.map((value) => (
-            <option key={value} value={value}>
-              {Number.parseInt(value, 10)}
-            </option>
-          ))}
-        </select>
-        {props.withTime && (
-          <input
+      <div className="field-body">
+        <div className="field-row">
+          <select
             className="input"
-            type="time"
-            value={clock}
-            onChange={(event) => commit(month, day, event.target.value)}
-          />
-        )}
+            value={month}
+            onChange={(event) =>
+              commit(event.target.value, clampDay(event.target.value, day), clock)
+            }
+          >
+            <option value="">month</option>
+            {MONTH_NAMES.map((name, index) => (
+              <option key={name} value={String(index + 1).padStart(2, "0")}>
+                {name}
+              </option>
+            ))}
+          </select>
+          <select
+            className="input"
+            value={day}
+            onChange={(event) => commit(month, event.target.value, clock)}
+          >
+            <option value="">day</option>
+            {days.map((value) => (
+              <option key={value} value={value}>
+                {Number.parseInt(value, 10)}
+              </option>
+            ))}
+          </select>
+          {props.withTime && (
+            <input
+              className="input"
+              type="time"
+              value={clock}
+              onChange={(event) => commit(month, day, event.target.value)}
+            />
+          )}
+        </div>
+        <ErrorPlaque error={props.field.validationError()} />
       </div>
-      <ErrorPlaque error={props.field.validationError()} />
     </div>
   );
 }
 
 function BooleanInput({ field, editor }: { field: BooleanFieldModel; editor: ObjectEditorStore }): ReactElement {
   return (
-    <label className="field field-inline">
-      <span className="field-label">{field.key}</span>
+    <FieldShell label={field.key}>
       <input
         type="checkbox"
         checked={field.checked}
@@ -292,16 +346,19 @@ function BooleanInput({ field, editor }: { field: BooleanFieldModel; editor: Obj
           draftChanged(editor);
         }}
       />
-    </label>
+    </FieldShell>
   );
 }
 
 function RefInput({ field, editor }: { field: RefFieldModel; editor: ObjectEditorStore }): ReactElement {
   return (
-    <label className="field">
-      <span className="field-label">
-        {field.key} <span className="dim">→ {field.valueType}</span>
-      </span>
+    <FieldShell
+      label={
+        <>
+          {field.key} <span className="dim">→ {field.valueType}</span>
+        </>
+      }
+    >
       <select
         className="input"
         value={field.selectedUuid ?? ""}
@@ -317,35 +374,37 @@ function RefInput({ field, editor }: { field: RefFieldModel; editor: ObjectEdito
           </option>
         ))}
       </select>
-    </label>
+    </FieldShell>
   );
 }
 
 function ArrayEditor({ field, editor }: { field: ArrayFieldModel; editor: ObjectEditorStore }): ReactElement {
   return (
     <div className="field field-array">
-      <div className="field-array-head">
-        <span className="field-label">
-          {field.key} <span className="dim">→ {field.elementType}</span>
-        </span>
-        <button className="button" onClick={() => editor.addArrayItem(field)}>
-          + item
-        </button>
-      </div>
-      {field.items.map((item, index) => (
-        <div className="field-array-item" key={index}>
-          <div className="field-array-item-editor">
-            <FieldEditor field={item} editor={editor} />
-          </div>
-          <button
-            className="icon-button"
-            title="Remove item"
-            onClick={() => editor.removeArrayItem(field, index)}
-          >
-            ×
+      <span className="field-label">
+        {field.key} <span className="dim">→ {field.elementType}</span>
+      </span>
+      <div className="field-body">
+        <div className="field-array-head">
+          <button className="button" onClick={() => editor.addArrayItem(field)}>
+            + item
           </button>
         </div>
-      ))}
+        {field.items.map((item, index) => (
+          <div className="field-array-item" key={index}>
+            <div className="field-array-item-editor">
+              <FieldEditor field={item} editor={editor} />
+            </div>
+            <button
+              className="icon-button"
+              title="Remove item"
+              onClick={() => editor.removeArrayItem(field, index)}
+            >
+              ×
+            </button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
