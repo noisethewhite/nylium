@@ -532,6 +532,11 @@ select.input option {
   flex: 1;
   overflow-y: auto;
   min-height: 0;
+  /* flex column so .object-editor's flex:1 actually stretches it to
+     full height — otherwise its height collapses to content and
+     overflow-y:auto clips popover menus opening past the last row */
+  display: flex;
+  flex-direction: column;
 }
 
 .create-type-page {
