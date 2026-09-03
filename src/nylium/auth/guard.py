@@ -8,6 +8,9 @@ from nylium.database.tables import AuthUsers
 
 
 def require_user(request: Request) -> AuthUsers:
+    # HTTPException is fine here: errors.register maps it onto the
+    # uniform {"error": ...} wire shape. Importing ApiError subclasses
+    # would create a circular import (server package -> app -> guard).
     user = sessions.user_for(request.cookies.get(sessions.COOKIE_NAME))
     if user is None:
         raise HTTPException(

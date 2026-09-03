@@ -328,3 +328,9 @@ def test_unexpected_error_is_500_json(
     assert response.json() == {
         "error": {"code": "internal", "message": "internal server error"}
     }
+
+
+def test_unauthenticated_error_shape() -> None:
+    response = TestClient(NyliumApp.create()).get("/api/types")
+    assert response.status_code == 401
+    assert response.json()["error"]["code"] == "unauthorized"

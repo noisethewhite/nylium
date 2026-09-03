@@ -20,6 +20,7 @@ from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic_core import ErrorDetails
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 _logger = logging.getLogger(__name__)
 
@@ -72,6 +73,7 @@ class errors:
         app.add_exception_handler(TypeError, cls.validation)
         app.add_exception_handler(PermissionError, cls.unauthorized)
         app.add_exception_handler(RequestValidationError, cls.request_validation)
+        app.add_exception_handler(StarletteHTTPException, cls.http_exception)
         app.add_exception_handler(Exception, cls.internal)
 
     @classmethod
@@ -113,6 +115,26 @@ class errors:
             ValidationError.CODE,
             cls._validation_message(validation_exc),
         )
+
+    @classmethod
+    def http_exception(cls, _request: Request, exc: Exception) -> JSONResponse:
+        http_exc = cast(StarletteHTTPException, exc)
+        message = http_exc.detail if http_exc.detail else "request failed"
+        return cls._json(
+            http_exc.status_code, cls._code_for(http_exc.status_code), message
+        )
+
+    @classmethod
+    def _code_for(cls, status_code: int) -> str:
+        known = {
+            status.HTTP_400_BAD_REQUEST: ValidationError.CODE,
+            status.HTTP_401_UNAUTHORIZED: UnauthorizedError.CODE,
+            status.HTTP_403_FORBIDDEN: UnauthorizedError.CODE,
+            status.HTTP_404_NOT_FOUND: NotFoundError.CODE,
+            status.HTTP_409_CONFLICT: ConflictError.CODE,
+            status.HTTP_422_UNPROCESSABLE_CONTENT: ValidationError.CODE,
+        }
+        return known.get(status_code, "request_error")
 
     @classmethod
     def internal(cls, _request: Request, exc: Exception) -> JSONResponse:
