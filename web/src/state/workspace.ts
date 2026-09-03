@@ -291,7 +291,9 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
 
   async createObject(typeName: string): Promise<void> {
     await this.guard(async () => {
-      const created = await this.api.createObject(typeName, {});
+      const created = await this.api.createObject(typeName, {
+        name: { value: "New Object" },
+      });
       this.setState({
         ...this.getSnapshot(),
         objects: [...this.getSnapshot().objects, created],

@@ -2,6 +2,8 @@ import type { ReactElement } from "react";
 import { useState } from "react";
 import { TypeLabels, TypeNames } from "../contracts";
 import { WorkspaceStore } from "../state/workspace";
+import { FloatingMenu } from "./floating-menu";
+import { NameSearch } from "./name-search";
 import { TypeIcon } from "./type-icon";
 
 /** Submenu the two bottom buttons open — same view, different wrapping. */
@@ -16,77 +18,13 @@ export function TypePicker(props: {
   value: string;
   onChange: (value: string) => void;
 }): ReactElement {
-  const [open, setOpen] = useState(false);
   const [objectMode, setObjectMode] = useState<ObjectMode | null>(null);
   const [calendarOpen, setCalendarOpen] = useState(false);
-  const [query, setQuery] = useState("");
 
-  const close = (): void => {
-    setOpen(false);
+  const reset = (): void => {
     setObjectMode(null);
     setCalendarOpen(false);
-    setQuery("");
   };
-
-  const pick = (value: string): void => {
-    props.onChange(value);
-    close();
-  };
-
-  const matches = props.workspace
-    .userTypes()
-    .filter((view) => view.name.toLowerCase().includes(query.toLowerCase()));
-
-  const renderObjectSearch = (mode: ObjectMode): ReactElement => (
-    <>
-      <div className="type-menu-search">
-        <button className="icon-button" title="Back" onClick={() => setObjectMode(null)}>
-          ←
-        </button>
-        <input
-          className="input"
-          placeholder="Search types…"
-          value={query}
-          autoFocus
-          onChange={(event) => setQuery(event.target.value)}
-        />
-      </div>
-      <div className="type-menu-list">
-        {matches.map((view) => (
-          <button
-            key={view.name}
-            className="type-menu-row"
-            onClick={() =>
-              pick(mode === "array" ? TypeNames.arrayOf(view.name) : view.name)
-            }
-          >
-            <TypeIcon icon={view.icon} color={view.color} size={15} />
-            <span>{mode === "array" ? TypeNames.arrayOf(view.name) : view.name}</span>
-          </button>
-        ))}
-        {matches.length === 0 && <div className="type-menu-empty dim">No types</div>}
-      </div>
-    </>
-  );
-
-  const renderCalendar = (): ReactElement => (
-    <>
-      <div className="type-menu-search">
-        <button className="icon-button" title="Back" onClick={() => setCalendarOpen(false)}>
-          ←
-        </button>
-        <span className="dim type-menu-title">Date &amp; time</span>
-      </div>
-      <div className="type-menu-list">
-        {TypeNames.CALENDAR.map((name) => (
-          <button key={name} className="type-menu-row" onClick={() => pick(name)}>
-            {scalarIcon(name)}
-            <span>{TypeLabels[name] ?? name}</span>
-          </button>
-        ))}
-      </div>
-    </>
-  );
 
   const scalarIcon = (name: string): ReactElement => {
     const view = props.workspace.typeView(name);
@@ -96,66 +34,115 @@ export function TypePicker(props: {
   };
 
   return (
-    <div className="type-picker">
-      <button
-        className="input type-picker-trigger"
-        onClick={() => (open ? close() : setOpen(true))}
-      >
-        <span className="material-symbols-outlined type-picker-chevron" aria-hidden>
-          keyboard_arrow_down
-        </span>
-        {scalarIcon(props.value)}
-        <span className="type-picker-value">{props.value}</span>
-      </button>
-      {open && (
+    <FloatingMenu
+      wrapperClassName="type-picker floating-menu-grow"
+      triggerClassName="input type-picker-trigger"
+      menuClassName="type-menu"
+      trigger={
         <>
-          <div className="type-picker-backdrop" onClick={close} />
-          <div className="type-menu">
-            {objectMode !== null ? (
-              renderObjectSearch(objectMode)
-            ) : calendarOpen ? (
-              renderCalendar()
-            ) : (
-              <>
-                <div className="type-menu-list">
-                  {FLAT_SCALARS.map((scalar) => (
-                    <button
-                      key={scalar}
-                      className="type-menu-row"
-                      onClick={() => pick(scalar)}
-                    >
-                      {scalarIcon(scalar)}
-                      <span>{scalar}</span>
-                    </button>
-                  ))}
-                  <button
-                    className="type-menu-row"
-                    onClick={() => setCalendarOpen(true)}
-                  >
-                    {scalarIcon(TypeNames.DATE)}
-                    <span>Date &amp; time →</span>
-                  </button>
-                </div>
-                <div className="type-menu-divider" />
-                <div className="type-menu-footer">
-                  <button
-                    className="type-menu-row"
-                    onClick={() => setObjectMode("single")}
-                  >
-                    Object
-                  </button>
-                  <button
-                    className="type-menu-row"
-                    onClick={() => setObjectMode("array")}
-                  >
-                    Array of objects
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
+          <span className="material-symbols-outlined type-picker-chevron" aria-hidden>
+            keyboard_arrow_down
+          </span>
+          {scalarIcon(props.value)}
+          <span className="type-picker-value">{props.value}</span>
         </>
-      )}
-    </div>
+      }
+    >
+      {(close) => {
+        const pick = (value: string): void => {
+          props.onChange(value);
+          reset();
+          close();
+        };
+        if (objectMode !== null) {
+          return (
+            <NameSearch
+              items={props.workspace.userTypes()}
+              getKey={(view) => view.name}
+              getLabel={(view) =>
+                objectMode === "array" ? TypeNames.arrayOf(view.name) : view.name
+              }
+              renderIcon={(view) => (
+                <TypeIcon icon={view.icon} color={view.color} size={15} />
+              )}
+              placeholder="Search types…"
+              emptyLabel="No types"
+              header={
+                <div className="type-menu-search">
+                  <button
+                    className="icon-button"
+                    title="Back"
+                    onClick={() => setObjectMode(null)}
+                  >
+                    ←
+                  </button>
+                  <span className="dim type-menu-title">
+                    {objectMode === "array" ? "Array of objects" : "Object"}
+                  </span>
+                </div>
+              }
+              onPick={(view) =>
+                pick(
+                  objectMode === "array" ? TypeNames.arrayOf(view.name) : view.name,
+                )
+              }
+            />
+          );
+        }
+        if (calendarOpen) {
+          return (
+            <>
+              <div className="type-menu-search">
+                <button
+                  className="icon-button"
+                  title="Back"
+                  onClick={() => setCalendarOpen(false)}
+                >
+                  ←
+                </button>
+                <span className="dim type-menu-title">Date &amp; time</span>
+              </div>
+              <div className="type-menu-list">
+                {TypeNames.CALENDAR.map((name) => (
+                  <button key={name} className="type-menu-row" onClick={() => pick(name)}>
+                    {scalarIcon(name)}
+                    <span>{TypeLabels[name] ?? name}</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          );
+        }
+        return (
+          <>
+            <div className="type-menu-list">
+              {FLAT_SCALARS.map((scalar) => (
+                <button
+                  key={scalar}
+                  className="type-menu-row"
+                  onClick={() => pick(scalar)}
+                >
+                  {scalarIcon(scalar)}
+                  <span>{scalar}</span>
+                </button>
+              ))}
+              <button className="type-menu-row" onClick={() => setCalendarOpen(true)}>
+                {scalarIcon(TypeNames.DATE)}
+                <span>Date &amp; time →</span>
+              </button>
+            </div>
+            <div className="type-menu-divider" />
+            <div className="type-menu-footer">
+              <button className="type-menu-row" onClick={() => setObjectMode("single")}>
+                Object
+              </button>
+              <button className="type-menu-row" onClick={() => setObjectMode("array")}>
+                Array of objects
+              </button>
+            </div>
+          </>
+        );
+      }}
+    </FloatingMenu>
   );
 }

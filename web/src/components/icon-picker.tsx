@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 import { useState } from "react";
+import { FloatingMenu } from "./floating-menu";
 import { DEFAULT_COLOR, DEFAULT_ICON, ICON_COLORS, ICON_NAMES, TypeIcon } from "./type-icon";
 
 /** Icon + color chooser popover, used in the type editor header and the
@@ -11,74 +12,64 @@ export function IconPicker(props: {
   onChange: (icon: string, color: string) => void;
   size?: number;
 }): ReactElement {
-  const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-
-  const close = (): void => {
-    setOpen(false);
-    setQuery("");
-  };
 
   const shown = ICON_NAMES.filter((name) => name.includes(query.toLowerCase()));
 
   return (
-    <div className="icon-picker">
-      <button
-        className="icon-picker-trigger"
-        title="Icon & color"
-        onClick={() => (open ? close() : setOpen(true))}
-      >
-        <TypeIcon icon={props.icon} color={props.color} size={props.size ?? 20} />
-      </button>
-      {open && (
+    <FloatingMenu
+      wrapperClassName="icon-picker"
+      triggerClassName="icon-picker-trigger"
+      menuClassName="icon-picker-menu"
+      title="Icon & color"
+      trigger={<TypeIcon icon={props.icon} color={props.color} size={props.size ?? 20} />}
+    >
+      {() => (
         <>
-          <div className="type-picker-backdrop" onClick={close} />
-          <div className="icon-picker-menu">
-            <input
-              className="input icon-picker-search"
-              placeholder="Click to filter..."
-              value={query}
-              autoFocus
-              onChange={(event) => setQuery(event.target.value)}
-            />
-            <div className="icon-picker-grid">
-              {shown.map((name) => (
-                <button
-                  key={name}
-                  className={
-                    name === props.icon
-                      ? "icon-picker-cell selected"
-                      : "icon-picker-cell"
-                  }
-                  title={name}
-                  onClick={() => props.onChange(name, props.color)}
-                >
-                  <TypeIcon icon={name} color={props.color} size={18} />
-                </button>
-              ))}
-              {shown.length === 0 && (
-                <div className="type-menu-empty dim">No icons</div>
-              )}
-            </div>
-            <div className="icon-picker-swatches">
-              {Object.entries(ICON_COLORS).map(([name, hex]) => (
-                <button
-                  key={name}
-                  className={
-                    name === props.color
-                      ? "icon-picker-swatch selected"
-                      : "icon-picker-swatch"
-                  }
-                  title={name}
-                  style={{ backgroundColor: hex }}
-                  onClick={() => props.onChange(props.icon, name)}
-                />
-              ))}
-            </div>
+          <input
+            className="input icon-picker-search"
+            placeholder="Click to filter..."
+            value={query}
+            autoFocus
+            onChange={(event) => setQuery(event.target.value)}
+          />
+          <div className="icon-picker-grid">
+            {shown.map((name) => (
+              <button
+                key={name}
+                className={
+                  name === props.icon
+                    ? "icon-picker-cell selected"
+                    : "icon-picker-cell"
+                }
+                title={name}
+                onClick={() => props.onChange(name, props.color)}
+              >
+                <TypeIcon icon={name} color={props.color} size={18} />
+              </button>
+            ))}
+            {shown.length === 0 && (
+              <div className="type-menu-empty dim">No icons</div>
+            )}
+          </div>
+          <div className="icon-picker-swatches">
+            {Object.entries(ICON_COLORS).map(([name, hex]) => (
+              <button
+                key={name}
+                className={
+                  name === props.color
+                    ? "icon-picker-swatch selected"
+                    : "icon-picker-swatch"
+                }
+                title={name}
+                style={{ backgroundColor: hex }}
+                onClick={() => props.onChange(props.icon, name)}
+              />
+            ))}
           </div>
         </>
       )}
-    </div>
+    </FloatingMenu>
   );
 }
 

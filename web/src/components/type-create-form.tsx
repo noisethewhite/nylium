@@ -42,30 +42,39 @@ export function TypeCreateForm(props: {
 
   return (
     <div className="type-create-form">
-      <div className="type-header">
-        <IconPicker
-          icon={icon}
-          color={color}
-          size={22}
-          onChange={(nextIcon, nextColor) => {
-            setIcon(nextIcon);
-            setColor(nextColor);
-          }}
-        />
-        {/* the title IS the name field — borderless, heading-sized */}
-        <input
-          className="input type-name-input"
-          placeholder="Type name"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-        />
+      <div className="type-header-boxes">
+        <div className="type-field-box">
+          <span className="type-field-box-label">Type name</span>
+          <div className="type-field-box-content">
+            <IconPicker
+              icon={icon}
+              color={color}
+              size={22}
+              onChange={(nextIcon, nextColor) => {
+                setIcon(nextIcon);
+                setColor(nextColor);
+              }}
+            />
+            <input
+              className="input type-name-input"
+              placeholder="Type name"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+            />
+          </div>
+        </div>
+        <div className="type-field-box">
+          <span className="type-field-box-label">Type plural name</span>
+          <div className="type-field-box-content">
+            <input
+              className="input type-name-input"
+              placeholder="Name (plural)"
+              value={pluralName}
+              onChange={(event) => setPluralName(event.target.value)}
+            />
+          </div>
+        </div>
       </div>
-      <input
-        className="input"
-        placeholder="Name (plural)"
-        value={pluralName}
-        onChange={(event) => setPluralName(event.target.value)}
-      />
       {/* every type opens with the pinned `name` prop — the instance title */}
       <div className="prop-draft-row prop-draft-row-fixed">
         <span className="schema-prop-key">name</span>

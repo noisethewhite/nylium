@@ -127,21 +127,8 @@ export function TypeViewPanel(props: {
 
   return (
     <div className="tab-content">
-      <div className="type-header">
-        <IconPicker
-          icon={iconDraft}
-          color={colorDraft}
-          size={22}
-          onChange={(icon, color) => {
-            setIconDraft(icon);
-            setColorDraft(color);
-          }}
-        />
-        <input
-          className="input type-name-input"
-          value={nameDraft}
-          onChange={(event) => setNameDraft(event.target.value)}
-        />
+      <div className="type-actions-bar">
+        <span className="dim type-header-title">Editing type</span>
         <div className="type-header-actions">
           <button
             className="button button-primary"
@@ -159,12 +146,38 @@ export function TypeViewPanel(props: {
           </button>
         </div>
       </div>
-      <input
-        className="input type-plural-input"
-        placeholder="Name (plural)"
-        value={pluralDraft}
-        onChange={(event) => setPluralDraft(event.target.value)}
-      />
+      <div className="type-header-boxes">
+        <div className="type-field-box">
+          <span className="type-field-box-label">Type name</span>
+          <div className="type-field-box-content">
+            <IconPicker
+              icon={iconDraft}
+              color={colorDraft}
+              size={22}
+              onChange={(icon, color) => {
+                setIconDraft(icon);
+                setColorDraft(color);
+              }}
+            />
+            <input
+              className="input type-name-input"
+              value={nameDraft}
+              onChange={(event) => setNameDraft(event.target.value)}
+            />
+          </div>
+        </div>
+        <div className="type-field-box">
+          <span className="type-field-box-label">Type plural name</span>
+          <div className="type-field-box-content">
+            <input
+              className="input type-name-input"
+              placeholder="Name (plural)"
+              value={pluralDraft}
+              onChange={(event) => setPluralDraft(event.target.value)}
+            />
+          </div>
+        </div>
+      </div>
       <div className="schema-props">
         {rows.map((row, index) => {
           // the schema's first row is the pinned `name` title — no grip,

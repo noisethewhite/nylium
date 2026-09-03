@@ -3,6 +3,8 @@ import { useState } from "react";
 import { AuthStore } from "../state/auth";
 import { useObservable } from "../state/use-observable";
 import { WorkspaceStore } from "../state/workspace";
+import { FloatingMenu } from "./floating-menu";
+import { NameSearch } from "./name-search";
 import { ObjectLabels } from "./object-labels";
 import { TypeIcon } from "./type-icon";
 
@@ -18,34 +20,37 @@ export function Sidebar(props: {
   const state = useObservable(props.workspace);
   const authState = useObservable(props.auth);
   const types = props.workspace.userTypes();
-  const [plusOpen, setPlusOpen] = useState(false);
   const [plusMode, setPlusMode] = useState<PlusMenuMode>("root");
-
-  const closePlus = (): void => {
-    setPlusOpen(false);
-    setPlusMode("root");
-  };
-
   const objectTypes = types.filter((view) => view.kind === "object");
 
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
         <span className="brand">nylium</span>
-        <div className="sidebar-plus">
-          <button
-            className="icon-button"
-            title="Create"
-            onClick={() => (plusOpen ? closePlus() : setPlusOpen(true))}
-          >
-            +
-          </button>
-          {plusOpen && (
-            <>
-              <div className="type-picker-backdrop" onClick={closePlus} />
-              <div className="type-menu">
-                {plusMode === "object" ? (
-                  <>
+        <FloatingMenu
+          wrapperClassName="sidebar-plus"
+          triggerClassName="icon-button"
+          menuClassName="type-menu"
+          title="Create"
+          trigger="+"
+        >
+          {(close) => {
+            const dismiss = (): void => {
+              setPlusMode("root");
+              close();
+            };
+            if (plusMode === "object") {
+              return (
+                <NameSearch
+                  items={objectTypes}
+                  getKey={(view) => view.name}
+                  getLabel={(view) => view.name}
+                  renderIcon={(view) => (
+                    <TypeIcon icon={view.icon} color={view.color} size={15} />
+                  )}
+                  placeholder="Search types…"
+                  emptyLabel="No types yet"
+                  header={
                     <div className="type-menu-search">
                       <button
                         className="icon-button"
@@ -56,57 +61,44 @@ export function Sidebar(props: {
                       </button>
                       <span className="dim type-menu-title">New object</span>
                     </div>
-                    <div className="type-menu-list">
-                      {objectTypes.map((view) => (
-                        <button
-                          key={view.name}
-                          className="type-menu-row"
-                          onClick={() => {
-                            closePlus();
-                            void props.workspace.createObject(view.name);
-                          }}
-                        >
-                          <TypeIcon icon={view.icon} color={view.color} size={15} />
-                          <span>{view.name}</span>
-                        </button>
-                      ))}
-                      {objectTypes.length === 0 && (
-                        <div className="type-menu-empty dim">No types yet</div>
-                      )}
-                    </div>
-                  </>
-                ) : (
-                  <div className="type-menu-list">
-                    <button
-                      className="type-menu-row"
-                      onClick={() => {
-                        closePlus();
-                        props.workspace.openCreateType();
-                      }}
-                    >
-                      New type
-                    </button>
-                    <button
-                      className="type-menu-row"
-                      onClick={() => setPlusMode("object")}
-                    >
-                      New object
-                    </button>
-                    <button
-                      className="type-menu-row"
-                      onClick={() => {
-                        closePlus();
-                        props.workspace.openCreateEnum();
-                      }}
-                    >
-                      New enum
-                    </button>
-                  </div>
-                )}
+                  }
+                  onPick={(view) => {
+                    dismiss();
+                    void props.workspace.createObject(view.name);
+                  }}
+                />
+              );
+            }
+            return (
+              <div className="type-menu-list">
+                <button
+                  className="type-menu-row"
+                  onClick={() => {
+                    dismiss();
+                    props.workspace.openCreateType();
+                  }}
+                >
+                  New type
+                </button>
+                <button
+                  className="type-menu-row"
+                  onClick={() => setPlusMode("object")}
+                >
+                  New object
+                </button>
+                <button
+                  className="type-menu-row"
+                  onClick={() => {
+                    dismiss();
+                    props.workspace.openCreateEnum();
+                  }}
+                >
+                  New enum
+                </button>
               </div>
-            </>
-          )}
-        </div>
+            );
+          }}
+        </FloatingMenu>
       </div>
       <nav className="sidebar-scroll">
         <div className="sidebar-section">Types</div>

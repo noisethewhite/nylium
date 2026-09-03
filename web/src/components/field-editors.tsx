@@ -1,6 +1,8 @@
 import type { ChangeEvent, ReactElement } from "react";
 import { ArrayFieldModel, RefFieldModel } from "../fields/composite-fields";
 import { EnumFieldModel } from "../fields/enum-fields";
+import { FloatingMenu } from "./floating-menu";
+import { NameSearch } from "./name-search";
 import { FieldModel } from "../fields/field-model";
 import {
   BooleanFieldModel,
@@ -437,26 +439,45 @@ function EnumInput({ field, editor }: { field: EnumFieldModel; editor: ObjectEdi
         </>
       }
     >
-      <select
-        className="input"
-        value={field.selected ?? ""}
-        onChange={(event) => {
-          field.selected = event.target.value === "" ? null : event.target.value;
-          draftChanged(editor);
-        }}
+      <FloatingMenu
+        wrapperClassName="floating-menu-grow"
+        triggerClassName="input type-picker-trigger"
+        menuClassName="type-menu"
+        trigger={
+          <>
+            <span className="material-symbols-outlined type-picker-chevron" aria-hidden>
+              keyboard_arrow_down
+            </span>
+            <span className="type-picker-value">{field.selected ?? "—"}</span>
+          </>
+        }
       >
-        <option value="">—</option>
-        {field.options.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
+        {(close) => (
+          <NameSearch
+            items={field.options}
+            getKey={(option) => option}
+            getLabel={(option) => option}
+            placeholder="Search options…"
+            unsetLabel="—"
+            onUnset={() => {
+              field.selected = null;
+              draftChanged(editor);
+              close();
+            }}
+            onPick={(option) => {
+              field.selected = option;
+              draftChanged(editor);
+              close();
+            }}
+          />
+        )}
+      </FloatingMenu>
     </FieldShell>
   );
 }
 
 function RefInput({ field, editor }: { field: RefFieldModel; editor: ObjectEditorStore }): ReactElement {
+  const selected = field.options.find((option) => option.uuid === field.selectedUuid);
   return (
     <FieldShell
       label={
@@ -465,21 +486,41 @@ function RefInput({ field, editor }: { field: RefFieldModel; editor: ObjectEdito
         </>
       }
     >
-      <select
-        className="input"
-        value={field.selectedUuid ?? ""}
-        onChange={(event) => {
-          field.selectedUuid = event.target.value === "" ? null : event.target.value;
-          draftChanged(editor);
-        }}
+      <FloatingMenu
+        wrapperClassName="floating-menu-grow"
+        triggerClassName="input type-picker-trigger"
+        menuClassName="type-menu"
+        trigger={
+          <>
+            <span className="material-symbols-outlined type-picker-chevron" aria-hidden>
+              keyboard_arrow_down
+            </span>
+            <span className="type-picker-value">
+              {selected === undefined ? "—" : ObjectLabels.of(selected)}
+            </span>
+          </>
+        }
       >
-        <option value="">—</option>
-        {field.options.map((option) => (
-          <option key={option.uuid} value={option.uuid}>
-            {ObjectLabels.of(option)}
-          </option>
-        ))}
-      </select>
+        {(close) => (
+          <NameSearch
+            items={field.options}
+            getKey={(option) => option.uuid}
+            getLabel={(option) => ObjectLabels.of(option)}
+            placeholder="Search objects…"
+            unsetLabel="—"
+            onUnset={() => {
+              field.selectedUuid = null;
+              draftChanged(editor);
+              close();
+            }}
+            onPick={(option) => {
+              field.selectedUuid = option.uuid;
+              draftChanged(editor);
+              close();
+            }}
+          />
+        )}
+      </FloatingMenu>
     </FieldShell>
   );
 }

@@ -29,22 +29,27 @@ export function EnumCreateForm(props: {
 
   return (
     <div className="type-create-form">
-      <div className="type-header">
-        <IconPicker
-          icon={icon}
-          color={color}
-          size={22}
-          onChange={(nextIcon, nextColor) => {
-            setIcon(nextIcon);
-            setColor(nextColor);
-          }}
-        />
-        <input
-          className="input type-name-input"
-          placeholder="Enum name"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-        />
+      <div className="type-header-boxes">
+        <div className="type-field-box">
+          <span className="type-field-box-label">Enum name</span>
+          <div className="type-field-box-content">
+            <IconPicker
+              icon={icon}
+              color={color}
+              size={22}
+              onChange={(nextIcon, nextColor) => {
+                setIcon(nextIcon);
+                setColor(nextColor);
+              }}
+            />
+            <input
+              className="input type-name-input"
+              placeholder="Enum name"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+            />
+          </div>
+        </div>
       </div>
       {options.map((option, index) => (
         <div className="prop-draft-row" key={index}>

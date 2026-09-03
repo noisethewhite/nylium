@@ -68,21 +68,8 @@ export function EnumTypePanel(props: {
 
   return (
     <div className="tab-content">
-      <div className="type-header">
-        <IconPicker
-          icon={iconDraft}
-          color={colorDraft}
-          size={22}
-          onChange={(icon, color) => {
-            setIconDraft(icon);
-            setColorDraft(color);
-          }}
-        />
-        <input
-          className="input type-name-input"
-          value={nameDraft}
-          onChange={(event) => setNameDraft(event.target.value)}
-        />
+      <div className="type-actions-bar">
+        <span className="dim type-header-title">Editing enum</span>
         <div className="type-header-actions">
           <button
             className="button button-primary"
@@ -98,6 +85,27 @@ export function EnumTypePanel(props: {
           >
             Delete enum
           </button>
+        </div>
+      </div>
+      <div className="type-header-boxes">
+        <div className="type-field-box">
+          <span className="type-field-box-label">Enum name</span>
+          <div className="type-field-box-content">
+            <IconPicker
+              icon={iconDraft}
+              color={colorDraft}
+              size={22}
+              onChange={(icon, color) => {
+                setIconDraft(icon);
+                setColorDraft(color);
+              }}
+            />
+            <input
+              className="input type-name-input"
+              value={nameDraft}
+              onChange={(event) => setNameDraft(event.target.value)}
+            />
+          </div>
         </div>
       </div>
       <div className="schema-props">
