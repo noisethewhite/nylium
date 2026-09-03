@@ -15,15 +15,15 @@ export const ICON_NAMES: string[] = [
   "schedule", "cloud", "code", "local_cafe", "savings", "explore", "memory",
   "credit_card", "crown", "local_drink", "database", "diamond", "casino",
   "music_note", "egg", "description", "movie", "flag",
-  "local_fire_department", "experiment", "folder", "footprints",
+  "local_fire_department", "experiment", "folder", "podiatry",
   "sports_esports", "redeem", "water_drop", "eyeglasses", "public", "piano",
   "handyman", "tag", "headphones", "favorite", "home", "icecream", "image",
   "key", "laptop", "eco", "local_library", "lightbulb", "link", "lock",
-  "magnet", "map", "location_on", "mic", "dark_mode", "landscape",
+  "attractions", "map", "location_on", "mic", "dark_mode", "landscape",
   "palette", "edit", "percent", "call", "pill", "local_pizza", "flight",
-  "power", "puzzle", "rocket_launch", "straighten", "scale", "cut", "search",
+  "power", "extension", "rocket_launch", "straighten", "scale", "cut", "search",
   "shield", "shopping_bag", "shopping_cart", "sentiment_satisfied", "ac_unit",
-  "chair", "sparkles", "star", "wb_sunny", "sell", "tent", "toggle_on",
+  "chair", "auto_awesome", "star", "wb_sunny", "sell", "camping", "toggle_on",
   "train", "delete", "park", "trophy", "local_shipping", "text_fields",
   "beach_access", "person", "wallet", "watch", "wifi", "wine_bar", "build",
   "bolt",
@@ -45,6 +45,16 @@ export const ICON_COLORS: Record<string, string> = {
 export const DEFAULT_ICON = "inventory_2";
 export const DEFAULT_COLOR = "gray";
 
+/** Stored names that predated registry validation — map them to the
+ * nearest glyph that actually exists in the font. */
+const ICON_ALIASES: Record<string, string> = {
+  sparkles: "auto_awesome",
+  puzzle: "extension",
+  magnet: "attractions",
+  tent: "camping",
+  footprints: "podiatry",
+};
+
 /** Monochrome Material Symbols glyph for a type; unknown icon/color
  * resolve to the defaults so a stale stored value can never blank the UI. */
 export function TypeIcon(props: {
@@ -52,7 +62,8 @@ export function TypeIcon(props: {
   color: string;
   size?: number;
 }): ReactElement {
-  const name = ICON_NAMES.includes(props.icon) ? props.icon : DEFAULT_ICON;
+  const aliased = ICON_ALIASES[props.icon] ?? props.icon;
+  const name = ICON_NAMES.includes(aliased) ? aliased : DEFAULT_ICON;
   const hex = ICON_COLORS[props.color] ?? ICON_COLORS[DEFAULT_COLOR];
   const size = props.size ?? 16;
   return (
