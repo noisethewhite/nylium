@@ -10,9 +10,11 @@ from uuid import UUID
 from nylium.api.api import Api
 from nylium.api.views import ObjectView, TypeView
 from nylium.server.bodies import (
+    CreateEnumBody,
     CreateObjectBody,
     CreateTypeBody,
     ReorderPropsBody,
+    SyncEnumOptionsBody,
     SyncPropsBody,
     UpdateObjectBody,
     UpdateTypeBody,
@@ -42,6 +44,16 @@ class routes:
     def create_type(cls, body: CreateTypeBody) -> TypeView:
         return Api.create_type(
             body.name, body.props, body.plural_name, body.icon, body.color
+        )
+
+    @classmethod
+    def create_enum(cls, body: CreateEnumBody) -> TypeView:
+        return Api.create_enum(body.name, body.options, body.icon, body.color)
+
+    @classmethod
+    def sync_enum_options(cls, name: str, body: SyncEnumOptionsBody) -> TypeView:
+        return Api.sync_enum_options(
+            name, [(item.uuid, item.value) for item in body.options]
         )
 
     @classmethod

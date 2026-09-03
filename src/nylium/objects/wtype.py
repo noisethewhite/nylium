@@ -20,6 +20,8 @@ from nylium.database import Database, Types
 
 class WType:
     ARRAY_TYPE_PREFIX: ClassVar[str] = "Array<"
+    KIND_OBJECT: ClassVar[str] = "object"
+    KIND_ENUM: ClassVar[str] = "enum"
 
     def __init__(self, row: Types):
         # snapshot, not a live row: reads must not depend on the session
@@ -29,6 +31,7 @@ class WType:
         self._plural_name: str | None = row.plural_name
         self._icon: str = row.icon
         self._color: str = row.color
+        self._kind: str = row.kind
 
     @property
     def uuid(self) -> UUID:
@@ -49,6 +52,14 @@ class WType:
     @property
     def color(self) -> str:
         return self._color
+
+    @property
+    def kind(self) -> str:
+        return self._kind
+
+    @property
+    def is_enum(self) -> bool:
+        return self._kind == self.KIND_ENUM
 
     # --- type-name conventions ---
 
@@ -86,9 +97,14 @@ class WType:
         name: str,
         plural_name: str | None = None,
         icon: str | None = None,
+        kind: str | None = None,
     ) -> "WType":
         existing = cls.by_name(name)
         if existing is not None:
+            if kind is not None and existing.kind != kind:
+                raise ValueError(
+                    f"type {name!r} already exists as {existing.kind}, not {kind}"
+                )
             # builtins re-ensure on every boot: keep their icon canonical
             if icon is not None and existing.icon != icon:
                 Types.update(existing.uuid, existing.name, existing.plural_name, icon, existing.color)
@@ -97,6 +113,8 @@ class WType:
         row = Types(uuid=uuid4(), name=name, plural_name=plural_name)
         if icon is not None:
             row.icon = icon
+        if kind is not None:
+            row.kind = kind
         session.add(row)
         session.flush()
         return cls(row)

@@ -30,8 +30,15 @@ export class ObjectEditorStore extends Observable<EditorState> {
     schema: TypeView,
     workspace: WorkspaceStore,
   ): ObjectEditorStore {
+    const enumOptionsOf = (typeName: string): readonly string[] | null => {
+      const view = workspace.typeView(typeName);
+      if (view === undefined || view.kind !== "enum") {
+        return null;
+      }
+      return view.enum_options.map((option) => option.value);
+    };
     const fields = schema.props.map((prop) =>
-      FieldFactory.create(prop, object.props[prop.key]),
+      FieldFactory.create(prop, object.props[prop.key], enumOptionsOf),
     );
     const store = new ObjectEditorStore(
       { object, fields, saving: false, dirty: false, error: null },

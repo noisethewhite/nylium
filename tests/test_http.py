@@ -472,3 +472,42 @@ def test_type_icon_and_color_over_http(auth_client):
     assert (response.json()["icon"], response.json()["color"]) == ("heart", "pink")
     builtin = auth_client.get("/api/types/String").json()
     assert (builtin["icon"], builtin["color"]) == ("text_fields", "gray")
+
+
+def test_enum_over_http(auth_client: TestClient) -> None:
+    created = auth_client.post(
+        "/api/enums", json={"name": "Status", "options": ["open", "closed"]}
+    )
+    assert created.status_code == 201, created.text
+    view = created.json()
+    assert view["kind"] == "enum"
+    assert [option["value"] for option in view["enum_options"]] == ["open", "closed"]
+    assert view["props"] == []
+
+    dsl.create_type(auth_client, "Ticket", {"name": "String", "status": "Status"})
+    ticket = dsl.create_object(
+        auth_client, "Ticket", {"name": {"value": "t1"}, "status": {"value": "open"}}
+    )
+    assert ticket["props"]["status"]["value"] == "open"
+
+    bad = auth_client.post(
+        "/api/objects",
+        json={"type_name": "Ticket", "props": {"status": {"value": "bogus"}}},
+    )
+    assert bad.status_code == 422
+
+    open_uuid = next(
+        option["uuid"] for option in view["enum_options"] if option["value"] == "open"
+    )
+    synced = auth_client.put(
+        "/api/enums/Status/options",
+        json={"options": [{"uuid": open_uuid, "value": "in progress"}]},
+    )
+    assert synced.status_code == 200, synced.text
+    assert [o["value"] for o in synced.json()["enum_options"]] == ["in progress"]
+    reloaded = auth_client.get(f"/api/objects/{ticket['uuid']}").json()
+    assert reloaded["props"]["status"]["value"] == "in progress"
+
+    delete_in_use = auth_client.put("/api/enums/Status/options", json={"options": []})
+    assert delete_in_use.status_code == 409
+

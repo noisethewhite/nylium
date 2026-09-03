@@ -26,6 +26,21 @@ export class NyliumApi extends HttpTransport {
     });
   }
 
+  createEnum(name: string, options: string[]): Promise<TypeView> {
+    return this.request("POST", "/enums", { name, options });
+  }
+
+  /** Full option draft: {uuid, value} renames (propagating to stored
+   * values), uuid null creates, absent uuids delete unless in use. */
+  syncEnumOptions(
+    name: string,
+    options: { uuid: string | null; value: string }[],
+  ): Promise<TypeView> {
+    return this.request<TypeView>(
+      "PUT", `/enums/${encodeURIComponent(name)}/options`, { options },
+    );
+  }
+
   /** Persist a new prop order — keys must cover the whole schema. */
   reorderProps(typeName: string, keys: string[]): Promise<TypeView> {
     return this.request<TypeView>(

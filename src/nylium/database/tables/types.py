@@ -23,6 +23,11 @@ class Types(Base):
     color: Mapped[str] = mapped_column(
         Text, nullable=False, default="gray", server_default="gray"
     )
+    # "object" (regular, builtin or array) | "enum" (string enum — its
+    # values live in enum_options; instances never exist for enum types)
+    kind: Mapped[str] = mapped_column(
+        Text, nullable=False, default="object", server_default="object"
+    )
 
     @classmethod
     @Database.sessionmethod(bundled=False, commit=False)

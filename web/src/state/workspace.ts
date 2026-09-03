@@ -5,11 +5,12 @@ import { HttpError } from "../net/http-transport";
 import { Observable } from "./observable";
 
 /** VS Code-style tabs: recently opened types/objects, plus the
- * transient create-type form. */
+ * transient create-type / create-enum forms. */
 export type Tab =
   | { readonly kind: "type"; readonly name: string }
   | { readonly kind: "object"; readonly uuid: string }
-  | { readonly kind: "create-type" };
+  | { readonly kind: "create-type" }
+  | { readonly kind: "create-enum" };
 
 export interface WorkspaceState {
   readonly loading: boolean;
@@ -37,7 +38,7 @@ export function sameTab(a: Tab, b: Tab): boolean {
   if (a.kind === "object" && b.kind === "object") {
     return a.uuid === b.uuid;
   }
-  return true; // single create-type tab
+  return true; // one tab per create-* form kind
 }
 
 /** The screen's source of truth: open tabs, every type, every object.
@@ -76,6 +77,10 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
     this.activate({ kind: "create-type" });
   }
 
+  openCreateEnum(): void {
+    this.activate({ kind: "create-enum" });
+  }
+
   closeTab(tab: Tab): void {
     const state = this.getSnapshot();
     const tabs = state.tabs.filter((open) => !sameTab(open, tab));
@@ -104,6 +109,77 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
         tabs: tabs.some((open) => sameTab(open, tab)) ? tabs : [...tabs, tab],
         activeTab: tab,
       });
+    });
+  }
+
+  async createEnum(name: string, options: string[]): Promise<void> {
+    await this.guard(async () => {
+      const created = await this.api.createEnum(name, options);
+      const state = this.getSnapshot();
+      const tabs = state.tabs.filter((tab) => tab.kind !== "create-enum");
+      const tab: Tab = { kind: "type", name: created.name };
+      this.setState({
+        ...state,
+        types: [...state.types, created],
+        tabs: tabs.some((open) => sameTab(open, tab)) ? tabs : [...tabs, tab],
+        activeTab: tab,
+      });
+    });
+  }
+
+  /** The enum page's save: meta patch first (rename must precede the
+   * options PUT), then the full option draft. Renames propagate into
+   * stored values server-side, so every type's objects get re-pulled. */
+  async saveEnumEdits(
+    typeName: string,
+    patch: { name: string; icon: string; color: string },
+    options: { uuid: string | null; value: string }[],
+  ): Promise<void> {
+    await this.guard(async () => {
+      const current = this.getSnapshot().types.find((v) => v.name === typeName);
+      if (!current) {
+        return;
+      }
+      let schema = current;
+      const metaChanged =
+        patch.name !== current.name ||
+        patch.icon !== current.icon ||
+        patch.color !== current.color;
+      if (metaChanged) {
+        const rename: { name?: string; icon?: string; color?: string } = {};
+        if (patch.name !== current.name) {
+          rename.name = patch.name;
+        }
+        if (patch.icon !== current.icon) {
+          rename.icon = patch.icon;
+        }
+        if (patch.color !== current.color) {
+          rename.color = patch.color;
+        }
+        schema = await this.api.updateType(typeName, rename);
+      }
+      schema = await this.api.syncEnumOptions(schema.name, options);
+      const state = this.getSnapshot();
+      const renamed = schema.name !== typeName;
+      const tabs = state.tabs.map((tab) =>
+        renamed && tab.kind === "type" && tab.name === typeName
+          ? { kind: "type" as const, name: schema.name }
+          : tab,
+      );
+      const activeTab =
+        renamed && state.activeTab?.kind === "type" && state.activeTab.name === typeName
+          ? { kind: "type" as const, name: schema.name }
+          : state.activeTab;
+      this.setState({
+        ...state,
+        types: state.types.map((view) => (view.name === typeName ? schema : view)),
+        tabs,
+        activeTab,
+      });
+      // option renames rewrote stored values across every user type
+      for (const view of this.userTypes()) {
+        await this.refreshObjectsOf(view.name);
+      }
     });
   }
 

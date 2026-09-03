@@ -1,5 +1,6 @@
 import type { ChangeEvent, ReactElement } from "react";
 import { ArrayFieldModel, RefFieldModel } from "../fields/composite-fields";
+import { EnumFieldModel } from "../fields/enum-fields";
 import { FieldModel } from "../fields/field-model";
 import {
   BooleanFieldModel,
@@ -50,6 +51,9 @@ export function FieldEditor({ field, editor }: FieldProps): ReactElement {
   }
   if (field instanceof MonthDayFieldModel) {
     return <MonthDayInput field={field} editor={editor} withTime={false} />;
+  }
+  if (field instanceof EnumFieldModel) {
+    return <EnumInput field={field} editor={editor} />;
   }
   if (field instanceof RefFieldModel) {
     return <RefInput field={field} editor={editor} />;
@@ -420,6 +424,34 @@ function BooleanInput({ field, editor }: { field: BooleanFieldModel; editor: Obj
           draftChanged(editor);
         }}
       />
+    </FieldShell>
+  );
+}
+
+function EnumInput({ field, editor }: { field: EnumFieldModel; editor: ObjectEditorStore }): ReactElement {
+  return (
+    <FieldShell
+      label={
+        <>
+          {field.key} <span className="dim">→ {field.valueType}</span>
+        </>
+      }
+    >
+      <select
+        className="input"
+        value={field.selected ?? ""}
+        onChange={(event) => {
+          field.selected = event.target.value === "" ? null : event.target.value;
+          draftChanged(editor);
+        }}
+      >
+        <option value="">—</option>
+        {field.options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
     </FieldShell>
   );
 }

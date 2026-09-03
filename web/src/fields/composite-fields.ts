@@ -1,6 +1,7 @@
 /** Composite field kinds — link and array, peers of one file. */
 import type { ArrayValue, ObjectView, PropValue, RefValue } from "../contracts";
 import { PropValues, TypeNames } from "../contracts";
+import type { EnumOptionsOf } from "./enum-fields";
 import { FieldFactory } from "./field-factory";
 import { FieldModel } from "./field-model";
 
@@ -32,22 +33,35 @@ export class RefFieldModel extends FieldModel {
 
 export class ArrayFieldModel extends FieldModel {
   items: FieldModel[];
+  /** Carried so addItem builds the same item kinds fromWire did. */
+  readonly enumOptionsOf: EnumOptionsOf | undefined;
 
-  constructor(key: string, valueType: string, items: FieldModel[]) {
+  constructor(
+    key: string,
+    valueType: string,
+    items: FieldModel[],
+    enumOptionsOf?: EnumOptionsOf,
+  ) {
     super(key, valueType);
     this.items = items;
+    this.enumOptionsOf = enumOptionsOf;
   }
 
-  static fromWire(key: string, valueType: string, value: PropValue | undefined): ArrayFieldModel {
+  static fromWire(
+    key: string,
+    valueType: string,
+    value: PropValue | undefined,
+    enumOptionsOf?: EnumOptionsOf,
+  ): ArrayFieldModel {
     const wireItems =
       value !== undefined && PropValues.isArray(value) && value.items !== null
         ? value.items
         : [];
     const elementType = TypeNames.elementOf(valueType);
     const items = wireItems.map((item) =>
-      FieldFactory.createForType(key, elementType, item),
+      FieldFactory.createForType(key, elementType, item, enumOptionsOf),
     );
-    return new ArrayFieldModel(key, valueType, items);
+    return new ArrayFieldModel(key, valueType, items, enumOptionsOf);
   }
 
   get elementType(): string {
@@ -55,7 +69,12 @@ export class ArrayFieldModel extends FieldModel {
   }
 
   addItem(): FieldModel {
-    const item = FieldFactory.createForType(this.key, this.elementType, undefined);
+    const item = FieldFactory.createForType(
+      this.key,
+      this.elementType,
+      undefined,
+      this.enumOptionsOf,
+    );
     this.items = [...this.items, item];
     return item;
   }

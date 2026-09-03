@@ -45,6 +45,17 @@ body {
   letter-spacing: 0.02em;
 }
 
+/* anchors the "+" popover menu to the header button */
+.sidebar-plus {
+  position: relative;
+}
+
+.sidebar-plus .type-menu {
+  left: auto;
+  right: 0;
+  min-width: 180px;
+}
+
 .type-list {
   flex: 1;
   overflow-y: auto;

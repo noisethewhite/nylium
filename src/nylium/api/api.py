@@ -16,7 +16,8 @@ from typing import TypeAlias, cast
 from uuid import UUID
 
 from nylium.api.views import ObjectRef, ObjectView, TypeView
-from nylium.database import Database, Instances, Props, Types
+from nylium.database import Database, EnumOptions, Instances, Props, Types
+from nylium.objects.wenum import WEnum
 from nylium.objects.wobject import WObject
 from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import WScalar, WString
@@ -79,6 +80,51 @@ class Api:
         for position, (key, value_type_name) in enumerate(props.items()):
             _ = WProp.ensure(owner, key, WType.ensure(value_type_name), position)
         Types.update(owner.uuid, owner.name, owner.plural_name, icon, color)
+        return TypeView.from_name(name)
+
+    @classmethod
+    @Database.sessionmethod(bundled=True, commit=True)
+    def create_enum(
+        cls,
+        name: str,
+        options: list[str] | None = None,
+        icon: str = "lists",
+        color: str = "gray",
+    ) -> TypeView:
+        """A string enum is a type with kind='enum': no props, values
+        live in string_values, options live in enum_options. Options
+        here seed the initial list in order."""
+        from nylium.server.errors import ValidationError
+
+        final_name = name.strip()
+        if not final_name:
+            raise ValidationError("enum name must not be empty")
+        owner = WType.ensure(final_name, kind=WType.KIND_ENUM)
+        EnumOptions.sync(owner.uuid, [(None, v) for v in (options or [])])
+        Types.update(owner.uuid, owner.name, None, icon, color)
+        return TypeView.from_name(final_name)
+
+    @classmethod
+    @Database.sessionmethod(bundled=True, commit=True)
+    def sync_enum_options(
+        cls, name: str, items: list[tuple[UUID | None, str]]
+    ) -> TypeView:
+        """Apply the enum editor's full option draft at once: matching
+        uuid renames the option (propagating to stored values), None
+        creates, absent options are deleted unless still in use."""
+        from nylium.server.errors import ValidationError
+
+        owner = WType.by_name(name)
+        if owner is None:
+            raise KeyError(f"no type {name!r}")
+        if not owner.is_enum:
+            raise ValidationError(f"type {name!r} is not an enum")
+        values = [value for _, value in items]
+        if any(not value.strip() for value in values):
+            raise ValidationError("enum options must not be empty")
+        if len(set(values)) != len(values):
+            raise ValidationError(f"duplicate enum options in {values!r}")
+        EnumOptions.sync(owner.uuid, items)
         return TypeView.from_name(name)
 
     @classmethod
@@ -163,7 +209,7 @@ class Api:
         owner = WType.by_name(name)
         if owner is None:
             raise KeyError(f"no type {name!r}")
-        if owner.plural_name is None:
+        if owner.plural_name is None and not owner.is_enum:
             raise ValidationError(f"type {name!r} is builtin and cannot be renamed")
         final_name = name if new_name is None else new_name.strip()
         if not final_name:
@@ -272,6 +318,8 @@ class Api:
     def _normalize_value(cls, value: PropInput, type_name: str) -> StoredValue:
         if WScalar.by_type_name(type_name) is not None:
             return cast(StoredValue, value)
+        if WEnum.is_enum(type_name):
+            return cast(StoredValue, value)  # membership checked in setattr
         if WType.is_array_name(type_name):
             if not isinstance(value, list):
                 raise TypeError(f"array prop takes list, got {type(value).__name__}")

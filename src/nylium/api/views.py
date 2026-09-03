@@ -15,9 +15,10 @@ from typing import Self, cast
 from pydantic import ConfigDict
 from pydantic.dataclasses import dataclass
 
-from nylium.database import Database, Instances
+from nylium.database import Database, EnumOptions, Instances
 from nylium.objects import WObject, WProp, WType
 from nylium.objects.monthday import MonthDay, MonthDayTime
+from nylium.objects.wenum import WEnum
 from nylium.objects.wscalar import ScalarPayload, WScalar
 from nylium.objects.wtypemeta import StoredValue
 
@@ -25,6 +26,12 @@ _CONFIG = ConfigDict(extra="ignore")
 
 
 # --- type schema views ---
+
+
+@dataclass(config=_CONFIG)
+class EnumOptionView:
+    uuid: UUID
+    value: str
 
 
 @dataclass(config=_CONFIG)
@@ -40,6 +47,8 @@ class TypeView:
     plural_name: str | None
     icon: str
     color: str
+    kind: str
+    enum_options: list[EnumOptionView]
     props: list[PropView]
 
     @classmethod
@@ -53,6 +62,11 @@ class TypeView:
             plural_name=owner.plural_name,
             icon=owner.icon,
             color=owner.color,
+            kind=owner.kind,
+            enum_options=[
+                EnumOptionView(uuid=option.uuid, value=option.value)
+                for option in EnumOptions.list_for(owner.uuid)
+            ],
             props=[
                 PropView(uuid=prop.uuid, key=prop.key, value_type=prop.value_type().name)
                 for prop in WProp.all_for(owner)
@@ -133,6 +147,8 @@ class ObjectView:
             if isinstance(value, (MonthDay, MonthDayTime)):
                 return ScalarValue(value=str(value))
             return ScalarValue(value=cast(ScalarPayload | None, value))
+        if WEnum.is_enum(type_name):
+            return ScalarValue(value=cast(str | None, value))
         if WType.is_array_name(type_name):
             element_name = WType.element_name(type_name)
             if value is None:

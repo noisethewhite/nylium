@@ -19,8 +19,9 @@ import sqlalchemy as sqla
 from sqlalchemy.orm import Session
 
 from nylium.database import Database, ArrayValues, Instances, InstanceValues
+from nylium.objects.wenum import WEnum
 from nylium.objects.wprop import WProp
-from nylium.objects.wscalar import VALUE_PROP_KEY, ScalarPayload, WScalar
+from nylium.objects.wscalar import VALUE_PROP_KEY, ScalarPayload, WScalar, WString
 from nylium.objects.wtype import WType
 from nylium.objects.wtypemeta import StoredValue, WObjectShape, WTypeMeta
 
@@ -152,6 +153,9 @@ class WArray:
         if WType.is_array_name(type_name):
             return cls.read(uuid, WType.element_name(type_name))
         scalar = WScalar.by_type_name(type_name)
+        if scalar is None and WEnum.is_enum(type_name):
+            # enum elements box as String boxes; membership was checked at write
+            scalar = WString
         if scalar is None:
             return WTypeMeta.root().wrap(uuid)
         inst = session.get(Instances, uuid)
@@ -179,11 +183,16 @@ class WArray:
             return array_uuid
         scalar = WScalar.by_type_name(type_name)
         if scalar is None:
-            WTypeMeta.check_link(type_name, value)
-            return cast(WObjectShape, value).uuid
-        WScalar.validate(type_name, cast(ScalarPayload | None, value))
+            if WEnum.is_enum(type_name):
+                validated = WEnum.validate(type_name, value)
+                scalar = WString
+                value = validated
+            else:
+                WTypeMeta.check_link(type_name, value)
+                return cast(WObjectShape, value).uuid
+        WScalar.validate(scalar.TYPE_NAME, cast(ScalarPayload | None, value))
         box_uuid = uuid4()
-        owner = WType.ensure(type_name)
+        owner = WType.ensure(scalar.TYPE_NAME)
         session.add(Instances(uuid=box_uuid, type_uuid=owner.uuid, name=str(value)))
         session.flush()
         value_prop = WProp.by_key(owner, VALUE_PROP_KEY)

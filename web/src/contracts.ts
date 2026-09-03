@@ -6,13 +6,22 @@ export interface PropView {
   value_type: string;
 }
 
+export interface EnumOptionView {
+  uuid: string;
+  value: string;
+}
+
 export interface TypeView {
   name: string;
   /** null for builtins and array types — only user types carry both forms */
   plural_name: string | null;
+  /** "object" (schema of props) or "enum" (list of string options) */
+  kind: string;
   icon: string;
   color: string;
   props: PropView[];
+  /** enum kinds only; always empty for object kinds */
+  enum_options: EnumOptionView[];
 }
 
 export interface ObjectRef {

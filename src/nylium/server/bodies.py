@@ -69,6 +69,33 @@ class SyncPropsBody:
 
 
 @dataclass(config=_CONFIG)
+class CreateEnumBody:
+    """A string enum type: name plus its allowed option values."""
+
+    name: str
+    options: list[str] = field(default_factory=list)
+    icon: str = "lists"
+    color: str = "gray"
+
+
+@dataclass(config=_CONFIG)
+class SyncEnumOptionItem:
+    """One row of the enum editor's draft: uuid None = new option."""
+
+    value: str
+    uuid: UUID | None = None
+
+
+@dataclass(config=_CONFIG)
+class SyncEnumOptionsBody:
+    """The full option draft — renames by uuid (propagating to stored
+    values), creates without, deletes whatever the draft omits unless
+    still in use."""
+
+    options: list[SyncEnumOptionItem]
+
+
+@dataclass(config=_CONFIG)
 class UpdateTypeBody:
     """PATCH semantics: only the listed fields change."""
 

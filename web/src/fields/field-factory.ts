@@ -1,6 +1,8 @@
 import type { PropValue, PropView } from "../contracts";
 import { TypeNames } from "../contracts";
 import { ArrayFieldModel, RefFieldModel } from "./composite-fields";
+import { EnumFieldModel } from "./enum-fields";
+import type { EnumOptionsOf } from "./enum-fields";
 import { FieldModel } from "./field-model";
 import {
   BooleanFieldModel,
@@ -15,17 +17,27 @@ import {
 } from "./scalar-fields";
 
 /** Declared type name -> the right FieldModel kind. The single place
- * that knows the whole hierarchy. */
+ * that knows the whole hierarchy. `enumOptionsOf` resolves a type name
+ * to its enum options; without it enum-typed props degrade to refs. */
 export abstract class FieldFactory {
-  static create(prop: PropView, value: PropValue | undefined): FieldModel {
-    return FieldFactory.createForType(prop.key, prop.value_type, value);
+  static create(
+    prop: PropView,
+    value: PropValue | undefined,
+    enumOptionsOf?: EnumOptionsOf,
+  ): FieldModel {
+    return FieldFactory.createForType(prop.key, prop.value_type, value, enumOptionsOf);
   }
 
   static createForType(
     key: string,
     valueType: string,
     value: PropValue | undefined,
+    enumOptionsOf?: EnumOptionsOf,
   ): FieldModel {
+    const enumOptions = enumOptionsOf?.(valueType) ?? null;
+    if (enumOptions !== null) {
+      return EnumFieldModel.fromWire(key, valueType, enumOptions, value);
+    }
     switch (valueType) {
       case TypeNames.STRING:
         return TextFieldModel.fromWire(key, value);
@@ -47,7 +59,7 @@ export abstract class FieldFactory {
         return MonthDayTimeFieldModel.fromWire(key, value);
       default:
         if (TypeNames.isArray(valueType)) {
-          return ArrayFieldModel.fromWire(key, valueType, value);
+          return ArrayFieldModel.fromWire(key, valueType, value, enumOptionsOf);
         }
         return RefFieldModel.fromWire(key, valueType, value);
     }

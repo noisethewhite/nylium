@@ -12,6 +12,7 @@ from decimal import Decimal, InvalidOperation
 from nylium.api.api import Api, PropInput
 from nylium.api.views import ArrayValue, PropValue, RefValue, ScalarValue
 from nylium.objects.monthday import MonthDay, MonthDayTime
+from nylium.objects.wenum import WEnum
 from nylium.objects.wscalar import (
     ScalarPayload,
     WBoolean,
@@ -56,6 +57,13 @@ class PropCodec:
             if not isinstance(value, ScalarValue):
                 raise TypeError(cls._shape_error(type_name, "ScalarValue", value))
             return cls._coerce_scalar(value.value, type_name)
+        if WEnum.is_enum(type_name):
+            if not isinstance(value, ScalarValue):
+                raise TypeError(cls._shape_error(type_name, "ScalarValue", value))
+            raw = value.value
+            if raw is not None and type(raw) is not str:
+                raise TypeError(f"value {raw!r} is not a valid {type_name}")
+            return raw
         if WType.is_array_name(type_name):
             if not isinstance(value, ArrayValue):
                 raise TypeError(cls._shape_error(type_name, "ArrayValue", value))

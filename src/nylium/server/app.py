@@ -52,6 +52,7 @@ class NyliumApp:
         statements = [
             "ALTER TABLE types ADD COLUMN IF NOT EXISTS icon TEXT NOT NULL DEFAULT 'inventory_2'",
             "ALTER TABLE types ADD COLUMN IF NOT EXISTS color TEXT NOT NULL DEFAULT 'gray'",
+            "ALTER TABLE types ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'object'",
         ]
         with Database.engine.begin() as connection:
             for statement in statements:
@@ -97,6 +98,14 @@ class NyliumApp:
         app.add_api_route(
             f"{prefix}/types", routes.create_type, methods=["POST"],
             status_code=created, response_model=TypeView, dependencies=guard,
+        )
+        app.add_api_route(
+            f"{prefix}/enums", routes.create_enum, methods=["POST"],
+            status_code=created, response_model=TypeView, dependencies=guard,
+        )
+        app.add_api_route(
+            f"{prefix}/enums/{{name}}/options", routes.sync_enum_options,
+            methods=["PUT"], response_model=TypeView, dependencies=guard,
         )
         app.add_api_route(
             f"{prefix}/types/{{name}}", routes.get_type, methods=["GET"],

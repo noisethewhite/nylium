@@ -5,6 +5,8 @@ import { ErrorStore } from "../state/errors";
 import { useObservable } from "../state/use-observable";
 import { WorkspaceStore } from "../state/workspace";
 import { ErrorCenter } from "./error-center";
+import { EnumCreateForm } from "./enum-create-form";
+import { EnumTypePanel } from "./enum-type-view";
 import { LoginView } from "./login-view";
 import { ObjectEditor } from "./object-editor";
 import { Sidebar } from "./sidebar";
@@ -52,10 +54,20 @@ export function App(props: {
         </div>
       );
     }
+    if (tab.kind === "create-enum") {
+      return (
+        <div className="tab-content create-type-page">
+          <EnumCreateForm workspace={props.workspace} />
+        </div>
+      );
+    }
     if (tab.kind === "type") {
       const schema = state.types.find((view) => view.name === tab.name);
       if (schema === undefined) {
         return <div className="empty-state dim">Type is gone.</div>;
+      }
+      if (schema.kind === "enum") {
+        return <EnumTypePanel workspace={props.workspace} schema={schema} />;
       }
       return <TypeViewPanel workspace={props.workspace} schema={schema} />;
     }

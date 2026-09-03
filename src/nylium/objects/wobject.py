@@ -28,6 +28,7 @@ from sqlalchemy.orm import Session
 from nylium.database import Database
 from nylium.database.tables import ArrayValues, Instances, InstanceValues
 from nylium.objects.warray import WArray
+from nylium.objects.wenum import WEnum
 from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import ScalarPayload, WScalar
 from nylium.objects.wtype import WType
@@ -190,6 +191,8 @@ class WObject(metaclass=WTypeMeta):
         if scalar is not None:
             row = session.get(scalar.TABLE, (self._uuid, prop.uuid))
             return None if row is None else scalar.from_storage(row.value)
+        if WEnum.is_enum(value_type):
+            return WEnum.read(session, self._uuid, prop)
         link = self._link(prop)
         if link is None:
             return None
@@ -209,6 +212,8 @@ class WObject(metaclass=WTypeMeta):
             payload = cast(ScalarPayload | None, value)
             WScalar.validate(value_type, payload)
             self._write_scalar(prop, scalar, payload)
+        elif WEnum.is_enum(value_type):
+            WEnum.write(session, self._uuid, prop, WEnum.validate(value_type, value))
         elif WType.is_array_name(value_type):
             WArray.write(
                 self._uuid,
@@ -234,6 +239,10 @@ class WObject(metaclass=WTypeMeta):
             if row is not None:
                 session.delete(row)
                 self._touch()
+            return
+        if WEnum.is_enum(value_type):
+            WEnum.write(session, self._uuid, prop, None)
+            self._touch()
             return
         link = self._link(prop)
         if link is None:
