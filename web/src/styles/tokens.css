@@ -18,7 +18,6 @@
   --space-3: 12px;
   --space-4: 16px;
   --space-6: 24px;
-  --font:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+  --font: "Helvetica Neue", Helvetica, Arial, "Liberation Sans", sans-serif;
   color-scheme: dark;
 }
