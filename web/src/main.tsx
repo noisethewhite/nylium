@@ -8,6 +8,7 @@ import { ErrorStore } from "./state/errors";
 import { WorkspaceStore } from "./state/workspace";
 import "./styles/tokens.css";
 import "./styles/app.css";
+import "@fontsource/material-symbols-outlined";
 
 /** Composition root: build the object graph, probe the session, render. */
 const container = document.getElementById("root");

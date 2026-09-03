@@ -56,7 +56,7 @@ class Api:
         name: str,
         props: dict[str, str] | None = None,
         plural_name: str | None = None,
-        icon: str = "box",
+        icon: str = "inventory_2",
         color: str = "gray",
     ) -> TypeView:
         """props maps key -> value type name. Missing value types are created.

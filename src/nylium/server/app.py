@@ -47,7 +47,7 @@ class NyliumApp:
     def _migrate_schema(cls) -> None:
         """Idempotent column backfills; each clause is a no-op once applied."""
         statements = [
-            "ALTER TABLE types ADD COLUMN IF NOT EXISTS icon TEXT NOT NULL DEFAULT 'box'",
+            "ALTER TABLE types ADD COLUMN IF NOT EXISTS icon TEXT NOT NULL DEFAULT 'inventory_2'",
             "ALTER TABLE types ADD COLUMN IF NOT EXISTS color TEXT NOT NULL DEFAULT 'gray'",
         ]
         with Database.engine.begin() as connection:

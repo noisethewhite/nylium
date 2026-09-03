@@ -471,4 +471,4 @@ def test_type_icon_and_color_over_http(auth_client):
     assert response.status_code == 200
     assert (response.json()["icon"], response.json()["color"]) == ("heart", "pink")
     builtin = auth_client.get("/api/types/String").json()
-    assert (builtin["icon"], builtin["color"]) == ("type", "gray")
+    assert (builtin["icon"], builtin["color"]) == ("text_fields", "gray")

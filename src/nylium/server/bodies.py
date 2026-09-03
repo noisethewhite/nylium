@@ -27,7 +27,7 @@ class CreateTypeBody:
     name: str
     plural_name: str
     props: dict[str, str] = field(default_factory=dict)
-    icon: str = "box"
+    icon: str = "inventory_2"
     color: str = "gray"
 
 

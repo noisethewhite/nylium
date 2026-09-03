@@ -882,3 +882,19 @@ select.input option {
   color: var(--fg-faint);
   flex-shrink: 0;
 }
+
+.type-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  user-select: none;
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+}
+
+.type-picker-chevron {
+  font-size: 16px;
+  color: var(--fg-faint);
+  flex-shrink: 0;
+  user-select: none;
+}

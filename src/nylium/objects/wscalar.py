@@ -44,7 +44,7 @@ class WScalar:
     TYPE_NAME: ClassVar[str]
     PYTHON_TYPE: ClassVar[type[ScalarPayload]]
     TABLE: ClassVar[type[ScalarTable]]
-    # lucide icon name, rendered gray and immutable for builtins
+    # Material Symbols name, rendered gray and immutable for builtins
     ICON: ClassVar[str]
 
     @classmethod
@@ -110,7 +110,7 @@ class WString(WScalar):
     TYPE_NAME = "String"
     PYTHON_TYPE = str
     TABLE = StringValues
-    ICON = "type"
+    ICON = "text_fields"
 
 
 @final
@@ -118,7 +118,7 @@ class WInteger(WScalar):
     TYPE_NAME = "Integer"
     PYTHON_TYPE = int
     TABLE = IntegerValues
-    ICON = "hash"
+    ICON = "tag"
 
 
 @final
@@ -134,7 +134,7 @@ class WBoolean(WScalar):
     TYPE_NAME = "Boolean"
     PYTHON_TYPE = bool
     TABLE = BooleanValues
-    ICON = "toggle-left"
+    ICON = "toggle_on"
 
 
 @final
@@ -142,7 +142,7 @@ class WDatetime(WScalar):
     TYPE_NAME = "Datetime"
     PYTHON_TYPE = datetime
     TABLE = DatetimeValues
-    ICON = "calendar-clock"
+    ICON = "calendar_clock"
 
 
 @final
@@ -150,7 +150,7 @@ class WDate(WScalar):
     TYPE_NAME = "Date"
     PYTHON_TYPE = date
     TABLE = DateValues
-    ICON = "calendar"
+    ICON = "calendar_month"
 
 
 @final
@@ -158,7 +158,7 @@ class WTime(WScalar):
     TYPE_NAME = "Time"
     PYTHON_TYPE = time
     TABLE = TimeValues
-    ICON = "clock"
+    ICON = "schedule"
 
 
 @final
@@ -168,7 +168,7 @@ class WMonthDay(WScalar):
     TYPE_NAME = "MonthDay"
     PYTHON_TYPE = MonthDay
     TABLE = MonthDayValues
-    ICON = "calendar-day"
+    ICON = "calendar_today"
 
     @override
     @classmethod
@@ -188,7 +188,7 @@ class WMonthDayTime(WScalar):
     TYPE_NAME = "MonthDayTime"
     PYTHON_TYPE = MonthDayTime
     TABLE = MonthDayTimeValues
-    ICON = "alarm-clock"
+    ICON = "alarm"
 
     @override
     @classmethod

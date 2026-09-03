@@ -3,7 +3,7 @@ import { useState } from "react";
 import { DEFAULT_COLOR, DEFAULT_ICON, ICON_COLORS, ICON_NAMES, TypeIcon } from "./type-icon";
 
 /** Icon + color chooser popover, used in the type editor header and the
- * create-type form. Click the glyph to open; pick a lucide icon from the
+ * create-type form. Click the glyph to open; pick an icon from the
  * filterable grid and a swatch below. */
 export function IconPicker(props: {
   icon: string;

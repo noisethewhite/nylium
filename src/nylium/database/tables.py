@@ -32,10 +32,10 @@ class Types(Base):
     name: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
     # NULL for builtins and array types — only user types carry both forms
     plural_name: Mapped[str | None] = mapped_column(Text, nullable=True)
-    # lucide icon name + palette key, rendered monochrome by the UI;
+    # Material Symbols name + palette key, rendered monochrome by the UI;
     # server defaults backfill existing rows on ALTER
     icon: Mapped[str] = mapped_column(
-        Text, nullable=False, default="box", server_default="box"
+        Text, nullable=False, default="inventory_2", server_default="inventory_2"
     )
     color: Mapped[str] = mapped_column(
         Text, nullable=False, default="gray", server_default="gray"

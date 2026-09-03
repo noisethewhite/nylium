@@ -1,6 +1,5 @@
 import type { ReactElement } from "react";
 import { useState } from "react";
-import { ChevronDown } from "lucide-react";
 import { TypeLabels, TypeNames } from "../contracts";
 import { WorkspaceStore } from "../state/workspace";
 import { TypeIcon } from "./type-icon";
@@ -93,7 +92,7 @@ export function TypePicker(props: {
     const view = props.workspace.typeView(name);
     // builtins render gray by rule — their stored color IS gray, but
     // force it here so a stale backend value can't sneak color in
-    return <TypeIcon icon={view?.icon ?? "box"} color="gray" size={15} />;
+    return <TypeIcon icon={view?.icon ?? "inventory_2"} color="gray" size={15} />;
   };
 
   return (
@@ -102,7 +101,9 @@ export function TypePicker(props: {
         className="input type-picker-trigger"
         onClick={() => (open ? close() : setOpen(true))}
       >
-        <ChevronDown size={14} className="type-picker-chevron" aria-hidden />
+        <span className="material-symbols-outlined type-picker-chevron" aria-hidden>
+          keyboard_arrow_down
+        </span>
         {scalarIcon(props.value)}
         <span className="type-picker-value">{props.value}</span>
       </button>
