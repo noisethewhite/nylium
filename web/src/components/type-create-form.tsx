@@ -27,7 +27,8 @@ export function TypeCreateForm(props: {
   };
 
   const submit = (): void => {
-    const propsRecord: Record<string, string> = {};
+    // every type opens with the pinned `name` prop — the instance title
+    const propsRecord: Record<string, string> = { name: "String" };
     for (const draft of propsDraft) {
       if (draft.key !== "") {
         propsRecord[draft.key] = draft.valueType;
@@ -51,6 +52,11 @@ export function TypeCreateForm(props: {
         value={pluralName}
         onChange={(event) => setPluralName(event.target.value)}
       />
+      {/* every type opens with the pinned `name` prop — the instance title */}
+      <div className="prop-draft-row prop-draft-row-fixed">
+        <span className="schema-prop-key">name</span>
+        <span className="dim">String · title</span>
+      </div>
       {propsDraft.map((draft, index) => (
         <div className="prop-draft-row" key={index}>
           <input

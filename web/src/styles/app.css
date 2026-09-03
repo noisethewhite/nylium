@@ -169,6 +169,19 @@ select.input option {
   padding: 0 0 var(--space-2);
 }
 
+/* the object's name prop IS its page heading — same borderless trick */
+.object-name-input {
+  font-size: 24px;
+  font-weight: 600;
+  padding: 0 0 var(--space-3);
+  width: 100%;
+}
+
+.prop-grip-spacer {
+  cursor: default;
+  width: 11px;
+}
+
 /* --- type create form --- */
 
 .type-create-form {

@@ -5,6 +5,7 @@ import { ObjectEditorStore } from "../state/object-editor";
 import { useObservable } from "../state/use-observable";
 import { WorkspaceStore } from "../state/workspace";
 import { FieldEditor } from "./field-editors";
+import { TextFieldModel } from "../fields/scalar-fields";
 
 export function ObjectEditor(props: {
   workspace: WorkspaceStore;
@@ -40,10 +41,29 @@ function ObjectEditorInner(props: {
   );
   const editorState = useObservable(store);
 
+  const fields = editorState.fields;
+  const first = fields[0];
+  // the schema's first prop is the pinned `name` text prop — it renders
+  // as the editable page heading instead of a grid row
+  const titleField =
+    first instanceof TextFieldModel && first.key === "name" ? first : undefined;
+  const gridFields = titleField !== undefined ? fields.slice(1) : fields;
+
   return (
     <div className="object-editor">
+      {titleField !== undefined && (
+        <input
+          className="input object-name-input"
+          placeholder="Name"
+          value={titleField.draft}
+          onChange={(event) => {
+            titleField.draft = event.target.value;
+            store.touch();
+          }}
+        />
+      )}
       <div className="object-editor-fields">
-        {editorState.fields.map((field) => (
+        {gridFields.map((field) => (
           <FieldEditor key={field.key} field={field} editor={store} />
         ))}
       </div>

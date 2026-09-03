@@ -12,6 +12,7 @@ from nylium.api import (
     TypeView,
 )
 from nylium.objects import WInteger, WObject, WString
+from nylium.server.errors import ValidationError
 
 
 def person_class() -> type[WObject]:
@@ -80,7 +81,7 @@ def test_links_and_arrays_render_as_views():
 
 
 def test_db_only_type_created_through_api():
-    view = Api.create_type("Note", {"body": "String"}, "Notes")
+    view = Api.create_type("Note", {"name": "String", "body": "String"}, "Notes")
     assert view.name == "Note"
     assert view.plural_name == "Notes"
 
@@ -113,11 +114,26 @@ def test_delete_type_when_empty():
 
 def test_reorder_props_roundtrip():
     _ = person_class()
-    view = Api.reorder_props("Person", ["age", "tags", "name", "friend"])
-    assert [prop.key for prop in view.props] == ["age", "tags", "name", "friend"]
+    view = Api.reorder_props("Person", ["name", "tags", "age", "friend"])
+    assert [prop.key for prop in view.props] == ["name", "tags", "age", "friend"]
     reloaded = Api.get_type("Person")
     assert reloaded is not None
-    assert [prop.key for prop in reloaded.props] == ["age", "tags", "name", "friend"]
+    assert [prop.key for prop in reloaded.props] == ["name", "tags", "age", "friend"]
+
+
+def test_reorder_props_keeps_name_first():
+    _ = person_class()
+    with pytest.raises(ValidationError):
+        Api.reorder_props("Person", ["age", "tags", "name", "friend"])
+
+
+def test_create_type_requires_name_prop_first():
+    with pytest.raises(ValidationError):
+        Api.create_type("Note", {"body": "String"})
+    with pytest.raises(ValidationError):
+        Api.create_type("Note", {"name": "Integer"})
+    with pytest.raises(ValidationError):
+        Api.create_type("Note", {})
 
 
 def test_reorder_props_rejects_foreign_keys():

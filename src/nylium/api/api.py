@@ -19,7 +19,7 @@ from nylium.api.views import ObjectRef, ObjectView, TypeView
 from nylium.database import Database, Instances, Props, Types
 from nylium.objects.wobject import WObject
 from nylium.objects.wprop import WProp
-from nylium.objects.wscalar import WScalar
+from nylium.objects.wscalar import WScalar, WString
 from nylium.objects.wtype import WType
 from nylium.objects.wtypemeta import StoredValue, WTypeMeta
 
@@ -27,6 +27,11 @@ from nylium.objects.wtypemeta import StoredValue, WTypeMeta
 # UUID/ObjectRef (resolved to WObject here). A string forward ref inside
 # list[...] keeps the recursion 3.11-parseable without typing.Union.
 PropInput: TypeAlias = StoredValue | UUID | ObjectRef | list["PropInput"]
+
+# Every object type starts with a `name` prop — it IS the instance's
+# title, rendered as the editable heading in the UI. Pinned at
+# position 0: reorder may shuffle the rest, never the name.
+NAME_PROP_KEY = "name"
 
 
 class Api:
@@ -53,20 +58,41 @@ class Api:
         plural_name: str | None = None,
     ) -> TypeView:
         """props maps key -> value type name. Missing value types are created.
-        Dict order becomes the schema's display order (positions)."""
+        Dict order becomes the schema's display order (positions).
+        The schema must open with the `name` prop (String) — see
+        NAME_PROP_KEY."""
+        # lazy: a module-level import would circle api -> server -> api
+        from nylium.server.errors import ValidationError
+
+        props = dict(props or {})
+        keys = list(props)
+        if not keys or keys[0] != NAME_PROP_KEY:
+            raise ValidationError(f"first prop of a type must be {NAME_PROP_KEY!r}")
+        if props[NAME_PROP_KEY] != WString.TYPE_NAME:
+            raise ValidationError(
+                f"the {NAME_PROP_KEY!r} prop must be of type {WString.TYPE_NAME!r}"
+            )
         WScalar.ensure_builtins()
         owner = WType.ensure(name, plural_name)
-        for position, (key, value_type_name) in enumerate((props or {}).items()):
+        for position, (key, value_type_name) in enumerate(props.items()):
             _ = WProp.ensure(owner, key, WType.ensure(value_type_name), position)
         return TypeView.from_name(name)
 
     @classmethod
     @Database.sessionmethod(bundled=True, commit=True)
     def reorder_props(cls, type_name: str, keys: list[str]) -> TypeView:
-        """Persist a new prop order; keys must cover the whole schema."""
+        """Persist a new prop order; keys must cover the whole schema and
+        keep the `name` prop first (see NAME_PROP_KEY)."""
+        from nylium.server.errors import ValidationError
+
         owner = WType.by_name(type_name)
         if owner is None:
             raise KeyError(f"no type {type_name!r}")
+        existing = [prop.key for prop in WProp.all_for(owner)]
+        if set(keys) != set(existing):
+            raise ValueError(f"prop order {keys!r} does not match {type_name!r} schema")
+        if NAME_PROP_KEY in existing and (not keys or keys[0] != NAME_PROP_KEY):
+            raise ValidationError(f"the {NAME_PROP_KEY!r} prop must stay first")
         WProp.reorder(owner, keys)
         return TypeView.from_name(type_name)
 

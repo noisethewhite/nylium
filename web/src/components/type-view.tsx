@@ -38,6 +38,10 @@ export function TypeViewPanel(props: {
     if (moved === undefined || dragIndex === null || dragIndex === target) {
       return;
     }
+    // the pinned `name` prop never leaves position 0
+    if (order[0]?.key === "name" && (dragIndex === 0 || target === 0)) {
+      return;
+    }
     const next = order.filter((_, position) => position !== dragIndex);
     next.splice(target, 0, moved);
     setOrder(next);
@@ -82,30 +86,46 @@ export function TypeViewPanel(props: {
         </button>
       </div>
       <div className="schema-props">
-        {order.map((prop, index) => (
-          <div
-            key={prop.key}
-            className={rowClass(index)}
-            draggable
-            onDragStart={() => setDragIndex(index)}
-            onDragOver={(event) => {
-              event.preventDefault();
-              setOverIndex(index);
-            }}
-            onDragLeave={() => setOverIndex((current) => (current === index ? null : current))}
-            onDrop={(event) => onDrop(event, index)}
-            onDragEnd={() => {
-              setDragIndex(null);
-              setOverIndex(null);
-            }}
-          >
-            <span className="prop-grip" title="Drag to reorder">
-              <PropGrip />
-            </span>
-            <span className="schema-prop-key">{prop.key}</span>
-            <span className="dim">{TypeLabels[prop.value_type] ?? prop.value_type}</span>
-          </div>
-        ))}
+        {order.map((prop, index) => {
+          // the schema's first prop is the pinned `name` title — no grip,
+          // not draggable, not a drop target
+          const pinned = index === 0 && prop.key === "name";
+          return (
+            <div
+              key={prop.key}
+              className={rowClass(index)}
+              draggable={!pinned}
+              onDragStart={() => {
+                if (!pinned) {
+                  setDragIndex(index);
+                }
+              }}
+              onDragOver={(event) => {
+                if (pinned) {
+                  return;
+                }
+                event.preventDefault();
+                setOverIndex(index);
+              }}
+              onDragLeave={() => setOverIndex((current) => (current === index ? null : current))}
+              onDrop={(event) => onDrop(event, index)}
+              onDragEnd={() => {
+                setDragIndex(null);
+                setOverIndex(null);
+              }}
+            >
+              {pinned ? (
+                <span className="prop-grip prop-grip-spacer" title="The name prop is pinned first" />
+              ) : (
+                <span className="prop-grip" title="Drag to reorder">
+                  <PropGrip />
+                </span>
+              )}
+              <span className="schema-prop-key">{prop.key}</span>
+              <span className="dim">{TypeLabels[prop.value_type] ?? prop.value_type}</span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

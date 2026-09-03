@@ -55,11 +55,11 @@ class dsl:
 
 def test_types_roundtrip(auth_client: TestClient) -> None:
     created = dsl.create_type(
-        auth_client, "Book", {"title": "String", "pages": "Integer"}
+        auth_client, "Book", {"name": "String", "title": "String", "pages": "Integer"}
     )
     assert created["name"] == "Book"
     assert created["plural_name"] == "Books"
-    assert {prop["key"] for prop in created["props"]} == {"title", "pages"}
+    assert {prop["key"] for prop in created["props"]} == {"name", "title", "pages"}
 
     names = {view["name"] for view in auth_client.get("/api/types").json()}
     assert "Book" in names
@@ -76,6 +76,7 @@ def test_object_scalars_roundtrip(auth_client: TestClient) -> None:
         auth_client,
         "Book",
         {
+            "name": "String",
             "title": "String",
             "pages": "Integer",
             "price": "Numeric",
@@ -112,6 +113,7 @@ def test_calendar_scalar_family_roundtrip(auth_client: TestClient) -> None:
         auth_client,
         "Event",
         {
+            "name": "String",
             "on": "Date",
             "at": "Time",
             "starts": "Datetime",
@@ -146,11 +148,12 @@ def test_calendar_scalar_family_roundtrip(auth_client: TestClient) -> None:
 
 
 def test_object_link_and_arrays(auth_client: TestClient) -> None:
-    dsl.create_type(auth_client, "Book", {"title": "String"})
+    dsl.create_type(auth_client, "Book", {"name": "String", "title": "String"})
     dsl.create_type(
         auth_client,
         "Shelf",
         {
+            "name": "String",
             "label": "String",
             "favorite": "Book",
             "books": "Array<Book>",
@@ -177,7 +180,7 @@ def test_object_link_and_arrays(auth_client: TestClient) -> None:
 
 def test_update_object_partial_and_array_semantics(auth_client: TestClient) -> None:
     dsl.create_type(
-        auth_client, "Book", {"title": "String", "tags": "Array<String>"}
+        auth_client, "Book", {"name": "String", "title": "String", "tags": "Array<String>"}
     )
     book = dsl.create_object(
         auth_client, "Book", {"tags": {"items": [{"value": "x"}]}}
@@ -204,8 +207,8 @@ def test_update_object_partial_and_array_semantics(auth_client: TestClient) -> N
 
 
 def test_wire_shape_mismatch_is_422(auth_client: TestClient) -> None:
-    dsl.create_type(auth_client, "Book", {"title": "String"})
-    dsl.create_type(auth_client, "Shelf", {"favorite": "Book"})
+    dsl.create_type(auth_client, "Book", {"name": "String", "title": "String"})
+    dsl.create_type(auth_client, "Shelf", {"name": "String", "favorite": "Book"})
     response = auth_client.post(
         "/api/objects",
         json={
@@ -217,7 +220,7 @@ def test_wire_shape_mismatch_is_422(auth_client: TestClient) -> None:
 
 
 def test_unknown_keys_and_types_are_404(auth_client: TestClient) -> None:
-    dsl.create_type(auth_client, "Book", {"title": "String"})
+    dsl.create_type(auth_client, "Book", {"name": "String", "title": "String"})
     unknown_prop = auth_client.post(
         "/api/objects",
         json={"type_name": "Book", "props": {"nope": {"value": "x"}}},
@@ -228,7 +231,7 @@ def test_unknown_keys_and_types_are_404(auth_client: TestClient) -> None:
 
 
 def test_delete_flows(auth_client: TestClient) -> None:
-    dsl.create_type(auth_client, "Book", {"title": "String"})
+    dsl.create_type(auth_client, "Book", {"name": "String", "title": "String"})
     book_uuid = dsl.create_book(auth_client, "Dune")
 
     busy = auth_client.delete("/api/types/Book")
@@ -264,27 +267,51 @@ def test_spa_fallback(
 
 def test_reorder_props_endpoint(auth_client: TestClient) -> None:
     dsl.create_type(
-        auth_client, "Track", {"title": "String", "bpm": "Integer", "live": "Boolean"}
+        auth_client,
+        "Track",
+        {"name": "String", "title": "String", "bpm": "Integer", "live": "Boolean"},
     )
     response = auth_client.patch(
-        "/api/types/Track/props-order", json={"keys": ["bpm", "live", "title"]}
+        "/api/types/Track/props-order", json={"keys": ["name", "bpm", "live", "title"]}
     )
     assert response.status_code == 200, response.text
     assert [prop["key"] for prop in response.json()["props"]] == [
+        "name",
         "bpm",
         "live",
         "title",
     ]
     reloaded = auth_client.get("/api/types/Track")
     assert [prop["key"] for prop in reloaded.json()["props"]] == [
+        "name",
         "bpm",
         "live",
         "title",
     ]
 
 
+def test_reorder_props_moving_name_is_422(auth_client: TestClient) -> None:
+    dsl.create_type(
+        auth_client, "Track", {"name": "String", "title": "String", "bpm": "Integer"}
+    )
+    response = auth_client.patch(
+        "/api/types/Track/props-order", json={"keys": ["title", "name", "bpm"]}
+    )
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "validation"
+
+
+def test_create_type_without_name_is_422(auth_client: TestClient) -> None:
+    response = auth_client.post(
+        "/api/types",
+        json={"name": "Track", "plural_name": "Tracks", "props": {"title": "String"}},
+    )
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "validation"
+
+
 def test_reorder_props_mismatch_is_409(auth_client: TestClient) -> None:
-    dsl.create_type(auth_client, "Track", {"title": "String", "bpm": "Integer"})
+    dsl.create_type(auth_client, "Track", {"name": "String", "title": "String", "bpm": "Integer"})
     response = auth_client.patch(
         "/api/types/Track/props-order", json={"keys": ["title", "nope"]}
     )
