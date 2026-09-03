@@ -105,9 +105,15 @@ export class ObjectEditorStore extends Observable<EditorState> {
   }
 
   /** Candidates of a ref target type for the chip picker — array-level,
-   * where no per-item RefFieldModel exists to carry them. */
+   * where no per-item RefFieldModel exists yet. */
   async refOptionsOf(typeName: string): Promise<readonly ObjectView[]> {
     return this.workspace.listObjectsOfType(typeName);
+  }
+
+  /** Schema of a user type by name — for type icons next to object
+   * names in ref pickers and chips. */
+  typeOf(name: string): TypeView | undefined {
+    return this.workspace.getSnapshot().types.find((view) => view.name === name);
   }
 
   /** Every RefFieldModel (top-level or inside arrays) gets candidates

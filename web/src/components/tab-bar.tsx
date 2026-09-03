@@ -23,14 +23,25 @@ export function TabBar(props: { workspace: WorkspaceStore }): ReactElement {
   };
 
   const iconOf = (tab: Tab): ReactElement | null => {
-    if (tab.kind !== "type") {
-      return null;
+    if (tab.kind === "type") {
+      const view = state.types.find((type) => type.name === tab.name);
+      if (view === undefined) {
+        return null;
+      }
+      return <TypeIcon icon={view.icon} color={view.color} size={14} />;
     }
-    const view = state.types.find((type) => type.name === tab.name);
-    if (view === undefined) {
-      return null;
+    if (tab.kind === "object") {
+      const object = state.objects.find((view) => view.uuid === tab.uuid);
+      const type =
+        object === undefined
+          ? undefined
+          : state.types.find((view) => view.name === object.type_name);
+      if (type === undefined) {
+        return null;
+      }
+      return <TypeIcon icon={type.icon} color={type.color} size={14} />;
     }
-    return <TypeIcon icon={view.icon} color={view.color} size={14} />;
+    return null;
   };
 
   const activate = (tab: Tab): void => {

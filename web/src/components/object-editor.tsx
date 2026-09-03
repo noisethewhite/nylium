@@ -5,6 +5,7 @@ import { ObjectEditorStore } from "../state/object-editor";
 import { useObservable } from "../state/use-observable";
 import { WorkspaceStore } from "../state/workspace";
 import { FieldEditor } from "./field-editors";
+import { TypeIcon } from "./type-icon";
 import { TextFieldModel } from "../fields/scalar-fields";
 
 export function ObjectEditor(props: {
@@ -52,15 +53,18 @@ function ObjectEditorInner(props: {
   return (
     <div className="object-editor">
       {titleField !== undefined && (
-        <input
-          className="input object-name-input"
-          placeholder="Name"
-          value={titleField.draft}
-          onChange={(event) => {
-            titleField.draft = event.target.value;
-            store.touch();
-          }}
-        />
+        <div className="object-name-row">
+          <TypeIcon icon={props.schema.icon} color={props.schema.color} size={24} />
+          <input
+            className="input object-name-input"
+            placeholder="Name"
+            value={titleField.draft}
+            onChange={(event) => {
+              titleField.draft = event.target.value;
+              store.touch();
+            }}
+          />
+        </div>
       )}
       <div className="object-editor-fields">
         {gridFields.map((field) => (

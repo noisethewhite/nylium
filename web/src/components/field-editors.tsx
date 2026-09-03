@@ -21,6 +21,7 @@ import {
 } from "../fields/scalar-fields";
 import { ObjectEditorStore } from "../state/object-editor";
 import { ObjectLabels } from "./object-labels";
+import { TypeIcon } from "./type-icon";
 
 interface FieldProps {
   field: FieldModel;
@@ -481,6 +482,9 @@ function EnumInput({ field, editor }: { field: EnumFieldModel; editor: ObjectEdi
 
 function RefInput({ field, editor }: { field: RefFieldModel; editor: ObjectEditorStore }): ReactElement {
   const selected = field.options.find((option) => option.uuid === field.selectedUuid);
+  const type = editor.typeOf(field.valueType);
+  const icon =
+    type === undefined ? null : <TypeIcon icon={type.icon} color={type.color} />;
   return (
     <FieldShell
       label={
@@ -498,6 +502,7 @@ function RefInput({ field, editor }: { field: RefFieldModel; editor: ObjectEdito
             <span className="material-symbols-outlined type-picker-chevron" aria-hidden>
               keyboard_arrow_down
             </span>
+            {icon}
             <span className="type-picker-value">
               {selected === undefined ? "—" : ObjectLabels.of(selected)}
             </span>
@@ -509,6 +514,7 @@ function RefInput({ field, editor }: { field: RefFieldModel; editor: ObjectEdito
             items={field.options}
             getKey={(option) => option.uuid}
             getLabel={(option) => ObjectLabels.of(option)}
+            renderIcon={() => icon}
             placeholder="Search objects…"
             unsetLabel="—"
             onUnset={() => {
@@ -591,6 +597,9 @@ function ChipArrayInput({
   kind: ChipKind;
 }): ReactElement {
   const [refOptions, setRefOptions] = useState<readonly ObjectView[]>([]);
+  const type = editor.typeOf(field.elementType);
+  const typeIcon =
+    type === undefined ? null : <TypeIcon icon={type.icon} color={type.color} />;
   useEffect(() => {
     if (kind !== "ref") {
       return;
@@ -649,6 +658,7 @@ function ChipArrayInput({
         <div className="chip-field">
           {field.items.map((item, index) => (
             <span className="chip" key={index}>
+              {typeIcon}
               {labelOf(item)}
               <button
                 className="chip-remove"
@@ -672,6 +682,7 @@ function ChipArrayInput({
                   items={refOptions.filter((option) => !takenUuids.has(option.uuid))}
                   getKey={(option) => option.uuid}
                   getLabel={(option) => ObjectLabels.of(option)}
+                  renderIcon={() => typeIcon}
                   placeholder="Search objects…"
                   onPick={(option) => {
                     addPick(option);

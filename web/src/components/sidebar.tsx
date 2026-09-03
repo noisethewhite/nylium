@@ -121,17 +121,21 @@ export function Sidebar(props: {
           </div>
         ))}
         <div className="sidebar-section">Objects</div>
-        {state.objects.map((view) => (
-          <button
-            className="type-row object-entry"
-            key={view.uuid}
-            title={view.uuid}
-            onClick={() => props.workspace.openObject(view.uuid)}
-          >
-            <span className="type-row-name">{ObjectLabels.of(view)}</span>
-            <span className="dim">{view.type_name}</span>
-          </button>
-        ))}
+        {state.objects.map((view) => {
+          const type = state.types.find((entry) => entry.name === view.type_name);
+          return (
+            <button
+              className="type-row object-entry"
+              key={view.uuid}
+              title={view.uuid}
+              onClick={() => props.workspace.openObject(view.uuid)}
+            >
+              {type !== undefined && <TypeIcon icon={type.icon} color={type.color} />}
+              <span className="type-row-name">{ObjectLabels.of(view)}</span>
+              <span className="dim">{view.type_name}</span>
+            </button>
+          );
+        })}
       </nav>
       <div className="sidebar-footer">
         <span className="sidebar-user">{authState.userName}</span>
