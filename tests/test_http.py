@@ -361,3 +361,99 @@ def test_unauthenticated_error_shape() -> None:
     response = TestClient(NyliumApp.create()).get("/api/types")
     assert response.status_code == 401
     assert response.json()["error"]["code"] == "unauthorized"
+
+
+def sync_draft(schema: dict[str, Any], drop=(), rename=None, retype=None, add=()):
+    """Wire version of the api-layer draft builder."""
+    rename = rename or {}
+    retype = retype or {}
+    items = [
+        {
+            "uuid": prop["uuid"],
+            "key": rename.get(prop["key"], prop["key"]),
+            "value_type": retype.get(prop["key"], prop["value_type"]),
+        }
+        for prop in schema["props"]
+        if prop["key"] not in drop
+    ]
+    return items + [{"uuid": None, "key": key, "value_type": vt} for key, vt in add]
+
+
+def test_sync_props_endpoint_roundtrip(auth_client: TestClient) -> None:
+    schema = dsl.create_type(
+        auth_client, "Note", {"name": "String", "body": "String", "priority": "Integer"}
+    )
+    note = dsl.create_object(
+        auth_client,
+        "Note",
+        {"name": {"value": "n1"}, "body": {"value": "hello"}, "priority": {"value": 5}},
+    )
+    response = auth_client.put(
+        "/api/types/Note/props",
+        json={
+            "props": sync_draft(
+                schema,
+                rename={"body": "text"},
+                retype={"priority": "String"},
+                add=[("mood", "String")],
+            )
+        },
+    )
+    assert response.status_code == 200, response.text
+    assert [prop["key"] for prop in response.json()["props"]] == [
+        "name", "text", "priority", "mood",
+    ]
+    reloaded = auth_client.get(f"/api/objects/{note['uuid']}").json()
+    assert reloaded["props"]["text"] == {"value": "hello"}  # rename keeps data
+    assert reloaded["props"]["priority"] == {"value": None}  # retype purges
+    assert reloaded["props"]["mood"] == {"value": None}  # new prop = Null
+
+    deleting = auth_client.put(
+        "/api/types/Note/props",
+        json={"props": sync_draft(response.json(), drop=("mood",))},
+    )
+    assert deleting.status_code == 200, deleting.text
+    gone = auth_client.get(f"/api/objects/{note['uuid']}").json()
+    assert "mood" not in gone["props"]
+
+
+def test_sync_props_tampering_name_is_422(auth_client: TestClient) -> None:
+    schema = dsl.create_type(auth_client, "Note", {"name": "String", "body": "String"})
+    for draft in (
+        sync_draft(schema, drop=("name",)),
+        sync_draft(schema, rename={"name": "title"}),
+        sync_draft(schema, retype={"name": "Integer"}),
+    ):
+        response = auth_client.put("/api/types/Note/props", json={"props": draft})
+        assert response.status_code == 422, response.text
+        assert response.json()["error"]["code"] == "validation"
+
+
+def test_sync_props_duplicate_keys_is_422(auth_client: TestClient) -> None:
+    schema = dsl.create_type(auth_client, "Note", {"name": "String", "body": "String"})
+    response = auth_client.put(
+        "/api/types/Note/props",
+        json={"props": sync_draft(schema, add=[("body", "Integer")])},
+    )
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "validation"
+
+
+def test_update_type_endpoint(auth_client: TestClient) -> None:
+    dsl.create_type(auth_client, "Note", {"name": "String", "body": "String"})
+    response = auth_client.patch("/api/types/Note", json={"name": "Memo", "plural_name": "Memos"})
+    assert response.status_code == 200, response.text
+    assert response.json()["name"] == "Memo"
+    assert response.json()["plural_name"] == "Memos"
+    assert auth_client.get("/api/types/Note").status_code == 404
+    assert auth_client.get("/api/types/Memo").status_code == 200
+
+
+def test_update_type_guards(auth_client: TestClient) -> None:
+    dsl.create_type(auth_client, "Note", {"name": "String"})
+    collision = auth_client.patch("/api/types/Note", json={"name": "String"})
+    assert collision.status_code == 409
+    builtin = auth_client.patch("/api/types/String", json={"name": "Text"})
+    assert builtin.status_code == 422
+    missing = auth_client.patch("/api/types/Nope", json={"name": "Memo"})
+    assert missing.status_code == 404

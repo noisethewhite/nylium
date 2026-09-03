@@ -56,6 +56,16 @@ class Types(Base):
 
     @classmethod
     @Database.sessionmethod(bundled=False, commit=True)
+    def rename(cls, session: Session, uuid: UUID, name: str, plural_name: str | None) -> None:
+        row = session.get(cls, uuid)
+        if row is None:
+            raise KeyError(f"no type with uuid {uuid}")
+        row.name = name
+        row.plural_name = plural_name
+        session.flush()
+
+    @classmethod
+    @Database.sessionmethod(bundled=False, commit=True)
     def delete_by_uuid(cls, session: Session, uuid: UUID) -> None:
         row = session.get(cls, uuid)
         if row is not None:

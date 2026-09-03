@@ -29,6 +29,7 @@ _CONFIG = ConfigDict(extra="ignore")
 
 @dataclass(config=_CONFIG)
 class PropView:
+    uuid: UUID
     key: str
     value_type: str
 
@@ -49,7 +50,7 @@ class TypeView:
             name=name,
             plural_name=owner.plural_name,
             props=[
-                PropView(key=prop.key, value_type=prop.value_type().name)
+                PropView(uuid=prop.uuid, key=prop.key, value_type=prop.value_type().name)
                 for prop in WProp.all_for(owner)
             ],
         )

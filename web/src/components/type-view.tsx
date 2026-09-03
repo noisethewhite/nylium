@@ -1,8 +1,25 @@
 import type { DragEvent, ReactElement } from "react";
 import { useEffect, useState } from "react";
-import type { PropView, TypeView } from "../contracts";
-import { TypeLabels } from "../contracts";
+import type { TypeView } from "../contracts";
+import { TypeNames } from "../contracts";
 import { WorkspaceStore } from "../state/workspace";
+import { TypePicker } from "./type-picker";
+
+/** One row of the editor's draft — uuid null marks a not-yet-created
+ * prop; everything else is matched to the live schema by uuid. */
+interface PropDraft {
+  readonly uuid: string | null;
+  readonly key: string;
+  readonly valueType: string;
+}
+
+function draftsOf(schema: TypeView): PropDraft[] {
+  return schema.props.map((prop) => ({
+    uuid: prop.uuid,
+    key: prop.key,
+    valueType: prop.value_type,
+  }));
+}
 
 /** Six-dot grip (2×3) — the affordance that a schema row is draggable. */
 function PropGrip(): ReactElement {
@@ -19,47 +36,61 @@ function PropGrip(): ReactElement {
   );
 }
 
+/** The type page IS the editor — same shape as the object editor:
+ * borderless heading (the type name), prop rows with grips, one Save. */
 export function TypeViewPanel(props: {
   workspace: WorkspaceStore;
   schema: TypeView;
 }): ReactElement {
   const { workspace, schema } = props;
-  // optimistic order while a drop is in flight; server answer resets it
-  const [order, setOrder] = useState<readonly PropView[]>(schema.props);
+  const [nameDraft, setNameDraft] = useState(schema.name);
+  const [pluralDraft, setPluralDraft] = useState(schema.plural_name ?? "");
+  const [rows, setRows] = useState<PropDraft[]>(() => draftsOf(schema));
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [overIndex, setOverIndex] = useState<number | null>(null);
 
   useEffect(() => {
-    setOrder(schema.props);
-  }, [schema.props]);
+    setNameDraft(schema.name);
+    setPluralDraft(schema.plural_name ?? "");
+    setRows(draftsOf(schema));
+  }, [schema]);
+
+  const updateRow = (index: number, patch: Partial<PropDraft>): void => {
+    setRows((drafts) =>
+      drafts.map((draft, position) =>
+        position === index ? { ...draft, ...patch } : draft,
+      ),
+    );
+  };
 
   const dropAt = (target: number): void => {
-    const moved = dragIndex === null ? undefined : order[dragIndex];
-    if (moved === undefined || dragIndex === null || dragIndex === target) {
+    if (dragIndex === null || dragIndex === target) {
       return;
     }
-    // the pinned `name` prop never leaves position 0
-    if (order[0]?.key === "name" && (dragIndex === 0 || target === 0)) {
+    // the pinned `name` row never leaves position 0
+    if (dragIndex === 0 || target === 0) {
       return;
     }
-    const next = order.filter((_, position) => position !== dragIndex);
-    next.splice(target, 0, moved);
-    setOrder(next);
-    void workspace.reorderProps(
-      schema.name,
-      next.map((prop) => prop.key),
-    );
+    setRows((drafts) => {
+      const moved = drafts[dragIndex];
+      if (moved === undefined) {
+        return drafts;
+      }
+      const next = drafts.filter((_, position) => position !== dragIndex);
+      next.splice(target, 0, moved);
+      return next;
+    });
+    setDragIndex(null);
+    setOverIndex(null);
   };
 
   const onDrop = (event: DragEvent, target: number): void => {
     event.preventDefault();
     dropAt(target);
-    setDragIndex(null);
-    setOverIndex(null);
   };
 
   const rowClass = (index: number): string => {
-    const classes = ["schema-prop-row"];
+    const classes = ["prop-draft-row", "schema-prop-row"];
     if (index === dragIndex) {
       classes.push("schema-prop-row-dragging");
     }
@@ -69,30 +100,63 @@ export function TypeViewPanel(props: {
     return classes.join(" ");
   };
 
+  const pristine =
+    nameDraft === schema.name &&
+    pluralDraft === (schema.plural_name ?? "") &&
+    JSON.stringify(rows) === JSON.stringify(draftsOf(schema));
+  const keys = rows.map((row) => row.key);
+  const invalid =
+    keys.some((key) => key.trim() === "") ||
+    new Set(keys).size !== keys.length ||
+    nameDraft.trim() === "";
+
+  const save = (): void => {
+    void workspace.saveTypeEdits(
+      schema.name,
+      { name: nameDraft.trim(), plural_name: pluralDraft },
+      rows.map((row) => ({ uuid: row.uuid, key: row.key, value_type: row.valueType })),
+    );
+  };
+
   return (
     <div className="tab-content">
       <div className="type-header">
-        <h1>
-          {schema.name}
-          {schema.plural_name !== null && (
-            <span className="type-plural dim">({schema.plural_name})</span>
-          )}
-        </h1>
-        <button
-          className="button button-danger"
-          onClick={() => void workspace.deleteType(schema.name)}
-        >
-          Delete type
-        </button>
+        <input
+          className="input type-name-input"
+          value={nameDraft}
+          onChange={(event) => setNameDraft(event.target.value)}
+        />
+        <div className="type-header-actions">
+          <button
+            className="button button-primary"
+            disabled={pristine || invalid}
+            title={invalid ? "Prop keys must be non-empty and unique" : undefined}
+            onClick={save}
+          >
+            Save
+          </button>
+          <button
+            className="button button-danger"
+            onClick={() => void workspace.deleteType(schema.name)}
+          >
+            Delete type
+          </button>
+        </div>
       </div>
+      <input
+        className="input type-plural-input"
+        placeholder="Name (plural)"
+        value={pluralDraft}
+        onChange={(event) => setPluralDraft(event.target.value)}
+      />
       <div className="schema-props">
-        {order.map((prop, index) => {
-          // the schema's first prop is the pinned `name` title — no grip,
-          // not draggable, not a drop target
-          const pinned = index === 0 && prop.key === "name";
+        {rows.map((row, index) => {
+          // the schema's first row is the pinned `name` title — no grip,
+          // locked key and type, not draggable, not a drop target
+          const pinned = index === 0 && row.key === "name";
           return (
             <div
-              key={prop.key}
+              key={row.uuid ?? `new-${index}`}
               className={rowClass(index)}
               draggable={!pinned}
               onDragStart={() => {
@@ -108,7 +172,11 @@ export function TypeViewPanel(props: {
                 setOverIndex(index);
               }}
               onDragLeave={() => setOverIndex((current) => (current === index ? null : current))}
-              onDrop={(event) => onDrop(event, index)}
+              onDrop={(event) => {
+                if (!pinned) {
+                  onDrop(event, index);
+                }
+              }}
               onDragEnd={() => {
                 setDragIndex(null);
                 setOverIndex(null);
@@ -121,11 +189,51 @@ export function TypeViewPanel(props: {
                   <PropGrip />
                 </span>
               )}
-              <span className="schema-prop-key">{prop.key}</span>
-              <span className="dim">{TypeLabels[prop.value_type] ?? prop.value_type}</span>
+              {pinned ? (
+                <>
+                  <span className="schema-prop-key">name</span>
+                  <span className="dim">String · title</span>
+                </>
+              ) : (
+                <>
+                  <input
+                    className="input"
+                    placeholder="Property Name"
+                    value={row.key}
+                    onChange={(event) => updateRow(index, { key: event.target.value })}
+                  />
+                  <TypePicker
+                    workspace={workspace}
+                    value={row.valueType}
+                    onChange={(valueType) => updateRow(index, { valueType })}
+                  />
+                  <button
+                    className="icon-button"
+                    title="Delete prop — removes it from every instance"
+                    onClick={() =>
+                      setRows((drafts) => drafts.filter((_, position) => position !== index))
+                    }
+                  >
+                    ×
+                  </button>
+                </>
+              )}
             </div>
           );
         })}
+      </div>
+      <div className="type-create-actions">
+        <button
+          className="button"
+          onClick={() =>
+            setRows((drafts) => [
+              ...drafts,
+              { uuid: null, key: "", valueType: TypeNames.STRING },
+            ])
+          }
+        >
+          Add Property
+        </button>
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 /** Shared fetch behavior for API clients — extend, don't reimplement. */
 
-export type HttpMethod = "GET" | "POST" | "PATCH" | "DELETE";
+export type HttpMethod = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
 /** Sink for transport-level failures — every non-2xx lands here once. */
 export type ErrorReporter = (error: HttpError) => void;
 

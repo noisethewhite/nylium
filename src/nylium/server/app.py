@@ -94,6 +94,14 @@ class NyliumApp:
             methods=["PATCH"], response_model=TypeView, dependencies=guard,
         )
         app.add_api_route(
+            f"{prefix}/types/{{name}}/props", routes.sync_props,
+            methods=["PUT"], response_model=TypeView, dependencies=guard,
+        )
+        app.add_api_route(
+            f"{prefix}/types/{{name}}", routes.update_type, methods=["PATCH"],
+            response_model=TypeView, dependencies=guard,
+        )
+        app.add_api_route(
             f"{prefix}/objects", routes.list_objects, methods=["GET"],
             response_model=list[ObjectView], dependencies=guard,
         )

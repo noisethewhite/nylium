@@ -142,3 +142,104 @@ def test_reorder_props_rejects_foreign_keys():
         Api.reorder_props("Person", ["name", "age"])
     with pytest.raises(KeyError):
         Api.reorder_props("NoSuchType", ["name"])
+
+
+def note_type():
+    return Api.create_type(
+        "Note",
+        {"name": "String", "body": "String", "priority": "Integer"},
+        "Notes",
+    )
+
+
+def draft_items(view, drop=(), rename=None, retype=None, add=()):
+    """Build a sync_props draft from a view: drop/rename/retype by key,
+    then append (key, value type) additions."""
+    rename = rename or {}
+    retype = retype or {}
+    items = [
+        (prop.uuid, rename.get(prop.key, prop.key), retype.get(prop.key, prop.value_type))
+        for prop in view.props
+        if prop.key not in drop
+    ]
+    return items + [(None, key, value_type) for key, value_type in add]
+
+
+def test_sync_props_add_and_delete():
+    view = note_type()
+    note = Api.create_object("Note", {"name": "n1", "body": "hello"})
+    synced = Api.sync_props(
+        "Note", draft_items(view, drop=("body",), add=[("mood", "String")])
+    )
+    assert [prop.key for prop in synced.props] == ["name", "priority", "mood"]
+    reloaded = Api.get_object(note.uuid)
+    assert reloaded is not None
+    assert "body" not in reloaded.props
+    assert reloaded.props["mood"] == ScalarValue(value=None)
+
+
+def test_sync_props_rename_keeps_values():
+    view = note_type()
+    note = Api.create_object("Note", {"name": "n1", "body": "hello"})
+    synced = Api.sync_props("Note", draft_items(view, rename={"body": "text"}))
+    assert [prop.key for prop in synced.props] == ["name", "text", "priority"]
+    reloaded = Api.get_object(note.uuid)
+    assert reloaded is not None
+    assert reloaded.props["text"] == ScalarValue(value="hello")
+
+
+def test_sync_props_retype_purges_values():
+    view = note_type()
+    note = Api.create_object("Note", {"name": "n1", "priority": 5})
+    synced = Api.sync_props("Note", draft_items(view, retype={"priority": "String"}))
+    assert {p.key: p.value_type for p in synced.props}["priority"] == "String"
+    reloaded = Api.get_object(note.uuid)
+    assert reloaded is not None
+    assert reloaded.props["priority"] == ScalarValue(value=None)
+
+
+def test_sync_props_keeps_name_pinned():
+    view = note_type()
+    with pytest.raises(ValidationError):
+        Api.sync_props("Note", draft_items(view, drop=("name",)))
+    with pytest.raises(ValidationError):
+        Api.sync_props("Note", draft_items(view, rename={"name": "title"}))
+    with pytest.raises(ValidationError):
+        Api.sync_props("Note", draft_items(view, retype={"name": "Integer"}))
+
+
+def test_sync_props_rejects_bad_drafts():
+    view = note_type()
+    body = next(prop for prop in view.props if prop.key == "body")
+    with pytest.raises(ValidationError):
+        Api.sync_props("Note", draft_items(view, add=[("body", "String")]))
+    with pytest.raises(ValidationError):
+        Api.sync_props("Note", draft_items(view, add=[("", "String")]))
+    forged = [(body.uuid, "body", "String")]
+    with pytest.raises(ValidationError):
+        Api.sync_props("Note", forged + draft_items(view, drop=("body",)))
+    with pytest.raises(KeyError):
+        Api.sync_props("NoSuchType", forged)
+
+
+def test_rename_type_roundtrip():
+    _ = note_type()
+    note = Api.create_object("Note", {"name": "n1"})
+    renamed = Api.rename_type("Note", "Memo", "Memos")
+    assert renamed.name == "Memo" and renamed.plural_name == "Memos"
+    reloaded = Api.get_object(note.uuid)
+    assert reloaded is not None and reloaded.type_name == "Memo"
+    assert Api.get_type("Note") is None
+    assert Api.get_type("Memo") is not None
+
+
+def test_rename_type_guards():
+    _ = note_type()
+    with pytest.raises(ValueError):
+        Api.rename_type("Note", "String")  # collision with a builtin
+    with pytest.raises(ValidationError):
+        Api.rename_type("Note", "")  # empty name
+    with pytest.raises(ValidationError):
+        Api.rename_type("String", "Text")  # builtins are immutable
+    with pytest.raises(KeyError):
+        Api.rename_type("NoSuchType", "Memo")

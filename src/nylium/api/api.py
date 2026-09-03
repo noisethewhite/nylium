@@ -98,6 +98,77 @@ class Api:
 
     @classmethod
     @Database.sessionmethod(bundled=True, commit=True)
+    def sync_props(
+        cls, type_name: str, items: list[tuple[UUID | None, str, str]]
+    ) -> TypeView:
+        """Apply the type editor's full prop draft at once. Each item is
+        (uuid | None, key, value type name): a matching uuid edits that
+        prop in place (rename/retype — a retype purges the old values),
+        None creates a new prop, props absent from the draft are deleted
+        for every instance at once. The pinned `name` prop must keep its
+        uuid, its key, its String type and the first position."""
+        from nylium.server.errors import ValidationError
+
+        owner = WType.by_name(type_name)
+        if owner is None:
+            raise KeyError(f"no type {type_name!r}")
+        existing = WProp.all_for(owner)
+        by_uuid = {prop.uuid: prop for prop in existing}
+        name_prop = next(
+            (prop for prop in existing if prop.key == NAME_PROP_KEY), None
+        )
+        if not items:
+            raise ValidationError("a type must keep at least its 'name' prop")
+        first_uuid, first_key, first_type = items[0]
+        if (
+            name_prop is not None
+            and (first_uuid, first_key, first_type)
+            != (name_prop.uuid, NAME_PROP_KEY, WString.TYPE_NAME)
+        ):
+            raise ValidationError(
+                f"the {NAME_PROP_KEY!r} prop must stay first, keyed {NAME_PROP_KEY!r}, typed {WString.TYPE_NAME!r}"
+            )
+        keys = [key for _, key, _ in items]
+        if any(not key.strip() for key in keys):
+            raise ValidationError("prop keys must not be empty")
+        if len(set(keys)) != len(keys):
+            raise ValidationError(f"duplicate prop keys in {keys!r}")
+        strangers = [uuid for uuid, _, _ in items if uuid is not None and uuid not in by_uuid]
+        if strangers:
+            raise ValidationError(f"prop uuids {strangers!r} do not belong to {type_name!r}")
+        resolved: list[tuple[UUID | None, str, UUID]] = [
+            (uuid, key, WType.ensure(value_type_name).uuid)
+            for uuid, key, value_type_name in items
+        ]
+        WProp.sync_schema(owner, resolved)
+        return TypeView.from_name(type_name)
+
+    @classmethod
+    @Database.sessionmethod(bundled=True, commit=True)
+    def rename_type(
+        cls, name: str, new_name: str | None = None, plural_name: str | None = None
+    ) -> TypeView:
+        """Rename a user type and/or its plural form. Builtins and array
+        types (no plural form) are immutable identities."""
+        from nylium.server.errors import ValidationError
+
+        owner = WType.by_name(name)
+        if owner is None:
+            raise KeyError(f"no type {name!r}")
+        if owner.plural_name is None:
+            raise ValidationError(f"type {name!r} is builtin and cannot be renamed")
+        final_name = name if new_name is None else new_name.strip()
+        if not final_name:
+            raise ValidationError("type name must not be empty")
+        collision = Types.uuid_by_name(final_name)
+        if collision is not None and collision != owner.uuid:
+            raise ValueError(f"type {final_name!r} already exists")
+        final_plural = owner.plural_name if plural_name is None else plural_name
+        Types.rename(owner.uuid, final_name, final_plural)
+        return TypeView.from_name(final_name)
+
+    @classmethod
+    @Database.sessionmethod(bundled=True, commit=True)
     def delete_type(cls, name: str) -> bool:
         """Refuses while instances exist; other types referencing this one
         as a prop value type are stopped by the FK, on purpose."""

@@ -24,9 +24,26 @@ export class NyliumApi extends HttpTransport {
 
   /** Persist a new prop order — keys must cover the whole schema. */
   reorderProps(typeName: string, keys: string[]): Promise<TypeView> {
-    return this.request("PATCH", `/types/${encodeURIComponent(typeName)}/props-order`, {
-      keys,
-    });
+    return this.request<TypeView>(
+      "PATCH", `/types/${encodeURIComponent(typeName)}/props-order`, { keys },
+    );
+  }
+
+  syncProps(
+    typeName: string,
+    props: { uuid: string | null; key: string; value_type: string }[],
+  ): Promise<TypeView> {
+    return this.request<TypeView>(
+      "PUT", `/types/${encodeURIComponent(typeName)}/props`, { props },
+    );
+  }
+
+  updateType(
+    name: string, patch: { name?: string; plural_name?: string },
+  ): Promise<TypeView> {
+    return this.request<TypeView>(
+      "PATCH", `/types/${encodeURIComponent(name)}`, patch,
+    );
   }
 
   deleteType(name: string): Promise<void> {

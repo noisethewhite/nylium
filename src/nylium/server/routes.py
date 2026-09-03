@@ -13,7 +13,9 @@ from nylium.server.bodies import (
     CreateObjectBody,
     CreateTypeBody,
     ReorderPropsBody,
+    SyncPropsBody,
     UpdateObjectBody,
+    UpdateTypeBody,
 )
 from nylium.server.codec import PropCodec
 from nylium.server.errors import NotFoundError
@@ -48,6 +50,16 @@ class routes:
     @classmethod
     def reorder_props(cls, name: str, body: ReorderPropsBody) -> TypeView:
         return Api.reorder_props(name, body.keys)
+
+    @classmethod
+    def sync_props(cls, name: str, body: SyncPropsBody) -> TypeView:
+        return Api.sync_props(
+            name, [(item.uuid, item.key, item.value_type) for item in body.props]
+        )
+
+    @classmethod
+    def update_type(cls, name: str, body: UpdateTypeBody) -> TypeView:
+        return Api.rename_type(name, body.name, body.plural_name)
 
     # --- objects ---
 

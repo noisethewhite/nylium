@@ -1,6 +1,7 @@
 /** Wire contract mirroring nylium.api.views — keep the two in sync. */
 
 export interface PropView {
+  uuid: string;
   key: string;
   value_type: string;
 }

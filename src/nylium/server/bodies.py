@@ -10,6 +10,7 @@ DTOs of the same boundary, mirroring the views they pair with.
 from __future__ import annotations
 
 from dataclasses import field
+from uuid import UUID
 
 from pydantic import ConfigDict
 from pydantic.dataclasses import dataclass
@@ -46,3 +47,28 @@ class ReorderPropsBody:
     """New ordering for a type's props, as a full list of prop keys."""
 
     keys: list[str]
+
+
+@dataclass(config=_CONFIG)
+class SyncPropItem:
+    """One row of the type editor's draft: uuid None = new prop."""
+
+    key: str
+    value_type: str
+    uuid: UUID | None = None
+
+
+@dataclass(config=_CONFIG)
+class SyncPropsBody:
+    """The full prop draft — renames/retypes by uuid, creates without,
+    deletes whatever the draft omits."""
+
+    props: list[SyncPropItem]
+
+
+@dataclass(config=_CONFIG)
+class UpdateTypeBody:
+    """PATCH semantics: only the listed fields change."""
+
+    name: str | None = None
+    plural_name: str | None = None

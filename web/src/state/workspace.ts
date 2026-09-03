@@ -145,6 +145,61 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
     });
   }
 
+  /** The type editor's save path: rename first (the schema PUT needs the
+   * final name), then the full prop draft, then refresh both the type
+   * list and the objects whose values a retype/delete may have wiped. */
+  async saveTypeEdits(
+    typeName: string,
+    patch: { name: string; plural_name: string },
+    props: { uuid: string | null; key: string; value_type: string }[],
+  ): Promise<void> {
+    await this.guard(async () => {
+      const current = this.getSnapshot().types.find((v) => v.name === typeName);
+      if (!current) {
+        return;
+      }
+      let schema = current;
+      if (patch.name !== current.name || patch.plural_name !== current.plural_name) {
+        const rename: { name?: string; plural_name?: string } = {};
+        if (patch.name !== current.name) {
+          rename.name = patch.name;
+        }
+        if (patch.plural_name !== current.plural_name) {
+          rename.plural_name = patch.plural_name;
+        }
+        schema = await this.api.updateType(typeName, rename);
+      }
+      schema = await this.api.syncProps(schema.name, props);
+      const state = this.getSnapshot();
+      const renamed = schema.name !== typeName;
+      const tabs = state.tabs.map((tab) =>
+        renamed && tab.kind === "type" && tab.name === typeName
+          ? { kind: "type" as const, name: schema.name }
+          : tab,
+      );
+      const activeTab =
+        renamed && state.activeTab?.kind === "type" && state.activeTab.name === typeName
+          ? { kind: "type" as const, name: schema.name }
+          : state.activeTab;
+      this.setState({
+        ...state,
+        types: state.types.map((view) => (view.name === typeName ? schema : view)),
+        tabs,
+        activeTab,
+      });
+      // values may have been purged by a retype/delete — re-pull objects
+      await this.refreshObjectsOf(schema.name);
+      if (renamed) {
+        // objects now carry the new type name — drop the stale ones
+        const fresh = this.getSnapshot().objects.filter(
+          (o) => !(o.type_name === typeName),
+        );
+        this.setState({ ...this.getSnapshot(), objects: fresh });
+        await this.refreshObjectsOf(schema.name);
+      }
+    });
+  }
+
   async createObject(typeName: string): Promise<void> {
     await this.guard(async () => {
       const created = await this.api.createObject(typeName, {});

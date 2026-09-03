@@ -418,6 +418,33 @@ select.input option {
   font-weight: 600;
 }
 
+/* the editor heading IS the type-name field */
+.type-header .type-name-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.type-header-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.type-plural-input {
+  margin: var(--space-2) var(--space-6) 0;
+  width: auto;
+}
+
+/* the type editor composes prop-draft-row (inputs) with schema-prop-row
+ * (grips + drop states) — the draft variant wins on spacing */
+.schema-props .prop-draft-row {
+  padding: var(--space-2) var(--space-3);
+}
+
+.tab-content > .type-create-actions {
+  padding: 0 var(--space-6) var(--space-4);
+  justify-content: flex-start;
+}
+
 .schema-props {
   padding: var(--space-4) var(--space-6);
   display: flex;
