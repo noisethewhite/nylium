@@ -423,6 +423,8 @@ select.input option {
   top: calc(100% + var(--space-1));
   left: 0;
   right: 0;
+  /* narrow triggers (chip "+", icon buttons) must not squeeze the menu */
+  min-width: 220px;
   z-index: 11;
   background: var(--bg-raised);
   border: 1px solid var(--separator);
