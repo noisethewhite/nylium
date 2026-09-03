@@ -8,8 +8,8 @@ from sqlalchemy.orm import Mapped, mapped_column
 from nylium.database.tables.base import Base
 
 
-class MonthDayValues(Base):
-    __tablename__: str = "monthday_values"
+class MonthDayTimeValues(Base):
+    __tablename__: str = "monthdaytime_values"
 
     inst_uuid: Mapped[UUID] = mapped_column(
         ForeignKey("instances.uuid", ondelete="CASCADE"), primary_key=True
