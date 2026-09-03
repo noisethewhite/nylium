@@ -12,9 +12,11 @@ from nylium.api.views import ObjectView, TypeView
 from nylium.server.bodies import (
     CreateObjectBody,
     CreateTypeBody,
+    ReorderPropsBody,
     UpdateObjectBody,
 )
 from nylium.server.codec import PropCodec
+from nylium.server.errors import NotFoundError
 
 
 class routes:
@@ -31,7 +33,7 @@ class routes:
     def get_type(cls, name: str) -> TypeView:
         view = Api.get_type(name)
         if view is None:
-            raise KeyError(f"no type {name!r}")
+            raise NotFoundError(f"no type {name!r}")
         return view
 
     @classmethod
@@ -41,7 +43,11 @@ class routes:
     @classmethod
     def delete_type(cls, name: str) -> None:
         if not Api.delete_type(name):
-            raise KeyError(f"no type {name!r}")
+            raise NotFoundError(f"no type {name!r}")
+
+    @classmethod
+    def reorder_props(cls, name: str, body: ReorderPropsBody) -> TypeView:
+        return Api.reorder_props(name, body.keys)
 
     # --- objects ---
 
@@ -53,7 +59,7 @@ class routes:
     def get_object(cls, object_uuid: UUID) -> ObjectView:
         view = Api.get_object(object_uuid)
         if view is None:
-            raise KeyError(f"no object {object_uuid}")
+            raise NotFoundError(f"no object {object_uuid}")
         return view
 
     @classmethod
@@ -65,11 +71,11 @@ class routes:
     def update_object(cls, object_uuid: UUID, body: UpdateObjectBody) -> ObjectView:
         view = Api.get_object(object_uuid)
         if view is None:
-            raise KeyError(f"no object {object_uuid}")
+            raise NotFoundError(f"no object {object_uuid}")
         decoded = PropCodec.decode(view.type_name, body.props)
         return Api.update_object(object_uuid, decoded)
 
     @classmethod
     def delete_object(cls, object_uuid: UUID) -> None:
         if not Api.delete_object(object_uuid):
-            raise KeyError(f"no object {object_uuid}")
+            raise NotFoundError(f"no object {object_uuid}")

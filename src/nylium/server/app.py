@@ -90,6 +90,10 @@ class NyliumApp:
             status_code=no_content, dependencies=guard,
         )
         app.add_api_route(
+            f"{prefix}/types/{{name}}/props-order", routes.reorder_props,
+            methods=["PATCH"], response_model=TypeView, dependencies=guard,
+        )
+        app.add_api_route(
             f"{prefix}/objects", routes.list_objects, methods=["GET"],
             response_model=list[ObjectView], dependencies=guard,
         )

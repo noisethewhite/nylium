@@ -1,8 +1,10 @@
 import type { ReactElement } from "react";
 import { useEffect } from "react";
 import { AuthStore } from "../state/auth";
+import { ErrorStore } from "../state/errors";
 import { useObservable } from "../state/use-observable";
 import { WorkspaceStore } from "../state/workspace";
+import { ErrorCenter } from "./error-center";
 import { LoginView } from "./login-view";
 import { ObjectEditor } from "./object-editor";
 import { Sidebar } from "./sidebar";
@@ -13,6 +15,7 @@ import { TypeViewPanel } from "./type-view";
 export function App(props: {
   workspace: WorkspaceStore;
   auth: AuthStore;
+  errors: ErrorStore;
 }): ReactElement {
   const authState = useObservable(props.auth);
   const state = useObservable(props.workspace);
@@ -72,9 +75,9 @@ export function App(props: {
       <Sidebar workspace={props.workspace} auth={props.auth} />
       <main className="main">
         <TabBar workspace={props.workspace} />
-        {state.error !== null && <div className="error-banner">{state.error}</div>}
         {renderContent()}
       </main>
+      <ErrorCenter errors={props.errors} />
     </div>
   );
 }

@@ -52,12 +52,23 @@ class Api:
         props: dict[str, str] | None = None,
         plural_name: str | None = None,
     ) -> TypeView:
-        """props maps key -> value type name. Missing value types are created."""
+        """props maps key -> value type name. Missing value types are created.
+        Dict order becomes the schema's display order (positions)."""
         WScalar.ensure_builtins()
         owner = WType.ensure(name, plural_name)
-        for key, value_type_name in (props or {}).items():
-            _ = WProp.ensure(owner, key, WType.ensure(value_type_name))
+        for position, (key, value_type_name) in enumerate((props or {}).items()):
+            _ = WProp.ensure(owner, key, WType.ensure(value_type_name), position)
         return TypeView.from_name(name)
+
+    @classmethod
+    @Database.sessionmethod(bundled=True, commit=True)
+    def reorder_props(cls, type_name: str, keys: list[str]) -> TypeView:
+        """Persist a new prop order; keys must cover the whole schema."""
+        owner = WType.by_name(type_name)
+        if owner is None:
+            raise KeyError(f"no type {type_name!r}")
+        WProp.reorder(owner, keys)
+        return TypeView.from_name(type_name)
 
     @classmethod
     @Database.sessionmethod(bundled=True, commit=True)

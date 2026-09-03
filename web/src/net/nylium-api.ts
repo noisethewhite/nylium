@@ -1,12 +1,13 @@
 import type { ObjectView, PropValue, TypeView } from "../contracts";
+import type { ErrorReporter } from "./http-transport";
 import { HttpTransport } from "./http-transport";
 
 /** Typed client for the nylium HTTP surface. */
 export class NyliumApi extends HttpTransport {
   private static readonly BASE_URL = "/api";
 
-  constructor() {
-    super(NyliumApi.BASE_URL);
+  constructor(onError?: ErrorReporter) {
+    super(NyliumApi.BASE_URL, undefined, onError);
   }
 
   listTypes(): Promise<TypeView[]> {
@@ -19,6 +20,13 @@ export class NyliumApi extends HttpTransport {
     props: Record<string, string>,
   ): Promise<TypeView> {
     return this.request("POST", "/types", { name, plural_name: pluralName, props });
+  }
+
+  /** Persist a new prop order — keys must cover the whole schema. */
+  reorderProps(typeName: string, keys: string[]): Promise<TypeView> {
+    return this.request("PATCH", `/types/${encodeURIComponent(typeName)}/props-order`, {
+      keys,
+    });
   }
 
   deleteType(name: string): Promise<void> {

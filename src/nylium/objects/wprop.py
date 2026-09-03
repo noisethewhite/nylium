@@ -58,24 +58,45 @@ class WProp:
     @Database.sessionmethod(bundled=False, commit=False)
     def all_for(cls, session: Session, owner: "WType") -> "list[WProp]":
         rows = session.scalars(
-            sqla.select(Props).where(Props.owner_type_uuid == owner.uuid)
+            sqla.select(Props)
+            .where(Props.owner_type_uuid == owner.uuid)
+            .order_by(Props.position)
         ).all()
         return [cls(row) for row in rows]
 
     @classmethod
     @Database.sessionmethod(bundled=False, commit=True)
+    def reorder(cls, session: Session, owner: "WType", keys: list[str]) -> None:
+        """Rewrite positions so props render in `keys` order. The list
+        must be a permutation of the whole schema — partial orders would
+        silently orphan the props left out."""
+        props = {prop.key: prop._live_row() for prop in cls.all_for(owner)}
+        if set(keys) != set(props):
+            raise ValueError(
+                f"prop order {keys!r} does not match {owner.name!r} schema"
+            )
+        for position, key in enumerate(keys):
+            props[key].position = position
+        session.flush()
+
+    @classmethod
+    @Database.sessionmethod(bundled=False, commit=True)
     def ensure(
-        cls, session: Session, owner: "WType", key: str, value_type: "WType"
+        cls, session: Session, owner: "WType", key: str, value_type: "WType",
+        position: int = 0,
     ) -> "WProp":
         existing = cls.by_key(owner, key)
         if existing is not None:
-            existing._live_row().value_type_uuid = value_type.uuid
+            live = existing._live_row()
+            live.value_type_uuid = value_type.uuid
+            live.position = position
             return existing
         row = Props(
             uuid=uuid4(),
             key=key,
             owner_type_uuid=owner.uuid,
             value_type_uuid=value_type.uuid,
+            position=position,
         )
         session.add(row)
         session.flush()

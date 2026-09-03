@@ -39,3 +39,10 @@ class UpdateObjectBody:
     """PATCH semantics: only the listed props are touched."""
 
     props: dict[str, PropValue] = field(default_factory=dict)
+
+
+@dataclass(config=_CONFIG)
+class ReorderPropsBody:
+    """New ordering for a type's props, as a full list of prop keys."""
+
+    keys: list[str]

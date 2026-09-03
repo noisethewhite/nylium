@@ -38,9 +38,10 @@ export function TypeCreateForm(props: {
 
   return (
     <div className="type-create-form">
+      {/* the title IS the name field — borderless, heading-sized */}
       <input
-        className="input"
-        placeholder="Name (singular)"
+        className="input type-name-input"
+        placeholder="Type name"
         value={name}
         onChange={(event) => setName(event.target.value)}
       />

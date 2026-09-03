@@ -4,6 +4,7 @@ import type {
   PublicKeyCredentialRequestOptionsJSON,
   RegistrationResponseJSON,
 } from "@simplewebauthn/browser";
+import type { ErrorReporter } from "./http-transport";
 import { HttpTransport } from "./http-transport";
 
 export interface UserView {
@@ -13,8 +14,8 @@ export interface UserView {
 
 /** Client for /api/auth — passkey ceremonies over the session cookie. */
 export class AuthApi extends HttpTransport {
-  constructor() {
-    super("/api/auth");
+  constructor(onError?: ErrorReporter) {
+    super("/api/auth", undefined, onError);
   }
 
   me(): Promise<UserView> {

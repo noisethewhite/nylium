@@ -17,7 +17,6 @@ export interface WorkspaceState {
   readonly objects: readonly ObjectView[];
   readonly tabs: readonly Tab[];
   readonly activeTab: Tab | null;
-  readonly error: string | null;
 }
 
 const INITIAL_STATE: WorkspaceState = {
@@ -26,7 +25,6 @@ const INITIAL_STATE: WorkspaceState = {
   objects: [],
   tabs: [],
   activeTab: null,
-  error: null,
 };
 
 export function sameTab(a: Tab, b: Tab): boolean {
@@ -133,6 +131,20 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
     });
   }
 
+  /** Drag-and-drop reorder in the type view — the server answers with
+   * the re-sorted schema, which we swap into the type list. */
+  async reorderProps(typeName: string, keys: string[]): Promise<void> {
+    await this.guard(async () => {
+      const updated = await this.api.reorderProps(typeName, keys);
+      this.setState({
+        ...this.getSnapshot(),
+        types: this.getSnapshot().types.map((view) =>
+          view.name === typeName ? updated : view,
+        ),
+      });
+    });
+  }
+
   async createObject(typeName: string): Promise<void> {
     await this.guard(async () => {
       const created = await this.api.createObject(typeName, {});
@@ -192,15 +204,14 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
   private async guard(action: () => Promise<void>): Promise<void> {
     try {
       await action();
-      this.setState({ ...this.getSnapshot(), error: null });
     } catch (caught: unknown) {
       if (caught instanceof HttpError && caught.status === 401) {
         // session expired mid-flight — the auth store flips the screen
         this.onUnauthorized();
         return;
       }
-      const message = caught instanceof Error ? caught.message : String(caught);
-      this.setState({ ...this.getSnapshot(), error: message });
+      // transport already reported the failure to the error log —
+      // the workspace only stops the action here
     }
   }
 }

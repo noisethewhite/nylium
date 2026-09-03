@@ -109,3 +109,20 @@ def test_delete_type_when_empty():
     assert Api.delete_type("Person") is True
     assert Api.get_type("Person") is None
     assert Api.delete_type("Person") is False
+
+
+def test_reorder_props_roundtrip():
+    _ = person_class()
+    view = Api.reorder_props("Person", ["age", "tags", "name", "friend"])
+    assert [prop.key for prop in view.props] == ["age", "tags", "name", "friend"]
+    reloaded = Api.get_type("Person")
+    assert reloaded is not None
+    assert [prop.key for prop in reloaded.props] == ["age", "tags", "name", "friend"]
+
+
+def test_reorder_props_rejects_foreign_keys():
+    _ = person_class()
+    with pytest.raises(ValueError):
+        Api.reorder_props("Person", ["name", "age"])
+    with pytest.raises(KeyError):
+        Api.reorder_props("NoSuchType", ["name"])

@@ -77,6 +77,11 @@ class Props(Base):
     value_type_uuid: Mapped[UUID] = mapped_column(
         ForeignKey("types.uuid"), nullable=False
     )
+    # the prop's slot in the owner type's display order — create order
+    # unless a reorder overwrote it
+    position: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
 
     @classmethod
     @Database.sessionmethod(bundled=False, commit=False)

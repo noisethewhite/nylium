@@ -260,3 +260,71 @@ def test_spa_fallback(
     api_miss = spa.get("/api/definitely-not-a-route")
     assert api_miss.status_code == 404
     assert api_miss.headers["content-type"].startswith("application/json")
+
+
+def test_reorder_props_endpoint(auth_client: TestClient) -> None:
+    dsl.create_type(
+        auth_client, "Track", {"title": "String", "bpm": "Integer", "live": "Boolean"}
+    )
+    response = auth_client.patch(
+        "/api/types/Track/props-order", json={"keys": ["bpm", "live", "title"]}
+    )
+    assert response.status_code == 200, response.text
+    assert [prop["key"] for prop in response.json()["props"]] == [
+        "bpm",
+        "live",
+        "title",
+    ]
+    reloaded = auth_client.get("/api/types/Track")
+    assert [prop["key"] for prop in reloaded.json()["props"]] == [
+        "bpm",
+        "live",
+        "title",
+    ]
+
+
+def test_reorder_props_mismatch_is_409(auth_client: TestClient) -> None:
+    dsl.create_type(auth_client, "Track", {"title": "String", "bpm": "Integer"})
+    response = auth_client.patch(
+        "/api/types/Track/props-order", json={"keys": ["title", "nope"]}
+    )
+    assert response.status_code == 409
+    assert set(response.json()["error"]) == {"code", "message"}
+    assert response.json()["error"]["code"] == "conflict"
+
+
+def test_error_body_shape(auth_client: TestClient) -> None:
+    missing = auth_client.get("/api/types/Nope")
+    assert missing.status_code == 404
+    assert missing.json()["error"]["code"] == "not_found"
+    malformed = auth_client.post("/api/types", json={"props": "not-a-dict"})
+    assert malformed.status_code == 422
+    assert malformed.json()["error"]["code"] == "validation"
+
+
+def test_unexpected_error_is_500_json(
+    auth_client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from nylium.api import Api
+
+    def boom(name: str) -> None:
+        raise RuntimeError("boom")
+
+    # ServerErrorMiddleware always re-raises after answering, so this
+    # check needs a client that doesn't escalate server exceptions.
+    import secrets
+
+    from nylium.auth.sessions import sessions
+    from nylium.database.tables import AuthCredentials, AuthUsers
+    from nylium.server import NyliumApp
+
+    user = AuthUsers.create("boom-owner")
+    AuthCredentials.register(user.uuid, secrets.token_bytes(32), b"pk", 0, "")
+    client = TestClient(NyliumApp.create(), raise_server_exceptions=False)
+    client.cookies.set(sessions.COOKIE_NAME, sessions.issue(user.uuid))
+    monkeypatch.setattr(Api, "get_type", boom)
+    response = client.get("/api/types/Anything")
+    assert response.status_code == 500
+    assert response.json() == {
+        "error": {"code": "internal", "message": "internal server error"}
+    }
