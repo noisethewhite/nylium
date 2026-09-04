@@ -1,109 +1,114 @@
-# ADR-0003: Units of measure for numeric props
+# ADR-0003: User-defined units of measure
 
-Status: proposed (2026-09-03)
+Status: accepted (2026-09-03; supersedes the original Pint-based
+proposal — the user redirected the design to user-managed Unit
+entities before implementation began)
 Date: 2026-09-03
 
 ## Context
 
-Numeric props are currently bare magnitudes: `Decimal` and `Integer`
-store a number with no notion of *what* it measures. The user wants
-units and conversion as the first step toward computed values
-(ADR-0004): `weight = 1.5 kg`, entered as `1500 g` or `3.3 lb`,
-stored correctly, displayed sensibly, and rejected when the dimension
-is wrong (kilograms where metres are declared).
+Numeric props are bare magnitudes. The user wants units with
+conversion, defined **by the user**, not from a built-in registry:
 
-This is the data-layer slice only. Integrations/automation are a
-later phase (out of scope here, recorded in Engram).
+- A **Unit** is created from the sidebar "+" menu ("New unit"), like
+  types and enums.
+- A Unit has one **base part** and any number of **secondary parts**.
+  A secondary has: name, multiplier, offset.
+  Example: Temperature — base `°C`; secondary `°F` with multiplier 1.8
+  and offset 32 (F = C × 1.8 + 32).
+- When a numeric prop (Decimal/Integer) is added to a type, it gets a
+  **unit selector with default None**.
 
 ## Decisions
 
-### Type model
+### Unit model (mirrors ADR-0002 enums)
 
-1. **Unit is a parameter of the numeric builtin, not a composite
-   object.** Prop type grammar gains `Decimal<unit>` / `Integer<unit>`
-   (same angle-bracket syntax as `Array<…>`). `unit` is any unit the
-   backend registry parses: `kg`, `m`, `s`, `L`, `m/s`, `°C`.
-   Bare `Decimal` / `Integer` stay param-less and behave exactly as
-   today — no migration of existing props.
+1. **A unit is a user type** — a row in `types` with
+   `kind = 'unit'`. Own name, icon, color; renamable/deletable through
+   existing paths. No props, plural_name NULL (like enums).
 
-2. **The dimension is derived from the declared unit**, not declared
-   separately: `Decimal<kg>` → mass. Pint resolves this; we store the
-   unit string as-is in the prop spec.
+2. **New table `unit_parts`** (`tables/unit_parts.py`, one file per
+   table):
+   - `uuid` pk (default uuid4)
+   - `type_uuid` FK → `types.uuid` `ondelete="CASCADE"`, not null
+   - `name` Text, not null — `°C`, `kg`, `lb`
+   - `multiplier` Float, not null, default 1
+   - `offset` Float, not null, default 0
+   - `is_base` Boolean, not null, default False — **exactly one base
+     part per unit**, enforced in the API layer
+   - `position` Integer, not null, default 0 — display order
+   - `UniqueConstraint("type_uuid", "name")`
 
-### Conversion engine
+3. **Conversion is linear**, no external registry (Pint dropped):
+   - to canonical (base): `canonical = (entered − offset) / multiplier`
+   - from canonical: `display = canonical × multiplier + offset`
+   - Base part: multiplier 1, offset 0 → identity.
 
-3. **Pint on the backend** (`pint` added to `pyproject.toml`). One
-   `UnitRegistry` per process. Pint gives parsing (`"3.3 lb"`),
-   conversion, and dimensionality checks (`kg + m` →
-   `DimensionalityError` → our `ValidationError`). We do not write our
-   own conversion tables.
+### Prop typing
 
-4. **Currencies are explicitly out of scope.** EUR/USD are not units —
-   they are floating exchange rates and need a rate provider, fetching
-   policy, and staleness semantics. Separate ADR if ever.
+4. **Unit is an optional parameter of numeric builtins**:
+   `Decimal<Temperature>` / `Integer<Temperature>` in the prop-spec
+   grammar (angle brackets like `Array<…>`). Bare `Decimal`/`Integer`
+   = unit None — unchanged behavior, no migration of existing props.
+   The parameter must name a type with `kind='unit'`; validated on
+   prop create/sync.
+
+5. **Type editor**: numeric prop rows show a unit picker (search
+   field, like every picker) listing unit types, default "None".
 
 ### Storage
 
-5. **Canonical value + display unit, two columns on the existing
-   `numeric_values` table** (no new table):
-   - `value` (existing) now stores the magnitude in the dimension's
-     **base unit** (Pint's SI base for that dimension: kg, m, s, …).
-     Comparisons, sorting, and future formula arithmetic work on
-     `value` directly with zero conversion.
-   - `unit` (**new** `Text, nullable`, idempotent
+6. **Existing `numeric_values` table**, two-column shape:
+   - `value` stores the magnitude in the **base part** of the prop's
+     unit (canonical). Comparisons/sorting/future formula arithmetic
+     need no conversion.
+   - `unit` (**new** `Text, nullable`; idempotent
      `ALTER TABLE … ADD COLUMN IF NOT EXISTS` in `_ensure_schema`)
-     stores the unit **as entered by the user**. NULL = plain number,
-     which keeps every existing row valid unchanged.
+     stores the part name **as entered**. NULL = plain number; all
+     existing rows stay valid.
 
-6. **Display renders the entered unit**: the UI converts `value` back
-   into `unit` for display. Entering `1500 g` on a `Decimal<kg>` prop
-   stores `value=1.5, unit="g"` and renders back as `1500 g`, not as
-   `1.5 kg`. What you typed is what you see.
+7. **Reads return the value converted back into the stored `unit`**
+   plus the unit name — display shows what was entered (`1500 g`
+   stays `1500 g`).
 
 ### Write path
 
-7. **Input accepts `number` or `number + unit`** (`"500"`, `"500 g"`,
-   `"3.3 lb"`). A bare number means the prop's declared unit. An
-   explicit unit must parse and its dimension must match the declared
-   unit's dimension — otherwise `ValidationError` (422) with a human
-   message ("expected a mass, got metres"). This validation happens
-   next to the existing `PYTHON_TYPE` scalar checks in the object
-   layer.
+8. Input is a number plus an optional part name (UI: numeric input +
+   unit picker defaulting to the base part). Validation:
+   - part name must belong to the prop's declared unit type → else
+     `ValidationError` (422);
+   - unit-typed prop with no part name → base part assumed;
+   - plain numeric prop keeps the current shape (no unit field).
 
-8. **Wire format**: `ScalarValue` for unit-typed props carries the raw
-   input string; the backend normalizes to canonical+unit before
-   write. Reads return `{value, unit}` so the frontend renders without
-   its own unit math. (Exact `ScalarValue` shape pinned down at
-   implementation; contract change is additive.)
+9. **Renaming a part propagates** to stored `numeric_values.unit`
+   strings in the same transaction (same rule as enum option renames).
+   **Editing multiplier/offset does not rewrite stored values** —
+   canonical magnitudes were physical at entry time; only future
+   display conversion changes.
 
-### Frontend
+10. **Delete-in-use**: a unit type referenced by any prop spec
+    (`Decimal<Name>` / `Integer<Name>`, also inside `Array<…>`)
+    cannot be deleted → 409, same machinery as enum delete-in-use.
 
-9. Unit-typed numeric props render with the unit next to the value
-   (label suffix in the input box, like the existing `key → Type`
-   pattern). The draft input parses free text; invalid unit text
-   surfaces through the existing error banner.
+### Cross-unit semantics
 
-10. Editing a prop's declared unit on an existing type: allowed only
-    within the same dimension (`kg` → `g` re-displays existing rows;
-    `kg` → `m` is refused, like a type change that would invalidate
-    stored data).
+11. Units are only comparable **within the same unit type**. There is
+    no dimension algebra (`kg × m/s²`); mixing different unit types in
+    one prop or (later) one formula is a validation error. This keeps
+    the model honest without a dimension registry.
 
 ## Consequences
 
-- Numeric reads/writes for unit-typed props pay one Pint conversion
-  each way; negligible at our scale.
-- Formulas (ADR-0004) inherit dimension checking for free: adding
-  `kg` to `m` fails in Pint before any formula semantics exist.
-- `Integer<unit>` keeps integer storage; conversions that produce
-  non-integers (`1 kg` entered as `2.2 lb`) are refused for
-  `Integer<…>` — use `Decimal<…>` for convertible quantities.
-- Sorting/filtering (when it arrives) works on canonical `value`
-  without unit awareness.
+- No new dependencies; conversion is one multiply/subtract.
+- Arrays of unit-typed numerics (`Array<Decimal<Temperature>>`) work
+  once the param grammar parses nested params.
+- Computed props (ADR-0004) inherit canonical-only arithmetic: formula
+  math runs on base-unit magnitudes, results convert at display.
+- The automation/integrations layer (iCloud/CalDAV etc.) is future
+  scope and unaffected.
 
 ## Open questions
 
-- Compound display (`1 m 82 cm`) — no; single unit per value.
-- Imperial-by-default types (`Decimal<lb>`) — allowed, canonical is
-  still SI; Pint converts both ways.
-- `°C`/`°F` offsets (affine units) — Pint handles them; if edge cases
-  bite, restrict v1 to multiplicative units.
+- Compound entry (`1 m 82 cm`) — no; single part per value.
+- Negative offsets / logarithmic scales (dB) — linear model only;
+  dB-style units are out of scope until asked.
