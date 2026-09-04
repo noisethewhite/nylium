@@ -860,6 +860,59 @@ select.input option {
   border-color: var(--fg-faint);
 }
 
+/* --- derived tag chips (ADR-0005): owner-colored dots under the name --- */
+
+.tag-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-3);
+  border-radius: 999px;
+  background: var(--bg-raised);
+  border: 1px solid var(--separator);
+  font-size: 12px;
+}
+
+.tag-chip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.tag-chip-remove {
+  background: none;
+  border: none;
+  color: var(--fg-dim);
+  font: inherit;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.tag-chip-remove:hover {
+  color: var(--fg);
+}
+
+.tag-chip-add {
+  cursor: pointer;
+  color: var(--fg-dim);
+  font-size: 12px;
+}
+
+.tag-chip-add:hover {
+  color: var(--fg);
+  border-color: var(--fg-faint);
+}
+
 .object-editor-actions {
   display: flex;
   gap: var(--space-3);

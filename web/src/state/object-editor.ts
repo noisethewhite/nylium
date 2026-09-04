@@ -1,4 +1,5 @@
-import type { ObjectView, PropValue, TypeView } from "../contracts";
+import type { ObjectView, PropValue, TagView, TypeView } from "../contracts";
+import { PropValues, TypeNames } from "../contracts";
 import { ArrayFieldModel, RefFieldModel } from "../fields/composite-fields";
 import { EmbeddedFieldModel } from "../fields/embedded-fields";
 import { FieldFactory } from "../fields/field-factory";
@@ -12,6 +13,11 @@ export interface EditorState {
   readonly saving: boolean;
   readonly dirty: boolean;
   readonly error: string | null;
+}
+
+export interface TagCandidate {
+  readonly owner: ObjectView;
+  readonly propKey: string;
 }
 
 /** Draft owner for one open object: field models, ref options,
@@ -127,6 +133,76 @@ export class ObjectEditorStore extends Observable<EditorState> {
 
   async deleteObject(): Promise<void> {
     await this.workspace.deleteObject(this.getSnapshot().object.uuid);
+  }
+
+  /** ADR-0005 tag chips — member-side writes against the owner's
+   * Array<T> prop. A tag is never stored on the member: adding one
+   * appends a ref to the owner's array, removing one deletes exactly
+   * that edge. Both re-fetch the member afterwards because its tag
+   * projection only changes on the server. */
+
+  /** Every (owner, Array<ThisType> prop) pair that could point at the
+   * edited object. Owners are the loaded objects of each user type —
+   * the workspace already lists them all. */
+  tagCandidates(): readonly TagCandidate[] {
+    const object = this.getSnapshot().object;
+    const candidates: TagCandidate[] = [];
+    for (const view of this.workspace.userTypes()) {
+      if (view.embedded) {
+        continue;
+      }
+      for (const prop of view.props) {
+        if (TypeNames.elementOf(prop.value_type) !== object.type_name) {
+          continue;
+        }
+        for (const owner of this.workspace.getSnapshot().objects) {
+          if (owner.type_name === view.name && owner.uuid !== object.uuid) {
+            candidates.push({ owner, propKey: prop.key });
+          }
+        }
+      }
+    }
+    return candidates;
+  }
+
+  async addTag(candidate: TagCandidate): Promise<void> {
+    const object = this.getSnapshot().object;
+    const owner = await this.workspace.refreshObject(candidate.owner.uuid);
+    const current = owner.props[candidate.propKey];
+    const items =
+      current !== undefined && PropValues.isArray(current) && current.items !== null
+        ? current.items
+        : [];
+    await this.workspace.saveObject(owner.uuid, {
+      [candidate.propKey]: {
+        items: [...items, { ref: { uuid: object.uuid, type_name: object.type_name } }],
+      },
+    });
+    await this.refreshSelf();
+  }
+
+  async removeTag(tag: TagView): Promise<void> {
+    const object = this.getSnapshot().object;
+    const owner = await this.workspace.refreshObject(tag.owner_uuid);
+    const current = owner.props[tag.prop_key];
+    if (current === undefined || !PropValues.isArray(current) || current.items === null) {
+      return;
+    }
+    // exactly one edge — a duplicated membership survives as a second chip
+    let removed = false;
+    const rest = current.items.filter((item) => {
+      const hit =
+        !removed && PropValues.isRef(item) && item.ref !== null && item.ref.uuid === object.uuid;
+      removed = removed || hit;
+      return !hit;
+    });
+    await this.workspace.saveObject(owner.uuid, { [tag.prop_key]: { items: rest } });
+    await this.refreshSelf();
+  }
+
+  private async refreshSelf(): Promise<void> {
+    const fresh = await this.workspace.refreshObject(this.getSnapshot().object.uuid);
+    this.setState({ ...this.getSnapshot(), object: fresh });
   }
 
   /** Candidates of a ref target type for the chip picker — array-level,

@@ -6,6 +6,7 @@ import { useObservable } from "../state/use-observable";
 import { useSaveShortcut } from "../state/use-save-shortcut";
 import { WorkspaceStore } from "../state/workspace";
 import { FieldEditor } from "./field-editors";
+import { TagChips } from "./tag-chips";
 import { TypeIcon } from "./type-icon";
 import { TextFieldModel } from "../fields/scalar-fields";
 
@@ -68,6 +69,7 @@ function ObjectEditorInner(props: {
           />
         </div>
       )}
+      <TagChips editor={store} />
       <div className="object-editor-fields">
         {gridFields.map((field) => (
           <FieldEditor key={field.key} field={field} editor={store} />

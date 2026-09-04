@@ -103,6 +103,10 @@ export class NyliumApi extends HttpTransport {
     return this.request("GET", `/objects?type_name=${encodeURIComponent(typeName)}`);
   }
 
+  getObject(uuid: string): Promise<ObjectView> {
+    return this.request("GET", `/objects/${encodeURIComponent(uuid)}`);
+  }
+
   createObject(typeName: string, props: Record<string, PropValue>): Promise<ObjectView> {
     return this.request("POST", "/objects", { type_name: typeName, props });
   }

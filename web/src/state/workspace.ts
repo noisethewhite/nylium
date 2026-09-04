@@ -411,6 +411,18 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
     return updated;
   }
 
+  /** Re-pull one object — tag projections (ADR-0005) change when OTHER
+   * objects are edited, so the tag chips re-fetch after every
+   * member-side write. */
+  async refreshObject(uuid: string): Promise<ObjectView> {
+    const fresh = await this.api.getObject(uuid);
+    this.setState({
+      ...this.getSnapshot(),
+      objects: this.getSnapshot().objects.map((o) => (o.uuid === uuid ? fresh : o)),
+    });
+    return fresh;
+  }
+
   userTypes(): readonly TypeView[] {
     return this.getSnapshot().types.filter((view) => TypeNames.isUserType(view.name));
   }

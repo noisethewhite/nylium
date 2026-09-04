@@ -4,6 +4,9 @@ export interface PropView {
   uuid: string;
   key: string;
   value_type: string;
+  /** ADR-0005: a formula over the owner's Array<T> props, or null for a
+   * plain stored prop */
+  formula: string | null;
 }
 
 export interface EnumOptionView {
@@ -77,6 +80,19 @@ export interface ObjectView {
   uuid: string;
   type_name: string;
   props: Record<string, PropValue>;
+  /** ADR-0005: derived tags — one per Array<T> edge pointing at this
+   * object, colored by the owner type */
+  tags: TagView[];
+}
+
+/** ADR-0005: one membership edge of an object, read-only projection. */
+export interface TagView {
+  owner_uuid: string;
+  owner_name: string;
+  prop_key: string;
+  name: string;
+  /** owner type's hex color (#RRGGBB) */
+  color: string;
 }
 
 /** Static helpers on the wire shapes — namespace-only, never instantiated. */
@@ -107,6 +123,7 @@ export abstract class TypeNames {
   static readonly DATETIME = "Datetime";
   static readonly DATE = "Date";
   static readonly TIME = "Time";
+  static readonly COLOR = "Color";
   static readonly MONTH_DAY = "MonthDay";
   static readonly MONTH_DAY_TIME = "MonthDayTime";
   static readonly SCALARS: readonly string[] = [
@@ -117,6 +134,7 @@ export abstract class TypeNames {
     TypeNames.DATETIME,
     TypeNames.DATE,
     TypeNames.TIME,
+    TypeNames.COLOR,
     TypeNames.MONTH_DAY,
     TypeNames.MONTH_DAY_TIME,
   ];

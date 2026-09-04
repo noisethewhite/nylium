@@ -29,7 +29,8 @@ export const ICON_NAMES: string[] = [
   "bolt",
 ];
 
-/** Palette the color swatches offer — keys are what the backend stores. */
+/** Swatch palette the color picker offers — names are labels only; the
+ * backend stores the hex itself (WColor, ADR-0005). */
 export const ICON_COLORS: Record<string, string> = {
   gray: "#9e9e9e",
   red: "#e5534b",
@@ -43,7 +44,9 @@ export const ICON_COLORS: Record<string, string> = {
 };
 
 export const DEFAULT_ICON = "inventory_2";
-export const DEFAULT_COLOR = "gray";
+export const DEFAULT_COLOR = "#9e9e9e";
+
+const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 
 /** Stored names that predated registry validation — map them to the
  * nearest glyph that actually exists in the font. */
@@ -64,7 +67,7 @@ export function TypeIcon(props: {
 }): ReactElement {
   const aliased = ICON_ALIASES[props.icon] ?? props.icon;
   const name = ICON_NAMES.includes(aliased) ? aliased : DEFAULT_ICON;
-  const hex = ICON_COLORS[props.color] ?? ICON_COLORS[DEFAULT_COLOR];
+  const hex = HEX_COLOR.test(props.color) ? props.color : DEFAULT_COLOR;
   const size = props.size ?? 16;
   return (
     <span

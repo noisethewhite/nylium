@@ -57,13 +57,13 @@ export function IconPicker(props: {
               <button
                 key={name}
                 className={
-                  name === props.color
+                  hex === props.color
                     ? "icon-picker-swatch selected"
                     : "icon-picker-swatch"
                 }
                 title={name}
                 style={{ backgroundColor: hex }}
-                onClick={() => props.onChange(props.icon, name)}
+                onClick={() => props.onChange(props.icon, hex)}
               />
             ))}
           </div>
