@@ -9,22 +9,40 @@ of the same facade, mirroring the type/object graph they render.
 """
 from __future__ import annotations
 
-from uuid import UUID
-
+from dataclasses import field
 from decimal import Decimal
 from typing import Self, cast
+from uuid import UUID
+
+import sqlalchemy as sqla
 from pydantic import ConfigDict
 from pydantic.dataclasses import dataclass
+from sqlalchemy.orm import Session, aliased
 
-from nylium.database import Database, EnumOptions, Instances, UnitParts
+from nylium.database import (
+    ArrayValues,
+    Database,
+    EnumOptions,
+    InstanceValues,
+    Instances,
+    Props,
+    StringValues,
+    Types,
+    UnitParts,
+)
 from nylium.objects import WObject, WProp, WType
 from nylium.objects.monthday import MonthDay, MonthDayTime
 from nylium.objects.quantity import Quantity
+from nylium.objects.wembedded import EMBEDDED_NAME_SEPARATOR
 from nylium.objects.wenum import WEnum
 from nylium.objects.wscalar import ScalarPayload, WScalar
 from nylium.objects.wtypemeta import StoredValue
 
 _CONFIG = ConfigDict(extra="ignore")
+
+# The object title prop, pinned first on every object type (see
+# api.NAME_PROP_KEY). Tags derive the owner's display name from it.
+NAME_PROP_KEY = "name"
 
 
 # --- type schema views ---
@@ -150,13 +168,27 @@ PropValue = ScalarValue | RefValue | ArrayValue | EmbeddedValue
 
 
 @dataclass(config=_CONFIG)
+class TagView:
+    """A derived tag (ADR-0005): one array-membership edge projected back
+    onto the member object. Nothing is stored — the name is recomputed on
+    every read from the owner's display name and the prop key."""
+
+    owner_uuid: UUID
+    owner_name: str
+    prop_key: str
+    name: str
+
+
+@dataclass(config=_CONFIG)
 class ObjectView:
     """Snapshot of one instance: every prop rendered as a typed
-    ScalarValue / RefValue / ArrayValue — no Any escapes."""
+    ScalarValue / RefValue / ArrayValue — no Any escapes. `tags` is the
+    ADR-0005 reverse projection of the arrays that contain this object."""
 
     uuid: UUID
     type_name: str
     props: dict[str, PropValue]
+    tags: list[TagView] = field(default_factory=list)
 
     @classmethod
     @Database.sessionmethod(bundled=True, commit=False)
@@ -175,7 +207,65 @@ class ObjectView:
             )
             for prop in WProp.all_for(owner)
         }
-        return cls(uuid=uuid, type_name=owner.name, props=props)
+        return cls(
+            uuid=uuid,
+            type_name=owner.name,
+            props=props,
+            tags=cls._tags_for(uuid, owner.name),
+        )
+
+    @classmethod
+    @Database.sessionmethod(bundled=False, commit=False)
+    def _tags_for(cls, session: Session, uuid: UUID, type_name: str) -> list[TagView]:
+        """ADR-0005: reverse-projection of array membership. Every
+        ``Array<type_name>`` prop whose stored array contains this object
+        becomes one tag ``<owner display name> → <prop key>``. One query,
+        no N+1."""
+        name_prop = aliased(Props)
+        rows = session.execute(
+            sqla.select(
+                InstanceValues.inst_uuid,  # owner object uuid
+                Props.key,  # array prop key
+                Instances.name,  # owner registry name (fallback title)
+                StringValues.value,  # owner's `name` prop value (display title)
+            )
+            .select_from(ArrayValues)
+            .join(InstanceValues, InstanceValues.uuid == ArrayValues.inst_uuid)
+            .join(Props, Props.uuid == InstanceValues.prop_uuid)
+            .join(Types, Types.uuid == Props.value_type_uuid)
+            .join(Instances, Instances.uuid == InstanceValues.inst_uuid)
+            .join(name_prop, name_prop.owner_type_uuid == Instances.type_uuid)
+            .join(
+                StringValues,
+                sqla.and_(
+                    StringValues.inst_uuid == Instances.uuid,
+                    StringValues.prop_uuid == name_prop.uuid,
+                ),
+                isouter=True,
+            )
+            .where(
+                ArrayValues.value_uuid == uuid,
+                Types.name == WType.array_name(type_name),
+                name_prop.key == NAME_PROP_KEY,
+            )
+            .distinct()
+        ).all()
+        tags: list[TagView] = []
+        for row in rows:
+            owner_uuid = cast(UUID, row[0])
+            prop_key = cast(str, row[1])
+            registry_name = cast(str, row[2])
+            display_name = cast(str | None, row[3]) or registry_name
+            tags.append(
+                TagView(
+                    owner_uuid=owner_uuid,
+                    owner_name=display_name,
+                    prop_key=prop_key,
+                    name=f"{display_name} {EMBEDDED_NAME_SEPARATOR} {prop_key}",
+                )
+            )
+        tags.sort(key=lambda tag: (tag.owner_name, tag.prop_key))
+        return tags
 
     @classmethod
     @Database.sessionmethod(bundled=True, commit=False)

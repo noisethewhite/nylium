@@ -634,3 +634,41 @@ def test_embedded_over_http(auth_client: TestClient) -> None:
     gone = auth_client.get(f"/api/objects/{contact['uuid']}")
     assert gone.status_code == 404
 
+
+def test_tags_over_http(auth_client: TestClient) -> None:
+    """ADR-0005 over the wire: array membership projects back onto the
+    member object as a derived tag, named after the owner and prop."""
+    dsl.create_type(auth_client, "Book", {"name": "String", "title": "String"})
+    dsl.create_type(
+        auth_client, "Shelf", {"name": "String", "label": "String", "books": "Array<Book>"}
+    )
+    book = dsl.create_object(auth_client, "Book", {"name": {"value": "Dune"}})
+    book_uuid = str(book["uuid"])
+    ref = {"ref": {"uuid": book_uuid, "type_name": "Book"}}
+    shelf = dsl.create_object(
+        auth_client,
+        "Shelf",
+        {"name": {"value": "Sci-Fi"}, "books": {"items": [ref]}},
+    )
+
+    fetched = auth_client.get(f"/api/objects/{book_uuid}")
+    assert fetched.status_code == 200, fetched.text
+    assert fetched.json()["tags"] == [
+        {
+            "owner_uuid": str(shelf["uuid"]),
+            "owner_name": "Sci-Fi",
+            "prop_key": "books",
+            "name": "Sci-Fi → books",
+        }
+    ]
+
+    # removing the membership removes the tag on the member's next read
+    cleared = auth_client.patch(
+        f"/api/objects/{shelf['uuid']}", json={"props": {"books": {"items": []}}}
+    )
+    assert cleared.status_code == 200
+    refetched = auth_client.get(f"/api/objects/{book_uuid}")
+    assert refetched.status_code == 200
+    assert refetched.json()["tags"] == []
+
+

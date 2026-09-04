@@ -10,6 +10,7 @@ from nylium.api.views import (
     PropView,
     RefValue,
     ScalarValue,
+    TagView,
     TypeView,
 )
 from nylium.objects.wscalar import ScalarPayload
@@ -25,5 +26,6 @@ __all__ = [
     "RefValue",
     "ScalarPayload",
     "ScalarValue",
+    "TagView",
     "TypeView",
 ]
