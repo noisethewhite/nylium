@@ -31,7 +31,7 @@ class Files(Base):
 
     @classmethod
     @Database.sessionmethod(bundled=False, commit=False)
-    def by_uuid(cls, session: Session, uuid: UUID) -> Files | None:
+    def by_uuid(cls, session: Session, uuid: UUID) -> "Files | None":
         return session.get(cls, uuid)
 
     @classmethod
