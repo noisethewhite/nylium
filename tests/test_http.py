@@ -561,3 +561,76 @@ def test_unit_over_http(auth_client: TestClient) -> None:
     )
     assert delete_in_use.status_code == 409
 
+
+def test_embedded_over_http(auth_client: TestClient) -> None:
+    """ADR-0004 over the wire: embedded type create flag, inline draft
+    both ways, guards, visibility."""
+    created = auth_client.post(
+        "/api/types",
+        json={
+            "name": "ContactDetails",
+            "plural_name": "ContactDetails",
+            "props": {"name": "String", "email": "String"},
+            "embedded": True,
+        },
+    )
+    assert created.status_code == 201, created.text
+    assert created.json()["embedded"] is True
+
+    dsl.create_type(
+        auth_client, "Person", {"name": "String", "contact": "ContactDetails"}
+    )
+    # standalone create of an embedded type is 422
+    standalone = auth_client.post(
+        "/api/objects",
+        json={"type_name": "ContactDetails", "props": {"name": {"value": "x"}}},
+    )
+    assert standalone.status_code == 422
+
+    person = dsl.create_object(
+        auth_client,
+        "Person",
+        {
+            "name": {"value": "Vasya"},
+            "contact": {
+                "uuid": None,
+                "type_name": "ContactDetails",
+                "props": {"email": {"value": "v@x.com"}},
+            },
+        },
+    )
+    contact = person["props"]["contact"]
+    assert contact["uuid"] is not None
+    assert contact["type_name"] == "ContactDetails"
+    assert contact["props"]["email"]["value"] == "v@x.com"
+    assert contact["props"]["name"]["value"] == "Vasya → contact"
+
+    # embedded children never list standalone
+    listed = auth_client.get("/api/objects", params={"type_name": "ContactDetails"})
+    assert listed.status_code == 200
+    assert listed.json() == []
+
+    # direct writes to the child are refused — edit through the owner
+    direct = auth_client.patch(
+        f"/api/objects/{contact['uuid']}",
+        json={"props": {"email": {"value": "other@x.com"}}},
+    )
+    assert direct.status_code == 422
+
+    # parent rename regenerates the child name
+    renamed = auth_client.patch(
+        f"/api/objects/{person['uuid']}", json={"props": {"name": {"value": "Petya"}}}
+    )
+    assert renamed.status_code == 200
+    assert renamed.json()["props"]["contact"]["props"]["name"]["value"] == "Petya → contact"
+
+    # an empty draft clears the prop and deletes the child
+    cleared = auth_client.patch(
+        f"/api/objects/{person['uuid']}",
+        json={"props": {"contact": {"uuid": None, "type_name": "ContactDetails", "props": {}}}},
+    )
+    assert cleared.status_code == 200
+    assert cleared.json()["props"]["contact"]["uuid"] is None
+    gone = auth_client.get(f"/api/objects/{contact['uuid']}")
+    assert gone.status_code == 404
+

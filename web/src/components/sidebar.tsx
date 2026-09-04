@@ -21,7 +21,9 @@ export function Sidebar(props: {
   const authState = useObservable(props.auth);
   const types = props.workspace.userTypes();
   const [plusMode, setPlusMode] = useState<PlusMenuMode>("root");
-  const objectTypes = types.filter((view) => view.kind === "object");
+  const objectTypes = types.filter(
+    (view) => view.kind === "object" && !view.embedded,
+  );
 
   return (
     <aside className="sidebar">
@@ -119,6 +121,7 @@ export function Sidebar(props: {
             >
               <TypeIcon icon={view.icon} color={view.color} />
               <span>{view.name}</span>
+              {view.embedded && <span className="embedded-badge">embedded</span>}
             </button>
             <button
               className="icon-button type-row-delete"

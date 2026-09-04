@@ -3,6 +3,7 @@ FastAPI app mounts. Views, UUIDs and plain values in and out."""
 from nylium.api.api import Api
 from nylium.api.views import (
     ArrayValue,
+    EmbeddedValue,
     ObjectRef,
     ObjectView,
     PropValue,
@@ -16,6 +17,7 @@ from nylium.objects.wscalar import ScalarPayload
 __all__ = [
     "Api",
     "ArrayValue",
+    "EmbeddedValue",
     "ObjectRef",
     "ObjectView",
     "PropValue",

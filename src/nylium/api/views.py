@@ -59,6 +59,9 @@ class TypeView:
     icon: str
     color: str
     kind: str
+    # ADR-0004: composition types instantiate only as a prop value of an
+    # owner object — no standalone creation, hidden from lists/pickers
+    embedded: bool
     enum_options: list[EnumOptionView]
     unit_parts: list[UnitPartView]
     props: list[PropView]
@@ -75,6 +78,7 @@ class TypeView:
             icon=owner.icon,
             color=owner.color,
             kind=owner.kind,
+            embedded=owner.is_embedded,
             enum_options=[
                 EnumOptionView(uuid=option.uuid, value=option.value)
                 for option in EnumOptions.list_for(owner.uuid)
@@ -130,7 +134,19 @@ class ArrayValue:
     items: list[PropValue] | None
 
 
-PropValue = ScalarValue | RefValue | ArrayValue
+@dataclass(config=_CONFIG)
+class EmbeddedValue:
+    """A composition child rendered inline (ADR-0004). uuid None means
+    the prop was never filled — the child is created lazily on the first
+    write. On input, props is the full child draft and uuid is ignored:
+    create-vs-update is decided by the existing link, not the client."""
+
+    uuid: UUID | None
+    type_name: str
+    props: dict[str, PropValue]
+
+
+PropValue = ScalarValue | RefValue | ArrayValue | EmbeddedValue
 
 
 @dataclass(config=_CONFIG)
@@ -190,6 +206,18 @@ class ObjectView:
             return ArrayValue(
                 items=[cls._render_prop(item, element_name) for item in value]
             )
+        owner = WType.by_name(type_name)
+        if owner is not None and owner.is_embedded:
+            # composition child: rendered as the full nested props view,
+            # so the editor can inline its fields without a second fetch
+            if value is None:
+                return EmbeddedValue(uuid=None, type_name=type_name, props={})
+            if not isinstance(value, WObject):
+                raise TypeError(f"embedded prop rendered a {type(value).__name__}")
+            child = ObjectView.from_uuid(value.uuid)
+            if child is None:
+                raise RuntimeError(f"embedded child {value.uuid} vanished")
+            return EmbeddedValue(uuid=child.uuid, type_name=type_name, props=child.props)
         if value is None:
             return RefValue(ref=None)
         if not isinstance(value, WObject):

@@ -35,6 +35,9 @@ export interface TypeView {
   enum_options: EnumOptionView[];
   /** unit kinds only; always empty for other kinds */
   unit_parts: UnitPartView[];
+  /** ADR-0004: composition type — instances exist only as a prop value
+   * of an owner object; no standalone creation, hidden from lists */
+  embedded: boolean;
 }
 
 export interface ObjectRef {
@@ -59,7 +62,16 @@ export interface ArrayValue {
   items: PropValue[] | null;
 }
 
-export type PropValue = ScalarValue | RefValue | ArrayValue;
+/** ADR-0004: a composition child rendered inline. uuid null = never
+ * filled (created lazily on first write). On input, props is the full
+ * child draft; an empty props object clears the child. */
+export interface EmbeddedValue {
+  uuid: string | null;
+  type_name: string;
+  props: Record<string, PropValue>;
+}
+
+export type PropValue = ScalarValue | RefValue | ArrayValue | EmbeddedValue;
 
 export interface ObjectView {
   uuid: string;
@@ -79,6 +91,10 @@ export abstract class PropValues {
 
   static isRef(value: PropValue): value is RefValue {
     return "ref" in value;
+  }
+
+  static isEmbedded(value: PropValue): value is EmbeddedValue {
+    return "type_name" in value;
   }
 }
 

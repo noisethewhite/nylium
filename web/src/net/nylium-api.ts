@@ -20,9 +20,10 @@ export class NyliumApi extends HttpTransport {
     props: Record<string, string>,
     icon?: string,
     color?: string,
+    embedded?: boolean,
   ): Promise<TypeView> {
     return this.request("POST", "/types", {
-      name, plural_name: pluralName, props, icon, color,
+      name, plural_name: pluralName, props, icon, color, embedded,
     });
   }
 

@@ -70,9 +70,16 @@ export function TypePicker(props: {
           close();
         };
         if (objectMode !== null) {
+          // ADR-0004: Array<Embedded> is rejected server-side — arrays
+          // never list embedded types; single-object mode keeps them,
+          // picking one makes the prop a composition
+          const candidates =
+            objectMode === "array"
+              ? props.workspace.userTypes().filter((view) => !view.embedded)
+              : props.workspace.userTypes();
           return (
             <NameSearch
-              items={props.workspace.userTypes()}
+              items={candidates}
               getKey={(view) => view.name}
               getLabel={(view) =>
                 objectMode === "array" ? TypeNames.arrayOf(view.name) : view.name

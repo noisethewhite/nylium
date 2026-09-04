@@ -130,7 +130,14 @@ export function TypeViewPanel(props: {
   return (
     <div className="tab-content">
       <div className="type-actions-bar">
-        <span className="dim type-header-title">Editing type</span>
+        <span className="dim type-header-title">
+          Editing type
+          {schema.embedded && (
+            <span className="embedded-badge" title="Composition type — instances exist only as a property value of an owner object">
+              embedded
+            </span>
+          )}
+        </span>
         <div className="type-header-actions">
           <button
             className="button button-primary"

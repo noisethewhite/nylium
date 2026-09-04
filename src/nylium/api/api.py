@@ -18,6 +18,7 @@ from uuid import UUID
 
 from nylium.api.views import ObjectRef, ObjectView, TypeView
 from nylium.database import Database, EnumOptions, Instances, Props, Types, UnitParts
+from nylium.objects.wembedded import EMBEDDED_NAME_SEPARATOR, WEmbedded
 from nylium.objects.wenum import WEnum
 from nylium.objects.wobject import WObject
 from nylium.objects.wprop import WProp
@@ -26,9 +27,12 @@ from nylium.objects.wtype import WType
 from nylium.objects.wtypemeta import StoredValue, WTypeMeta
 
 # What callers may hand in for a prop: stored values, plus links as
-# UUID/ObjectRef (resolved to WObject here). A string forward ref inside
+# UUID/ObjectRef (resolved to WObject here), plus a props draft for
+# embedded (composition) props — ADR-0004. A string forward ref inside
 # list[...] keeps the recursion 3.11-parseable without typing.Union.
-PropInput: TypeAlias = StoredValue | UUID | ObjectRef | list["PropInput"]
+PropInput: TypeAlias = (
+    StoredValue | UUID | ObjectRef | list["PropInput"] | dict[str, "PropInput"]
+)
 
 # Every object type starts with a `name` prop — it IS the instance's
 # title, rendered as the editable heading in the UI. Pinned at
@@ -60,11 +64,13 @@ class Api:
         plural_name: str | None = None,
         icon: str = "inventory_2",
         color: str = "gray",
+        embedded: bool = False,
     ) -> TypeView:
         """props maps key -> value type name. Missing value types are created.
         Dict order becomes the schema's display order (positions).
         The schema must open with the `name` prop (String) — see
-        NAME_PROP_KEY."""
+        NAME_PROP_KEY. embedded marks a composition type (ADR-0004):
+        its instances exist only as a prop value of an owner object."""
         # lazy: a module-level import would circle api -> server -> api
         from nylium.server.errors import ValidationError
 
@@ -76,8 +82,12 @@ class Api:
             raise ValidationError(
                 f"the {NAME_PROP_KEY!r} prop must be of type {WString.TYPE_NAME!r}"
             )
+        cls._check_reserved_name(name, "type name")
+        for key in keys:
+            # keys land inside generated embedded names — same reservation
+            cls._check_reserved_name(key, "prop key")
         WScalar.ensure_builtins()
-        owner = WType.ensure(name, plural_name)
+        owner = WType.ensure(name, plural_name, embedded=embedded)
         for position, (key, value_type_name) in enumerate(props.items()):
             _ = WProp.ensure(owner, key, cls._ensure_value_type(value_type_name), position)
         Types.update(owner.uuid, owner.name, owner.plural_name, icon, color)
@@ -100,6 +110,7 @@ class Api:
         final_name = name.strip()
         if not final_name:
             raise ValidationError("enum name must not be empty")
+        cls._check_reserved_name(final_name, "enum name")
         owner = WType.ensure(final_name, kind=WType.KIND_ENUM)
         EnumOptions.sync(owner.uuid, [(None, v) for v in (options or [])])
         Types.update(owner.uuid, owner.name, None, icon, color)
@@ -150,6 +161,7 @@ class Api:
         base_name = base.strip()
         if not base_name:
             raise ValidationError("unit base name must not be empty")
+        cls._check_reserved_name(final_name, "unit name")
         owner = WType.ensure(final_name, kind=WType.KIND_UNIT)
         items: list[tuple[UUID | None, str, Decimal, Decimal, bool]] = [
             (None, base_name, Decimal(1), Decimal(0), True),
@@ -269,6 +281,8 @@ class Api:
         keys = [key for _, key, _ in items]
         if any(not key.strip() for key in keys):
             raise ValidationError("prop keys must not be empty")
+        for key in keys:
+            cls._check_reserved_name(key, "prop key")
         if len(set(keys)) != len(keys):
             raise ValidationError(f"duplicate prop keys in {keys!r}")
         strangers = [uuid for uuid, _, _ in items if uuid is not None and uuid not in by_uuid]
@@ -278,7 +292,26 @@ class Api:
             (uuid, key, cls._ensure_value_type(value_type_name).uuid)
             for uuid, key, value_type_name in items
         ]
+        # embedded children die with their prop: deleting or retyping an
+        # embedded prop would cascade the link rows away and orphan the
+        # child instances — destroy them while the prop still stands
+        kept = {uuid: (key, vt) for uuid, key, vt in resolved if uuid is not None}
+        embedded_renamed = False
+        for prop in existing:
+            old_value_type = prop.value_type()
+            if not old_value_type.is_embedded:
+                continue
+            draft = kept.get(prop.uuid)
+            if draft is None or draft[1] != old_value_type.uuid:
+                WEmbedded.destroy_children_of_prop(prop.uuid)
+            elif draft[0] != prop.key:
+                embedded_renamed = True
         WProp.sync_schema(owner, resolved)
+        if embedded_renamed:
+            # a renamed embedded prop key invalidates every generated
+            # child name of every instance of this type
+            for instance_uuid in Instances.uuids_of_type(owner.uuid):
+                WEmbedded.regenerate_names(instance_uuid)
         return TypeView.from_name(type_name)
 
     @classmethod
@@ -303,6 +336,7 @@ class Api:
         final_name = name if new_name is None else new_name.strip()
         if not final_name:
             raise ValidationError("type name must not be empty")
+        cls._check_reserved_name(final_name, "type name")
         collision = Types.uuid_by_name(final_name)
         if collision is not None and collision != owner.uuid:
             raise ValueError(f"type {final_name!r} already exists")
@@ -361,6 +395,10 @@ class Api:
         owner = WType.by_name(type_name)
         if owner is None:
             return []
+        if owner.is_embedded:
+            # composition children never list standalone (ADR-0004) —
+            # this also keeps them out of every ref picker
+            return []
         views = [
             ObjectView.from_uuid(uuid)
             for uuid in Instances.uuids_of_type(owner.uuid)
@@ -376,6 +414,13 @@ class Api:
     def create_object(
         cls, type_name: str, props: dict[str, PropInput] | None = None
     ) -> ObjectView:
+        from nylium.server.errors import ValidationError
+
+        owner = WType.by_name(type_name)
+        if owner is not None and owner.is_embedded:
+            raise ValidationError(
+                f"type {type_name!r} is embedded — its instances exist only as a prop value of an owner object"
+            )
         normalized = cls._normalize_props(type_name, props or {})
         klass = WTypeMeta.python_class(type_name)
         if klass is not None:
@@ -385,6 +430,9 @@ class Api:
             instance_uuid = ctor(**normalized).uuid
         else:
             instance_uuid = WObject.create_db_only(type_name, normalized)
+        # heal generated names: an embedded prop written before the name
+        # prop in the same request computed a fallback-based child name
+        WEmbedded.regenerate_names(instance_uuid)
         view = cls.get_object(instance_uuid)
         if view is None:
             raise RuntimeError(f"created {type_name} instance {instance_uuid} vanished")
@@ -393,11 +441,20 @@ class Api:
     @classmethod
     @Database.sessionmethod(bundled=True, commit=True)
     def update_object(cls, uuid: UUID, props: dict[str, PropInput]) -> ObjectView:
+        from nylium.server.errors import ValidationError
+
+        if Instances.owner_of(uuid) is not None:
+            raise ValidationError(
+                "embedded objects are edited through their owner — write the embedded prop on the parent instead"
+            )
         wrapper = WObject.wrap(uuid)
         type_name = Instances.get_type_name(uuid)
         normalized = cls._normalize_props(type_name, props)
         for key, value in normalized.items():
             setattr(wrapper, key, value)
+        # a renamed parent (or a reordered draft) invalidates the
+        # generated names of its embedded children
+        WEmbedded.regenerate_names(uuid)
         view = cls.get_object(uuid)
         if view is None:
             raise RuntimeError(f"updated instance {uuid} vanished")
@@ -406,8 +463,14 @@ class Api:
     @classmethod
     @Database.sessionmethod(bundled=True, commit=True)
     def delete_object(cls, uuid: UUID) -> bool:
+        from nylium.server.errors import ValidationError
+
         if not Instances.exists(uuid):
             return False
+        if Instances.owner_of(uuid) is not None:
+            raise ValidationError(
+                "embedded objects are deleted with their owner or by clearing the prop that holds them"
+            )
         WObject.wrap(uuid).delete()
         return True
 
@@ -428,7 +491,11 @@ class Api:
                 raise ValidationError(f"no unit type {unit_param!r}")
             return WType.ensure(name)
         if WType.is_array_name(name):
-            _ = cls._ensure_value_type(WType.element_name(name))
+            element = cls._ensure_value_type(WType.element_name(name))
+            if element.is_embedded:
+                raise ValidationError(
+                    f"arrays of embedded type {element.name!r} are not supported yet"
+                )
             return WType.ensure(name)
         resolved = WType.ensure(name)
         if resolved.is_unit:
@@ -447,10 +514,18 @@ class Api:
         owner_type_uuid = Types.uuid_by_name(type_name)
         if owner_type_uuid is None:
             raise KeyError(f"no type {type_name!r}")
-        return {
-            key: cls._normalize_value(value, Props.get_type_name(owner_type_uuid, key))
-            for key, value in props.items()
-        }
+        result: dict[str, StoredValue] = {}
+        for key, value in props.items():
+            normalized = cls._normalize_value(
+                value, Props.get_type_name(owner_type_uuid, key)
+            )
+            if key == NAME_PROP_KEY and isinstance(normalized, str):
+                # → would make a user-typed name indistinguishable from a
+                # generated embedded one. Embedded children never pass
+                # here — their names are written by WEmbedded directly.
+                cls._check_reserved_name(normalized, "object name")
+            result[key] = normalized
+        return result
 
     @classmethod
     def _normalize_value(cls, value: PropInput, type_name: str) -> StoredValue:
@@ -465,8 +540,35 @@ class Api:
                 raise TypeError(f"array prop takes list, got {type(value).__name__}")
             element_name = WType.element_name(type_name)
             return [cls._normalize_value(item, element_name) for item in value]
+        resolved = WType.by_name(type_name)
+        if resolved is not None and resolved.is_embedded:
+            # composition: the value is an inline props draft, recursively
+            # normalized against the embedded type's schema. A link
+            # (UUID/ObjectRef) is refused — picking an existing object is
+            # exactly what embedded props are not (ADR-0004).
+            if value is None:
+                return None
+            if not isinstance(value, dict):
+                raise TypeError(
+                    f"embedded prop of type {type_name!r} takes an inline props draft, got {type(value).__name__}"
+                )
+            return {
+                key: cls._normalize_value(item, Props.get_type_name(resolved.uuid, key))
+                for key, item in value.items()
+            }
         if isinstance(value, ObjectRef):
             return WObject.wrap(value.uuid)
         if isinstance(value, UUID):
             return WObject.wrap(value)
         return cast(StoredValue, value)  # anything else fails in setattr
+
+    @classmethod
+    def _check_reserved_name(cls, value: str, what: str) -> None:
+        """The → separator of generated embedded names is reserved, so a
+        generated name can never collide with a user-typed one."""
+        from nylium.server.errors import ValidationError
+
+        if EMBEDDED_NAME_SEPARATOR in value:
+            raise ValidationError(
+                f"{what} {value!r} must not contain {EMBEDDED_NAME_SEPARATOR!r} — reserved for generated embedded names"
+            )

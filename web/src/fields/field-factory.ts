@@ -1,6 +1,8 @@
 import type { PropValue, PropView } from "../contracts";
 import { TypeNames } from "../contracts";
 import { ArrayFieldModel, RefFieldModel } from "./composite-fields";
+import type { EmbeddedSchemaOf } from "./embedded-fields";
+import { EmbeddedFieldModel } from "./embedded-fields";
 import { EnumFieldModel } from "./enum-fields";
 import type { EnumOptionsOf } from "./enum-fields";
 import { FieldModel } from "./field-model";
@@ -28,6 +30,7 @@ export abstract class FieldFactory {
     value: PropValue | undefined,
     enumOptionsOf?: EnumOptionsOf,
     unitPartsOf?: UnitPartsOf,
+    embeddedSchemaOf?: EmbeddedSchemaOf,
   ): FieldModel {
     return FieldFactory.createForType(
       prop.key,
@@ -35,6 +38,7 @@ export abstract class FieldFactory {
       value,
       enumOptionsOf,
       unitPartsOf,
+      embeddedSchemaOf,
     );
   }
 
@@ -44,6 +48,7 @@ export abstract class FieldFactory {
     value: PropValue | undefined,
     enumOptionsOf?: EnumOptionsOf,
     unitPartsOf?: UnitPartsOf,
+    embeddedSchemaOf?: EmbeddedSchemaOf,
   ): FieldModel {
     const enumOptions = enumOptionsOf?.(valueType) ?? null;
     if (enumOptions !== null) {
@@ -86,6 +91,20 @@ export abstract class FieldFactory {
       default:
         if (TypeNames.isArray(valueType)) {
           return ArrayFieldModel.fromWire(key, valueType, value, enumOptionsOf, unitPartsOf);
+        }
+        {
+          const embeddedSchema = embeddedSchemaOf?.(valueType);
+          if (embeddedSchema !== undefined && embeddedSchema.embedded) {
+            return EmbeddedFieldModel.fromWire(
+              key,
+              valueType,
+              embeddedSchema,
+              value,
+              enumOptionsOf,
+              unitPartsOf,
+              embeddedSchemaOf,
+            );
+          }
         }
         return RefFieldModel.fromWire(key, valueType, value);
     }

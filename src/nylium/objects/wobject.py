@@ -28,6 +28,7 @@ from sqlalchemy.orm import Session
 from nylium.database import Database
 from nylium.database.tables import ArrayValues, Instances, InstanceValues
 from nylium.objects.warray import WArray
+from nylium.objects.wembedded import WEmbedded
 from nylium.objects.wenum import WEnum
 from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import ScalarPayload, WScalar
@@ -226,6 +227,10 @@ class WObject(metaclass=WTypeMeta):
                 WType.element_name(value_type),
                 cast(list[StoredValue], value),
             )
+        elif prop.value_type().is_embedded:
+            # composition (ADR-0004): the value is an inline props draft,
+            # the child is created lazily / updated / deleted on None
+            WEmbedded.write(self._uuid, prop, value)
         else:
             WTypeMeta.check_link(value_type, value)
             self._write_link(prop, cast("WObject", value))
@@ -258,6 +263,8 @@ class WObject(metaclass=WTypeMeta):
             return
         if WType.is_array_name(value_type):
             WArray.destroy( link.uuid)
+        elif prop.value_type().is_embedded:
+            WEmbedded.destroy(link.uuid)  # the child dies with the prop
         else:
             session.delete(link)
         self._touch()
@@ -313,6 +320,8 @@ class WObject(metaclass=WTypeMeta):
     def delete(self, session: Session) -> None:
         for array_uuid in self._owned_array_uuids():
             WArray.destroy(array_uuid)
+        for child_uuid in self._owned_embedded_uuids():
+            WEmbedded.destroy(child_uuid)
         _ = session.execute(
             sqla.delete(InstanceValues).where(InstanceValues.uuid == self._uuid)
         )
@@ -322,6 +331,18 @@ class WObject(metaclass=WTypeMeta):
         inst = session.get(Instances, self._uuid)
         if inst is not None:
             session.delete(inst)
+
+    @Database.sessionmethod(bundled=False, commit=False)
+    def _owned_embedded_uuids(self, session: Session) -> list[UUID]:
+        """Instances held through embedded-typed props — composition
+        children (ADR-0004), found via the owner_* read-index."""
+        return list(
+            session.scalars(
+                sqla.select(Instances.uuid).where(
+                    Instances.owner_object_uuid == self._uuid
+                )
+            ).all()
+        )
 
     @Database.sessionmethod(bundled=False, commit=False)
     def _owned_array_uuids(self, session: Session) -> list[UUID]:

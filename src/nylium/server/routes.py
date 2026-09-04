@@ -45,7 +45,7 @@ class routes:
     @classmethod
     def create_type(cls, body: CreateTypeBody) -> TypeView:
         return Api.create_type(
-            body.name, body.props, body.plural_name, body.icon, body.color
+            body.name, body.props, body.plural_name, body.icon, body.color, body.embedded
         )
 
     @classmethod

@@ -1,5 +1,6 @@
 import type { ObjectView, PropValue, TypeView } from "../contracts";
 import { ArrayFieldModel, RefFieldModel } from "../fields/composite-fields";
+import { EmbeddedFieldModel } from "../fields/embedded-fields";
 import { FieldFactory } from "../fields/field-factory";
 import { FieldModel } from "../fields/field-model";
 import { Observable } from "./observable";
@@ -50,8 +51,12 @@ export class ObjectEditorStore extends Observable<EditorState> {
       }
       return { base: base.name, parts: view.unit_parts.map((part) => part.name) };
     };
+    const embeddedSchemaOf = (typeName: string): TypeView | undefined => {
+      const view = workspace.typeView(typeName);
+      return view !== undefined && view.embedded ? view : undefined;
+    };
     const fields = schema.props.map((prop) =>
-      FieldFactory.create(prop, object.props[prop.key], enumOptionsOf, unitPartsOf),
+      FieldFactory.create(prop, object.props[prop.key], enumOptionsOf, unitPartsOf, embeddedSchemaOf),
     );
     const store = new ObjectEditorStore(
       { object, fields, saving: false, dirty: false, error: null },
@@ -101,6 +106,13 @@ export class ObjectEditorStore extends Observable<EditorState> {
     this.setState({ ...this.getSnapshot(), saving: true, error: null });
     try {
       const updated = await this.workspace.saveObject(object.uuid, props);
+      // embedded children may have been created lazily — pull their
+      // fresh uuids/generated names off the saved object
+      for (const field of fields) {
+        if (field instanceof EmbeddedFieldModel) {
+          field.syncFromWire(updated.props[field.key]);
+        }
+      }
       this.setState({
         ...this.getSnapshot(),
         object: updated,
@@ -147,6 +159,12 @@ export class ObjectEditorStore extends Observable<EditorState> {
     if (field instanceof ArrayFieldModel) {
       for (const item of field.items) {
         await this.fillRefOptions(item);
+      }
+      return;
+    }
+    if (field instanceof EmbeddedFieldModel) {
+      for (const child of field.childFields) {
+        await this.fillRefOptions(child);
       }
     }
   }

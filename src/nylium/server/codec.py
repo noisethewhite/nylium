@@ -11,7 +11,13 @@ from decimal import Decimal, InvalidOperation
 from typing import cast
 
 from nylium.api.api import Api, PropInput
-from nylium.api.views import ArrayValue, PropValue, RefValue, ScalarValue
+from nylium.api.views import (
+    ArrayValue,
+    EmbeddedValue,
+    PropValue,
+    RefValue,
+    ScalarValue,
+)
 from nylium.objects.monthday import MonthDay, MonthDayTime
 from nylium.objects.quantity import Quantity
 from nylium.objects.wenum import WEnum
@@ -87,6 +93,15 @@ class PropCodec:
                 )
             element_name = WType.element_name(type_name)
             return [cls._decode_value(item, element_name) for item in value.items]
+        owner = WType.by_name(type_name)
+        if owner is not None and owner.is_embedded:
+            if not isinstance(value, EmbeddedValue):
+                raise TypeError(cls._shape_error(type_name, "EmbeddedValue", value))
+            # an empty draft clears the child; uuid is server-owned,
+            # the client's copy is ignored entirely
+            if not value.props:
+                return None
+            return cls.decode(type_name, value.props)
         if not isinstance(value, RefValue):
             raise TypeError(cls._shape_error(type_name, "RefValue", value))
         return value.ref

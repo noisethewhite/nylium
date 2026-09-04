@@ -44,13 +44,20 @@ class WObjectShape(Protocol):
     @property
     def uuid(self) -> UUID: ...
 
+    def delete(self) -> None: ...
+
 
 # The closed union of everything a prop can hold: scalar payloads,
 # unit-aware quantities, WObject links (structurally), (nested) lists of
 # those. None means "never set". A string forward ref inside list[...]
 # keeps the recursion parseable without typing.Union or the PEP 695
 # `type` stmt.
-StoredValue: TypeAlias = ScalarPayload | Quantity | WObjectShape | list["StoredValue"] | None
+# dict[str, StoredValue] is the write-side-only draft for embedded
+# (composition) props, ADR-0004 — reads always come back as WObject
+# links, the dict never leaves the write path.
+StoredValue: TypeAlias = (
+    ScalarPayload | Quantity | WObjectShape | list["StoredValue"] | dict[str, "StoredValue"] | None
+)
 
 
 class WTypeMeta(type):
@@ -108,6 +115,10 @@ class WTypeMeta(type):
         if actual is None or actual.name != expected_name:
             raise TypeError(
                 f"{expected_name} prop takes {expected_name}, got {'<missing instance>' if actual is None else actual.name}"
+            )
+        if actual.is_embedded:
+            raise TypeError(
+                f"{expected_name} is embedded (ADR-0004) — link it from its owner only, as an inline props draft"
             )
 
     @classmethod

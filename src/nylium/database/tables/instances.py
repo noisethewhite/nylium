@@ -20,6 +20,12 @@ class Instances(Base):
         ForeignKey("types.uuid"), nullable=False
     )
     name: Mapped[str] = mapped_column(Text, nullable=False)
+    # Ownership read-index for embedded instances (ADR-0004): the
+    # instance_values ref is the source of truth, these two columns
+    # answer "who owns this child" without a join. NULL on standalone
+    # objects, scalar boxes and array instances.
+    owner_object_uuid: Mapped[UUID | None] = mapped_column(nullable=True)
+    owner_prop_uuid: Mapped[UUID | None] = mapped_column(nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -67,5 +73,30 @@ class Instances(Base):
 
     @classmethod
     @Database.sessionmethod(bundled=False, commit=True)
-    def register(cls, session: Session, uuid: UUID, type_uuid: UUID, name: str) -> None:
-        session.add(cls(uuid=uuid, type_uuid=type_uuid, name=name))
+    def register(
+        cls,
+        session: Session,
+        uuid: UUID,
+        type_uuid: UUID,
+        name: str,
+        owner_object_uuid: UUID | None = None,
+        owner_prop_uuid: UUID | None = None,
+    ) -> None:
+        session.add(
+            cls(
+                uuid=uuid,
+                type_uuid=type_uuid,
+                name=name,
+                owner_object_uuid=owner_object_uuid,
+                owner_prop_uuid=owner_prop_uuid,
+            )
+        )
+
+    @classmethod
+    @Database.sessionmethod(bundled=False, commit=False)
+    def owner_of(cls, session: Session, uuid: UUID) -> "tuple[UUID, UUID] | None":
+        """(owner object, owner prop) for an embedded instance, else None."""
+        inst = session.get(cls, uuid)
+        if inst is None or inst.owner_object_uuid is None or inst.owner_prop_uuid is None:
+            return None
+        return (inst.owner_object_uuid, inst.owner_prop_uuid)

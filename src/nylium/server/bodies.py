@@ -30,6 +30,8 @@ class CreateTypeBody:
     props: dict[str, str] = field(default_factory=dict)
     icon: str = "inventory_2"
     color: str = "gray"
+    # ADR-0004: composition type — instances exist only as prop values
+    embedded: bool = False
 
 
 @dataclass(config=_CONFIG)

@@ -34,6 +34,7 @@ class WType:
         self._icon: str = row.icon
         self._color: str = row.color
         self._kind: str = row.kind
+        self._embedded: bool = row.embedded
 
     @property
     def uuid(self) -> UUID:
@@ -66,6 +67,10 @@ class WType:
     @property
     def is_unit(self) -> bool:
         return self._kind == self.KIND_UNIT
+
+    @property
+    def is_embedded(self) -> bool:
+        return self._embedded
 
     # --- type-name conventions ---
 
@@ -118,12 +123,20 @@ class WType:
         plural_name: str | None = None,
         icon: str | None = None,
         kind: str | None = None,
+        embedded: bool | None = None,
     ) -> "WType":
         existing = cls.by_name(name)
         if existing is not None:
             if kind is not None and existing.kind != kind:
                 raise ValueError(
                     f"type {name!r} already exists as {existing.kind}, not {kind}"
+                )
+            # embedded is a create-time declaration: callers that pass it
+            # must agree with the existing row, silent flag flips would
+            # strand or orphan instances
+            if embedded is not None and existing.is_embedded != embedded:
+                raise ValueError(
+                    f"type {name!r} already exists as {'embedded' if existing.is_embedded else 'standalone'}"
                 )
             # builtins re-ensure on every boot: keep their icon canonical
             if icon is not None and existing.icon != icon:
@@ -135,6 +148,8 @@ class WType:
             row.icon = icon
         if kind is not None:
             row.kind = kind
+        if embedded is not None:
+            row.embedded = embedded
         session.add(row)
         session.flush()
         return cls(row)

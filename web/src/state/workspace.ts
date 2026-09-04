@@ -102,9 +102,10 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
     props: Record<string, string>,
     icon?: string,
     color?: string,
+    embedded?: boolean,
   ): Promise<void> {
     await this.guard(async () => {
-      const created = await this.api.createType(name, pluralName, props, icon, color);
+      const created = await this.api.createType(name, pluralName, props, icon, color, embedded);
       const state = this.getSnapshot();
       const tabs = state.tabs.filter((tab) => tab.kind !== "create-type");
       const tab: Tab = { kind: "type", name: created.name };

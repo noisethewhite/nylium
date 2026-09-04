@@ -1,7 +1,7 @@
 from uuid import UUID, uuid4
 
 import sqlalchemy as sqla
-from sqlalchemy import Text
+from sqlalchemy import Boolean, Text
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
 from nylium.database.database import Database
@@ -27,6 +27,12 @@ class Types(Base):
     # values live in enum_options; instances never exist for enum types)
     kind: Mapped[str] = mapped_column(
         Text, nullable=False, default="object", server_default="object"
+    )
+    # Composition flag (ADR-0004): embedded types instantiate only as a
+    # prop value of an owner object, never standalone. Orthogonal to
+    # kind — an embedded type is still kind="object".
+    embedded: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
     )
 
     @classmethod

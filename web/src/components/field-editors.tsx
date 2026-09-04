@@ -2,6 +2,7 @@ import type { ChangeEvent, ReactElement } from "react";
 import { useEffect, useState } from "react";
 import type { ObjectView } from "../contracts";
 import { ArrayFieldModel, RefFieldModel } from "../fields/composite-fields";
+import { EmbeddedFieldModel } from "../fields/embedded-fields";
 import { EnumFieldModel } from "../fields/enum-fields";
 import { FieldFactory } from "../fields/field-factory";
 import { FloatingMenu } from "./floating-menu";
@@ -64,6 +65,9 @@ export function FieldEditor({ field, editor }: FieldProps): ReactElement {
   }
   if (field instanceof EnumFieldModel) {
     return <EnumInput field={field} editor={editor} />;
+  }
+  if (field instanceof EmbeddedFieldModel) {
+    return <EmbeddedSection field={field} editor={editor} />;
   }
   if (field instanceof RefFieldModel) {
     return <RefInput field={field} editor={editor} />;
@@ -547,6 +551,49 @@ function EnumInput({ field, editor }: { field: EnumFieldModel; editor: ObjectEdi
         )}
       </FloatingMenu>
     </FieldShell>
+  );
+}
+
+/** ADR-0004: collapsible inline section for a composition child —
+ * the child's own fields render through the same FieldEditor
+ * dispatch (recursion covers nested embeds), saving is the parent's
+ * single Ctrl+S. The generated child name shows read-only. */
+function EmbeddedSection({ field, editor }: { field: EmbeddedFieldModel; editor: ObjectEditorStore }): ReactElement {
+  // filled children open expanded; untouched drafts start collapsed
+  const [expanded, setExpanded] = useState(field.childUuid !== null);
+  const type = editor.typeOf(field.valueType);
+  const icon =
+    type === undefined ? null : <TypeIcon icon={type.icon} color={type.color} />;
+  return (
+    <div className="field field-array">
+      <span className="field-label">
+        {field.key} <span className="dim">→ {field.valueType}</span>
+      </span>
+      <div className="field-body">
+        <button
+          className="input type-picker-trigger embedded-toggle"
+          onClick={() => setExpanded((current) => !current)}
+        >
+          <span className="material-symbols-outlined type-picker-chevron" aria-hidden>
+            {expanded ? "expand_more" : "chevron_right"}
+          </span>
+          {icon}
+          <span className="type-picker-value">
+            {field.childName ?? (field.childUuid === null ? "—" : field.valueType)}
+          </span>
+        </button>
+        {expanded && (
+          <div className="embedded-section">
+            {field.childFields.map((child) => (
+              <FieldEditor key={child.key} field={child} editor={editor} />
+            ))}
+            {field.childFields.length === 0 && (
+              <span className="dim">No editable props</span>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 

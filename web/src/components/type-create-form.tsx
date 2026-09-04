@@ -20,6 +20,8 @@ export function TypeCreateForm(props: {
   const [icon, setIcon] = useState(DEFAULT_ICON);
   const [color, setColor] = useState(DEFAULT_COLOR);
   const [propsDraft, setPropsDraft] = useState<PropDraft[]>([{ ...EMPTY_PROP }]);
+  // ADR-0004: composition type — instances live only as prop values
+  const [embedded, setEmbedded] = useState(false);
 
   const updateProp = (index: number, patch: Partial<PropDraft>): void => {
     setPropsDraft((drafts) =>
@@ -37,7 +39,7 @@ export function TypeCreateForm(props: {
         propsRecord[draft.key] = draft.valueType;
       }
     }
-    void props.workspace.createType(name, pluralName, propsRecord, icon, color);
+    void props.workspace.createType(name, pluralName, propsRecord, icon, color, embedded);
   };
 
   return (
@@ -107,6 +109,14 @@ export function TypeCreateForm(props: {
         </div>
       ))}
       <div className="type-create-actions">
+        <label className="embedded-checkbox">
+          <input
+            type="checkbox"
+            checked={embedded}
+            onChange={(event) => setEmbedded(event.target.checked)}
+          />
+          Embedded — instances exist only as a property value
+        </label>
         <button
           className="button"
           onClick={() => setPropsDraft((drafts) => [...drafts, { ...EMPTY_PROP }])}
