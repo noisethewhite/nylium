@@ -16,8 +16,16 @@ from decimal import Decimal
 from typing import TypeAlias, cast
 from uuid import UUID
 
-from nylium.api.views import ObjectRef, ObjectView, TypeView
-from nylium.database import Database, EnumOptions, Instances, Props, Types, UnitParts
+from nylium.api.views import FileView, ObjectRef, ObjectView, TypeView
+from nylium.database import (
+    Database,
+    EnumOptions,
+    Files,
+    Instances,
+    Props,
+    Types,
+    UnitParts,
+)
 from nylium.objects.wembedded import EMBEDDED_NAME_SEPARATOR, WEmbedded
 from nylium.objects.wenum import WEnum
 from nylium.objects.wformula import Formula
@@ -100,6 +108,7 @@ class Api:
         for key, value_type_name in props.items():
             cls._check_formula_prop(formulas.get(key), value_type_name, owner_props)
         cls._check_color(color)
+        cls._check_icon(icon)
         WScalar.ensure_builtins()
         owner = WType.ensure(name, plural_name, embedded=embedded)
         for position, (key, value_type_name) in enumerate(props.items()):
@@ -132,6 +141,7 @@ class Api:
             raise ValidationError("enum name must not be empty")
         cls._check_reserved_name(final_name, "enum name")
         cls._check_color(color)
+        cls._check_icon(icon)
         owner = WType.ensure(final_name, kind=WType.KIND_ENUM)
         EnumOptions.sync(owner.uuid, [(None, v) for v in (options or [])])
         Types.update(owner.uuid, owner.name, None, icon, color)
@@ -184,6 +194,7 @@ class Api:
             raise ValidationError("unit base name must not be empty")
         cls._check_reserved_name(final_name, "unit name")
         cls._check_color(color)
+        cls._check_icon(icon)
         owner = WType.ensure(final_name, kind=WType.KIND_UNIT)
         items: list[tuple[UUID | None, str, Decimal, Decimal, bool]] = [
             (None, base_name, Decimal(1), Decimal(0), True),
@@ -403,6 +414,8 @@ class Api:
         if collision is not None and collision != owner.uuid:
             raise ValueError(f"type {final_name!r} already exists")
         final_plural = owner.plural_name if plural_name is None else plural_name
+        if icon is not None:
+            cls._check_icon(icon)
         final_icon = owner.icon if icon is None else icon
         if color is not None:
             cls._check_color(color)
@@ -524,6 +537,57 @@ class Api:
             raise RuntimeError(f"updated instance {uuid} vanished")
         return view
 
+    # --- files (ADR-0006) ---
+
+    @classmethod
+    @Database.sessionmethod(bundled=True, commit=True)
+    def create_file(
+        cls, type_name: str, filename: str, mime: str, data: bytes
+    ) -> ObjectView:
+        """Atomic upload: one transaction creates the instance and the
+        files row, then the blob lands on disk last. If the disk write
+        fails the transaction rolls back — no half-created pointer."""
+        from nylium.objects.wfile import WFile
+        from nylium.server.errors import ValidationError
+
+        if not WFile.is_file_type(type_name):
+            raise ValidationError(
+                f"type {type_name!r} is not a file type — use /api/files only for File/Document/Image"
+            )
+        if not filename.strip():
+            raise ValidationError("filename must not be empty")
+        if len(data) > WFile.MAX_UPLOAD_BYTES:
+            raise ValidationError(
+                f"file exceeds the {WFile.MAX_UPLOAD_BYTES // (1024 * 1024)} MiB upload cap"
+            )
+        if not WFile.accepts_mime(type_name, mime):
+            raise ValidationError(
+                f"{type_name} does not accept MIME {mime!r}"
+            )
+        view = cls.create_object(type_name, {"name": filename})
+        Files.create(view.uuid, mime, len(data))
+        blob = WFile.blob_path(view.uuid)
+        tmp = blob.with_suffix(".tmp")
+        try:
+            _ = tmp.write_bytes(data)
+            _ = tmp.replace(blob)  # rename is atomic on the same filesystem
+        finally:
+            tmp.unlink(missing_ok=True)
+        return view
+
+    @classmethod
+    @Database.sessionmethod(bundled=True, commit=False)
+    def get_file(cls, uuid: UUID) -> FileView | None:
+        from nylium.objects.wfile import WFile
+
+        row = Files.by_uuid(uuid)
+        if row is None or not Instances.exists(uuid):
+            return None
+        type_name = Instances.get_type_name(uuid)
+        if not WFile.is_file_type(type_name):
+            return None
+        return FileView(mime=row.mime, size_bytes=row.size_bytes)
+
     @classmethod
     @Database.sessionmethod(bundled=True, commit=True)
     def delete_object(cls, uuid: UUID) -> bool:
@@ -535,6 +599,16 @@ class Api:
             raise ValidationError(
                 "embedded objects are deleted with their owner or by clearing the prop that holds them"
             )
+        # ADR-0006: deleting a file instance also drops its blob, and an
+        # Image used as an icon resets every referencing type to the
+        # default glyph — no dangling img: pointers.
+        type_name = Instances.get_type_name(uuid)
+        from nylium.objects.wfile import WFile
+
+        if type_name == WFile.TYPE_IMAGE:
+            WFile.reset_icons_referencing(uuid)
+        if WFile.is_file_type(type_name):
+            WFile.delete_blob(uuid)
         WObject.wrap(uuid).delete()
         return True
 
@@ -731,6 +805,21 @@ class Api:
 
         if not WColor.HEX_RE.fullmatch(color):
             raise ValidationError(f"color must be #RRGGBB hex, got {color!r}")
+
+    @classmethod
+    def _check_icon(cls, icon: str) -> None:
+        """ADR-0006: an icon is either a Material glyph name or
+        `img:<uuid>` pointing at a live Image instance."""
+        from nylium.objects.wfile import WFile
+        from nylium.server.errors import ValidationError
+
+        image_uuid = WFile.parse_icon_image(icon)
+        if image_uuid is None:
+            return
+        if not WFile.image_instance_exists(image_uuid):
+            raise ValidationError(
+                f"icon {icon!r} does not reference a live Image instance"
+            )
 
     @classmethod
     def _check_reserved_name(cls, value: str, what: str) -> None:

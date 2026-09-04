@@ -118,4 +118,25 @@ export class NyliumApi extends HttpTransport {
   deleteObject(uuid: string): Promise<void> {
     return this.requestVoid("DELETE", `/objects/${uuid}`);
   }
+
+  /** ADR-0006: upload a blob as a File/Document/Image instance. The
+   * multipart body carries the bytes; the instance is a uuid-stable
+   * pointer, so renaming the object never breaks references. */
+  async uploadFile(typeName: string, file: File): Promise<ObjectView> {
+    const form = new FormData();
+    form.append("file", file, file.name);
+    const response = await fetch(
+      `${NyliumApi.BASE_URL}/files?type_name=${encodeURIComponent(typeName)}`,
+      { method: "POST", body: form, credentials: "same-origin" },
+    );
+    if (!response.ok) {
+      throw new Error(`upload failed: ${response.status} ${await response.text()}`);
+    }
+    return (await response.json()) as ObjectView;
+  }
+
+  /** Blob URL for previews/downloads — served from GET /api/files/{uuid}. */
+  static fileUrl(uuid: string): string {
+    return `/api/files/${encodeURIComponent(uuid)}`;
+  }
 }

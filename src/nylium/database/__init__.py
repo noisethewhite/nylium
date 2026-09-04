@@ -16,7 +16,8 @@ from .tables import (
     EnumOptions,
     UnitParts,
     InstanceValues,
-    ArrayValues
+    ArrayValues,
+    Files,
 )
 
 
@@ -38,4 +39,5 @@ __all__ = [
     "UnitParts",
     "InstanceValues",
     "ArrayValues",
+    "Files",
 ]

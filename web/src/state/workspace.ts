@@ -390,6 +390,32 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
     });
   }
 
+  /** ADR-0006: File/Document/Image objects exist only via upload — the
+   * instance is a pointer to the blob, so "new object" for these types
+   * is a file pick, not a blank row. */
+  async uploadFile(typeName: string, file: File): Promise<void> {
+    await this.guard(async () => {
+      const created = await this.api.uploadFile(typeName, file);
+      this.setState({
+        ...this.getSnapshot(),
+        objects: [...this.getSnapshot().objects, created],
+      });
+      this.openObject(created.uuid);
+    });
+  }
+
+  /** Upload an image and return its `img:<uuid>` icon value (ADR-0006).
+   * The Image instance joins the object list so the user can find and
+   * rename it; deleting it later resets icons back to the glyph. */
+  async uploadIconImage(file: File): Promise<string> {
+    const created = await this.api.uploadFile(TypeNames.IMAGE, file);
+    this.setState({
+      ...this.getSnapshot(),
+      objects: [...this.getSnapshot().objects, created],
+    });
+    return `${TypeNames.IMG_ICON_PREFIX}${created.uuid}`;
+  }
+
   async deleteObject(uuid: string): Promise<void> {
     await this.guard(async () => {
       await this.api.deleteObject(uuid);

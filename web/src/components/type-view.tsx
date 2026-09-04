@@ -163,6 +163,7 @@ export function TypeViewPanel(props: {
               icon={iconDraft}
               color={colorDraft}
               size={22}
+              onUploadImage={(file) => workspace.uploadIconImage(file)}
               onChange={(icon, color) => {
                 setIconDraft(icon);
                 setColorDraft(color);

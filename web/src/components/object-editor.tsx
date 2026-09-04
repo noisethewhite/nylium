@@ -1,6 +1,8 @@
 import type { ReactElement } from "react";
 import { useMemo } from "react";
 import type { ObjectView, TypeView } from "../contracts";
+import { TypeNames } from "../contracts";
+import { NyliumApi } from "../net/nylium-api";
 import { ObjectEditorStore } from "../state/object-editor";
 import { useObservable } from "../state/use-observable";
 import { useSaveShortcut } from "../state/use-save-shortcut";
@@ -70,6 +72,9 @@ function ObjectEditorInner(props: {
         </div>
       )}
       <TagChips editor={store} />
+      {TypeNames.isFileType(props.object.type_name) && (
+        <FileBlock object={props.object} />
+      )}
       <div className="object-editor-fields">
         {gridFields.map((field) => (
           <FieldEditor key={field.key} field={field} editor={store} />
@@ -93,6 +98,35 @@ function ObjectEditorInner(props: {
           Delete
         </button>
       </div>
+    </div>
+  );
+}
+
+/** ADR-0006: file objects render their blob inline (images) or as a
+ * download affordance (documents/files). The blob URL is uuid-keyed, so
+ * renames never break it. */
+function FileBlock(props: { object: ObjectView }): ReactElement {
+  const url = NyliumApi.fileUrl(props.object.uuid);
+  const name = props.object.props["name"];
+  const label =
+    name !== undefined && "value" in name && typeof name.value === "string"
+      ? name.value
+      : "file";
+  if (props.object.type_name === TypeNames.IMAGE) {
+    return (
+      <div className="file-block">
+        <img className="file-block-image" src={url} alt={label} />
+        <a className="file-block-link dim" href={url} download={label}>
+          Download original
+        </a>
+      </div>
+    );
+  }
+  return (
+    <div className="file-block">
+      <a className="file-block-link" href={url} download={label}>
+        Download {label}
+      </a>
     </div>
   );
 }

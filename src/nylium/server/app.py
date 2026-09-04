@@ -14,6 +14,7 @@ from nylium.auth.routes import auth_routes
 from nylium.api.views import ObjectView, TypeView
 from nylium.database.database import Database
 from nylium.database.tables import Base
+from nylium.objects.wfile import WFile
 from nylium.objects.wscalar import WScalar
 from nylium.server.errors import errors
 from nylium.server.routes import routes
@@ -33,6 +34,9 @@ class NyliumApp:
         cls._ensure_schema()
         # re-stamp builtin scalar icons on every boot — they are canonical
         WScalar.ensure_builtins()
+        # ADR-0006: File/Document/Image builtins + blob-dir orphan sweep
+        WFile.ensure_builtins()
+        WFile.sweep_orphans()
         app = FastAPI(title=cls.TITLE)
         cls._mount_api(app)
         errors.register(app)
@@ -175,4 +179,12 @@ class NyliumApp:
         app.add_api_route(
             f"{prefix}/objects/{{object_uuid}}", routes.delete_object, methods=["DELETE"],
             status_code=no_content, dependencies=guard,
+        )
+        app.add_api_route(
+            f"{prefix}/files", routes.upload_file, methods=["POST"],
+            status_code=created, response_model=ObjectView, dependencies=guard,
+        )
+        app.add_api_route(
+            f"{prefix}/files/{{file_uuid}}", routes.download_file, methods=["GET"],
+            dependencies=guard,
         )

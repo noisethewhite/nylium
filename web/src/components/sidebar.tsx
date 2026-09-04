@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { TypeNames } from "../contracts";
 import { AuthStore } from "../state/auth";
 import { useObservable } from "../state/use-observable";
 import { WorkspaceStore } from "../state/workspace";
@@ -21,12 +22,26 @@ export function Sidebar(props: {
   const authState = useObservable(props.auth);
   const types = props.workspace.userTypes();
   const [plusMode, setPlusMode] = useState<PlusMenuMode>("root");
+  const uploadType = useRef<string | null>(null);
+  const fileInput = useRef<HTMLInputElement | null>(null);
   const objectTypes = types.filter(
     (view) => view.kind === "object" && !view.embedded,
   );
 
   return (
     <aside className="sidebar">
+      <input
+        ref={fileInput}
+        type="file"
+        hidden
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          event.target.value = "";
+          if (file !== undefined && uploadType.current !== null) {
+            void props.workspace.uploadFile(uploadType.current, file);
+          }
+        }}
+      />
       <div className="sidebar-header">
         <span className="brand">nylium</span>
         <FloatingMenu
@@ -66,6 +81,12 @@ export function Sidebar(props: {
                   }
                   onPick={(view) => {
                     dismiss();
+                    if (TypeNames.isFileType(view.name)) {
+                      // ADR-0006: file objects are uploads, not blank rows
+                      uploadType.current = view.name;
+                      fileInput.current?.click();
+                      return;
+                    }
                     void props.workspace.createObject(view.name);
                   }}
                 />

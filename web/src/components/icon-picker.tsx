@@ -1,18 +1,23 @@
 import type { ReactElement } from "react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { FloatingMenu } from "./floating-menu";
+import { TypeNames } from "../contracts";
 import { DEFAULT_COLOR, DEFAULT_ICON, ICON_COLORS, ICON_NAMES, TypeIcon } from "./type-icon";
 
 /** Icon + color chooser popover, used in the type editor header and the
  * create-type form. Click the glyph to open; pick an icon from the
- * filterable grid and a swatch below. */
+ * filterable grid and a swatch below. When `onUploadImage` is given, an
+ * extra row lets the user upload an Image blob as the icon (ADR-0006) —
+ * the callback receives the file and returns the `img:<uuid>` value. */
 export function IconPicker(props: {
   icon: string;
   color: string;
   onChange: (icon: string, color: string) => void;
+  onUploadImage?: (file: File) => Promise<string>;
   size?: number;
 }): ReactElement {
   const [query, setQuery] = useState("");
+  const imageInput = useRef<HTMLInputElement | null>(null);
 
   const shown = ICON_NAMES.filter((name) => name.includes(query.toLowerCase()));
 
@@ -33,6 +38,39 @@ export function IconPicker(props: {
             autoFocus
             onChange={(event) => setQuery(event.target.value)}
           />
+          {props.onUploadImage !== undefined && (
+            <div className="icon-picker-upload-row">
+              <input
+                ref={imageInput}
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  event.target.value = "";
+                  if (file !== undefined && props.onUploadImage !== undefined) {
+                    void props.onUploadImage(file).then((icon) =>
+                      props.onChange(icon, props.color),
+                    );
+                  }
+                }}
+              />
+              <button
+                className="type-menu-row"
+                onClick={() => imageInput.current?.click()}
+              >
+                Upload image…
+              </button>
+              {props.icon.startsWith(TypeNames.IMG_ICON_PREFIX) && (
+                <button
+                  className="type-menu-row"
+                  onClick={() => props.onChange(DEFAULT_ICON, props.color)}
+                >
+                  Back to glyph
+                </button>
+              )}
+            </div>
+          )}
           <div className="icon-picker-grid">
             {shown.map((name) => (
               <button

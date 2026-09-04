@@ -7,8 +7,11 @@ from __future__ import annotations
 
 from uuid import UUID
 
+from fastapi import UploadFile
+from fastapi.responses import FileResponse
+
 from nylium.api.api import Api
-from nylium.api.views import ObjectView, TypeView
+from nylium.api.views import ObjectView, ScalarValue, TypeView
 from nylium.server.bodies import (
     CreateEnumBody,
     CreateObjectBody,
@@ -134,3 +137,32 @@ class routes:
     def delete_object(cls, object_uuid: UUID) -> None:
         if not Api.delete_object(object_uuid):
             raise NotFoundError(f"no object {object_uuid}")
+
+    # --- files (ADR-0006) ---
+
+    @classmethod
+    def upload_file(cls, type_name: str, file: UploadFile) -> ObjectView:
+        """Multipart upload; the declared MIME comes from the client and is
+        validated against the target file type's policy in Api.create_file."""
+        data = file.file.read()
+        return Api.create_file(type_name, file.filename or "", file.content_type or "application/octet-stream", data)
+
+    @classmethod
+    def download_file(cls, file_uuid: UUID) -> FileResponse:
+        view = Api.get_file(file_uuid)
+        if view is None:
+            raise NotFoundError(f"no file {file_uuid}")
+        from nylium.objects.wfile import WFile
+
+        path = WFile.blob_path(file_uuid)
+        if not path.is_file():
+            raise NotFoundError(f"blob for file {file_uuid} is missing")
+        obj = Api.get_object(file_uuid)
+        filename: str | None = None
+        if obj is not None:
+            name_prop = obj.props.get("name")
+            if isinstance(name_prop, ScalarValue) and isinstance(
+                name_prop.value, str
+            ):
+                filename = name_prop.value
+        return FileResponse(path, media_type=view.mime, filename=filename)

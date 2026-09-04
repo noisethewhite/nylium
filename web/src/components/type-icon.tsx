@@ -1,4 +1,5 @@
 import type { ReactElement } from "react";
+import { TypeNames } from "../contracts";
 
 /** Curated monochrome icon registry — every user type picks from these.
  * Names are Material Symbols identifiers (snake_case ligatures); unknown
@@ -46,6 +47,11 @@ export const ICON_COLORS: Record<string, string> = {
 export const DEFAULT_ICON = "inventory_2";
 export const DEFAULT_COLOR = "#9e9e9e";
 
+/** ADR-0006: a type icon may be `img:<uuid>` — the blob of a live Image
+ * instance served from GET /api/files/{uuid}. Backend validates on write;
+ * here we only recognize the shape and fall back to the glyph on delete.
+ * The prefix lives in contracts (TypeNames.IMG_ICON_PREFIX). */
+
 const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 
 /** Stored names that predated registry validation — map them to the
@@ -59,16 +65,28 @@ const ICON_ALIASES: Record<string, string> = {
 };
 
 /** Monochrome Material Symbols glyph for a type; unknown icon/color
- * resolve to the defaults so a stale stored value can never blank the UI. */
+ * resolve to the defaults so a stale stored value can never blank the UI.
+ * `img:<uuid>` icons render the image blob itself (ADR-0006). */
 export function TypeIcon(props: {
   icon: string;
   color: string;
   size?: number;
 }): ReactElement {
+  const size = props.size ?? 16;
+  const imageUuid = TypeNames.imgIconUuid(props.icon);
+  if (imageUuid !== null) {
+    return (
+      <img
+        className="type-icon type-icon-image"
+        src={`/api/files/${encodeURIComponent(imageUuid)}`}
+        alt=""
+        style={{ width: size, height: size }}
+      />
+    );
+  }
   const aliased = ICON_ALIASES[props.icon] ?? props.icon;
   const name = ICON_NAMES.includes(aliased) ? aliased : DEFAULT_ICON;
   const hex = HEX_COLOR.test(props.color) ? props.color : DEFAULT_COLOR;
-  const size = props.size ?? 16;
   return (
     <span
       className="material-symbols-outlined type-icon"

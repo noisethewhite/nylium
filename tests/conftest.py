@@ -15,10 +15,12 @@ from nylium.server import NyliumApp
 
 
 @pytest.fixture(autouse=True)
-def _auth_env(monkeypatch: pytest.MonkeyPatch) -> None:
+def _auth_env(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
     """RP config for WebAuthn options — read lazily from the environment."""
     monkeypatch.setenv("RP_ID", "localhost")
     monkeypatch.setenv("RP_ORIGIN", "http://testserver")
+    # ADR-0006: blobs land in a per-test tmp dir
+    monkeypatch.setenv("FILES_DIR", str(tmp_path / "files"))
 
 
 @pytest.fixture(autouse=True)

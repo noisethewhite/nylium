@@ -768,3 +768,92 @@ def test_formulas_eval_over_http(auth_client: TestClient) -> None:
     assert updated.json()["props"]["total"] == {"value": "0", "unit": None}
 
 
+
+
+def test_files_over_http(auth_client: TestClient) -> None:
+    """Upload/download roundtrip over the wire (ADR-0006): builtin file
+    types are boot-seeded by NyliumApp.create, blobs live under the
+    test FILES_DIR, delete cascades to disk."""
+    from nylium.objects.wfile import WFile
+
+    png = b"\x89PNG\r\n\x1a\n" + b"\x00" * 16
+
+    # upload an image
+    up = auth_client.post(
+        "/api/files",
+        params={"type_name": "Image"},
+        files={"file": ("icon.png", png, "image/png")},
+    )
+    assert up.status_code == 201, up.text
+    obj = up.json()
+    assert obj["type_name"] == "Image"
+    assert obj["props"]["name"] == {"value": "icon.png", "unit": None}
+
+    # download streams the bytes back with the original mime + filename
+    dl = auth_client.get(f"/api/files/{obj['uuid']}")
+    assert dl.status_code == 200, dl.text
+    assert dl.content == png
+    assert dl.headers["content-type"].startswith("image/png")
+    assert "icon.png" in dl.headers["content-disposition"]
+
+    # MIME policy: Image rejects non-image bytes
+    bad = auth_client.post(
+        "/api/files",
+        params={"type_name": "Image"},
+        files={"file": ("x.pdf", b"%PDF-1.4", "application/pdf")},
+    )
+    assert bad.status_code == 422, bad.text
+
+    # File takes anything
+    anyfile = auth_client.post(
+        "/api/files",
+        params={"type_name": "File"},
+        files={"file": ("blob.bin", b"junk", "application/x-junk")},
+    )
+    assert anyfile.status_code == 201, anyfile.text
+
+    # rename-safe: patch the name prop, bytes stay
+    rename = auth_client.patch(
+        f"/api/objects/{obj['uuid']}", json={"props": {"name": {"value": "renamed.png"}}}
+    )
+    assert rename.status_code == 200, rename.text
+    assert auth_client.get(f"/api/files/{obj['uuid']}").content == png
+
+    # delete cascades: row gone, blob gone
+    deleted = auth_client.delete(f"/api/objects/{obj['uuid']}")
+    assert deleted.status_code == 204, deleted.text
+    assert not WFile.blob_path(obj["uuid"]).exists()
+    assert auth_client.get(f"/api/files/{obj['uuid']}").status_code == 404
+
+    # unknown uuid is a 404, not a 500
+    from uuid import uuid4
+
+    assert auth_client.get(f"/api/files/{uuid4()}").status_code == 404
+
+
+def test_img_icon_over_http(auth_client: TestClient) -> None:
+    """img:<uuid> type icons validate against live Image instances and
+    fall back to the default glyph when the image is deleted."""
+    png = b"\x89PNG\r\n\x1a\n" + b"\x00" * 16
+    up = auth_client.post(
+        "/api/files",
+        params={"type_name": "Image"},
+        files={"file": ("icon.png", png, "image/png")},
+    )
+    assert up.status_code == 201, up.text
+    icon = f"img:{up.json()['uuid']}"
+
+    created = dsl.create_type(auth_client, "Book", {"name": "String"}, icon=icon)
+    assert created["icon"] == icon
+
+    from uuid import uuid4
+
+    dead = auth_client.post(
+        "/api/types",
+        json={"name": "Ghost", "plural_name": "Ghosts", "props": {"name": "String"}, "icon": f"img:{uuid4()}"},
+    )
+    assert dead.status_code == 422, dead.text
+
+    deleted = auth_client.delete(f"/api/objects/{up.json()['uuid']}")
+    assert deleted.status_code == 204
+    assert auth_client.get("/api/types/Book").json()["icon"] == "inventory_2"

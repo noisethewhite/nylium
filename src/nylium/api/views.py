@@ -176,6 +176,18 @@ class EmbeddedValue:
 PropValue = ScalarValue | RefValue | ArrayValue | EmbeddedValue
 
 
+# --- file views (ADR-0006) ---
+
+
+@dataclass(config=_CONFIG)
+class FileView:
+    """Blob metadata for a File/Document/Image instance — the bytes
+    stream from disk separately, this is what the API can serialize."""
+
+    mime: str
+    size_bytes: int
+
+
 @dataclass(config=_CONFIG)
 class TagView:
     """A derived tag (ADR-0005): one array-membership edge projected back

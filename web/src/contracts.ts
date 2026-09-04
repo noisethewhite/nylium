@@ -126,6 +126,16 @@ export abstract class TypeNames {
   static readonly COLOR = "Color";
   static readonly MONTH_DAY = "MonthDay";
   static readonly MONTH_DAY_TIME = "MonthDayTime";
+  /** Blob-pointer builtins (ADR-0006): instances reference a file blob
+   * under FILES_DIR keyed by instance uuid. */
+  static readonly FILE = "File";
+  static readonly DOCUMENT = "Document";
+  static readonly IMAGE = "Image";
+  static readonly FILES: readonly string[] = [
+    TypeNames.FILE,
+    TypeNames.DOCUMENT,
+    TypeNames.IMAGE,
+  ];
   static readonly SCALARS: readonly string[] = [
     TypeNames.STRING,
     TypeNames.INTEGER,
@@ -151,6 +161,20 @@ export abstract class TypeNames {
 
   static isScalar(name: string): boolean {
     return TypeNames.SCALARS.includes(name);
+  }
+
+  static isFileType(name: string): boolean {
+    return TypeNames.FILES.includes(name);
+  }
+
+  /** ADR-0006: `img:<uuid>` type icons — blob of a live Image instance.
+   * Contract-level so both the icon renderer and stores can parse it. */
+  static readonly IMG_ICON_PREFIX = "img:";
+
+  static imgIconUuid(icon: string): string | null {
+    return icon.startsWith(TypeNames.IMG_ICON_PREFIX)
+      ? icon.slice(TypeNames.IMG_ICON_PREFIX.length)
+      : null;
   }
 
   static isArray(name: string): boolean {

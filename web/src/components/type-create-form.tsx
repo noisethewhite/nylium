@@ -52,6 +52,7 @@ export function TypeCreateForm(props: {
               icon={icon}
               color={color}
               size={22}
+              onUploadImage={(file) => props.workspace.uploadIconImage(file)}
               onChange={(nextIcon, nextColor) => {
                 setIcon(nextIcon);
                 setColor(nextColor);
