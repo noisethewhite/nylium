@@ -29,8 +29,9 @@ from nylium.database import (
 if TYPE_CHECKING:
     from nylium.objects.wtype import WType
 
-# (uuid | None, key, value_type_uuid) — None uuid means "new prop"
-SchemaItem: TypeAlias = "tuple[UUID | None, str, UUID]"
+# (uuid | None, key, value_type_uuid, formula | None) — None uuid means
+# "new prop"; None formula means a plain stored prop
+SchemaItem: TypeAlias = "tuple[UUID | None, str, UUID, str | None]"
 
 
 class _PropKeyedValues(Protocol):
@@ -67,6 +68,7 @@ class WProp:
         self._uuid: UUID = row.uuid
         self._key: str = row.key
         self._value_type_uuid: UUID = row.value_type_uuid
+        self._formula: str | None = row.formula
 
     @property
     def uuid(self) -> UUID:
@@ -75,6 +77,10 @@ class WProp:
     @property
     def key(self) -> str:
         return self._key
+
+    @property
+    def formula(self) -> str | None:
+        return self._formula
 
     def _live_row(self) -> Props:
         if sqla.inspect(self._row).detached:
@@ -135,12 +141,12 @@ class WProp:
                 sqla.select(Props).where(Props.owner_type_uuid == owner.uuid)
             )
         }
-        kept = {uuid for uuid, _, _ in items if uuid is not None}
+        kept = {uuid for uuid, _, _, _ in items if uuid is not None}
         for stale_uuid, stale_row in existing.items():
             if stale_uuid not in kept:
                 session.delete(stale_row)
         session.flush()
-        for position, (prop_uuid, key, value_type_uuid) in enumerate(items):
+        for position, (prop_uuid, key, value_type_uuid, formula) in enumerate(items):
             if prop_uuid is None or prop_uuid not in existing:
                 session.add(
                     Props(
@@ -149,6 +155,7 @@ class WProp:
                         owner_type_uuid=owner.uuid,
                         value_type_uuid=value_type_uuid,
                         position=position,
+                        formula=formula,
                     )
                 )
                 continue
@@ -158,6 +165,7 @@ class WProp:
                 row.value_type_uuid = value_type_uuid
             row.key = key
             row.position = position
+            row.formula = formula
         session.flush()
 
     @classmethod
@@ -172,13 +180,14 @@ class WProp:
     @Database.sessionmethod(bundled=False, commit=True)
     def ensure(
         cls, session: Session, owner: "WType", key: str, value_type: "WType",
-        position: int = 0,
+        position: int = 0, formula: str | None = None,
     ) -> "WProp":
         existing = cls.by_key(owner, key)
         if existing is not None:
             live = existing._live_row()
             live.value_type_uuid = value_type.uuid
             live.position = position
+            live.formula = formula
             return existing
         row = Props(
             uuid=uuid4(),
@@ -186,6 +195,7 @@ class WProp:
             owner_type_uuid=owner.uuid,
             value_type_uuid=value_type.uuid,
             position=position,
+            formula=formula,
         )
         session.add(row)
         session.flush()

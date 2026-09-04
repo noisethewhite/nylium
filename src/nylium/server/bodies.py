@@ -28,6 +28,8 @@ class CreateTypeBody:
     name: str
     plural_name: str
     props: dict[str, str] = field(default_factory=dict)
+    # ADR-0005: optional prop key -> formula string
+    formulas: dict[str, str] | None = None
     icon: str = "inventory_2"
     color: str = "gray"
     # ADR-0004: composition type — instances exist only as prop values
@@ -61,6 +63,8 @@ class SyncPropItem:
     key: str
     value_type: str
     uuid: UUID | None = None
+    # ADR-0005: a formula over the owner's Array<T> props, or None
+    formula: str | None = None
 
 
 @dataclass(config=_CONFIG)

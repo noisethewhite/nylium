@@ -20,9 +20,10 @@ from nylium.api.views import ObjectRef, ObjectView, TypeView
 from nylium.database import Database, EnumOptions, Instances, Props, Types, UnitParts
 from nylium.objects.wembedded import EMBEDDED_NAME_SEPARATOR, WEmbedded
 from nylium.objects.wenum import WEnum
+from nylium.objects.wformula import Formula
 from nylium.objects.wobject import WObject
 from nylium.objects.wprop import WProp
-from nylium.objects.wscalar import WScalar, WString
+from nylium.objects.wscalar import WInteger, WNumeric, WScalar, WString
 from nylium.objects.wtype import WType
 from nylium.objects.wtypemeta import StoredValue, WTypeMeta
 
@@ -65,16 +66,20 @@ class Api:
         icon: str = "inventory_2",
         color: str = "gray",
         embedded: bool = False,
+        formulas: dict[str, str] | None = None,
     ) -> TypeView:
         """props maps key -> value type name. Missing value types are created.
         Dict order becomes the schema's display order (positions).
         The schema must open with the `name` prop (String) — see
         NAME_PROP_KEY. embedded marks a composition type (ADR-0004):
-        its instances exist only as a prop value of an owner object."""
+        its instances exist only as a prop value of an owner object.
+        formulas maps prop key -> formula string (ADR-0005); a formula
+        prop must be Numeric (or Integer for a bare COUNT)."""
         # lazy: a module-level import would circle api -> server -> api
         from nylium.server.errors import ValidationError
 
         props = dict(props or {})
+        formulas = dict(formulas or {})
         keys = list(props)
         if not keys or keys[0] != NAME_PROP_KEY:
             raise ValidationError(f"first prop of a type must be {NAME_PROP_KEY!r}")
@@ -86,10 +91,24 @@ class Api:
         for key in keys:
             # keys land inside generated embedded names — same reservation
             cls._check_reserved_name(key, "prop key")
+        strangers = sorted(set(formulas) - set(props))
+        if strangers:
+            raise ValidationError(
+                f"formula keys {strangers!r} do not name a prop of {name!r}"
+            )
+        owner_props = list(props.items())
+        for key, value_type_name in props.items():
+            cls._check_formula_prop(formulas.get(key), value_type_name, owner_props)
         WScalar.ensure_builtins()
         owner = WType.ensure(name, plural_name, embedded=embedded)
         for position, (key, value_type_name) in enumerate(props.items()):
-            _ = WProp.ensure(owner, key, cls._ensure_value_type(value_type_name), position)
+            _ = WProp.ensure(
+                owner,
+                key,
+                cls._ensure_value_type(value_type_name),
+                position,
+                formulas.get(key),
+            )
         Types.update(owner.uuid, owner.name, owner.plural_name, icon, color)
         return TypeView.from_name(name)
 
@@ -249,14 +268,16 @@ class Api:
     @classmethod
     @Database.sessionmethod(bundled=True, commit=True)
     def sync_props(
-        cls, type_name: str, items: list[tuple[UUID | None, str, str]]
+        cls, type_name: str, items: list[tuple[UUID | None, str, str, str | None]]
     ) -> TypeView:
         """Apply the type editor's full prop draft at once. Each item is
-        (uuid | None, key, value type name): a matching uuid edits that
-        prop in place (rename/retype — a retype purges the old values),
-        None creates a new prop, props absent from the draft are deleted
-        for every instance at once. The pinned `name` prop must keep its
-        uuid, its key, its String type and the first position."""
+        (uuid | None, key, value type name, formula | None): a matching
+        uuid edits that prop in place (rename/retype — a retype purges
+        the old values), None creates a new prop, props absent from the
+        draft are deleted for every instance at once. The pinned `name`
+        prop must keep its uuid, its key, its String type and the first
+        position. A formula (ADR-0005) must be Numeric, or Integer for a
+        bare COUNT."""
         from nylium.server.errors import ValidationError
 
         owner = WType.by_name(type_name)
@@ -269,7 +290,7 @@ class Api:
         )
         if not items:
             raise ValidationError("a type must keep at least its 'name' prop")
-        first_uuid, first_key, first_type = items[0]
+        first_uuid, first_key, first_type, _ = items[0]
         if (
             name_prop is not None
             and (first_uuid, first_key, first_type)
@@ -278,24 +299,27 @@ class Api:
             raise ValidationError(
                 f"the {NAME_PROP_KEY!r} prop must stay first, keyed {NAME_PROP_KEY!r}, typed {WString.TYPE_NAME!r}"
             )
-        keys = [key for _, key, _ in items]
+        keys = [key for _, key, _, _ in items]
         if any(not key.strip() for key in keys):
             raise ValidationError("prop keys must not be empty")
         for key in keys:
             cls._check_reserved_name(key, "prop key")
         if len(set(keys)) != len(keys):
             raise ValidationError(f"duplicate prop keys in {keys!r}")
-        strangers = [uuid for uuid, _, _ in items if uuid is not None and uuid not in by_uuid]
+        strangers = [uuid for uuid, _, _, _ in items if uuid is not None and uuid not in by_uuid]
         if strangers:
             raise ValidationError(f"prop uuids {strangers!r} do not belong to {type_name!r}")
-        resolved: list[tuple[UUID | None, str, UUID]] = [
-            (uuid, key, cls._ensure_value_type(value_type_name).uuid)
-            for uuid, key, value_type_name in items
+        owner_props = [(key, value_type_name) for _, key, value_type_name, _ in items]
+        for _, _, value_type_name, formula in items:
+            cls._check_formula_prop(formula, value_type_name, owner_props)
+        resolved: list[tuple[UUID | None, str, UUID, str | None]] = [
+            (uuid, key, cls._ensure_value_type(value_type_name).uuid, formula)
+            for uuid, key, value_type_name, formula in items
         ]
         # embedded children die with their prop: deleting or retyping an
         # embedded prop would cascade the link rows away and orphan the
         # child instances — destroy them while the prop still stands
-        kept = {uuid: (key, vt) for uuid, key, vt in resolved if uuid is not None}
+        kept = {uuid: (key, vt) for uuid, key, vt, _ in resolved if uuid is not None}
         embedded_renamed = False
         for prop in existing:
             old_value_type = prop.value_type()
@@ -475,6 +499,39 @@ class Api:
         return True
 
     # --- internals ---
+
+    @classmethod
+    def _member_props(cls, element_type_name: str) -> list[tuple[str, str]] | None:
+        """The schema of an array's element type, for formula validation.
+        None when the element type cannot be resolved at all."""
+        element = WType.by_name(element_type_name)
+        if element is None:
+            return None
+        return [(prop.key, prop.value_type().name) for prop in WProp.all_for(element)]
+
+    @classmethod
+    def _check_formula_prop(
+        cls,
+        formula: str | None,
+        value_type_name: str,
+        owner_type_props: list[tuple[str, str]],
+    ) -> None:
+        """Validate a prop's formula (ADR-0005) against the owner schema.
+        A formula prop must be Numeric — or Integer for a bare COUNT."""
+        from nylium.server.errors import ValidationError
+
+        if formula is None:
+            return
+        if value_type_name == WInteger.TYPE_NAME:
+            if not Formula.is_bare_count(formula):
+                raise ValidationError(
+                    "an Integer formula prop must be a bare COUNT(<array>) call"
+                )
+        elif value_type_name != WNumeric.TYPE_NAME:
+            raise ValidationError(
+                f"a formula prop must be {WNumeric.TYPE_NAME} (or {WInteger.TYPE_NAME} for a bare COUNT), got {value_type_name!r}"
+            )
+        Formula.validate(formula, owner_type_props, cls._member_props)
 
     @classmethod
     def _ensure_value_type(cls, name: str) -> WType:

@@ -123,7 +123,12 @@ def test_renaming_prop_key_renames_tag():
     shelf = Api.create_object("Shelf", {"name": "Sci-Fi", "books": [book.uuid]})
 
     items = [
-        (prop.uuid, "items" if prop.key == "books" else prop.key, prop.value_type)
+        (
+            prop.uuid,
+            "items" if prop.key == "books" else prop.key,
+            prop.value_type,
+            prop.formula,
+        )
         for prop in view.props
     ]
     _ = Api.sync_props("Shelf", items)

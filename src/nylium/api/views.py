@@ -68,6 +68,9 @@ class PropView:
     uuid: UUID
     key: str
     value_type: str
+    # ADR-0005: a formula over the owner's Array<T> props, or None for a
+    # plain stored prop
+    formula: str | None = None
 
 
 @dataclass(config=_CONFIG)
@@ -112,7 +115,12 @@ class TypeView:
                 for part in UnitParts.list_for(owner.uuid)
             ],
             props=[
-                PropView(uuid=prop.uuid, key=prop.key, value_type=prop.value_type().name)
+                PropView(
+                    uuid=prop.uuid,
+                    key=prop.key,
+                    value_type=prop.value_type().name,
+                    formula=prop.formula,
+                )
                 for prop in WProp.all_for(owner)
             ],
         )

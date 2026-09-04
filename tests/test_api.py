@@ -158,11 +158,16 @@ def draft_items(view, drop=(), rename=None, retype=None, add=()):
     rename = rename or {}
     retype = retype or {}
     items = [
-        (prop.uuid, rename.get(prop.key, prop.key), retype.get(prop.key, prop.value_type))
+        (
+            prop.uuid,
+            rename.get(prop.key, prop.key),
+            retype.get(prop.key, prop.value_type),
+            prop.formula,
+        )
         for prop in view.props
         if prop.key not in drop
     ]
-    return items + [(None, key, value_type) for key, value_type in add]
+    return items + [(None, key, value_type, None) for key, value_type in add]
 
 
 def test_sync_props_add_and_delete():
@@ -215,7 +220,7 @@ def test_sync_props_rejects_bad_drafts():
         Api.sync_props("Note", draft_items(view, add=[("body", "String")]))
     with pytest.raises(ValidationError):
         Api.sync_props("Note", draft_items(view, add=[("", "String")]))
-    forged = [(body.uuid, "body", "String")]
+    forged = [(body.uuid, "body", "String", None)]
     with pytest.raises(ValidationError):
         Api.sync_props("Note", forged + draft_items(view, drop=("body",)))
     with pytest.raises(KeyError):

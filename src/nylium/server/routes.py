@@ -45,7 +45,13 @@ class routes:
     @classmethod
     def create_type(cls, body: CreateTypeBody) -> TypeView:
         return Api.create_type(
-            body.name, body.props, body.plural_name, body.icon, body.color, body.embedded
+            body.name,
+            body.props,
+            body.plural_name,
+            body.icon,
+            body.color,
+            body.embedded,
+            body.formulas,
         )
 
     @classmethod
@@ -90,7 +96,8 @@ class routes:
     @classmethod
     def sync_props(cls, name: str, body: SyncPropsBody) -> TypeView:
         return Api.sync_props(
-            name, [(item.uuid, item.key, item.value_type) for item in body.props]
+            name,
+            [(item.uuid, item.key, item.value_type, item.formula) for item in body.props],
         )
 
     @classmethod

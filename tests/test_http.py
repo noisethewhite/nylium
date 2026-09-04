@@ -672,3 +672,41 @@ def test_tags_over_http(auth_client: TestClient) -> None:
     assert refetched.json()["tags"] == []
 
 
+def test_formulas_over_http(auth_client: TestClient) -> None:
+    """ADR-0005 over the wire: formulas ride create_type/sync_props and
+    surface on TypeView; invalid formulas are 422."""
+    dsl.create_type(auth_client, "Item", {"name": "String", "price": "Numeric"})
+    created = auth_client.post(
+        "/api/types",
+        json={
+            "name": "Receipt",
+            "plural_name": "Receipts",
+            "props": {
+                "name": "String",
+                "items": "Array<Item>",
+                "total": "Numeric",
+            },
+            "formulas": {"total": "SUM(items.price) * 1.21"},
+        },
+    )
+    assert created.status_code == 201, created.text
+    by_key = {prop["key"]: prop for prop in created.json()["props"]}
+    assert by_key["total"]["formula"] == "SUM(items.price) * 1.21"
+    assert by_key["items"]["formula"] is None
+
+    invalid = auth_client.post(
+        "/api/types",
+        json={
+            "name": "BadReceipt",
+            "plural_name": "BadReceipts",
+            "props": {
+                "name": "String",
+                "items": "Array<Item>",
+                "total": "Numeric",
+            },
+            "formulas": {"total": "SUM(items.weight)"},
+        },
+    )
+    assert invalid.status_code == 422
+
+

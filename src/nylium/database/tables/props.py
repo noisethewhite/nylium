@@ -29,6 +29,9 @@ class Props(Base):
     position: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0, server_default="0"
     )
+    # ADR-0005: a formula string over the owner's Array<T> props (e.g.
+    # "SUM(items.price) * 1.21"); NULL means a plain stored prop
+    formula: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     @classmethod
     @Database.sessionmethod(bundled=False, commit=False)

@@ -55,6 +55,7 @@ class NyliumApp:
             "ALTER TABLE types ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'object'",
             "ALTER TABLE types ADD COLUMN IF NOT EXISTS embedded BOOLEAN NOT NULL DEFAULT FALSE",
             "ALTER TABLE numeric_values ADD COLUMN IF NOT EXISTS unit TEXT",
+            "ALTER TABLE props ADD COLUMN IF NOT EXISTS formula TEXT",
             "ALTER TABLE instances ADD COLUMN IF NOT EXISTS owner_object_uuid UUID",
             "ALTER TABLE instances ADD COLUMN IF NOT EXISTS owner_prop_uuid UUID",
         ]

@@ -187,7 +187,7 @@ def test_sync_props_delete_destroys_children():
     assert isinstance(contact, EmbeddedValue) and contact.uuid is not None
     name_prop = next(prop for prop in view.props if prop.key == "name")
     # drop the contact prop from the schema entirely
-    synced = Api.sync_props("Person", [(name_prop.uuid, "name", "String")])
+    synced = Api.sync_props("Person", [(name_prop.uuid, "name", "String", None)])
     assert [prop.key for prop in synced.props] == ["name"]
     assert Api.get_object(contact.uuid) is None
 
@@ -199,9 +199,12 @@ def test_sync_props_rename_regenerates_names():
     )
     contact = person.props["contact"]
     assert isinstance(contact, EmbeddedValue) and contact.uuid is not None
-    items = [(prop.uuid, prop.key, prop.value_type) for prop in view.props]
     items = [
-        (uuid, "details" if key == "contact" else key, vt) for uuid, key, vt in items
+        (prop.uuid, prop.key, prop.value_type, prop.formula) for prop in view.props
+    ]
+    items = [
+        (uuid, "details" if key == "contact" else key, vt, formula)
+        for uuid, key, vt, formula in items
     ]
     _ = Api.sync_props("Person", items)
     reloaded = Api.get_object(person.uuid)
