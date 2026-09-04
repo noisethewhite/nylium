@@ -56,9 +56,17 @@ conversion, defined **by the user**, not from a built-in registry:
 5. **Type editor**: numeric prop rows show a unit picker (search
    field, like every picker) listing unit types, default "None".
 
+6. **Unitless is not an entity.** A bare numeric is conceptually a
+   quantity with the identity unit, but we do NOT materialize a
+   builtin "Unitless" row in `types` — the absent parameter *is* the
+   unitless case (selector default None). Internally the conversion
+   path treats None as identity (multiplier 1, offset 0), so formulas
+   can later treat every numeric as `Quantity(unit | None)` without a
+   user-visible phantom type.
+
 ### Storage
 
-6. **Existing `numeric_values` table**, two-column shape:
+7. **Existing `numeric_values` table**, two-column shape:
    - `value` stores the magnitude in the **base part** of the prop's
      unit (canonical). Comparisons/sorting/future formula arithmetic
      need no conversion.
@@ -67,32 +75,32 @@ conversion, defined **by the user**, not from a built-in registry:
      stores the part name **as entered**. NULL = plain number; all
      existing rows stay valid.
 
-7. **Reads return the value converted back into the stored `unit`**
+8. **Reads return the value converted back into the stored `unit`**
    plus the unit name — display shows what was entered (`1500 g`
    stays `1500 g`).
 
 ### Write path
 
-8. Input is a number plus an optional part name (UI: numeric input +
+9. Input is a number plus an optional part name (UI: numeric input +
    unit picker defaulting to the base part). Validation:
    - part name must belong to the prop's declared unit type → else
      `ValidationError` (422);
    - unit-typed prop with no part name → base part assumed;
    - plain numeric prop keeps the current shape (no unit field).
 
-9. **Renaming a part propagates** to stored `numeric_values.unit`
+10. **Renaming a part propagates** to stored `numeric_values.unit`
    strings in the same transaction (same rule as enum option renames).
    **Editing multiplier/offset does not rewrite stored values** —
    canonical magnitudes were physical at entry time; only future
    display conversion changes.
 
-10. **Delete-in-use**: a unit type referenced by any prop spec
+11. **Delete-in-use**: a unit type referenced by any prop spec
     (`Decimal<Name>` / `Integer<Name>`, also inside `Array<…>`)
     cannot be deleted → 409, same machinery as enum delete-in-use.
 
 ### Cross-unit semantics
 
-11. Units are only comparable **within the same unit type**. There is
+12. Units are only comparable **within the same unit type**. There is
     no dimension algebra (`kg × m/s²`); mixing different unit types in
     one prop or (later) one formula is a validation error. This keeps
     the model honest without a dimension registry.
