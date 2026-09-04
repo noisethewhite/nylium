@@ -2,10 +2,10 @@
 
 A prop may carry a ``formula`` string that computes its value from the
 owner's ``Array<T>`` props, e.g. ``SUM(items.price) * 1.21``. This module
-owns the grammar: it parses the string into a small frozen AST, then
-type-checks that AST against the owner type's schema. Read-time
-evaluation is a later slice and deliberately absent here — nothing in
-this module computes a value.
+owns the grammar end to end: it parses the string into a small frozen
+AST, type-checks that AST against the owner type's schema, folds the AST
+over live array rows at read time, and rewrites paths when props are
+renamed.
 
 Grammar (recursive descent, no ``eval``, no third-party deps)::
 
@@ -17,9 +17,9 @@ Grammar (recursive descent, no ``eval``, no third-party deps)::
 """
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from typing import ClassVar, NoReturn, TypeAlias
 
 from nylium.objects.wscalar import WInteger, WNumeric
@@ -306,3 +306,118 @@ class Formula:
                 raise ValidationError(
                     f"member prop {array_key}.{member_key} is not numeric ({member_type!r})"
                 )
+
+    @classmethod
+    def references(cls, formula: str) -> set[tuple[str, str | None]]:
+        """Every ``(array key, member key | None)`` pair the formula reads.
+        The member is None only for a bare ``COUNT(<array>)``."""
+        return {
+            (call.path[0], call.path[1] if len(call.path) > 1 else None)
+            for call in _calls(cls.parse(formula))
+        }
+
+    @classmethod
+    def evaluate(
+        cls,
+        formula: str,
+        arrays: Mapping[str, Sequence[Mapping[str, Decimal | None]]],
+    ) -> Decimal | None:
+        """Fold a formula over live array rows. Unset member values count
+        as 0 — the ADR-0005 missing-ref rule applied to cells; an empty
+        array aggregates to 0. A division by zero (incl. 0/0, which
+        Decimal reports as InvalidOperation) yields None — the prop
+        renders empty — rather than failing the whole read."""
+        try:
+            return _eval(cls.parse(formula), arrays)
+        except (ZeroDivisionError, InvalidOperation):
+            return None
+
+    @classmethod
+    def rewrite(
+        cls,
+        formula: str,
+        array_renames: Mapping[str, str],
+        member_renames: Mapping[str, Mapping[str, str]],
+    ) -> str:
+        """Re-render canonically with prop renames applied. ``member_renames``
+        is keyed by the array key as written in the formula (pre-rename)."""
+        return _render(_rewrite(cls.parse(formula), array_renames, member_renames))
+
+
+# --- read-time evaluation ---
+
+# array key -> rows; a row maps member key -> value (None = unset)
+ArrayRows = Mapping[str, Sequence[Mapping[str, Decimal | None]]]
+
+
+def _cell(row: Mapping[str, Decimal | None], key: str) -> Decimal:
+    value = row.get(key)
+    return Decimal(0) if value is None else value
+
+
+def _eval(node: Expr, arrays: ArrayRows) -> Decimal:
+    if isinstance(node, Number):
+        return node.value
+    if isinstance(node, Neg):
+        return -_eval(node.operand, arrays)
+    if isinstance(node, BinOp):
+        left = _eval(node.left, arrays)
+        right = _eval(node.right, arrays)
+        if node.op == "+":
+            return left + right
+        if node.op == "-":
+            return left - right
+        if node.op == "*":
+            return left * right
+        return left / right
+    rows = arrays.get(node.path[0], ())
+    if node.func == "COUNT":
+        if len(node.path) == 1:
+            # a bare COUNT counts stored rows, dangling refs included
+            return Decimal(len(rows))
+        return Decimal(sum(1 for row in rows if row.get(node.path[1]) is not None))
+    values = [_cell(row, node.path[1]) for row in rows]
+    if not values:
+        return Decimal(0)
+    if node.func == "SUM":
+        return sum(values, Decimal(0))
+    if node.func == "AVERAGE":
+        return sum(values, Decimal(0)) / Decimal(len(values))
+    if node.func == "MIN":
+        return min(values)
+    return max(values)
+
+
+# --- canonical rendering + path rewriting ---
+
+
+def _render(node: Expr) -> str:
+    if isinstance(node, Number):
+        return str(node.value)
+    if isinstance(node, Neg):
+        return f"-{_render(node.operand)}"
+    if isinstance(node, BinOp):
+        return f"({_render(node.left)} {node.op} {_render(node.right)})"
+    return f"{node.func}({'.'.join(node.path)})"
+
+
+def _rewrite(
+    node: Expr,
+    array_renames: Mapping[str, str],
+    member_renames: Mapping[str, Mapping[str, str]],
+) -> Expr:
+    if isinstance(node, Call):
+        array_key = array_renames.get(node.path[0], node.path[0])
+        if len(node.path) == 1:
+            return Call(node.func, (array_key,))
+        member = member_renames.get(node.path[0], {}).get(node.path[1], node.path[1])
+        return Call(node.func, (array_key, member))
+    if isinstance(node, BinOp):
+        return BinOp(
+            node.op,
+            _rewrite(node.left, array_renames, member_renames),
+            _rewrite(node.right, array_renames, member_renames),
+        )
+    if isinstance(node, Neg):
+        return Neg(_rewrite(node.operand, array_renames, member_renames))
+    return node

@@ -309,6 +309,33 @@ class Api:
         strangers = [uuid for uuid, _, _, _ in items if uuid is not None and uuid not in by_uuid]
         if strangers:
             raise ValidationError(f"prop uuids {strangers!r} do not belong to {type_name!r}")
+        # ADR-0005 rename-rewrite, local pass: the editor echoes formulas
+        # back verbatim, so a renamed key would otherwise fail validation
+        # on the stale path. Rewrite array keys — and member keys of
+        # self-referencing arrays — before checking against the new schema.
+        renames = {
+            by_uuid[uuid].key: key
+            for uuid, key, _, _ in items
+            if uuid is not None and by_uuid[uuid].key != key
+        }
+        self_arrays = {
+            key
+            for _, key, value_type_name, _ in items
+            if WType.is_array_name(value_type_name)
+            and WType.element_name(value_type_name) == type_name
+        }
+        if renames:
+            items = [
+                (
+                    uuid,
+                    key,
+                    value_type_name,
+                    Formula.rewrite(formula, renames, {k: renames for k in self_arrays})
+                    if formula is not None
+                    else None,
+                )
+                for uuid, key, value_type_name, formula in items
+            ]
         owner_props = [(key, value_type_name) for _, key, value_type_name, _ in items]
         for _, _, value_type_name, formula in items:
             cls._check_formula_prop(formula, value_type_name, owner_props)
@@ -316,6 +343,12 @@ class Api:
             (uuid, key, cls._ensure_value_type(value_type_name).uuid, formula)
             for uuid, key, value_type_name, formula in items
         ]
+        # cross-type pass: other types aggregate over Array<type_name>
+        # props — rewrite their stored formulas to the new member keys, or
+        # refuse the whole sync when a referenced member dies
+        formula_updates = cls._rewrite_dependent_formulas(
+            type_name, owner.uuid, owner_props, renames
+        )
         # embedded children die with their prop: deleting or retyping an
         # embedded prop would cascade the link rows away and orphan the
         # child instances — destroy them while the prop still stands
@@ -331,6 +364,8 @@ class Api:
             elif draft[0] != prop.key:
                 embedded_renamed = True
         WProp.sync_schema(owner, resolved)
+        for prop_uuid, rewritten in formula_updates:
+            Props.update_formula(prop_uuid, rewritten)
         if embedded_renamed:
             # a renamed embedded prop key invalidates every generated
             # child name of every instance of this type
@@ -510,6 +545,55 @@ class Api:
         return [(prop.key, prop.value_type().name) for prop in WProp.all_for(element)]
 
     @classmethod
+    def _rewrite_dependent_formulas(
+        cls,
+        type_name: str,
+        owner_uuid: UUID,
+        new_schema: list[tuple[str, str]],
+        renames: dict[str, str],
+    ) -> list[tuple[UUID, str]]:
+        """ADR-0005 rename-rewrite, cross-type pass: formulas on OTHER
+        types that aggregate over ``Array<type_name>`` props are rewritten
+        to the renamed member keys and re-validated against the new
+        schema. A formula that still reads a deleted or retyped member
+        fails the whole sync — schemas never strand a stored formula.
+        Returns (prop uuid, new formula) updates; the caller persists
+        them after the local schema change lands."""
+        array_type_uuid = Types.uuid_by_name(WType.array_name(type_name))
+        if array_type_uuid is None:
+            return []
+
+        def resolve_member_type(element_name: str) -> list[tuple[str, str]] | None:
+            if element_name == type_name:
+                return new_schema
+            return cls._member_props(element_name)
+
+        updates: list[tuple[UUID, str]] = []
+        usages = Props.usages_of_value_type(array_type_uuid)
+        by_owner: dict[UUID, list[str]] = {}
+        for dependent_uuid, array_key in usages:
+            if dependent_uuid == owner_uuid:
+                continue  # self-referencing arrays were rewritten locally
+            by_owner.setdefault(dependent_uuid, []).append(array_key)
+        for dependent_uuid, array_keys in by_owner.items():
+            dependent = WType.by_uuid(dependent_uuid)
+            if dependent is None:
+                continue
+            dependent_props = WProp.all_for(dependent)
+            dependent_schema = [
+                (prop.key, prop.value_type().name) for prop in dependent_props
+            ]
+            member_renames = {key: renames for key in array_keys}
+            for prop in dependent_props:
+                if prop.formula is None:
+                    continue
+                rewritten = Formula.rewrite(prop.formula, {}, member_renames)
+                Formula.validate(rewritten, dependent_schema, resolve_member_type)
+                if rewritten != prop.formula:
+                    updates.append((prop.uuid, rewritten))
+        return updates
+
+    @classmethod
     def _check_formula_prop(
         cls,
         formula: str | None,
@@ -571,8 +655,15 @@ class Api:
         owner_type_uuid = Types.uuid_by_name(type_name)
         if owner_type_uuid is None:
             raise KeyError(f"no type {type_name!r}")
+        readonly = Props.formula_keys(owner_type_uuid)
         result: dict[str, StoredValue] = {}
         for key, value in props.items():
+            if key in readonly:
+                from nylium.server.errors import ValidationError
+
+                raise ValidationError(
+                    f"prop {key!r} of {type_name!r} is computed by a formula — it is read-only"
+                )
             normalized = cls._normalize_value(
                 value, Props.get_type_name(owner_type_uuid, key)
             )
@@ -609,6 +700,14 @@ class Api:
                 raise TypeError(
                     f"embedded prop of type {type_name!r} takes an inline props draft, got {type(value).__name__}"
                 )
+            readonly = Props.formula_keys(resolved.uuid)
+            for child_key in value:
+                if child_key in readonly:
+                    from nylium.server.errors import ValidationError
+
+                    raise ValidationError(
+                        f"prop {child_key!r} of {type_name!r} is computed by a formula — it is read-only"
+                    )
             return {
                 key: cls._normalize_value(item, Props.get_type_name(resolved.uuid, key))
                 for key, item in value.items()

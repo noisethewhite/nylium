@@ -710,3 +710,59 @@ def test_formulas_over_http(auth_client: TestClient) -> None:
     assert invalid.status_code == 422
 
 
+def test_formulas_eval_over_http(auth_client: TestClient) -> None:
+    """Read-time evaluation over the wire: a computed prop renders its
+    value, writes into it are 422, and the value tracks live members."""
+    dsl.create_type(auth_client, "Item", {"name": "String", "price": "Numeric"})
+    created = auth_client.post(
+        "/api/types",
+        json={
+            "name": "Receipt",
+            "plural_name": "Receipts",
+            "props": {
+                "name": "String",
+                "lines": "Array<Item>",
+                "total": "Numeric",
+                "count": "Integer",
+            },
+            "formulas": {"total": "SUM(lines.price)", "count": "COUNT(lines)"},
+        },
+    )
+    assert created.status_code == 201, created.text
+
+    def item(name: str, price: str):
+        body = dsl.create_object(
+            auth_client,
+            "Item",
+            {"name": {"value": name}, "price": {"value": price}},
+        )
+        return {"ref": {"uuid": str(body["uuid"]), "type_name": "Item"}}
+
+    receipt = dsl.create_object(
+        auth_client,
+        "Receipt",
+        {
+            "name": {"value": "R1"},
+            "lines": {"items": [item("a", "10.5"), item("b", "2")]},
+        },
+    )
+    fetched = auth_client.get(f"/api/objects/{receipt['uuid']}")
+    assert fetched.status_code == 200, fetched.text
+    props = fetched.json()["props"]
+    assert props["total"] == {"value": "12.5", "unit": None}
+    assert props["count"] == {"value": 2, "unit": None}
+
+    # computed props are read-only over the wire
+    blocked = auth_client.patch(
+        f"/api/objects/{receipt['uuid']}", json={"props": {"total": {"value": "1"}}}
+    )
+    assert blocked.status_code == 422
+
+    # ...and the value re-evaluates on every read
+    updated = auth_client.patch(
+        f"/api/objects/{receipt['uuid']}", json={"props": {"lines": {"items": []}}}
+    )
+    assert updated.status_code == 200, updated.text
+    assert updated.json()["props"]["total"] == {"value": "0", "unit": None}
+
+

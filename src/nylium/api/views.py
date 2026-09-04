@@ -35,7 +35,8 @@ from nylium.objects.monthday import MonthDay, MonthDayTime
 from nylium.objects.quantity import Quantity
 from nylium.objects.wembedded import EMBEDDED_NAME_SEPARATOR
 from nylium.objects.wenum import WEnum
-from nylium.objects.wscalar import ScalarPayload, WScalar
+from nylium.objects.wformula import Formula
+from nylium.objects.wscalar import ScalarPayload, WInteger, WScalar
 from nylium.objects.wtypemeta import StoredValue
 
 _CONFIG = ConfigDict(extra="ignore")
@@ -209,7 +210,9 @@ class ObjectView:
             raise RuntimeError(f"instance {uuid} has dangling type")
         wrapper = WObject.wrap(uuid)
         props = {
-            prop.key: cls._render_prop(
+            prop.key: cls._eval_formula(wrapper, prop)
+            if prop.formula is not None
+            else cls._render_prop(
                 cast(StoredValue, getattr(wrapper, prop.key)),
                 prop.value_type().name,
             )
@@ -274,6 +277,55 @@ class ObjectView:
             )
         tags.sort(key=lambda tag: (tag.owner_name, tag.prop_key))
         return tags
+
+    @classmethod
+    @Database.sessionmethod(bundled=False, commit=False)
+    def _eval_formula(cls, session: Session, wrapper: WObject, prop: WProp) -> ScalarValue:
+        """ADR-0005 read-time evaluation: fold the stored formula over the
+        live rows of the arrays it references. Unset cells count as 0; a
+        dangling member keeps its stored row (COUNT sees it, the numeric
+        aggregates treat it as 0). Division by zero renders empty."""
+        assert prop.formula is not None
+        refs = Formula.references(prop.formula)
+        arrays: dict[str, list[dict[str, Decimal | None]]] = {}
+        for array_key in {key for key, _ in refs}:
+            members = cast(list[WObject] | None, getattr(wrapper, array_key)) or []
+            existing: set[UUID] = (
+                set(
+                    session.scalars(
+                        sqla.select(Instances.uuid).where(
+                            Instances.uuid.in_([member.uuid for member in members])
+                        )
+                    ).all()
+                )
+                if members
+                else set()
+            )
+            wanted = {member for key, member in refs if key == array_key and member}
+            rows: list[dict[str, Decimal | None]] = []
+            for member in members:
+                if member.uuid not in existing:
+                    rows.append({})
+                    continue
+                row: dict[str, Decimal | None] = {}
+                for key in wanted:
+                    value = cast(StoredValue, getattr(member, key))
+                    if isinstance(value, bool):
+                        row[key] = None
+                    elif isinstance(value, (int, Decimal)):
+                        row[key] = Decimal(value)
+                    elif isinstance(value, Quantity):
+                        row[key] = value.value
+                    else:
+                        row[key] = None
+                rows.append(row)
+            arrays[array_key] = rows
+        result = Formula.evaluate(prop.formula, arrays)
+        if result is None:
+            return ScalarValue(value=None)
+        if prop.value_type().name == WInteger.TYPE_NAME:
+            return ScalarValue(value=int(result))
+        return ScalarValue(value=result)
 
     @classmethod
     @Database.sessionmethod(bundled=True, commit=False)

@@ -1,3 +1,4 @@
+from typing import cast
 from uuid import UUID, uuid4
 
 import sqlalchemy as sqla
@@ -61,3 +62,41 @@ class Props(Base):
         if value_type is None:
             raise KeyError(f"Type with UUID {row.value_type_uuid} does not exist")
         return value_type
+
+    @classmethod
+    @Database.sessionmethod(bundled=False, commit=False)
+    def formula_keys(cls, session: Session, owner_type_uuid: UUID) -> set[str]:
+        """Keys of the owner type's computed props (ADR-0005) — writes to
+        these are refused."""
+        rows = session.scalars(
+            sqla.select(cls.key).where(
+                cls.owner_type_uuid == owner_type_uuid, cls.formula.is_not(None)
+            )
+        ).all()
+        return set(rows)
+
+    @classmethod
+    @Database.sessionmethod(bundled=False, commit=False)
+    def usages_of_value_type(
+        cls, session: Session, value_type_uuid: UUID
+    ) -> list[tuple[UUID, str]]:
+        """(owner_type_uuid, key) of every prop typed with this row — the
+        dependency index for cross-type formula rewrites (ADR-0005)."""
+        rows = session.execute(
+            sqla.select(cls.owner_type_uuid, cls.key).where(
+                cls.value_type_uuid == value_type_uuid
+            )
+        ).all()
+        result: list[tuple[UUID, str]] = []
+        for row in rows:
+            result.append((cast(UUID, row.owner_type_uuid), cast(str, row.key)))
+        return result
+
+    @classmethod
+    @Database.sessionmethod(bundled=False, commit=False)
+    def update_formula(cls, session: Session, prop_uuid: UUID, formula: str) -> None:
+        """Persist a rewritten formula string (ADR-0005 rename-rewrite)."""
+        row = session.get(cls, prop_uuid)
+        if row is None:
+            raise KeyError(f"no prop {prop_uuid}")
+        row.formula = formula
