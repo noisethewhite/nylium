@@ -41,6 +41,34 @@ export class NyliumApi extends HttpTransport {
     );
   }
 
+  /** A unit type: name, its base part, optional secondary parts with
+   * the affine factor (base = (entered - offset) / multiplier). */
+  createUnit(
+    name: string,
+    base: string,
+    secondaries: { name: string; multiplier: number; offset: number }[],
+  ): Promise<TypeView> {
+    return this.request("POST", "/units", { name, base, secondaries });
+  }
+
+  /** Full part draft — same semantics as syncEnumOptions: uuid renames
+   * propagate into stored unit labels, uuid null creates, absent uuids
+   * delete unless in use. Exactly one part must carry is_base. */
+  syncUnitParts(
+    name: string,
+    parts: {
+      uuid: string | null;
+      name: string;
+      multiplier: number;
+      offset: number;
+      is_base: boolean;
+    }[],
+  ): Promise<TypeView> {
+    return this.request<TypeView>(
+      "PUT", `/units/${encodeURIComponent(name)}/parts`, { parts },
+    );
+  }
+
   /** Persist a new prop order — keys must cover the whole schema. */
   reorderProps(typeName: string, keys: string[]): Promise<TypeView> {
     return this.request<TypeView>(

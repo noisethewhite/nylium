@@ -13,6 +13,8 @@ import { Sidebar } from "./sidebar";
 import { TabBar } from "./tab-bar";
 import { TypeCreateForm } from "./type-create-form";
 import { TypeViewPanel } from "./type-view";
+import { UnitCreateForm } from "./unit-create-form";
+import { UnitTypePanel } from "./unit-type-view";
 
 export function App(props: {
   workspace: WorkspaceStore;
@@ -61,6 +63,13 @@ export function App(props: {
         </div>
       );
     }
+    if (tab.kind === "create-unit") {
+      return (
+        <div className="tab-content create-type-page">
+          <UnitCreateForm workspace={props.workspace} />
+        </div>
+      );
+    }
     if (tab.kind === "type") {
       const schema = state.types.find((view) => view.name === tab.name);
       if (schema === undefined) {
@@ -68,6 +77,9 @@ export function App(props: {
       }
       if (schema.kind === "enum") {
         return <EnumTypePanel workspace={props.workspace} schema={schema} />;
+      }
+      if (schema.kind === "unit") {
+        return <UnitTypePanel workspace={props.workspace} schema={schema} />;
       }
       return <TypeViewPanel workspace={props.workspace} schema={schema} />;
     }

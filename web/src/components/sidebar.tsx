@@ -95,6 +95,15 @@ export function Sidebar(props: {
                 >
                   New enum
                 </button>
+                <button
+                  className="type-menu-row"
+                  onClick={() => {
+                    dismiss();
+                    props.workspace.openCreateUnit();
+                  }}
+                >
+                  New unit
+                </button>
               </div>
             );
           }}

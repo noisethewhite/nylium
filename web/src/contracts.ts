@@ -11,17 +11,30 @@ export interface EnumOptionView {
   value: string;
 }
 
+/** One part of a user unit: the base part plus secondaries with an
+ * affine factor (base = (entered - offset) / multiplier). Decimals
+ * cross the wire as strings. */
+export interface UnitPartView {
+  uuid: string;
+  name: string;
+  multiplier: string;
+  offset: string;
+  is_base: boolean;
+}
+
 export interface TypeView {
   name: string;
   /** null for builtins and array types — only user types carry both forms */
   plural_name: string | null;
-  /** "object" (schema of props) or "enum" (list of string options) */
+  /** "object" (schema of props), "enum" (list of options), "unit" (parts) */
   kind: string;
   icon: string;
   color: string;
   props: PropView[];
   /** enum kinds only; always empty for object kinds */
   enum_options: EnumOptionView[];
+  /** unit kinds only; always empty for other kinds */
+  unit_parts: UnitPartView[];
 }
 
 export interface ObjectRef {
@@ -34,6 +47,8 @@ export type ScalarWire = string | number | boolean | null;
 
 export interface ScalarValue {
   value: ScalarWire;
+  /** part name as entered for Numeric<Unit> props; null elsewhere */
+  unit: string | null;
 }
 
 export interface RefValue {
@@ -98,6 +113,7 @@ export abstract class TypeNames {
     TypeNames.MONTH_DAY_TIME,
   ];
   private static readonly ARRAY_PREFIX = "Array<";
+  private static readonly UNIT_NUMERIC_PREFIX = "Numeric<";
 
   static isScalar(name: string): boolean {
     return TypeNames.SCALARS.includes(name);
@@ -115,9 +131,30 @@ export abstract class TypeNames {
     return `${TypeNames.ARRAY_PREFIX}${element}>`;
   }
 
-  /** Types a human edits in the sidebar — not builtins, not arrays. */
+  /** A numeric prop parameterized by a user unit: "Numeric<Temperature>". */
+  static isUnitNumeric(name: string): boolean {
+    return name.startsWith(TypeNames.UNIT_NUMERIC_PREFIX) && name.endsWith(">");
+  }
+
+  static unitParamOf(name: string): string | null {
+    if (!TypeNames.isUnitNumeric(name)) {
+      return null;
+    }
+    return name.slice(TypeNames.UNIT_NUMERIC_PREFIX.length, -1);
+  }
+
+  static unitNumericName(unit: string): string {
+    return `${TypeNames.UNIT_NUMERIC_PREFIX}${unit}>`;
+  }
+
+  /** Types a human edits in the sidebar — not builtins, not arrays,
+   * not parameterized forms like Numeric<Unit>. */
   static isUserType(name: string): boolean {
-    return !TypeNames.isScalar(name) && !TypeNames.isArray(name);
+    return (
+      !TypeNames.isScalar(name) &&
+      !TypeNames.isArray(name) &&
+      !TypeNames.isUnitNumeric(name)
+    );
   }
 }
 

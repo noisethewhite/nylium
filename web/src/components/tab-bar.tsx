@@ -18,6 +18,9 @@ export function TabBar(props: { workspace: WorkspaceStore }): ReactElement {
     if (tab.kind === "create-enum") {
       return "New Enum";
     }
+    if (tab.kind === "create-unit") {
+      return "New Unit";
+    }
     const object = state.objects.find((view) => view.uuid === tab.uuid);
     return object === undefined ? tab.uuid.slice(0, 8) : ObjectLabels.of(object);
   };
@@ -55,6 +58,10 @@ export function TabBar(props: { workspace: WorkspaceStore }): ReactElement {
     }
     if (tab.kind === "create-enum") {
       props.workspace.openCreateEnum();
+      return;
+    }
+    if (tab.kind === "create-unit") {
+      props.workspace.openCreateUnit();
       return;
     }
     props.workspace.openCreateType();

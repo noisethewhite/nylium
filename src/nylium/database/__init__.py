@@ -14,6 +14,7 @@ from .tables import (
     MonthDayValues,
     MonthDayTimeValues,
     EnumOptions,
+    UnitParts,
     InstanceValues,
     ArrayValues
 )
@@ -34,6 +35,7 @@ __all__ = [
     "MonthDayValues",
     "MonthDayTimeValues",
     "EnumOptions",
+    "UnitParts",
     "InstanceValues",
     "ArrayValues",
 ]

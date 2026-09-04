@@ -21,6 +21,7 @@ from sqlalchemy.orm import Session
 
 from nylium.database import Database
 from nylium.database.tables import Instances
+from nylium.objects.quantity import Quantity
 from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import ScalarPayload, WScalar
 from nylium.objects.wtype import WType
@@ -45,10 +46,11 @@ class WObjectShape(Protocol):
 
 
 # The closed union of everything a prop can hold: scalar payloads,
-# WObject links (structurally), (nested) lists of those. None means
-# "never set". A string forward ref inside list[...] keeps the
-# recursion parseable without typing.Union or the PEP 695 `type` stmt.
-StoredValue: TypeAlias = ScalarPayload | WObjectShape | list["StoredValue"] | None
+# unit-aware quantities, WObject links (structurally), (nested) lists of
+# those. None means "never set". A string forward ref inside list[...]
+# keeps the recursion parseable without typing.Union or the PEP 695
+# `type` stmt.
+StoredValue: TypeAlias = ScalarPayload | Quantity | WObjectShape | list["StoredValue"] | None
 
 
 class WTypeMeta(type):

@@ -32,6 +32,20 @@ class Props(Base):
 
     @classmethod
     @Database.sessionmethod(bundled=False, commit=False)
+    def count_with_value_type(cls, session: Session, value_type_uuid: UUID) -> int:
+        """Props whose value type is this row — the FK stops deletes,
+        callers that want a friendly error check here first."""
+        return int(
+            session.scalar(
+                sqla.select(sqla.func.count())
+                .select_from(cls)
+                .where(cls.value_type_uuid == value_type_uuid)
+            )
+            or 0
+        )
+
+    @classmethod
+    @Database.sessionmethod(bundled=False, commit=False)
     def get_type_name(cls, session: Session, owner_type_uuid: UUID, key: str) -> str:
         row = session.scalar(
             sqla.select(cls).where(

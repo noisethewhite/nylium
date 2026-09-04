@@ -7,6 +7,7 @@ import { FieldFactory } from "../fields/field-factory";
 import { FloatingMenu } from "./floating-menu";
 import { NameSearch } from "./name-search";
 import { FieldModel } from "../fields/field-model";
+import { UnitDecimalFieldModel } from "../fields/unit-fields";
 import {
   BooleanFieldModel,
   DateFieldModel,
@@ -57,6 +58,9 @@ export function FieldEditor({ field, editor }: FieldProps): ReactElement {
   }
   if (field instanceof MonthDayFieldModel) {
     return <MonthDayInput field={field} editor={editor} withTime={false} />;
+  }
+  if (field instanceof UnitDecimalFieldModel) {
+    return <UnitInput field={field} editor={editor} />;
   }
   if (field instanceof EnumFieldModel) {
     return <EnumInput field={field} editor={editor} />;
@@ -434,6 +438,72 @@ function BooleanInput({ field, editor }: { field: BooleanFieldModel; editor: Obj
   );
 }
 
+/** Numeric<Unit> editor: the decimal draft input plus a part picker —
+ * the number is entered in the picked part, the backend converts into
+ * the base part for storage. null unit renders as the base part name. */
+function UnitInput(props: {
+  field: UnitDecimalFieldModel;
+  editor: ObjectEditorStore;
+}): ReactElement {
+  const { field, editor } = props;
+  const numericFilter = (raw: string): string => {
+    const signed = raw.replace(/[^\d.-]/g, "").replace(/(?!^)-/g, "");
+    const [head = "", ...rest] = signed.split(".");
+    return rest.length === 0 ? head : `${head}.${rest.join("")}`;
+  };
+
+  return (
+    <FieldShell
+      label={
+        <>
+          {field.key} <span className="dim">→ {field.valueType}</span>
+        </>
+      }
+    >
+      <div className="field-row">
+        <input
+          className="input"
+          type="text"
+          inputMode="decimal"
+          value={field.draft}
+          onChange={(event) => {
+            field.draft = numericFilter(event.target.value);
+            draftChanged(editor);
+          }}
+        />
+        <FloatingMenu
+          wrapperClassName="type-picker"
+          triggerClassName="input type-picker-trigger"
+          menuClassName="type-menu"
+          trigger={
+            <>
+              <span className="material-symbols-outlined type-picker-chevron" aria-hidden>
+                keyboard_arrow_down
+              </span>
+              <span className="type-picker-value">{field.unit ?? field.base}</span>
+            </>
+          }
+        >
+          {(close) => (
+            <NameSearch
+              items={field.parts}
+              getKey={(part) => part}
+              getLabel={(part) => part}
+              placeholder="Search parts…"
+              onPick={(part) => {
+                field.unit = part === field.base ? null : part;
+                draftChanged(editor);
+                close();
+              }}
+            />
+          )}
+        </FloatingMenu>
+      </div>
+      <ErrorPlaque error={field.validationError()} />
+    </FieldShell>
+  );
+}
+
 function EnumInput({ field, editor }: { field: EnumFieldModel; editor: ObjectEditorStore }): ReactElement {
   return (
     <FieldShell
@@ -575,7 +645,13 @@ type ChipKind = "ref" | "enum";
 function chipKindOf(field: ArrayFieldModel): ChipKind | null {
   const probe =
     field.items[0] ??
-    FieldFactory.createForType(field.key, field.elementType, undefined, field.enumOptionsOf);
+    FieldFactory.createForType(
+      field.key,
+      field.elementType,
+      undefined,
+      field.enumOptionsOf,
+      field.unitPartsOf,
+    );
   if (probe instanceof RefFieldModel) {
     return "ref";
   }

@@ -20,8 +20,10 @@ from nylium.database import Database, Types
 
 class WType:
     ARRAY_TYPE_PREFIX: ClassVar[str] = "Array<"
+    UNIT_NUMERIC_PREFIX: ClassVar[str] = "Numeric<"
     KIND_OBJECT: ClassVar[str] = "object"
     KIND_ENUM: ClassVar[str] = "enum"
+    KIND_UNIT: ClassVar[str] = "unit"
 
     def __init__(self, row: Types):
         # snapshot, not a live row: reads must not depend on the session
@@ -61,6 +63,10 @@ class WType:
     def is_enum(self) -> bool:
         return self._kind == self.KIND_ENUM
 
+    @property
+    def is_unit(self) -> bool:
+        return self._kind == self.KIND_UNIT
+
     # --- type-name conventions ---
 
     @classmethod
@@ -74,6 +80,20 @@ class WType:
     @classmethod
     def element_name(cls, array_name: str) -> str:
         return array_name[len(cls.ARRAY_TYPE_PREFIX) : -1]
+
+    @classmethod
+    def unit_numeric_name(cls, unit_name: str) -> str:
+        """The prop value type parameterized on a unit: Numeric<Temperature>."""
+        return f"{cls.UNIT_NUMERIC_PREFIX}{unit_name}>"
+
+    @classmethod
+    def unit_param_of(cls, type_name: str) -> str | None:
+        """Syntactic split only — 'Numeric<Temperature>' -> 'Temperature'.
+        Whether the parameter actually names a unit type is WUnit's
+        semantic check; arrays never match (they start with Array<)."""
+        if type_name.startswith(cls.UNIT_NUMERIC_PREFIX) and type_name.endswith(">"):
+            return type_name[len(cls.UNIT_NUMERIC_PREFIX) : -1]
+        return None
 
     # --- row access ---
 

@@ -14,6 +14,7 @@ from nylium.database.tables.time_values import TimeValues
 from nylium.database.tables.monthday_values import MonthDayValues
 from nylium.database.tables.monthdaytime_values import MonthDayTimeValues
 from nylium.database.tables.enum_options import EnumOptions
+from nylium.database.tables.unit_parts import UnitParts
 from nylium.database.tables.instance_values import InstanceValues
 from nylium.database.tables.array_values import ArrayValues
 from nylium.database.tables.auth_users import AuthUsers
@@ -36,6 +37,7 @@ __all__ = [
     "MonthDayValues",
     "MonthDayTimeValues",
     "EnumOptions",
+    "UnitParts",
     "InstanceValues",
     "ArrayValues",
     "AuthUsers",

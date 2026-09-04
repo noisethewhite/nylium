@@ -10,7 +10,8 @@ export type Tab =
   | { readonly kind: "type"; readonly name: string }
   | { readonly kind: "object"; readonly uuid: string }
   | { readonly kind: "create-type" }
-  | { readonly kind: "create-enum" };
+  | { readonly kind: "create-enum" }
+  | { readonly kind: "create-unit" };
 
 export interface WorkspaceState {
   readonly loading: boolean;
@@ -81,6 +82,10 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
     this.activate({ kind: "create-enum" });
   }
 
+  openCreateUnit(): void {
+    this.activate({ kind: "create-unit" });
+  }
+
   closeTab(tab: Tab): void {
     const state = this.getSnapshot();
     const tabs = state.tabs.filter((open) => !sameTab(open, tab));
@@ -124,6 +129,88 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
         tabs: tabs.some((open) => sameTab(open, tab)) ? tabs : [...tabs, tab],
         activeTab: tab,
       });
+    });
+  }
+
+  async createUnit(
+    name: string,
+    base: string,
+    secondaries: { name: string; multiplier: number; offset: number }[],
+  ): Promise<void> {
+    await this.guard(async () => {
+      const created = await this.api.createUnit(name, base, secondaries);
+      const state = this.getSnapshot();
+      const tabs = state.tabs.filter((tab) => tab.kind !== "create-unit");
+      const tab: Tab = { kind: "type", name: created.name };
+      this.setState({
+        ...state,
+        types: [...state.types, created],
+        tabs: tabs.some((open) => sameTab(open, tab)) ? tabs : [...tabs, tab],
+        activeTab: tab,
+      });
+    });
+  }
+
+  /** The unit page's save: meta patch first (rename must precede the
+   * parts PUT), then the full part draft. Part renames propagate into
+   * stored unit labels server-side, so every type's objects get
+   * re-pulled. */
+  async saveUnitEdits(
+    typeName: string,
+    patch: { name: string; icon: string; color: string },
+    parts: {
+      uuid: string | null;
+      name: string;
+      multiplier: number;
+      offset: number;
+      is_base: boolean;
+    }[],
+  ): Promise<void> {
+    await this.guard(async () => {
+      const current = this.getSnapshot().types.find((v) => v.name === typeName);
+      if (!current) {
+        return;
+      }
+      let schema = current;
+      const metaChanged =
+        patch.name !== current.name ||
+        patch.icon !== current.icon ||
+        patch.color !== current.color;
+      if (metaChanged) {
+        const rename: { name?: string; icon?: string; color?: string } = {};
+        if (patch.name !== current.name) {
+          rename.name = patch.name;
+        }
+        if (patch.icon !== current.icon) {
+          rename.icon = patch.icon;
+        }
+        if (patch.color !== current.color) {
+          rename.color = patch.color;
+        }
+        schema = await this.api.updateType(typeName, rename);
+      }
+      schema = await this.api.syncUnitParts(schema.name, parts);
+      const state = this.getSnapshot();
+      const renamed = schema.name !== typeName;
+      const tabs = state.tabs.map((tab) =>
+        renamed && tab.kind === "type" && tab.name === typeName
+          ? { kind: "type" as const, name: schema.name }
+          : tab,
+      );
+      const activeTab =
+        renamed && state.activeTab?.kind === "type" && state.activeTab.name === typeName
+          ? { kind: "type" as const, name: schema.name }
+          : state.activeTab;
+      this.setState({
+        ...state,
+        types: state.types.map((view) => (view.name === typeName ? schema : view)),
+        tabs,
+        activeTab,
+      });
+      // part renames rewrote stored unit labels across every user type
+      for (const view of this.userTypes()) {
+        await this.refreshObjectsOf(view.name);
+      }
     });
   }
 
@@ -292,7 +379,7 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
   async createObject(typeName: string): Promise<void> {
     await this.guard(async () => {
       const created = await this.api.createObject(typeName, {
-        name: { value: "New Object" },
+        name: { value: "New Object", unit: null },
       });
       this.setState({
         ...this.getSnapshot(),

@@ -52,6 +52,6 @@ export class EnumFieldModel extends FieldModel {
         `${JSON.stringify(this.selected)} is not an option`,
       );
     }
-    return { value: this.selected };
+    return { value: this.selected, unit: null };
   }
 }

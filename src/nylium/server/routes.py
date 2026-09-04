@@ -13,9 +13,11 @@ from nylium.server.bodies import (
     CreateEnumBody,
     CreateObjectBody,
     CreateTypeBody,
+    CreateUnitBody,
     ReorderPropsBody,
     SyncEnumOptionsBody,
     SyncPropsBody,
+    SyncUnitPartsBody,
     UpdateObjectBody,
     UpdateTypeBody,
 )
@@ -54,6 +56,26 @@ class routes:
     def sync_enum_options(cls, name: str, body: SyncEnumOptionsBody) -> TypeView:
         return Api.sync_enum_options(
             name, [(item.uuid, item.value) for item in body.options]
+        )
+
+    @classmethod
+    def create_unit(cls, body: CreateUnitBody) -> TypeView:
+        return Api.create_unit(
+            body.name,
+            body.base,
+            [(item.name, item.multiplier, item.offset) for item in body.secondaries],
+            body.icon,
+            body.color,
+        )
+
+    @classmethod
+    def sync_unit_parts(cls, name: str, body: SyncUnitPartsBody) -> TypeView:
+        return Api.sync_unit_parts(
+            name,
+            [
+                (item.uuid, item.name, item.multiplier, item.offset, item.is_base)
+                for item in body.parts
+            ],
         )
 
     @classmethod

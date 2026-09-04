@@ -21,7 +21,7 @@ export abstract class ScalarFieldModel extends FieldModel {
   }
 
   protected emptyAsNull(): ScalarValue | null {
-    return this.draft === "" ? { value: null } : null;
+    return this.draft === "" ? { value: null, unit: null } : null;
   }
 
   /** Regex a non-empty draft must match; null = free text. */
@@ -52,7 +52,7 @@ export class TextFieldModel extends ScalarFieldModel {
   }
 
   toWire(): ScalarValue {
-    return { value: this.draft === "" ? null : this.draft };
+    return { value: this.draft === "" ? null : this.draft, unit: null };
   }
 }
 
@@ -79,7 +79,7 @@ export class IntegerFieldModel extends ScalarFieldModel {
     if (!IntegerFieldModel.PATTERN.test(this.draft)) {
       throw new FieldValidationError(this.key, "integer expected");
     }
-    return { value: Number.parseInt(this.draft, 10) };
+    return { value: Number.parseInt(this.draft, 10), unit: null };
   }
 }
 
@@ -108,7 +108,7 @@ export class DecimalFieldModel extends ScalarFieldModel {
     }
     // the draft string itself crosses the wire — the backend parses it
     // into Decimal losslessly, no binary float detour
-    return { value: this.draft };
+    return { value: this.draft, unit: null };
   }
 }
 
@@ -127,7 +127,7 @@ export class BooleanFieldModel extends FieldModel {
   }
 
   toWire(): ScalarValue {
-    return { value: this.checked };
+    return { value: this.checked, unit: null };
   }
 }
 
@@ -155,7 +155,7 @@ export class DatetimeFieldModel extends ScalarFieldModel {
 
   toWire(): ScalarValue {
     // the backend parses ISO via datetime.fromisoformat
-    return { value: this.draft === "" ? null : this.draft };
+    return { value: this.draft === "" ? null : this.draft, unit: null };
   }
 }
 
@@ -181,7 +181,7 @@ export class DateFieldModel extends ScalarFieldModel {
   }
 
   toWire(): ScalarValue {
-    return { value: this.draft === "" ? null : this.draft };
+    return { value: this.draft === "" ? null : this.draft, unit: null };
   }
 }
 
@@ -207,7 +207,7 @@ export class TimeFieldModel extends ScalarFieldModel {
   }
 
   toWire(): ScalarValue {
-    return { value: this.draft === "" ? null : this.draft };
+    return { value: this.draft === "" ? null : this.draft, unit: null };
   }
 }
 
@@ -237,7 +237,7 @@ export class MonthDayFieldModel extends ScalarFieldModel {
     if (!MonthDayFieldModel.PATTERN.test(this.draft)) {
       throw new FieldValidationError(this.key, "month and day both expected");
     }
-    return { value: this.draft };
+    return { value: this.draft, unit: null };
   }
 }
 
@@ -264,6 +264,6 @@ export class MonthDayTimeFieldModel extends ScalarFieldModel {
     if (!MonthDayTimeFieldModel.PATTERN.test(this.draft)) {
       throw new FieldValidationError(this.key, "month, day and time all expected");
     }
-    return { value: this.draft };
+    return { value: this.draft, unit: null };
   }
 }

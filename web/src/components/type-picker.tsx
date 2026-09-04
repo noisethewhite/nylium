@@ -20,10 +20,12 @@ export function TypePicker(props: {
 }): ReactElement {
   const [objectMode, setObjectMode] = useState<ObjectMode | null>(null);
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [unitOpen, setUnitOpen] = useState(false);
 
   const reset = (): void => {
     setObjectMode(null);
     setCalendarOpen(false);
+    setUnitOpen(false);
   };
 
   const scalarIcon = (name: string): ReactElement => {
@@ -31,6 +33,19 @@ export function TypePicker(props: {
     // builtins render gray by rule — their stored color IS gray, but
     // force it here so a stale backend value can't sneak color in
     return <TypeIcon icon={view?.icon ?? "inventory_2"} color="gray" size={15} />;
+  };
+
+  /** Icon for the trigger: parameterized names (Numeric<Unit>) borrow
+   * the parameter type's icon, everything else its own. */
+  const triggerIcon = (): ReactElement => {
+    const param = TypeNames.unitParamOf(props.value);
+    if (param !== null) {
+      const unit = props.workspace.typeView(param);
+      return (
+        <TypeIcon icon={unit?.icon ?? "straighten"} color={unit?.color ?? "gray"} size={15} />
+      );
+    }
+    return scalarIcon(props.value);
   };
 
   return (
@@ -43,7 +58,7 @@ export function TypePicker(props: {
           <span className="material-symbols-outlined type-picker-chevron" aria-hidden>
             keyboard_arrow_down
           </span>
-          {scalarIcon(props.value)}
+          {triggerIcon()}
           <span className="type-picker-value">{props.value}</span>
         </>
       }
@@ -89,6 +104,36 @@ export function TypePicker(props: {
             />
           );
         }
+        if (unitOpen) {
+          const units = props.workspace
+            .userTypes()
+            .filter((view) => view.kind === "unit");
+          return (
+            <NameSearch
+              items={units}
+              getKey={(view) => view.name}
+              getLabel={(view) => TypeNames.unitNumericName(view.name)}
+              renderIcon={(view) => (
+                <TypeIcon icon={view.icon} color={view.color} size={15} />
+              )}
+              placeholder="Search units…"
+              emptyLabel="No units yet"
+              header={
+                <div className="type-menu-search">
+                  <button
+                    className="icon-button"
+                    title="Back"
+                    onClick={() => setUnitOpen(false)}
+                  >
+                    ←
+                  </button>
+                  <span className="dim type-menu-title">Numeric with unit</span>
+                </div>
+              }
+              onPick={(view) => pick(TypeNames.unitNumericName(view.name))}
+            />
+          );
+        }
         if (calendarOpen) {
           return (
             <>
@@ -129,6 +174,10 @@ export function TypePicker(props: {
               <button className="type-menu-row" onClick={() => setCalendarOpen(true)}>
                 {scalarIcon(TypeNames.DATE)}
                 <span>Date &amp; time →</span>
+              </button>
+              <button className="type-menu-row" onClick={() => setUnitOpen(true)}>
+                {scalarIcon(TypeNames.NUMERIC)}
+                <span>Numeric with unit →</span>
               </button>
             </div>
             <div className="type-menu-divider" />

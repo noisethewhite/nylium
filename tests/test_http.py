@@ -408,9 +408,9 @@ def test_sync_props_endpoint_roundtrip(auth_client: TestClient) -> None:
         "name", "text", "priority", "mood",
     ]
     reloaded = auth_client.get(f"/api/objects/{note['uuid']}").json()
-    assert reloaded["props"]["text"] == {"value": "hello"}  # rename keeps data
-    assert reloaded["props"]["priority"] == {"value": None}  # retype purges
-    assert reloaded["props"]["mood"] == {"value": None}  # new prop = Null
+    assert reloaded["props"]["text"] == {"value": "hello", "unit": None}  # rename keeps data
+    assert reloaded["props"]["priority"] == {"value": None, "unit": None}  # retype purges
+    assert reloaded["props"]["mood"] == {"value": None, "unit": None}  # new prop = Null
 
     deleting = auth_client.put(
         "/api/types/Note/props",
@@ -509,5 +509,55 @@ def test_enum_over_http(auth_client: TestClient) -> None:
     assert reloaded["props"]["status"]["value"] == "in progress"
 
     delete_in_use = auth_client.put("/api/enums/Status/options", json={"options": []})
+    assert delete_in_use.status_code == 409
+
+
+def test_unit_over_http(auth_client: TestClient) -> None:
+    created = auth_client.post(
+        "/api/units",
+        json={
+            "name": "Temperature",
+            "base": "°C",
+            "secondaries": [{"name": "°F", "multiplier": 1.8, "offset": 32}],
+        },
+    )
+    assert created.status_code == 201, created.text
+    view = created.json()
+    assert view["kind"] == "unit"
+    assert [(p["name"], p["is_base"]) for p in view["unit_parts"]] == [
+        ("°C", True), ("°F", False),
+    ]
+
+    dsl.create_type(auth_client, "Oven", {"name": "String", "temp": "Numeric<Temperature>"})
+    oven = dsl.create_object(
+        auth_client, "Oven", {"name": {"value": "o1"}, "temp": {"value": 32, "unit": "°F"}}
+    )
+    assert oven["props"]["temp"] == {"value": "32.0", "unit": "°F"}  # Decimal → str on the wire
+
+    bogus = auth_client.post(
+        "/api/objects",
+        json={"type_name": "Oven", "props": {"temp": {"value": 1, "unit": "kelvin"}}},
+    )
+    assert bogus.status_code == 422
+
+    f_uuid = next(p["uuid"] for p in view["unit_parts"] if p["name"] == "°F")
+    c_uuid = next(p["uuid"] for p in view["unit_parts"] if p["name"] == "°C")
+    synced = auth_client.put(
+        "/api/units/Temperature/parts",
+        json={"parts": [
+            {"uuid": c_uuid, "name": "°C", "multiplier": 1, "offset": 0, "is_base": True},
+            {"uuid": f_uuid, "name": "fahrenheit", "multiplier": 1.8, "offset": 32, "is_base": False},
+        ]},
+    )
+    assert synced.status_code == 200, synced.text
+    reloaded = auth_client.get(f"/api/objects/{oven['uuid']}").json()
+    assert reloaded["props"]["temp"]["unit"] == "fahrenheit"
+
+    delete_in_use = auth_client.put(
+        "/api/units/Temperature/parts",
+        json={"parts": [
+            {"uuid": c_uuid, "name": "°C", "multiplier": 1, "offset": 0, "is_base": True},
+        ]},
+    )
     assert delete_in_use.status_code == 409
 

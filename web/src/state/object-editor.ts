@@ -37,8 +37,21 @@ export class ObjectEditorStore extends Observable<EditorState> {
       }
       return view.enum_options.map((option) => option.value);
     };
+    const unitPartsOf = (
+      unitTypeName: string,
+    ): { readonly base: string; readonly parts: readonly string[] } | null => {
+      const view = workspace.typeView(unitTypeName);
+      if (view === undefined || view.kind !== "unit") {
+        return null;
+      }
+      const base = view.unit_parts.find((part) => part.is_base);
+      if (base === undefined) {
+        return null;
+      }
+      return { base: base.name, parts: view.unit_parts.map((part) => part.name) };
+    };
     const fields = schema.props.map((prop) =>
-      FieldFactory.create(prop, object.props[prop.key], enumOptionsOf),
+      FieldFactory.create(prop, object.props[prop.key], enumOptionsOf, unitPartsOf),
     );
     const store = new ObjectEditorStore(
       { object, fields, saving: false, dirty: false, error: null },

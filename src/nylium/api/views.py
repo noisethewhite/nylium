@@ -11,13 +11,15 @@ from __future__ import annotations
 
 from uuid import UUID
 
+from decimal import Decimal
 from typing import Self, cast
 from pydantic import ConfigDict
 from pydantic.dataclasses import dataclass
 
-from nylium.database import Database, EnumOptions, Instances
+from nylium.database import Database, EnumOptions, Instances, UnitParts
 from nylium.objects import WObject, WProp, WType
 from nylium.objects.monthday import MonthDay, MonthDayTime
+from nylium.objects.quantity import Quantity
 from nylium.objects.wenum import WEnum
 from nylium.objects.wscalar import ScalarPayload, WScalar
 from nylium.objects.wtypemeta import StoredValue
@@ -35,6 +37,15 @@ class EnumOptionView:
 
 
 @dataclass(config=_CONFIG)
+class UnitPartView:
+    uuid: UUID
+    name: str
+    multiplier: Decimal
+    offset: Decimal
+    is_base: bool
+
+
+@dataclass(config=_CONFIG)
 class PropView:
     uuid: UUID
     key: str
@@ -49,6 +60,7 @@ class TypeView:
     color: str
     kind: str
     enum_options: list[EnumOptionView]
+    unit_parts: list[UnitPartView]
     props: list[PropView]
 
     @classmethod
@@ -66,6 +78,16 @@ class TypeView:
             enum_options=[
                 EnumOptionView(uuid=option.uuid, value=option.value)
                 for option in EnumOptions.list_for(owner.uuid)
+            ],
+            unit_parts=[
+                UnitPartView(
+                    uuid=part.uuid,
+                    name=part.name,
+                    multiplier=part.multiplier,
+                    offset=part.offset,
+                    is_base=part.is_base,
+                )
+                for part in UnitParts.list_for(owner.uuid)
             ],
             props=[
                 PropView(uuid=prop.uuid, key=prop.key, value_type=prop.value_type().name)
@@ -87,9 +109,11 @@ class ObjectRef:
 
 @dataclass(config=_CONFIG)
 class ScalarValue:
-    """None means the prop was never set."""
+    """None means the prop was never set. `unit` is the unit part name
+    as entered for `Numeric<Unit>` props; absent everywhere else."""
 
     value: ScalarPayload | None
+    unit: str | None = None
 
 
 @dataclass(config=_CONFIG)
@@ -147,6 +171,14 @@ class ObjectView:
             if isinstance(value, (MonthDay, MonthDayTime)):
                 return ScalarValue(value=str(value))
             return ScalarValue(value=cast(ScalarPayload | None, value))
+        if WType.unit_param_of(type_name) is not None:
+            # Quantity: canonical magnitude re-scaled to the entered part,
+            # rendered with the part name attached
+            if value is None:
+                return ScalarValue(value=None)
+            if not isinstance(value, Quantity):
+                raise TypeError(f"unit prop rendered a {type(value).__name__}")
+            return ScalarValue(value=value.value, unit=value.unit)
         if WEnum.is_enum(type_name):
             return ScalarValue(value=cast(str | None, value))
         if WType.is_array_name(type_name):

@@ -10,6 +10,7 @@ DTOs of the same boundary, mirroring the views they pair with.
 from __future__ import annotations
 
 from dataclasses import field
+from decimal import Decimal
 from uuid import UUID
 
 from pydantic import ConfigDict
@@ -93,6 +94,47 @@ class SyncEnumOptionsBody:
     still in use."""
 
     options: list[SyncEnumOptionItem]
+
+
+@dataclass(config=_CONFIG)
+class UnitSecondaryInput:
+    """One secondary part of a new unit: name and the affine conversion
+    factor (base = (entered - offset) / multiplier)."""
+
+    name: str
+    multiplier: Decimal
+    offset: Decimal = Decimal(0)
+
+
+@dataclass(config=_CONFIG)
+class CreateUnitBody:
+    """A unit type: name, its base part, and optional secondary parts."""
+
+    name: str
+    base: str
+    secondaries: list[UnitSecondaryInput] = field(default_factory=list)
+    icon: str = "straighten"
+    color: str = "gray"
+
+
+@dataclass(config=_CONFIG)
+class SyncUnitPartItem:
+    """One row of the unit editor's draft: uuid None = new part."""
+
+    name: str
+    multiplier: Decimal
+    offset: Decimal = Decimal(0)
+    is_base: bool = False
+    uuid: UUID | None = None
+
+
+@dataclass(config=_CONFIG)
+class SyncUnitPartsBody:
+    """The full part draft — renames by uuid (propagating to stored
+    values), creates without, deletes whatever the draft omits unless
+    still in use. Exactly one part must carry is_base."""
+
+    parts: list[SyncUnitPartItem]
 
 
 @dataclass(config=_CONFIG)

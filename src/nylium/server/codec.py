@@ -8,10 +8,12 @@ from __future__ import annotations
 
 from datetime import date, datetime, time
 from decimal import Decimal, InvalidOperation
+from typing import cast
 
 from nylium.api.api import Api, PropInput
 from nylium.api.views import ArrayValue, PropValue, RefValue, ScalarValue
 from nylium.objects.monthday import MonthDay, MonthDayTime
+from nylium.objects.quantity import Quantity
 from nylium.objects.wenum import WEnum
 from nylium.objects.wscalar import (
     ScalarPayload,
@@ -57,6 +59,18 @@ class PropCodec:
             if not isinstance(value, ScalarValue):
                 raise TypeError(cls._shape_error(type_name, "ScalarValue", value))
             return cls._coerce_scalar(value.value, type_name)
+        if WType.unit_param_of(type_name) is not None:
+            if not isinstance(value, ScalarValue):
+                raise TypeError(cls._shape_error(type_name, "ScalarValue", value))
+            if value.value is None:
+                return None
+            coerced = cls._coerce_scalar(value.value, WNumeric.TYPE_NAME)
+            unit = value.unit
+            if unit is not None and type(unit) is not str:
+                raise TypeError(f"unit {unit!r} is not a valid {type_name}")
+            # part membership and conversion happen in WUnit.validate,
+            # when the write hits the object layer
+            return Quantity(value=cast(Decimal, coerced), unit=unit)
         if WEnum.is_enum(type_name):
             if not isinstance(value, ScalarValue):
                 raise TypeError(cls._shape_error(type_name, "ScalarValue", value))
