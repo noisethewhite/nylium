@@ -251,14 +251,16 @@ def test_rename_type_guards():
 
 
 def test_type_icon_and_color():
-    view = Api.create_type("Tagged", {"name": "String"}, "Tagged", icon="star", color="red")
-    assert (view.icon, view.color) == ("star", "red")
+    view = Api.create_type(
+        "Tagged", {"name": "String"}, "Tagged", icon="star", color="#e5534b"
+    )
+    assert (view.icon, view.color) == ("star", "#e5534b")
     plain = Api.create_type("Plain", {"name": "String"}, "Plains")
-    assert (plain.icon, plain.color) == ("inventory_2", "gray")
-    updated = Api.rename_type("Tagged", icon="heart", color="pink")
-    assert (updated.name, updated.icon, updated.color) == ("Tagged", "heart", "pink")
+    assert (plain.icon, plain.color) == ("inventory_2", "#9e9e9e")
+    updated = Api.rename_type("Tagged", icon="heart", color="#e275ad")
+    assert (updated.name, updated.icon, updated.color) == ("Tagged", "heart", "#e275ad")
     builtin = Api.get_type("String")
     assert builtin is not None
-    assert (builtin.icon, builtin.color) == ("text_fields", "gray")
+    assert (builtin.icon, builtin.color) == ("text_fields", "#9e9e9e")
     with pytest.raises(ValidationError):
         Api.rename_type("String", icon="x")

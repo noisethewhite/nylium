@@ -11,6 +11,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
+from nylium.objects.wscalar import WColor
 from nylium.server import NyliumApp
 
 
@@ -464,14 +465,14 @@ def test_update_type_guards(auth_client: TestClient) -> None:
 
 
 def test_type_icon_and_color_over_http(auth_client):
-    dsl.create_type(auth_client, "Tagged", {"name": "String"}, icon="star", color="red")
+    dsl.create_type(auth_client, "Tagged", {"name": "String"}, icon="star", color="#e5534b")
     view = auth_client.get("/api/types/Tagged").json()
-    assert (view["icon"], view["color"]) == ("star", "red")
-    response = auth_client.patch("/api/types/Tagged", json={"icon": "heart", "color": "pink"})
+    assert (view["icon"], view["color"]) == ("star", "#e5534b")
+    response = auth_client.patch("/api/types/Tagged", json={"icon": "heart", "color": "#e275ad"})
     assert response.status_code == 200
-    assert (response.json()["icon"], response.json()["color"]) == ("heart", "pink")
+    assert (response.json()["icon"], response.json()["color"]) == ("heart", "#e275ad")
     builtin = auth_client.get("/api/types/String").json()
-    assert (builtin["icon"], builtin["color"]) == ("text_fields", "gray")
+    assert (builtin["icon"], builtin["color"]) == ("text_fields", "#9e9e9e")
 
 
 def test_enum_over_http(auth_client: TestClient) -> None:
@@ -659,6 +660,7 @@ def test_tags_over_http(auth_client: TestClient) -> None:
             "owner_name": "Sci-Fi",
             "prop_key": "books",
             "name": "Sci-Fi → books",
+            "color": WColor.DEFAULT,
         }
     ]
 

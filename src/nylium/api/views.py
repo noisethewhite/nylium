@@ -186,6 +186,9 @@ class TagView:
     owner_name: str
     prop_key: str
     name: str
+    # ADR-0005: tag color = the owner type's color, projected along so the
+    # UI paints chips without a second fetch
+    color: str
 
 
 @dataclass(config=_CONFIG)
@@ -233,18 +236,21 @@ class ObjectView:
         becomes one tag ``<owner display name> → <prop key>``. One query,
         no N+1."""
         name_prop = aliased(Props)
+        owner_types = aliased(Types)
         rows = session.execute(
             sqla.select(
                 InstanceValues.inst_uuid,  # owner object uuid
                 Props.key,  # array prop key
                 Instances.name,  # owner registry name (fallback title)
                 StringValues.value,  # owner's `name` prop value (display title)
+                owner_types.color,  # owner type's color paints the chip
             )
             .select_from(ArrayValues)
             .join(InstanceValues, InstanceValues.uuid == ArrayValues.inst_uuid)
             .join(Props, Props.uuid == InstanceValues.prop_uuid)
             .join(Types, Types.uuid == Props.value_type_uuid)
             .join(Instances, Instances.uuid == InstanceValues.inst_uuid)
+            .join(owner_types, owner_types.uuid == Instances.type_uuid)
             .join(name_prop, name_prop.owner_type_uuid == Instances.type_uuid)
             .join(
                 StringValues,
@@ -267,12 +273,14 @@ class ObjectView:
             prop_key = cast(str, row[1])
             registry_name = cast(str, row[2])
             display_name = cast(str | None, row[3]) or registry_name
+            color = cast(str, row[4])
             tags.append(
                 TagView(
                     owner_uuid=owner_uuid,
                     owner_name=display_name,
                     prop_key=prop_key,
                     name=f"{display_name} {EMBEDDED_NAME_SEPARATOR} {prop_key}",
+                    color=color,
                 )
             )
         tags.sort(key=lambda tag: (tag.owner_name, tag.prop_key))

@@ -13,6 +13,7 @@ list[...] of those — the prop type world is closed by construction.
 """
 from __future__ import annotations
 
+import re
 from datetime import date, datetime, time
 from decimal import Decimal
 from typing import ClassVar, cast, final, override
@@ -82,6 +83,13 @@ class WScalar:
             raise TypeError(
                 f"{type_name} prop takes {scalar.PYTHON_TYPE.__name__}, got {type(value).__name__}"
             )
+        scalar.check(value)
+
+    @classmethod
+    def check(cls, value: ScalarPayload) -> None:
+        """Subclass invariant, enforced after the exact-type match.
+        Base scalars carry no invariant beyond the type itself."""
+        _ = value
 
     @classmethod
     def to_storage(cls, value: ScalarPayload) -> object:
@@ -159,6 +167,39 @@ class WTime(WScalar):
     PYTHON_TYPE = time
     TABLE = TimeValues
     ICON = "schedule"
+
+
+@final
+class WColor(WScalar):
+    """3-byte RGB hex ``#RRGGBB`` (ADR-0005): first-class scalar and the
+    backing type of type/icon/tag colors. Stored in StringValues."""
+
+    TYPE_NAME = "Color"
+    PYTHON_TYPE = str
+    TABLE = StringValues
+    ICON = "palette"
+
+    HEX_RE: ClassVar[re.Pattern[str]] = re.compile(r"^#[0-9A-Fa-f]{6}$")
+    # Neutral default; the named palette below exists only to migrate
+    # pre-ADR-0005 rows that stored palette keys instead of hex
+    DEFAULT: ClassVar[str] = "#9e9e9e"
+    LEGACY_PALETTE: ClassVar[dict[str, str]] = {
+        "gray": "#9e9e9e",
+        "red": "#e5534b",
+        "orange": "#e0823d",
+        "amber": "#d9a514",
+        "green": "#57ab5a",
+        "teal": "#39c5cf",
+        "blue": "#539bf5",
+        "purple": "#b083f0",
+        "pink": "#e275ad",
+    }
+
+    @override
+    @classmethod
+    def check(cls, value: ScalarPayload) -> None:
+        if not cls.HEX_RE.fullmatch(cast(str, value)):
+            raise ValueError(f"Color takes #RRGGBB hex, got {value!r}")
 
 
 @final

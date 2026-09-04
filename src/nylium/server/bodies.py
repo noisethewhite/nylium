@@ -17,6 +17,7 @@ from pydantic import ConfigDict
 from pydantic.dataclasses import dataclass
 
 from nylium.api.views import PropValue
+from nylium.objects.wscalar import WColor
 
 _CONFIG = ConfigDict(extra="ignore")
 
@@ -31,7 +32,7 @@ class CreateTypeBody:
     # ADR-0005: optional prop key -> formula string
     formulas: dict[str, str] | None = None
     icon: str = "inventory_2"
-    color: str = "gray"
+    color: str = WColor.DEFAULT
     # ADR-0004: composition type — instances exist only as prop values
     embedded: bool = False
 
@@ -82,7 +83,7 @@ class CreateEnumBody:
     name: str
     options: list[str] = field(default_factory=list)
     icon: str = "lists"
-    color: str = "gray"
+    color: str = WColor.DEFAULT
 
 
 @dataclass(config=_CONFIG)
@@ -120,7 +121,7 @@ class CreateUnitBody:
     base: str
     secondaries: list[UnitSecondaryInput] = field(default_factory=list)
     icon: str = "straighten"
-    color: str = "gray"
+    color: str = WColor.DEFAULT
 
 
 @dataclass(config=_CONFIG)

@@ -7,6 +7,7 @@ from typing import ClassVar
 
 from fastapi import Depends, FastAPI, status
 from sqlalchemy import text
+from sqlalchemy.engine import Connection
 
 from nylium.auth.guard import require_user
 from nylium.auth.routes import auth_routes
@@ -51,17 +52,32 @@ class NyliumApp:
         """Idempotent column backfills; each clause is a no-op once applied."""
         statements = [
             "ALTER TABLE types ADD COLUMN IF NOT EXISTS icon TEXT NOT NULL DEFAULT 'inventory_2'",
-            "ALTER TABLE types ADD COLUMN IF NOT EXISTS color TEXT NOT NULL DEFAULT 'gray'",
+            "ALTER TABLE types ADD COLUMN IF NOT EXISTS color TEXT NOT NULL DEFAULT '#9e9e9e'",
             "ALTER TABLE types ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'object'",
             "ALTER TABLE types ADD COLUMN IF NOT EXISTS embedded BOOLEAN NOT NULL DEFAULT FALSE",
             "ALTER TABLE numeric_values ADD COLUMN IF NOT EXISTS unit TEXT",
             "ALTER TABLE props ADD COLUMN IF NOT EXISTS formula TEXT",
             "ALTER TABLE instances ADD COLUMN IF NOT EXISTS owner_object_uuid UUID",
             "ALTER TABLE instances ADD COLUMN IF NOT EXISTS owner_prop_uuid UUID",
+            # ADR-0005: color stores hex now — align the pre-existing default
+            "ALTER TABLE types ALTER COLUMN color SET DEFAULT '#9e9e9e'",
         ]
         with Database.engine.begin() as connection:
             for statement in statements:
                 _ = connection.execute(text(statement))
+            cls._migrate_type_colors(connection)
+
+    @classmethod
+    def _migrate_type_colors(cls, connection: Connection) -> None:
+        """ADR-0005: rewrite legacy named-palette type colors to their hex
+        values. Idempotent — hex values never match a palette key."""
+        from nylium.objects.wscalar import WColor
+
+        for name, hex_value in WColor.LEGACY_PALETTE.items():
+            _ = connection.execute(
+                text("UPDATE types SET color = :hex WHERE color = :name"),
+                {"hex": hex_value, "name": name},
+            )
 
     @classmethod
     def _dist_dir(cls) -> Path:

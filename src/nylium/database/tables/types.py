@@ -15,13 +15,15 @@ class Types(Base):
     name: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
     # NULL for builtins and array types — only user types carry both forms
     plural_name: Mapped[str | None] = mapped_column(Text, nullable=True)
-    # Material Symbols name + palette key, rendered monochrome by the UI;
+    # Material Symbols name, rendered monochrome by the UI;
     # server defaults backfill existing rows on ALTER
     icon: Mapped[str] = mapped_column(
         Text, nullable=False, default="inventory_2", server_default="inventory_2"
     )
+    # ADR-0005: stores #RRGGBB hex; the default must match WColor.DEFAULT
+    # (tables must not import objects — keep the literal in sync by hand)
     color: Mapped[str] = mapped_column(
-        Text, nullable=False, default="gray", server_default="gray"
+        Text, nullable=False, default="#9e9e9e", server_default="#9e9e9e"
     )
     # "object" (regular, builtin or array) | "enum" (string enum — its
     # values live in enum_options; instances never exist for enum types)

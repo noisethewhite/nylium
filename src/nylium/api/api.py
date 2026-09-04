@@ -23,7 +23,7 @@ from nylium.objects.wenum import WEnum
 from nylium.objects.wformula import Formula
 from nylium.objects.wobject import WObject
 from nylium.objects.wprop import WProp
-from nylium.objects.wscalar import WInteger, WNumeric, WScalar, WString
+from nylium.objects.wscalar import WColor, WInteger, WNumeric, WScalar, WString
 from nylium.objects.wtype import WType
 from nylium.objects.wtypemeta import StoredValue, WTypeMeta
 
@@ -64,7 +64,7 @@ class Api:
         props: dict[str, str] | None = None,
         plural_name: str | None = None,
         icon: str = "inventory_2",
-        color: str = "gray",
+        color: str = WColor.DEFAULT,
         embedded: bool = False,
         formulas: dict[str, str] | None = None,
     ) -> TypeView:
@@ -99,6 +99,7 @@ class Api:
         owner_props = list(props.items())
         for key, value_type_name in props.items():
             cls._check_formula_prop(formulas.get(key), value_type_name, owner_props)
+        cls._check_color(color)
         WScalar.ensure_builtins()
         owner = WType.ensure(name, plural_name, embedded=embedded)
         for position, (key, value_type_name) in enumerate(props.items()):
@@ -119,7 +120,7 @@ class Api:
         name: str,
         options: list[str] | None = None,
         icon: str = "lists",
-        color: str = "gray",
+        color: str = WColor.DEFAULT,
     ) -> TypeView:
         """A string enum is a type with kind='enum': no props, values
         live in string_values, options live in enum_options. Options
@@ -130,6 +131,7 @@ class Api:
         if not final_name:
             raise ValidationError("enum name must not be empty")
         cls._check_reserved_name(final_name, "enum name")
+        cls._check_color(color)
         owner = WType.ensure(final_name, kind=WType.KIND_ENUM)
         EnumOptions.sync(owner.uuid, [(None, v) for v in (options or [])])
         Types.update(owner.uuid, owner.name, None, icon, color)
@@ -166,7 +168,7 @@ class Api:
         base: str,
         secondaries: list[tuple[str, Decimal, Decimal]] | None = None,
         icon: str = "straighten",
-        color: str = "gray",
+        color: str = WColor.DEFAULT,
     ) -> TypeView:
         """A unit is a type with kind='unit': no props, parts live in
         unit_parts. The base part has identity conversion (multiplier 1,
@@ -181,6 +183,7 @@ class Api:
         if not base_name:
             raise ValidationError("unit base name must not be empty")
         cls._check_reserved_name(final_name, "unit name")
+        cls._check_color(color)
         owner = WType.ensure(final_name, kind=WType.KIND_UNIT)
         items: list[tuple[UUID | None, str, Decimal, Decimal, bool]] = [
             (None, base_name, Decimal(1), Decimal(0), True),
@@ -401,6 +404,8 @@ class Api:
             raise ValueError(f"type {final_name!r} already exists")
         final_plural = owner.plural_name if plural_name is None else plural_name
         final_icon = owner.icon if icon is None else icon
+        if color is not None:
+            cls._check_color(color)
         final_color = owner.color if color is None else color
         Types.update(owner.uuid, final_name, final_plural, final_icon, final_color)
         if owner.is_unit and final_name != name:
@@ -717,6 +722,15 @@ class Api:
         if isinstance(value, UUID):
             return WObject.wrap(value)
         return cast(StoredValue, value)  # anything else fails in setattr
+
+    @classmethod
+    def _check_color(cls, color: str) -> None:
+        """ADR-0005: type colors are stored as #RRGGBB hex; anything else
+        (including the legacy named palette) is rejected at the boundary."""
+        from nylium.server.errors import ValidationError
+
+        if not WColor.HEX_RE.fullmatch(color):
+            raise ValidationError(f"color must be #RRGGBB hex, got {color!r}")
 
     @classmethod
     def _check_reserved_name(cls, value: str, what: str) -> None:
