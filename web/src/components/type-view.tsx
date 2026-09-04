@@ -2,6 +2,7 @@ import type { DragEvent, ReactElement } from "react";
 import { useEffect, useState } from "react";
 import type { TypeView } from "../contracts";
 import { TypeNames } from "../contracts";
+import { useSaveShortcut } from "../state/use-save-shortcut";
 import { WorkspaceStore } from "../state/workspace";
 import { IconPicker } from "./icon-picker";
 import { TypePicker } from "./type-picker";
@@ -124,6 +125,7 @@ export function TypeViewPanel(props: {
       rows.map((row) => ({ uuid: row.uuid, key: row.key, value_type: row.valueType })),
     );
   };
+  useSaveShortcut(save, !pristine && !invalid);
 
   return (
     <div className="tab-content">

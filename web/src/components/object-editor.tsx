@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import type { ObjectView, TypeView } from "../contracts";
 import { ObjectEditorStore } from "../state/object-editor";
 import { useObservable } from "../state/use-observable";
+import { useSaveShortcut } from "../state/use-save-shortcut";
 import { WorkspaceStore } from "../state/workspace";
 import { FieldEditor } from "./field-editors";
 import { TypeIcon } from "./type-icon";
@@ -41,6 +42,7 @@ function ObjectEditorInner(props: {
     [props.object, props.schema, props.workspace],
   );
   const editorState = useObservable(store);
+  useSaveShortcut(() => void store.save(), editorState.dirty && !editorState.saving);
 
   const fields = editorState.fields;
   const first = fields[0];
