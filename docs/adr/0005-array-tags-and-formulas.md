@@ -46,9 +46,12 @@ Tags show directly under the object's name and have their own color.
    each chip is one concrete edge to one concrete owner. Chips render
    **directly under the object's name** in the editor header.
 
-4. Each tag has its own color, derived deterministically by hashing
-   the tag name into the palette — stable across sessions, distinct
-   across tags. Not user-configurable in v1.
+4. Tag color = the color of the owner object's type. Colors are a new
+   builtin scalar type **`Color`**: a 3-byte RGB hex string (`#RRGGBB`),
+   validated on write. `Color` is a first-class scalar — users may type
+   any prop with it — and it also backs type/icon colors and tag colors
+   (a tag chip takes its color from the owner type's `Color`). Existing
+   named-palette type colors migrate to hex values.
 
 ### Two-way membership editing
 
