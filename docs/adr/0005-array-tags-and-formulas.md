@@ -13,7 +13,7 @@ The user revised the idea into something simpler and more general:
 collection that can be filled two ways — manually (search & pick on
 the owner side) and via **tags** (on the member side). When an object
 lands in such an array it automatically carries a tag named
-`<Type Name> -> <Prop Name>`; assigning that tag to an object makes
+`<Object Name> -> <Prop Name>`; assigning that tag to an object makes
 it a member of the array. Other props of the owner may be **computed
 by formulas over the array's members** (Excel-flavored: a
 `Receipt`'s `Total` = `SUM(items.price)`).
@@ -25,25 +25,26 @@ Tags show directly under the object's name and have their own color.
 ### Tags are derived back-references of array membership
 
 1. Every prop `p: Array<T>` on type `S`, where `T` is a standalone
-   (non-embedded) object type, automatically defines a **tag**
-   identified by the pair `(S, p)`. No opt-in, **no new tables**: the
-   edge set IS the array's stored refs; a tag is a read-side
-   projection of those edges onto the member object. Scalar arrays
-   (`Array<String>` …) have no tags — there is no object to tag.
-   `Array<Embedded>` stays forbidden (ADR-0004).
+   (non-embedded) object type, automatically defines, for every owner
+   instance `o` of `S`, a **tag** identified by the pair `(o, p)`.
+   No opt-in, **no new tables**: the edge set IS the array's stored
+   refs; a tag is a read-side projection of one such edge onto the
+   member object. Scalar arrays (`Array<String>` …) have no tags —
+   there is no object to tag. `Array<Embedded>` stays forbidden
+   (ADR-0004).
 
-2. The tag's name is exactly `<S name> → <p key>` — one derived
-   string. Renaming the type or the prop key renames the tag **by
-   construction**: nothing is stored, nothing to rewrite, name and
-   tag can never drift apart. The `→` glyph is already reserved in
-   all user-entered names (ADR-0004), so no user name can collide
-   with a tag name.
+2. The tag's name is exactly `<o name> → <p key>` — one derived
+   string, e.g. `Receipt #3 → items`. Renaming the owner object or
+   the prop key renames the tag **by construction**: nothing is
+   stored, nothing to rewrite, name and tag can never drift apart.
+   The `→` glyph is already reserved in all user-entered names
+   (ADR-0004), so no user name can collide with a tag name.
 
-3. An object displays one chip per **distinct** `(S, p)` it is a
-   member of, deduplicated across owners: sitting in three receipts'
-   `items` shows a single `Receipt → items` chip whose tooltip lists
-   the owning receipts. Chips render **directly under the object's
-   name** in the editor header.
+3. An object displays one chip per membership edge — sitting in
+   three receipts' `items` shows three chips: `Receipt #1 → items`,
+   `Receipt #3 → items`, `Receipt #7 → items`. No deduplication:
+   each chip is one concrete edge to one concrete owner. Chips render
+   **directly under the object's name** in the editor header.
 
 4. Each tag has its own color, derived deterministically by hashing
    the tag name into the palette — stable across sessions, distinct
@@ -55,16 +56,16 @@ Tags show directly under the object's name and have their own color.
    array via search appends the ref — the member instantly shows the
    tag, because the tag is derived. No extra write paths.
 
-6. Member side: the object's tag section offers *add tag* → pick a
-   tag `(S, p)` whose `T` matches the object's type → pick the owner
-   instance of `S` → the ref is appended to that owner's array. The
-   same edge, created from the other side; validation and storage are
-   the ordinary array-write path.
+6. Member side: the object's tag section offers *add tag* → pick the
+   owner instance `o` (search over objects whose type has an
+   `Array<T>` prop matching the object's type) → pick the prop `p`
+   (if `o`'s type has several matching array props) → the ref is
+   appended to `o`'s array. The same edge, created from the other
+   side; validation and storage are the ordinary array-write path.
 
-7. Removing a tag chip removes **all** `(S, p)` edges pointing at the
-   object (across every owner); the UI confirms and lists the
-   affected owners first. (Per-owner removal is the tooltip's job in
-   v1: remove from the owner's array editor.)
+7. Removing a tag chip removes **exactly that one edge** — the tag
+   IS a concrete `(owner, prop)` pair, so there is nothing to
+   disambiguate and no bulk side effects.
 
 ### Formula props
 
