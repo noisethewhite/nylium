@@ -18,8 +18,9 @@ from uuid import UUID, uuid4
 import sqlalchemy as sqla
 from sqlalchemy.orm import Session
 
-from nylium.database import Database, ArrayValues, Instances, InstanceValues
+from nylium.database import Database, ArrayValues, Files, Instances, InstanceValues
 from nylium.objects.wenum import WEnum
+from nylium.objects.wfile import WFile
 from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import VALUE_PROP_KEY, ScalarPayload, WScalar, WString
 from nylium.objects.wtype import WType
@@ -152,6 +153,9 @@ class WArray:
     def _unwrap(cls, session: Session, uuid: UUID, type_name: str) -> StoredValue:
         if WType.is_array_name(type_name):
             return cls.read(uuid, WType.element_name(type_name))
+        if WFile.is_file_type(type_name):
+            # ADR-0008: a file element is a files.uuid, not a box instance
+            return uuid
         scalar = WScalar.by_type_name(type_name)
         if scalar is None and WEnum.is_enum(type_name):
             # enum elements box as String boxes; membership was checked at write
@@ -183,6 +187,17 @@ class WArray:
             return array_uuid
         scalar = WScalar.by_type_name(type_name)
         if scalar is None:
+            if WFile.is_file_type(type_name):
+                # ADR-0008: a file element stores its files.uuid directly in
+                # value_uuid — no box instance (array_values.value_uuid is a
+                # bare uuid after the ADR-0008 migration)
+                if not isinstance(value, UUID):
+                    raise TypeError(
+                        f"{type_name} element takes a files.uuid, got {type(value).__name__}"
+                    )
+                if session.get(Files, value) is None:
+                    raise TypeError(f"{type_name} element references missing file {value}")
+                return value
             if WEnum.is_enum(type_name):
                 validated = WEnum.validate(type_name, value)
                 scalar = WString

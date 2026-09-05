@@ -1,10 +1,11 @@
 import type { ChangeEvent, ReactElement } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ObjectView } from "../contracts";
 import { ArrayFieldModel, RefFieldModel } from "../fields/composite-fields";
 import { EmbeddedFieldModel } from "../fields/embedded-fields";
 import { EnumFieldModel } from "../fields/enum-fields";
 import { FieldFactory } from "../fields/field-factory";
+import { FileFieldModel } from "../fields/file-fields";
 import { FloatingMenu } from "./floating-menu";
 import { NameSearch } from "./name-search";
 import { FieldModel } from "../fields/field-model";
@@ -68,6 +69,9 @@ export function FieldEditor({ field, editor }: FieldProps): ReactElement {
   }
   if (field instanceof EmbeddedFieldModel) {
     return <EmbeddedSection field={field} editor={editor} />;
+  }
+  if (field instanceof FileFieldModel) {
+    return <FileInput field={field} editor={editor} />;
   }
   if (field instanceof RefFieldModel) {
     return <RefInput field={field} editor={editor} />;
@@ -594,6 +598,89 @@ function EmbeddedSection({ field, editor }: { field: EmbeddedFieldModel; editor:
         )}
       </div>
     </div>
+  );
+}
+
+function FileInput({ field, editor }: { field: FileFieldModel; editor: ObjectEditorStore }): ReactElement {
+  const type = editor.typeOf(field.valueType);
+  const icon = type === undefined ? null : <TypeIcon icon={type.icon} color={type.color} />;
+  const files = editor.filesOfType(field.valueType);
+  const selected = files.find((file) => file.uuid === field.selectedUuid);
+  const uploadRef = useRef<HTMLInputElement | null>(null);
+
+  return (
+    <FieldShell
+      label={
+        <>
+          {field.key} <span className="dim">→ {field.valueType}</span>
+        </>
+      }
+    >
+      <span className="file-picker-row">
+        <FloatingMenu
+          wrapperClassName="floating-menu-grow"
+          triggerClassName="input type-picker-trigger"
+          menuClassName="type-menu"
+          trigger={
+            <>
+              <span className="material-symbols-outlined type-picker-chevron" aria-hidden>
+                keyboard_arrow_down
+              </span>
+              {icon}
+              <span className="type-picker-value">
+                {selected === undefined ? "—" : selected.name}
+              </span>
+            </>
+          }
+        >
+          {(close) => (
+            <NameSearch
+              items={files}
+              getKey={(file) => file.uuid}
+              getLabel={(file) => file.name}
+              renderIcon={() => icon}
+              placeholder="Search files…"
+              unsetLabel="—"
+              onUnset={() => {
+                field.selectedUuid = null;
+                draftChanged(editor);
+                close();
+              }}
+              onPick={(file) => {
+                field.selectedUuid = file.uuid;
+                draftChanged(editor);
+                close();
+              }}
+            />
+          )}
+        </FloatingMenu>
+        <button
+          className="button"
+          type="button"
+          title="Upload new file"
+          onClick={() => uploadRef.current?.click()}
+        >
+          Upload
+        </button>
+        <input
+          ref={uploadRef}
+          type="file"
+          hidden
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (file !== undefined) {
+              void editor.uploadFileFor(field.valueType, file).then((created) => {
+                if (created !== null) {
+                  field.selectedUuid = created.uuid;
+                  draftChanged(editor);
+                }
+              });
+            }
+            event.target.value = "";
+          }}
+        />
+      </span>
+    </FieldShell>
   );
 }
 

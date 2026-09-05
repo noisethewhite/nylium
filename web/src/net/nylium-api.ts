@@ -1,4 +1,5 @@
 import type {
+  FileView,
   FunctionEdgeInput,
   FunctionNodeInput,
   FunctionView,
@@ -185,10 +186,10 @@ export class NyliumApi extends HttpTransport {
     );
   }
 
-  /** ADR-0006: upload a blob as a File/Document/Image instance. The
-   * multipart body carries the bytes; the instance is a uuid-stable
-   * pointer, so renaming the object never breaks references. */
-  async uploadFile(typeName: string, file: File): Promise<ObjectView> {
+  /** ADR-0008: upload a blob as a first-class file entity. The multipart
+   * body carries the bytes; the `files` row is uuid-stable, so renaming
+   * the file never breaks references. */
+  async uploadFile(typeName: string, file: File): Promise<FileView> {
     const form = new FormData();
     form.append("file", file, file.name);
     const response = await fetch(
@@ -198,11 +199,23 @@ export class NyliumApi extends HttpTransport {
     if (!response.ok) {
       throw new Error(`upload failed: ${response.status} ${await response.text()}`);
     }
-    return (await response.json()) as ObjectView;
+    return (await response.json()) as FileView;
   }
 
-  /** Blob URL for previews/downloads — served from GET /api/files/{uuid}. */
+  listFiles(): Promise<FileView[]> {
+    return this.request("GET", "/files");
+  }
+
+  renameFile(uuid: string, name: string): Promise<FileView> {
+    return this.request<FileView>("PATCH", `/files/${encodeURIComponent(uuid)}`, { name });
+  }
+
+  deleteFile(uuid: string): Promise<void> {
+    return this.requestVoid("DELETE", `/files/${encodeURIComponent(uuid)}`);
+  }
+
+  /** Blob URL for previews/downloads — served from GET /api/files/{uuid}/download. */
   static fileUrl(uuid: string): string {
-    return `/api/files/${encodeURIComponent(uuid)}`;
+    return `/api/files/${encodeURIComponent(uuid)}/download`;
   }
 }

@@ -631,6 +631,36 @@ select.input option {
   border: none;
 }
 
+.type-file-note {
+  margin: 20px 0;
+  max-width: 52ch;
+}
+
+.file-picker-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.lock-marker {
+  font-size: 16px;
+  vertical-align: -2px;
+  margin-right: 2px;
+}
+
+.file-row {
+  padding: var(--space-2) var(--space-1);
+}
+
+.file-row .type-row-name {
+  color: var(--fg);
+  text-decoration: none;
+}
+
+.file-row .type-row-name:hover {
+  text-decoration: underline;
+}
+
 /* the type editor composes prop-draft-row (inputs) with schema-prop-row
  * (grips + drop states) — the draft variant wins on spacing */
 .schema-props .prop-draft-row {

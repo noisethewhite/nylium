@@ -1,4 +1,5 @@
 import type {
+  FileView,
   FunctionEdgeInput,
   FunctionNodeInput,
   FunctionView,
@@ -27,6 +28,7 @@ export interface WorkspaceState {
   readonly types: readonly TypeView[];
   readonly objects: readonly ObjectView[];
   readonly functions: readonly FunctionView[];
+  readonly files: readonly FileView[];
   readonly tabs: readonly Tab[];
   readonly activeTab: Tab | null;
 }
@@ -36,6 +38,7 @@ const INITIAL_STATE: WorkspaceState = {
   types: [],
   objects: [],
   functions: [],
+  files: [],
   tabs: [],
   activeTab: null,
 };
@@ -73,7 +76,8 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
     await this.guard(async () => {
       const types = await this.api.listTypes();
       const functions = await this.api.listFunctions();
-      this.setState({ ...this.getSnapshot(), types, functions });
+      const files = await this.api.listFiles();
+      this.setState({ ...this.getSnapshot(), types, functions, files });
       for (const view of this.userTypes()) {
         await this.refreshObjectsOf(view.name);
       }
@@ -413,30 +417,57 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
     });
   }
 
-  /** ADR-0006: File/Document/Image objects exist only via upload — the
-   * instance is a pointer to the blob, so "new object" for these types
-   * is a file pick, not a blank row. */
-  async uploadFile(typeName: string, file: File): Promise<void> {
+  /** ADR-0008: File/Document/Image exist only via upload — a file is a
+   * first-class row, so "new file" is a file pick, not a blank row. */
+  async uploadFile(typeName: string, file: File): Promise<FileView | null> {
+    let created: FileView | null = null;
     await this.guard(async () => {
-      const created = await this.api.uploadFile(typeName, file);
+      created = await this.api.uploadFile(typeName, file);
       this.setState({
         ...this.getSnapshot(),
-        objects: [...this.getSnapshot().objects, created],
+        files: [...this.getSnapshot().files, created],
       });
-      this.openObject(created.uuid);
     });
+    return created;
   }
 
-  /** Upload an image and return its `img:<uuid>` icon value (ADR-0006).
-   * The Image instance joins the object list so the user can find and
-   * rename it; deleting it later resets icons back to the glyph. */
+  /** Upload an image and return its `img:<uuid>` icon value (ADR-0008).
+   * The Image file joins the file list; deleting it later resets icons
+   * back to the glyph. */
   async uploadIconImage(file: File): Promise<string> {
     const created = await this.api.uploadFile(TypeNames.IMAGE, file);
     this.setState({
       ...this.getSnapshot(),
-      objects: [...this.getSnapshot().objects, created],
+      files: [...this.getSnapshot().files, created],
     });
     return `${TypeNames.IMG_ICON_PREFIX}${created.uuid}`;
+  }
+
+  /** Rename a file's display name — the uuid pointer is unchanged. */
+  async renameFile(uuid: string, name: string): Promise<void> {
+    await this.guard(async () => {
+      const renamed = await this.api.renameFile(uuid, name);
+      this.setState({
+        ...this.getSnapshot(),
+        files: this.getSnapshot().files.map((f) => (f.uuid === uuid ? renamed : f)),
+      });
+    });
+  }
+
+  /** Delete a file — blobs on disk and array references go with it. */
+  async deleteFile(uuid: string): Promise<void> {
+    await this.guard(async () => {
+      await this.api.deleteFile(uuid);
+      this.setState({
+        ...this.getSnapshot(),
+        files: this.getSnapshot().files.filter((f) => f.uuid !== uuid),
+      });
+    });
+  }
+
+  /** Files of a given file-type (File/Document/Image) for pickers. */
+  filesOfType(typeName: string): readonly FileView[] {
+    return this.getSnapshot().files.filter((f) => f.type_name === typeName);
   }
 
   async deleteObject(uuid: string): Promise<void> {

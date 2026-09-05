@@ -1,4 +1,4 @@
-import type { ObjectView, PropValue, TagView, TypeView } from "../contracts";
+import type { FileView, ObjectView, PropValue, TagView, TypeView } from "../contracts";
 import { PropValues, TypeNames } from "../contracts";
 import { ArrayFieldModel, RefFieldModel } from "../fields/composite-fields";
 import { EmbeddedFieldModel } from "../fields/embedded-fields";
@@ -237,6 +237,19 @@ export class ObjectEditorStore extends Observable<EditorState> {
    * names in ref pickers and chips. */
   typeOf(name: string): TypeView | undefined {
     return this.workspace.getSnapshot().types.find((view) => view.name === name);
+  }
+
+  /** Files of a file-typed prop's target type (ADR-0008) — files are
+   * first-class rows, so a File/Document/Image picker lists them, not
+   * objects. */
+  filesOfType(typeName: string): readonly FileView[] {
+    return this.workspace.filesOfType(typeName);
+  }
+
+  /** Upload a file for a file-typed prop; returns the new entity so the
+   * picker can select it in the same gesture. */
+  uploadFileFor(typeName: string, file: File): Promise<FileView | null> {
+    return this.workspace.uploadFile(typeName, file);
   }
 
   /** Every RefFieldModel (top-level or inside arrays) gets candidates

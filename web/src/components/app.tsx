@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 import { useEffect } from "react";
+import { TypeNames } from "../contracts";
 import { AuthStore } from "../state/auth";
 import { ErrorStore } from "../state/errors";
 import { useObservable } from "../state/use-observable";
@@ -7,9 +8,11 @@ import { WorkspaceStore } from "../state/workspace";
 import { ErrorCenter } from "./error-center";
 import { EnumCreateForm } from "./enum-create-form";
 import { EnumTypePanel } from "./enum-type-view";
+import { FileTypePanel } from "./file-type-view";
 import { FunctionEditor } from "./function-editor";
 import { LoginView } from "./login-view";
 import { ObjectEditor } from "./object-editor";
+import { ScalarTypePanel } from "./scalar-type-view";
 import { Sidebar } from "./sidebar";
 import { TabBar } from "./tab-bar";
 import { TypeCreateForm } from "./type-create-form";
@@ -99,6 +102,12 @@ export function App(props: {
       }
       if (schema.kind === "unit") {
         return <UnitTypePanel workspace={props.workspace} schema={schema} />;
+      }
+      if (schema.kind === "file") {
+        return <FileTypePanel workspace={props.workspace} schema={schema} />;
+      }
+      if (TypeNames.isScalar(schema.name)) {
+        return <ScalarTypePanel schema={schema} />;
       }
       return <TypeViewPanel workspace={props.workspace} schema={schema} />;
     }

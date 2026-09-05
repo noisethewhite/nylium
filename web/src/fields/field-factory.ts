@@ -1,6 +1,7 @@
 import type { PropValue, PropView } from "../contracts";
 import { TypeNames } from "../contracts";
 import { ArrayFieldModel, RefFieldModel } from "./composite-fields";
+import { FileFieldModel } from "./file-fields";
 import type { EmbeddedSchemaOf } from "./embedded-fields";
 import { EmbeddedFieldModel } from "./embedded-fields";
 import { EnumFieldModel } from "./enum-fields";
@@ -105,6 +106,9 @@ export abstract class FieldFactory {
               embeddedSchemaOf,
             );
           }
+        }
+        if (TypeNames.isFileType(valueType)) {
+          return FileFieldModel.fromWire(key, valueType, value);
         }
         return RefFieldModel.fromWire(key, valueType, value);
     }

@@ -155,6 +155,14 @@ class UpdateTypeBody:
 
 
 @dataclass(config=_CONFIG)
+class RenameFileBody:
+    """ADR-0008: rename a file entity's display name. The uuid pointer is
+    stable, so references never break."""
+
+    name: str
+
+
+@dataclass(config=_CONFIG)
 class FunctionNodeInput:
     """One node of a function's action DAG draft (ADR-0007). The client
     generates the uuid so edges can reference not-yet-created nodes."""

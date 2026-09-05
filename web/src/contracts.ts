@@ -89,6 +89,17 @@ export interface ObjectView {
   tags: TagView[];
 }
 
+/** ADR-0008: a first-class file entity — a self-contained `files` row.
+ * `uuid` is the stable pointer to the blob under FILES_DIR; `name` is a
+ * renameable display name (no longer a stored scalar prop). */
+export interface FileView {
+  uuid: string;
+  type_name: string;
+  name: string;
+  mime: string;
+  size_bytes: number;
+}
+
 /** ADR-0005: one membership edge of an object, read-only projection. */
 export interface TagView {
   owner_uuid: string;
@@ -276,13 +287,15 @@ export abstract class TypeNames {
   }
 
   /** Types a human edits in the sidebar — not builtins, not arrays,
-   * not parameterized forms like Numeric<Unit>, not Function<T,R>. */
+   * not parameterized forms like Numeric<Unit>, not Function<T,R>,
+   * not the file kinds (File/Document/Image). */
   static isUserType(name: string): boolean {
     return (
       !TypeNames.isScalar(name) &&
       !TypeNames.isArray(name) &&
       !TypeNames.isUnitNumeric(name) &&
-      !TypeNames.isFunction(name)
+      !TypeNames.isFunction(name) &&
+      !TypeNames.isFileType(name)
     );
   }
 }

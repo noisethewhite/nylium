@@ -26,6 +26,7 @@ class WType:
     KIND_ENUM: ClassVar[str] = "enum"
     KIND_UNIT: ClassVar[str] = "unit"
     KIND_FUNCTION: ClassVar[str] = "function"
+    KIND_FILE: ClassVar[str] = "file"
 
     def __init__(self, row: Types):
         # snapshot, not a live row: reads must not depend on the session
@@ -73,6 +74,10 @@ class WType:
     @property
     def is_function(self) -> bool:
         return self._kind == self.KIND_FUNCTION
+
+    @property
+    def is_file(self) -> bool:
+        return self._kind == self.KIND_FILE
 
     @property
     def is_embedded(self) -> bool:

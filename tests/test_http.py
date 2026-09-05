@@ -250,6 +250,15 @@ def test_delete_flows(auth_client: TestClient) -> None:
     assert auth_client.delete("/api/types/Book").status_code == 404
 
 
+def test_file_types_immutable_over_http(auth_client: TestClient) -> None:
+    from nylium.objects.wfile import WFile
+
+    WFile.ensure_builtins()
+    assert auth_client.delete("/api/types/File").status_code == 422
+    assert auth_client.delete("/api/types/Image").status_code == 422
+    assert auth_client.delete("/api/types/Document").status_code == 422
+
+
 def test_spa_fallback(
     auth_client: TestClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -771,7 +780,7 @@ def test_formulas_eval_over_http(auth_client: TestClient) -> None:
 
 
 def test_files_over_http(auth_client: TestClient) -> None:
-    """Upload/download roundtrip over the wire (ADR-0006): builtin file
+    """Upload/download roundtrip over the wire (ADR-0008): builtin file
     types are boot-seeded by NyliumApp.create, blobs live under the
     test FILES_DIR, delete cascades to disk."""
     from nylium.objects.wfile import WFile
@@ -787,10 +796,10 @@ def test_files_over_http(auth_client: TestClient) -> None:
     assert up.status_code == 201, up.text
     obj = up.json()
     assert obj["type_name"] == "Image"
-    assert obj["props"]["name"] == {"value": "icon.png", "unit": None}
+    assert obj["name"] == "icon.png"
 
     # download streams the bytes back with the original mime + filename
-    dl = auth_client.get(f"/api/files/{obj['uuid']}")
+    dl = auth_client.get(f"/api/files/{obj['uuid']}/download")
     assert dl.status_code == 200, dl.text
     assert dl.content == png
     assert dl.headers["content-type"].startswith("image/png")
@@ -812,15 +821,15 @@ def test_files_over_http(auth_client: TestClient) -> None:
     )
     assert anyfile.status_code == 201, anyfile.text
 
-    # rename-safe: patch the name prop, bytes stay
+    # rename-safe: patch the display name, bytes stay
     rename = auth_client.patch(
-        f"/api/objects/{obj['uuid']}", json={"props": {"name": {"value": "renamed.png"}}}
+        f"/api/files/{obj['uuid']}", json={"name": "renamed.png"}
     )
     assert rename.status_code == 200, rename.text
-    assert auth_client.get(f"/api/files/{obj['uuid']}").content == png
+    assert auth_client.get(f"/api/files/{obj['uuid']}/download").content == png
 
     # delete cascades: row gone, blob gone
-    deleted = auth_client.delete(f"/api/objects/{obj['uuid']}")
+    deleted = auth_client.delete(f"/api/files/{obj['uuid']}")
     assert deleted.status_code == 204, deleted.text
     assert not WFile.blob_path(obj["uuid"]).exists()
     assert auth_client.get(f"/api/files/{obj['uuid']}").status_code == 404
@@ -832,7 +841,7 @@ def test_files_over_http(auth_client: TestClient) -> None:
 
 
 def test_img_icon_over_http(auth_client: TestClient) -> None:
-    """img:<uuid> type icons validate against live Image instances and
+    """img:<uuid> type icons validate against live Image files and
     fall back to the default glyph when the image is deleted."""
     png = b"\x89PNG\r\n\x1a\n" + b"\x00" * 16
     up = auth_client.post(
@@ -854,7 +863,7 @@ def test_img_icon_over_http(auth_client: TestClient) -> None:
     )
     assert dead.status_code == 422, dead.text
 
-    deleted = auth_client.delete(f"/api/objects/{up.json()['uuid']}")
+    deleted = auth_client.delete(f"/api/files/{up.json()['uuid']}")
     assert deleted.status_code == 204
     assert auth_client.get("/api/types/Book").json()["icon"] == "inventory_2"
 

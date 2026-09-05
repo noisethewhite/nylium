@@ -1,9 +1,9 @@
-"""File/Document/Image builtin types and blob storage (ADR-0006).
+"""File/Document/Image builtin types and blob storage (ADR-0006, ADR-0008).
 
-Instances of the three file types are pointers: the bytes live on disk
-at FILES_DIR/<instance uuid>, the `files` row carries mime/size, and
-the instance's `name` prop is a freely editable display name. Renaming
-never touches the storage key.
+Files are first-class entities: the bytes live on disk at
+FILES_DIR/<uuid>, the self-contained `files` row carries type_name, name
+(renameable), mime and size. No instance exists for a file — the uuid is
+the stable pointer and never changes on rename.
 """
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from nylium.database.database import Database
-from nylium.database.tables import Files, Instances, Types
+from nylium.database.tables import Files, Types
 
 
 class WFile:
@@ -86,12 +86,10 @@ class WFile:
     @classmethod
     @Database.sessionmethod(bundled=True, commit=True)
     def ensure_builtins(cls) -> None:
-        from nylium.objects.wprop import WProp
         from nylium.objects.wtype import WType
 
         for name in cls.TYPE_NAMES:
-            type_row = WType.ensure(name, icon=cls.ICONS[name])
-            _ = WProp.ensure(type_row, "name", WType.ensure("String"))
+            _ = WType.ensure(name, icon=cls.ICONS[name], kind=WType.KIND_FILE)
 
     @classmethod
     @Database.sessionmethod(bundled=True, commit=False)
@@ -142,9 +140,20 @@ class WFile:
 
     @classmethod
     @Database.sessionmethod(bundled=False, commit=False)
-    def image_instance_exists(cls, session: Session, uuid: UUID) -> bool:
-        inst = session.get(Instances, uuid)
-        if inst is None:
-            return False
-        type_row = session.get(Types, inst.type_uuid)
-        return type_row is not None and type_row.name == cls.TYPE_IMAGE
+    def image_file_exists(cls, session: Session, uuid: UUID) -> bool:
+        row = session.get(Files, uuid)
+        return row is not None and row.type_name == cls.TYPE_IMAGE
+
+    @classmethod
+    @Database.sessionmethod(bundled=False, commit=False)
+    def clear_array_refs(cls, session: Session, uuid: UUID) -> None:
+        """Deleting a file also drops Array<File/Document/Image> members that
+        pointed at it (ADR-0008) — mirrors WObject.delete's cleanup of array
+        links, so no dangling files.uuid survives in an array."""
+        import sqlalchemy as sqla
+
+        from nylium.database.tables import ArrayValues
+
+        _ = session.execute(
+            sqla.delete(ArrayValues).where(ArrayValues.value_uuid == uuid)
+        )

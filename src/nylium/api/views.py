@@ -35,6 +35,7 @@ from nylium.objects.monthday import MonthDay, MonthDayTime
 from nylium.objects.quantity import Quantity
 from nylium.objects.wembedded import EMBEDDED_NAME_SEPARATOR
 from nylium.objects.wenum import WEnum
+from nylium.objects.wfile import WFile
 from nylium.objects.wformula import Formula
 from nylium.objects.wfunction import WFunction
 from nylium.objects.wscalar import ScalarPayload, WInteger, WScalar
@@ -180,14 +181,18 @@ class EmbeddedValue:
 PropValue = ScalarValue | RefValue | ArrayValue | EmbeddedValue
 
 
-# --- file views (ADR-0006) ---
+# --- file views (ADR-0008) ---
 
 
 @dataclass(config=_CONFIG)
 class FileView:
-    """Blob metadata for a File/Document/Image instance — the bytes
-    stream from disk separately, this is what the API can serialize."""
+    """A file entity (ADR-0008): a self-contained row in `files`, the
+    bytes stream from disk separately. `uuid` is the stable pointer;
+    `name` the renameable display name; `type_name` File/Document/Image."""
 
+    uuid: UUID
+    type_name: str
+    name: str
     mime: str
     size_bytes: int
 
@@ -461,6 +466,14 @@ class ObjectView:
             return ScalarValue(value=value.value, unit=value.unit)
         if WEnum.is_enum(type_name):
             return ScalarValue(value=cast(str | None, value))
+        if WFile.is_file_type(type_name):
+            # ADR-0008: a file-typed prop renders as a ref to the files row
+            # — the uuid is the pointer, the type name is the declared one
+            if value is None:
+                return RefValue(ref=None)
+            if not isinstance(value, UUID):
+                raise TypeError(f"file prop rendered a {type(value).__name__}")
+            return RefValue(ref=ObjectRef(uuid=value, type_name=type_name))
         if WType.is_array_name(type_name):
             element_name = WType.element_name(type_name)
             if value is None:

@@ -11,7 +11,7 @@ from sqlalchemy.engine import Connection
 
 from nylium.auth.guard import require_user
 from nylium.auth.routes import auth_routes
-from nylium.api.views import FunctionView, ObjectView, TypeView
+from nylium.api.views import FileView, FunctionView, ObjectView, TypeView
 from nylium.database.database import Database
 from nylium.database.tables import Base
 from nylium.objects.wfile import WFile
@@ -72,6 +72,99 @@ class NyliumApp:
             for statement in statements:
                 _ = connection.execute(text(statement))
             cls._migrate_type_colors(connection)
+            cls._migrate_file_kinds(connection)
+            cls._migrate_files_to_first_class(connection)
+
+    @classmethod
+    def _migrate_file_kinds(cls, connection: Connection) -> None:
+        """ADR-0006 follow-up: File/Document/Image are a dedicated kind, not
+        object. Idempotent — re-running re-sets the same value."""
+        _ = connection.execute(
+            text("UPDATE types SET kind='file' WHERE name IN ('File','Document','Image')"),
+        )
+
+    @classmethod
+    def _migrate_files_to_first_class(cls, connection: Connection) -> None:
+        """ADR-0008: promote files to a self-contained table. Idempotent —
+        every step is a no-op once applied.
+
+        Order matters: we copy type_name/name and prop references into the
+        new columns/table, then sever the instance FKs, THEN drop the file
+        instances. If the instance FK is still live when the instances go,
+        files.uuid's ON DELETE CASCADE would wipe the rows we just migrated.
+        """
+        file_types = "('File','Document','Image')"
+        # 1. new columns (files.uuid stays the stable pointer)
+        _ = connection.execute(
+            text("ALTER TABLE files ADD COLUMN IF NOT EXISTS type_name TEXT")
+        )
+        _ = connection.execute(
+            text("ALTER TABLE files ADD COLUMN IF NOT EXISTS name TEXT")
+        )
+        # 2. backfill type_name/name from the (soon-to-die) instances
+        _ = connection.execute(
+            text(
+                "UPDATE files f SET type_name = t.name, name = COALESCE("
+                + "  (SELECT sv.value FROM string_values sv JOIN props p ON sv.prop_uuid = p.uuid "
+                + "   WHERE sv.inst_uuid = f.uuid AND p.key = 'name'), i.name) "
+                + "FROM instances i JOIN types t ON i.type_uuid = t.uuid "
+                + f"WHERE f.uuid = i.uuid AND t.name IN {file_types}"
+            )
+        )
+        # orphan files rows (no instance) get a sane fallback before NOT NULL
+        _ = connection.execute(
+            text("UPDATE files SET type_name = 'File' WHERE type_name IS NULL")
+        )
+        _ = connection.execute(text("UPDATE files SET name = '' WHERE name IS NULL"))
+        # 3. copy direct file references into file_values (keyed by
+        #    owner instance + prop, pointing at files.uuid)
+        _ = connection.execute(
+            text(
+                "INSERT INTO file_values (file_uuid, inst_uuid, prop_uuid) "
+                + "SELECT iv.uuid, iv.inst_uuid, iv.prop_uuid FROM instance_values iv "
+                + "JOIN instances i ON iv.uuid = i.uuid "
+                + "JOIN types t ON i.type_uuid = t.uuid "
+                + f"WHERE t.name IN {file_types} "
+                + "ON CONFLICT (inst_uuid, prop_uuid) DO NOTHING"
+            )
+        )
+        # 4. drop the old instance_values rows for file refs (now in
+        #    file_values; their uuid FK -> instances would block step 8)
+        _ = connection.execute(
+            text(
+                "DELETE FROM instance_values iv USING instances i, types t "
+                + "WHERE iv.uuid = i.uuid AND i.type_uuid = t.uuid "
+                + f"AND t.name IN {file_types}"
+            )
+        )
+        # 5. sever array_values.value_uuid FK so Array<File/Document/Image>
+        #    members (already holding the right files.uuid) survive step 8
+        _ = connection.execute(
+            text("ALTER TABLE array_values DROP CONSTRAINT IF EXISTS array_values_value_uuid_fkey")
+        )
+        # 6. sever files.uuid FK -> instances so file rows outlive instances
+        _ = connection.execute(
+            text("ALTER TABLE files DROP CONSTRAINT IF EXISTS files_uuid_fkey")
+        )
+        # 7. drop the redundant name prop on file types (cascades string_values)
+        _ = connection.execute(
+            text(
+                "DELETE FROM props p USING types t WHERE p.owner_type_uuid = t.uuid "
+                + f"AND t.name IN {file_types} AND p.key = 'name'"
+            )
+        )
+        # 8. drop the file instances themselves (name scalar cascades away)
+        _ = connection.execute(
+            text(
+                "DELETE FROM instances i USING types t WHERE i.type_uuid = t.uuid "
+                + f"AND t.name IN {file_types}"
+            )
+        )
+        # 9. lock the new columns
+        _ = connection.execute(
+            text("ALTER TABLE files ALTER COLUMN type_name SET NOT NULL")
+        )
+        _ = connection.execute(text("ALTER TABLE files ALTER COLUMN name SET NOT NULL"))
 
     @classmethod
     def _migrate_type_colors(cls, connection: Connection) -> None:
@@ -184,10 +277,26 @@ class NyliumApp:
         )
         app.add_api_route(
             f"{prefix}/files", routes.upload_file, methods=["POST"],
-            status_code=created, response_model=ObjectView, dependencies=guard,
+            status_code=created, response_model=FileView, dependencies=guard,
         )
         app.add_api_route(
-            f"{prefix}/files/{{file_uuid}}", routes.download_file, methods=["GET"],
+            f"{prefix}/files", routes.list_files, methods=["GET"],
+            response_model=list[FileView], dependencies=guard,
+        )
+        app.add_api_route(
+            f"{prefix}/files/{{file_uuid}}", routes.get_file, methods=["GET"],
+            response_model=FileView, dependencies=guard,
+        )
+        app.add_api_route(
+            f"{prefix}/files/{{file_uuid}}", routes.rename_file, methods=["PATCH"],
+            response_model=FileView, dependencies=guard,
+        )
+        app.add_api_route(
+            f"{prefix}/files/{{file_uuid}}", routes.delete_file, methods=["DELETE"],
+            status_code=no_content, dependencies=guard,
+        )
+        app.add_api_route(
+            f"{prefix}/files/{{file_uuid}}/download", routes.download_file, methods=["GET"],
             dependencies=guard,
         )
         app.add_api_route(

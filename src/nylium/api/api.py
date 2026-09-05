@@ -14,7 +14,7 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from decimal import Decimal
 from typing import TypeAlias, cast
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from nylium.api.views import FileView, FunctionView, ObjectRef, ObjectView, TypeView
 from nylium.database import (
@@ -28,6 +28,7 @@ from nylium.database import (
 )
 from nylium.objects.wembedded import EMBEDDED_NAME_SEPARATOR, WEmbedded
 from nylium.objects.wenum import WEnum
+from nylium.objects.wfile import WFile
 from nylium.objects.wformula import Formula
 from nylium.objects.wfunction import INPUT_PROP_KEY, WFunction
 from nylium.objects.wobject import WObject
@@ -35,6 +36,23 @@ from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import WColor, WInteger, WNumeric, WScalar, WString
 from nylium.objects.wtype import WType
 from nylium.objects.wtypemeta import StoredValue, WTypeMeta
+
+
+def _is_builtin_type(owner: WType) -> bool:
+    """Immutable system type: scalars, array forms, parameterized kinds
+    (Numeric<Unit>, Function<T,R>) and the file kinds. Mirrors the
+    frontend's `isUserType` — a user type is mutable even without a plural
+    name. Lives here, not on WType, because it needs WScalar (which imports
+    WType — keeping the object layer acyclic)."""
+    name = owner.name
+    return (
+        owner.is_file
+        or WScalar.is_scalar(name)
+        or WType.is_array_name(name)
+        or WType.unit_param_of(name) is not None
+        or WType.is_function_name(name)
+    )
+
 
 # What callers may hand in for a prop: stored values, plus links as
 # UUID/ObjectRef (resolved to WObject here), plus a props draft for
@@ -272,6 +290,8 @@ class Api:
         owner = WType.by_name(type_name)
         if owner is None:
             raise KeyError(f"no type {type_name!r}")
+        if _is_builtin_type(owner):
+            raise ValidationError(f"type {type_name!r} is builtin and cannot be edited")
         existing = [prop.key for prop in WProp.all_for(owner)]
         if set(keys) != set(existing):
             raise ValueError(f"prop order {keys!r} does not match {type_name!r} schema")
@@ -298,6 +318,8 @@ class Api:
         owner = WType.by_name(type_name)
         if owner is None:
             raise KeyError(f"no type {type_name!r}")
+        if _is_builtin_type(owner):
+            raise ValidationError(f"type {type_name!r} is builtin and cannot be edited")
         existing = WProp.all_for(owner)
         by_uuid = {prop.uuid: prop for prop in existing}
         name_prop = next(
@@ -405,7 +427,7 @@ class Api:
         owner = WType.by_name(name)
         if owner is None:
             raise KeyError(f"no type {name!r}")
-        if owner.plural_name is None and not owner.is_enum and not owner.is_unit:
+        if _is_builtin_type(owner):
             raise ValidationError(f"type {name!r} is builtin and cannot be renamed")
         final_name = name if new_name is None else new_name.strip()
         if not final_name:
@@ -443,9 +465,13 @@ class Api:
     def delete_type(cls, name: str) -> bool:
         """Refuses while instances exist; other types referencing this one
         as a prop value type are stopped by the FK, on purpose."""
+        from nylium.server.errors import ValidationError
+
         owner = WType.by_name(name)
         if owner is None:
             return False
+        if _is_builtin_type(owner):
+            raise ValidationError(f"type {name!r} is builtin and cannot be deleted")
         instance_count = Instances.count_of_type(owner.uuid)
         if instance_count:
             raise ValueError(
@@ -544,11 +570,10 @@ class Api:
     @Database.sessionmethod(bundled=True, commit=True)
     def create_file(
         cls, type_name: str, filename: str, mime: str, data: bytes
-    ) -> ObjectView:
-        """Atomic upload: one transaction creates the instance and the
-        files row, then the blob lands on disk last. If the disk write
-        fails the transaction rolls back — no half-created pointer."""
-        from nylium.objects.wfile import WFile
+    ) -> FileView:
+        """Atomic upload (ADR-0008): one transaction writes the `files` row,
+        then the blob lands on disk last. If the disk write fails the
+        transaction rolls back — no half-created pointer."""
         from nylium.server.errors import ValidationError
 
         if not WFile.is_file_type(type_name):
@@ -565,29 +590,71 @@ class Api:
             raise ValidationError(
                 f"{type_name} does not accept MIME {mime!r}"
             )
-        view = cls.create_object(type_name, {"name": filename})
-        Files.create(view.uuid, mime, len(data))
-        blob = WFile.blob_path(view.uuid)
+        file_uuid = uuid4()
+        Files.create(file_uuid, type_name, filename, mime, len(data))
+        blob = WFile.blob_path(file_uuid)
         tmp = blob.with_suffix(".tmp")
         try:
             _ = tmp.write_bytes(data)
             _ = tmp.replace(blob)  # rename is atomic on the same filesystem
         finally:
             tmp.unlink(missing_ok=True)
-        return view
+        return FileView(
+            uuid=file_uuid, type_name=type_name, name=filename,
+            mime=mime, size_bytes=len(data),
+        )
 
     @classmethod
     @Database.sessionmethod(bundled=True, commit=False)
     def get_file(cls, uuid: UUID) -> FileView | None:
-        from nylium.objects.wfile import WFile
-
         row = Files.by_uuid(uuid)
-        if row is None or not Instances.exists(uuid):
+        if row is None:
             return None
-        type_name = Instances.get_type_name(uuid)
-        if not WFile.is_file_type(type_name):
-            return None
-        return FileView(mime=row.mime, size_bytes=row.size_bytes)
+        return FileView(
+            uuid=row.uuid, type_name=row.type_name, name=row.name,
+            mime=row.mime, size_bytes=row.size_bytes,
+        )
+
+    @classmethod
+    @Database.sessionmethod(bundled=True, commit=False)
+    def list_files(cls) -> list[FileView]:
+        return [
+            FileView(
+                uuid=row.uuid, type_name=row.type_name, name=row.name,
+                mime=row.mime, size_bytes=row.size_bytes,
+            )
+            for row in Files.list_all()
+        ]
+
+    @classmethod
+    @Database.sessionmethod(bundled=True, commit=True)
+    def rename_file(cls, uuid: UUID, name: str) -> FileView:
+        """ADR-0008: rename is a display-name update — the uuid pointer is
+        stable, so no reference ever breaks."""
+        from nylium.server.errors import ValidationError
+
+        if not name.strip():
+            raise ValidationError("filename must not be empty")
+        Files.rename(uuid, name)
+        view = cls.get_file(uuid)
+        if view is None:
+            raise KeyError(f"no file {uuid}")
+        return view
+
+    @classmethod
+    @Database.sessionmethod(bundled=True, commit=True)
+    def delete_file(cls, uuid: UUID) -> bool:
+        """ADR-0008: drop the files row and the blob. An Image used as an
+        icon resets every referencing type to the default glyph."""
+        row = Files.by_uuid(uuid)
+        if row is None:
+            return False
+        if row.type_name == WFile.TYPE_IMAGE:
+            WFile.reset_icons_referencing(uuid)
+        WFile.clear_array_refs(uuid)
+        Files.delete_by_uuid(uuid)
+        WFile.delete_blob(uuid)
+        return True
 
     @classmethod
     @Database.sessionmethod(bundled=True, commit=True)
@@ -600,16 +667,6 @@ class Api:
             raise ValidationError(
                 "embedded objects are deleted with their owner or by clearing the prop that holds them"
             )
-        # ADR-0006: deleting a file instance also drops its blob, and an
-        # Image used as an icon resets every referencing type to the
-        # default glyph — no dangling img: pointers.
-        type_name = Instances.get_type_name(uuid)
-        from nylium.objects.wfile import WFile
-
-        if type_name == WFile.TYPE_IMAGE:
-            WFile.reset_icons_referencing(uuid)
-        if WFile.is_file_type(type_name):
-            WFile.delete_blob(uuid)
         WObject.wrap(uuid).delete()
         return True
 
@@ -732,6 +789,8 @@ class Api:
         owner = WType.by_name(type_name)
         if owner is None:
             raise KeyError(f"no type {type_name!r}")
+        if _is_builtin_type(owner):
+            raise ValidationError(f"type {type_name!r} is builtin and cannot be edited")
         prop = WProp.by_key(owner, prop_key)
         if prop is None:
             raise ValidationError(f"type {type_name!r} has no prop {prop_key!r}")
@@ -910,6 +969,18 @@ class Api:
             return cast(StoredValue, value)  # Quantity; parts checked in setattr
         if WEnum.is_enum(type_name):
             return cast(StoredValue, value)  # membership checked in setattr
+        if WFile.is_file_type(type_name):
+            # ADR-0008: a file-typed prop holds a files.uuid — never an
+            # object link. ObjectRef/UUID both normalize to the raw uuid.
+            if value is None:
+                return None
+            if isinstance(value, ObjectRef):
+                return value.uuid
+            if isinstance(value, UUID):
+                return value
+            raise TypeError(
+                f"file prop of type {type_name!r} takes a files.uuid, got {type(value).__name__}"
+            )
         if WType.is_array_name(type_name):
             if not isinstance(value, list):
                 raise TypeError(f"array prop takes list, got {type(value).__name__}")
@@ -971,7 +1042,7 @@ class Api:
         image_uuid = WFile.parse_icon_image(icon)
         if image_uuid is None:
             return
-        if not WFile.image_instance_exists(image_uuid):
+        if not WFile.image_file_exists(image_uuid):
             raise ValidationError(
                 f"icon {icon!r} does not reference a live Image instance"
             )

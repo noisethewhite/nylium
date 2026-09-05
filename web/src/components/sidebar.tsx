@@ -11,7 +11,7 @@ import { TypeIcon } from "./type-icon";
 
 /** What the "+" popover is showing: the root menu or the pick-a-type
  * list that "New object" expands into. */
-type PlusMenuMode = "root" | "object";
+type PlusMenuMode = "root" | "object" | "file";
 
 /** Temporary explorer: every type and every object, flat. */
 export function Sidebar(props: {
@@ -27,6 +27,8 @@ export function Sidebar(props: {
   const objectTypes = types.filter(
     (view) => view.kind === "object" && !view.embedded,
   );
+  const fileTypes = state.types.filter((view) => TypeNames.isFileType(view.name));
+  const scalarTypes = state.types.filter((view) => TypeNames.isScalar(view.name));
 
   return (
     <aside className="sidebar">
@@ -81,13 +83,38 @@ export function Sidebar(props: {
                   }
                   onPick={(view) => {
                     dismiss();
-                    if (TypeNames.isFileType(view.name)) {
-                      // ADR-0006: file objects are uploads, not blank rows
-                      uploadType.current = view.name;
-                      fileInput.current?.click();
-                      return;
-                    }
                     void props.workspace.createObject(view.name);
+                  }}
+                />
+              );
+            }
+            if (plusMode === "file") {
+              return (
+                <NameSearch
+                  items={fileTypes}
+                  getKey={(view) => view.name}
+                  getLabel={(view) => view.name}
+                  renderIcon={(view) => (
+                    <TypeIcon icon={view.icon} color={view.color} size={15} />
+                  )}
+                  placeholder="Search file types…"
+                  emptyLabel="No file types"
+                  header={
+                    <div className="type-menu-search">
+                      <button
+                        className="icon-button"
+                        title="Back"
+                        onClick={() => setPlusMode("root")}
+                      >
+                        ←
+                      </button>
+                      <span className="dim type-menu-title">New file</span>
+                    </div>
+                  }
+                  onPick={(view) => {
+                    dismiss();
+                    uploadType.current = view.name;
+                    fileInput.current?.click();
                   }}
                 />
               );
@@ -108,6 +135,12 @@ export function Sidebar(props: {
                   onClick={() => setPlusMode("object")}
                 >
                   New object
+                </button>
+                <button
+                  className="type-menu-row"
+                  onClick={() => setPlusMode("file")}
+                >
+                  New file
                 </button>
                 <button
                   className="type-menu-row"
@@ -159,6 +192,30 @@ export function Sidebar(props: {
               onClick={() => void props.workspace.deleteType(view.name)}
             >
               ×
+            </button>
+          </div>
+        ))}
+        <div className="sidebar-section">Files</div>
+        {fileTypes.map((view) => (
+          <div className="type-row" key={view.name}>
+            <button
+              className="type-row-name"
+              onClick={() => props.workspace.openType(view.name)}
+            >
+              <TypeIcon icon={view.icon} color={view.color} />
+              <span>{view.name}</span>
+            </button>
+          </div>
+        ))}
+        <div className="sidebar-section">Scalars</div>
+        {scalarTypes.map((view) => (
+          <div className="type-row" key={view.name}>
+            <button
+              className="type-row-name"
+              onClick={() => props.workspace.openType(view.name)}
+            >
+              <TypeIcon icon={view.icon} color={view.color} />
+              <span>{view.name}</span>
             </button>
           </div>
         ))}

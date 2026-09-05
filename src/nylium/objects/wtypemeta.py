@@ -56,7 +56,7 @@ class WObjectShape(Protocol):
 # (composition) props, ADR-0004 — reads always come back as WObject
 # links, the dict never leaves the write path.
 StoredValue: TypeAlias = (
-    ScalarPayload | Quantity | WObjectShape | list["StoredValue"] | dict[str, "StoredValue"] | None
+    ScalarPayload | Quantity | WObjectShape | UUID | list["StoredValue"] | dict[str, "StoredValue"] | None
 )
 
 

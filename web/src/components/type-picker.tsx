@@ -188,6 +188,19 @@ export function TypePicker(props: {
               </button>
             </div>
             <div className="type-menu-divider" />
+            <div className="type-menu-list">
+              {TypeNames.FILES.map((name) => (
+                <button
+                  key={name}
+                  className="type-menu-row"
+                  onClick={() => pick(name)}
+                >
+                  {scalarIcon(name)}
+                  <span>{name}</span>
+                </button>
+              ))}
+            </div>
+            <div className="type-menu-divider" />
             <div className="type-menu-footer">
               <button className="type-menu-row" onClick={() => setObjectMode("single")}>
                 Object

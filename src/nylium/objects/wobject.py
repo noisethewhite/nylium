@@ -26,10 +26,11 @@ import sqlalchemy as sqla
 from sqlalchemy.orm import Session
 
 from nylium.database import Database
-from nylium.database.tables import ArrayValues, Instances, InstanceValues
+from nylium.database.tables import ArrayValues, FileValues, Instances, InstanceValues
 from nylium.objects.warray import WArray
 from nylium.objects.wembedded import WEmbedded
 from nylium.objects.wenum import WEnum
+from nylium.objects.wfile import WFile
 from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import ScalarPayload, WScalar
 from nylium.objects.wtype import WType
@@ -197,6 +198,8 @@ class WObject(metaclass=WTypeMeta):
             return WUnit.read(session, self._uuid, prop, value_type)
         if WEnum.is_enum(value_type):
             return WEnum.read(session, self._uuid, prop)
+        if WFile.is_file_type(value_type):
+            return self._file_ref(prop)
         link = self._link(prop)
         if link is None:
             return None
@@ -231,6 +234,14 @@ class WObject(metaclass=WTypeMeta):
             # composition (ADR-0004): the value is an inline props draft,
             # the child is created lazily / updated / deleted on None
             WEmbedded.write(self._uuid, prop, value)
+        elif WFile.is_file_type(value_type):
+            # file-typed prop (ADR-0008): the value is a files.uuid, never
+            # an object link — files aren't instances anymore
+            if value is not None and not isinstance(value, UUID):
+                raise TypeError(
+                    f"{value_type} prop takes a files.uuid, got {type(value).__name__}"
+                )
+            self._write_file_ref(prop, value)
         else:
             WTypeMeta.check_link(value_type, value)
             self._write_link(prop, cast("WObject", value))
@@ -256,6 +267,10 @@ class WObject(metaclass=WTypeMeta):
             return
         if WEnum.is_enum(value_type):
             WEnum.write(session, self._uuid, prop, None)
+            self._touch()
+            return
+        if WFile.is_file_type(value_type):
+            self._write_file_ref(prop, None)
             self._touch()
             return
         link = self._link(prop)
@@ -288,6 +303,15 @@ class WObject(metaclass=WTypeMeta):
             )
         )
 
+    @Database.sessionmethod(bundled=False, commit=False)
+    def _file_ref(self, session: Session, prop: WProp) -> UUID | None:
+        return session.scalar(
+            sqla.select(FileValues.file_uuid).where(
+                FileValues.inst_uuid == self._uuid,
+                FileValues.prop_uuid == prop.uuid,
+            )
+        )
+
     # --- writes ---
 
     @Database.sessionmethod(bundled=False, commit=True)
@@ -315,6 +339,24 @@ class WObject(metaclass=WTypeMeta):
         _ = session.merge(
             InstanceValues(uuid=value._uuid, prop_uuid=prop.uuid, inst_uuid=self._uuid)
         )
+
+    @Database.sessionmethod(bundled=False, commit=True)
+    def _write_file_ref(self, session: Session, prop: WProp, value: UUID | None) -> None:
+        if value is None:
+            _ = session.execute(
+                sqla.delete(FileValues).where(
+                    FileValues.inst_uuid == self._uuid,
+                    FileValues.prop_uuid == prop.uuid,
+                )
+            )
+            return
+        row = session.get(FileValues, (self._uuid, prop.uuid))
+        if row is None:
+            session.add(
+                FileValues(file_uuid=value, prop_uuid=prop.uuid, inst_uuid=self._uuid)
+            )
+        else:
+            row.file_uuid = value
 
     @Database.sessionmethod(bundled=False, commit=True)
     def delete(self, session: Session) -> None:

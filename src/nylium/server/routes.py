@@ -11,13 +11,14 @@ from fastapi import UploadFile
 from fastapi.responses import FileResponse
 
 from nylium.api.api import Api
-from nylium.api.views import FunctionView, ObjectView, ScalarValue, TypeView
+from nylium.api.views import FileView, FunctionView, ObjectView, TypeView
 from nylium.server.bodies import (
     CreateEnumBody,
     CreateFunctionBody,
     CreateObjectBody,
     CreateTypeBody,
     CreateUnitBody,
+    RenameFileBody,
     ReorderPropsBody,
     SetPropFunctionBody,
     SyncEnumOptionsBody,
@@ -141,14 +142,37 @@ class routes:
         if not Api.delete_object(object_uuid):
             raise NotFoundError(f"no object {object_uuid}")
 
-    # --- files (ADR-0006) ---
+    # --- files (ADR-0008) ---
 
     @classmethod
-    def upload_file(cls, type_name: str, file: UploadFile) -> ObjectView:
+    def upload_file(cls, type_name: str, file: UploadFile) -> FileView:
         """Multipart upload; the declared MIME comes from the client and is
         validated against the target file type's policy in Api.create_file."""
         data = file.file.read()
         return Api.create_file(type_name, file.filename or "", file.content_type or "application/octet-stream", data)
+
+    @classmethod
+    def list_files(cls) -> list[FileView]:
+        return Api.list_files()
+
+    @classmethod
+    def get_file(cls, file_uuid: UUID) -> FileView:
+        view = Api.get_file(file_uuid)
+        if view is None:
+            raise NotFoundError(f"no file {file_uuid}")
+        return view
+
+    @classmethod
+    def rename_file(cls, file_uuid: UUID, body: RenameFileBody) -> FileView:
+        view = Api.get_file(file_uuid)
+        if view is None:
+            raise NotFoundError(f"no file {file_uuid}")
+        return Api.rename_file(file_uuid, body.name)
+
+    @classmethod
+    def delete_file(cls, file_uuid: UUID) -> None:
+        if not Api.delete_file(file_uuid):
+            raise NotFoundError(f"no file {file_uuid}")
 
     @classmethod
     def download_file(cls, file_uuid: UUID) -> FileResponse:
@@ -160,15 +184,8 @@ class routes:
         path = WFile.blob_path(file_uuid)
         if not path.is_file():
             raise NotFoundError(f"blob for file {file_uuid} is missing")
-        obj = Api.get_object(file_uuid)
-        filename: str | None = None
-        if obj is not None:
-            name_prop = obj.props.get("name")
-            if isinstance(name_prop, ScalarValue) and isinstance(
-                name_prop.value, str
-            ):
-                filename = name_prop.value
-        return FileResponse(path, media_type=view.mime, filename=filename)
+        # ADR-0008: name is a column on the files row, not an object prop
+        return FileResponse(path, media_type=view.mime, filename=view.name)
 
     # --- functions (ADR-0007) ---
 
