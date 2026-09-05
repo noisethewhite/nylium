@@ -52,6 +52,7 @@ NODE_COUNT = "count"
 NODE_MIN = "min"
 NODE_MAX = "max"
 NODE_CAST = "cast"
+NODE_MAP = "map"
 
 # The one pinned prop a function type carries: a link to its input object.
 INPUT_PROP_KEY = "input"
@@ -97,6 +98,7 @@ class WFunction:
         NODE_MIN: 1,
         NODE_MAX: 1,
         NODE_CAST: 1,
+        NODE_MAP: 1,
     }
 
     @classmethod
@@ -140,7 +142,11 @@ class WFunction:
 
     @classmethod
     def node_output_type(
-        cls, kind: str, config: Mapping[str, object], input_type: str
+        cls,
+        kind: str,
+        config: Mapping[str, object],
+        input_type: str,
+        input_types: list[NodeType],
     ) -> NodeType:
         """The static output type of a node, given the function's input
         type `T` (for `get_prop` lookups) and the node's config."""
@@ -162,6 +168,24 @@ class WFunction:
             _error(
                 f"get_prop can only read scalar or array props, got {value_name!r}"
             )
+        if kind == NODE_MAP:
+            key = config.get("key")
+            if not isinstance(key, str):
+                _error("map needs a string 'key' in config")
+            array_type = input_types[0]
+            if not _is_array_type(array_type):
+                _error(f"map needs an array input, got {array_type!r}")
+            element = WType.element_name(array_type)
+            owner = WType.by_name(element)
+            if owner is None:
+                _error(f"cannot resolve map element type {element!r}")
+            prop = WProp.by_key(owner, key)
+            if prop is None:
+                _error(f"map references unknown prop {key!r} of {element}")
+            value_name = prop.value_type().name
+            if WScalar.by_type_name(value_name) is None and not _is_array_type(value_name):
+                _error(f"map can only read scalar or array props, got {value_name!r}")
+            return WType.array_name(value_name)
         if kind == NODE_CONST:
             value = config.get("value")
             if isinstance(value, bool) or value is None:
@@ -208,6 +232,13 @@ class WFunction:
             src = input_types[0]
             if src not in _NUMERIC_SCALARS and src != WString.TYPE_NAME:
                 _error(f"cast needs a numeric or string input, got {src!r}")
+        if kind == NODE_MAP:
+            array_type = input_types[0]
+            if not _is_array_type(array_type):
+                _error(f"map needs an array input, got {array_type!r}")
+            element = WType.element_name(array_type)
+            if WScalar.by_type_name(element) is not None or WType.is_array_name(element):
+                _error(f"map needs an array of objects, got Array<{element}>")
 
     # --- graph validation ---
 
@@ -278,7 +309,7 @@ class WFunction:
             kind = kinds[node_uuid]
             cls._check_inputs(kind, input_types)
             node_types[node_uuid] = cls.node_output_type(
-                kind, configs[node_uuid], input_type
+                kind, configs[node_uuid], input_type, input_types
             )
 
         sink_type = node_types[sinks[0]]
@@ -416,6 +447,12 @@ class WFunction:
             if target == WInteger.TYPE_NAME:
                 return int(Decimal(str(src)))
             return Decimal(str(src))
+        if kind == NODE_MAP:
+            key = cast(str, config["key"])
+            seq = inputs[0]
+            if seq is None:
+                return []
+            return [cls._read_prop(elem, key) for elem in cast(list[object], seq)]
         _error(f"unknown node kind {kind!r}")
 
     @classmethod
@@ -429,6 +466,13 @@ class WFunction:
         if isinstance(value, float):
             return Decimal(str(value))
         return None
+
+    @classmethod
+    def _read_prop(cls, elem: object, key: str) -> object:
+        """Read one prop off an array element (an object wrapper)."""
+        if elem is None:
+            return None
+        return cast(object, getattr(elem, key))
 
     # --- input materialization ---
 

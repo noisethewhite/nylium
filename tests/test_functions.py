@@ -197,6 +197,45 @@ def test_eval_sum_array():
     assert WFunction.evaluate_for(fn.uuid) == Decimal("60")
 
 
+def test_eval_map_over_object_array():
+    # map reads one prop off each element of Array<Invoice>, then sum
+    _ = invoice_type()
+    _ = Api.create_type(
+        "Report",
+        {"name": "String", "lines": "Array<Invoice>"},
+        "Reports",
+    )
+    i1 = Api.create_object("Invoice", {"name": "i1", "total": Decimal("10")})
+    i2 = Api.create_object("Invoice", {"name": "i2", "total": Decimal("20")})
+    rep = Api.create_object("Report", {"name": "r", "lines": [i1.uuid, i2.uuid]})
+    a, b, c = uuid4(), uuid4(), uuid4()
+    fn = Api.create_function(
+        "Report", "Numeric", "sum-lines", rep.uuid,
+        [
+            node(a, "get_prop", 0, {"key": "lines"}),
+            node(b, "map", 1, {"key": "total"}),
+            node(c, "sum", 2, {}),
+        ],
+        [edge(a, 0, b, 0), edge(b, 0, c, 0)],
+    )
+    assert WFunction.evaluate_for(fn.uuid) == Decimal("30")
+
+
+def test_map_over_scalar_array_rejected():
+    _ = invoice_type()
+    a, b, c = uuid4(), uuid4(), uuid4()
+    with pytest.raises(ValidationError):
+        Api.create_function(
+            "Invoice", "Numeric", "bad-map", None,
+            [
+                node(a, "get_prop", 0, {"key": "amounts"}),
+                node(b, "map", 1, {"key": "total"}),
+                node(c, "sum", 2, {}),
+            ],
+            [edge(a, 0, b, 0), edge(b, 0, c, 0)],
+        )
+
+
 def test_eval_div_by_zero_renders_none():
     inv = invoice("100", "0")
     a, b, c = uuid4(), uuid4(), uuid4()

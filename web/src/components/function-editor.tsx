@@ -1,6 +1,11 @@
 import type { ReactElement } from "react";
 import { useMemo, useState } from "react";
-import type { FunctionEdgeInput, FunctionNodeInput } from "../contracts";
+import type {
+  FunctionEdgeInput,
+  FunctionNodeInput,
+  PropView,
+  TypeView,
+} from "../contracts";
 import { TypeNames } from "../contracts";
 import { useObservable } from "../state/use-observable";
 import { usePinTabOnEdit } from "../state/use-pin-tab-on-edit";
@@ -47,6 +52,7 @@ const KIND_SPECS: Record<string, KindSpec> = {
   min: { arity: 1, configKey: null },
   max: { arity: 1, configKey: null },
   cast: { arity: 1, configKey: "target" },
+  map: { arity: 1, configKey: "key" },
 };
 
 const NODE_KINDS = Object.keys(KIND_SPECS);
@@ -84,6 +90,47 @@ function parseConstValue(raw: string): string | number {
   }
   const numeric = Number(trimmed);
   return Number.isNaN(numeric) ? raw : numeric;
+}
+
+/** Best-effort static output type of a node — a frontend mirror of
+ * WFunction.node_output_type, just enough to resolve a `map` node's array
+ * element type from its incoming edge. */
+function inferNodeType(
+  node: NodeDraft,
+  inputSchema: TypeView | undefined,
+): string | undefined {
+  if (node.kind === "get_prop") {
+    return inputSchema?.props.find((prop) => prop.key === node.config.key)
+      ?.value_type;
+  }
+  if (node.kind === "const") {
+    return typeof node.config.value === "number"
+      ? TypeNames.NUMERIC
+      : typeof node.config.value === "string"
+        ? TypeNames.STRING
+        : undefined;
+  }
+  if (node.kind === "cast") {
+    return typeof node.config.target === "string"
+      ? node.config.target
+      : undefined;
+  }
+  if (node.kind === "count") {
+    return TypeNames.INTEGER;
+  }
+  if (
+    node.kind === "sum" ||
+    node.kind === "average" ||
+    node.kind === "min" ||
+    node.kind === "max" ||
+    node.kind === "add" ||
+    node.kind === "sub" ||
+    node.kind === "mul" ||
+    node.kind === "div"
+  ) {
+    return TypeNames.NUMERIC;
+  }
+  return undefined;
 }
 
 export function FunctionEditor(props: {
@@ -141,6 +188,36 @@ export function FunctionEditor(props: {
             TypeNames.isScalar(prop.value_type) ||
             TypeNames.isArray(prop.value_type),
         );
+
+  // `map` reads one prop off each element of its incoming array — resolve
+  // the element type from the node feeding the map, then expose its props.
+  const mapElementProps = (node: NodeDraft): PropView[] => {
+    const incoming = edges.filter(
+      (edge) => edge.to_node_uuid === node.uuid && edge.to_port === 0,
+    );
+    const fromUuid = incoming[0]?.from_node_uuid;
+    if (incoming.length !== 1 || fromUuid === undefined) {
+      return [];
+    }
+    const source = nodes.find((n) => n.uuid === fromUuid);
+    if (source === undefined) {
+      return [];
+    }
+    const sourceType = inferNodeType(source, inputSchema);
+    if (sourceType === undefined || !TypeNames.isArray(sourceType)) {
+      return [];
+    }
+    const elementName = TypeNames.elementOf(sourceType);
+    const elementSchema = state.types.find((view) => view.name === elementName);
+    if (elementSchema === undefined) {
+      return [];
+    }
+    return elementSchema.props.filter(
+      (prop) =>
+        TypeNames.isScalar(prop.value_type) ||
+        TypeNames.isArray(prop.value_type),
+    );
+  };
 
   const addNode = (kind: string): void => {
     const spec = KIND_SPECS[kind];
@@ -385,6 +462,22 @@ export function FunctionEditor(props: {
               >
                 <option value="">— prop —</option>
                 {readableProps.map((prop) => (
+                  <option key={prop.key} value={prop.key}>
+                    {prop.key} ({prop.value_type})
+                  </option>
+                ))}
+              </select>
+            )}
+            {node.kind === "map" && (
+              <select
+                className="input function-node-config"
+                value={String(node.config.key ?? "")}
+                onChange={(event) =>
+                  setNodeConfig(node.uuid, "key", event.target.value)
+                }
+              >
+                <option value="">— element prop —</option>
+                {mapElementProps(node).map((prop) => (
                   <option key={prop.key} value={prop.key}>
                     {prop.key} ({prop.value_type})
                   </option>
