@@ -22,6 +22,9 @@ from nylium.database.tables.auth_credentials import AuthCredentials
 from nylium.database.tables.auth_challenges import AuthChallenges
 from nylium.database.tables.auth_sessions import AuthSessions
 from nylium.database.tables.files import Files
+from nylium.database.tables.function_nodes import FunctionNodes
+from nylium.database.tables.function_edges import FunctionEdges
+from nylium.database.tables.function_deps import FunctionDeps
 
 __all__ = [
     "Base",
@@ -46,4 +49,7 @@ __all__ = [
     "AuthChallenges",
     "AuthSessions",
     "Files",
+    "FunctionNodes",
+    "FunctionEdges",
+    "FunctionDeps",
 ]

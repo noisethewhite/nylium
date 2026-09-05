@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 import { useMemo } from "react";
-import type { ObjectView, TypeView } from "../contracts";
-import { TypeNames } from "../contracts";
+import type { ObjectView, PropValue, TypeView } from "../contracts";
+import { PropValues, TypeNames } from "../contracts";
 import { NyliumApi } from "../net/nylium-api";
 import { ObjectEditorStore } from "../state/object-editor";
 import { useObservable } from "../state/use-observable";
@@ -75,6 +75,20 @@ function ObjectEditorInner(props: {
       {TypeNames.isFileType(props.object.type_name) && (
         <FileBlock object={props.object} />
       )}
+      {editorState.computed.length > 0 && (
+        <div className="object-editor-computed">
+          <div className="computed-header dim">Computed</div>
+          {editorState.computed.map((prop) => (
+            <div className="computed-row" key={prop.key}>
+              <span className="computed-label">{prop.key}</span>
+              <span className="computed-value">{computedText(prop.value)}</span>
+              <span className="computed-badge dim">
+                {prop.functionUuid !== null ? "function" : "formula"}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
       <div className="object-editor-fields">
         {gridFields.map((field) => (
           <FieldEditor key={field.key} field={field} editor={store} />
@@ -100,6 +114,18 @@ function ObjectEditorInner(props: {
       </div>
     </div>
   );
+}
+
+/** ADR-0005/0007: a computed prop is always scalar on read — render its
+ * wire value, or an em-dash when unset. */
+function computedText(value: PropValue | undefined): string {
+  if (value === undefined) {
+    return "—";
+  }
+  if (PropValues.isScalar(value) && value.value !== null) {
+    return String(value.value);
+  }
+  return "—";
 }
 
 /** ADR-0006: file objects render their blob inline (images) or as a

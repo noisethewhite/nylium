@@ -1,22 +1,32 @@
-import type { ObjectView, PropValue, TypeView } from "../contracts";
+import type {
+  FunctionEdgeInput,
+  FunctionNodeInput,
+  FunctionView,
+  ObjectView,
+  PropValue,
+  TypeView,
+} from "../contracts";
 import { TypeNames } from "../contracts";
 import { NyliumApi } from "../net/nylium-api";
 import { HttpError } from "../net/http-transport";
 import { Observable } from "./observable";
 
-/** VS Code-style tabs: recently opened types/objects, plus the
- * transient create-type / create-enum forms. */
+/** VS Code-style tabs: recently opened types/objects/functions, plus the
+ * transient create-type / create-enum / create-function forms. */
 export type Tab =
   | { readonly kind: "type"; readonly name: string }
   | { readonly kind: "object"; readonly uuid: string }
+  | { readonly kind: "function"; readonly uuid: string }
   | { readonly kind: "create-type" }
   | { readonly kind: "create-enum" }
-  | { readonly kind: "create-unit" };
+  | { readonly kind: "create-unit" }
+  | { readonly kind: "create-function" };
 
 export interface WorkspaceState {
   readonly loading: boolean;
   readonly types: readonly TypeView[];
   readonly objects: readonly ObjectView[];
+  readonly functions: readonly FunctionView[];
   readonly tabs: readonly Tab[];
   readonly activeTab: Tab | null;
 }
@@ -25,6 +35,7 @@ const INITIAL_STATE: WorkspaceState = {
   loading: true,
   types: [],
   objects: [],
+  functions: [],
   tabs: [],
   activeTab: null,
 };
@@ -37,6 +48,9 @@ export function sameTab(a: Tab, b: Tab): boolean {
     return a.name === b.name;
   }
   if (a.kind === "object" && b.kind === "object") {
+    return a.uuid === b.uuid;
+  }
+  if (a.kind === "function" && b.kind === "function") {
     return a.uuid === b.uuid;
   }
   return true; // one tab per create-* form kind
@@ -58,7 +72,8 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
   async init(): Promise<void> {
     await this.guard(async () => {
       const types = await this.api.listTypes();
-      this.setState({ ...this.getSnapshot(), types });
+      const functions = await this.api.listFunctions();
+      this.setState({ ...this.getSnapshot(), types, functions });
       for (const view of this.userTypes()) {
         await this.refreshObjectsOf(view.name);
       }
@@ -84,6 +99,14 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
 
   openCreateUnit(): void {
     this.activate({ kind: "create-unit" });
+  }
+
+  openFunction(uuid: string): void {
+    this.activate({ kind: "function", uuid });
+  }
+
+  openCreateFunction(): void {
+    this.activate({ kind: "create-function" });
   }
 
   closeTab(tab: Tab): void {
@@ -447,6 +470,106 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
       objects: this.getSnapshot().objects.map((o) => (o.uuid === uuid ? fresh : o)),
     });
     return fresh;
+  }
+
+  /** ADR-0007: create a Function<T,R> instance and open it as a tab. */
+  async createFunction(
+    inputType: string,
+    outputType: string,
+    name: string,
+    inputObjectUuid: string | null,
+    nodes: FunctionNodeInput[],
+    edges: FunctionEdgeInput[],
+  ): Promise<void> {
+    await this.guard(async () => {
+      const created = await this.api.createFunction(
+        inputType,
+        outputType,
+        name,
+        inputObjectUuid,
+        nodes,
+        edges,
+      );
+      const state = this.getSnapshot();
+      const tabs = state.tabs.filter((tab) => tab.kind !== "create-function");
+      const tab: Tab = { kind: "function", uuid: created.uuid };
+      this.setState({
+        ...state,
+        functions: [...state.functions, created],
+        tabs: tabs.some((open) => sameTab(open, tab)) ? tabs : [...tabs, tab],
+        activeTab: tab,
+      });
+    });
+  }
+
+  /** ADR-0007: persist a function's DAG/parameterization. Computed props
+   * change value on the next read, so every object re-pulls. */
+  async saveFunctionEdits(
+    uuid: string,
+    name: string,
+    inputObjectUuid: string | null,
+    nodes: FunctionNodeInput[],
+    edges: FunctionEdgeInput[],
+  ): Promise<void> {
+    await this.guard(async () => {
+      const updated = await this.api.updateFunction(
+        uuid,
+        name,
+        inputObjectUuid,
+        nodes,
+        edges,
+      );
+      this.setState({
+        ...this.getSnapshot(),
+        functions: this.getSnapshot().functions.map((f) => (f.uuid === uuid ? updated : f)),
+      });
+      await this.refreshAllObjects();
+    });
+  }
+
+  /** ADR-0007: deleting a function unbinds every prop that referenced it. */
+  async deleteFunction(uuid: string): Promise<void> {
+    await this.guard(async () => {
+      await this.api.deleteFunction(uuid);
+      const types = await this.api.listTypes();
+      const state = this.getSnapshot();
+      const tabs = state.tabs.filter((tab) => !(tab.kind === "function" && tab.uuid === uuid));
+      const activeTab =
+        state.activeTab !== null && tabs.some((tab) => sameTab(tab, state.activeTab as Tab))
+          ? state.activeTab
+          : (tabs[tabs.length - 1] ?? null);
+      this.setState({
+        ...state,
+        functions: state.functions.filter((f) => f.uuid !== uuid),
+        types,
+        tabs,
+        activeTab,
+      });
+      await this.refreshAllObjects();
+    });
+  }
+
+  /** ADR-0007: bind/unbind a function on a prop (null unbinds). The
+   * server answers with the schema whose prop now carries the uuid. */
+  async setPropFunction(
+    typeName: string,
+    propKey: string,
+    functionUuid: string | null,
+  ): Promise<void> {
+    await this.guard(async () => {
+      const updated = await this.api.setPropFunction(typeName, propKey, functionUuid);
+      this.setState({
+        ...this.getSnapshot(),
+        types: this.getSnapshot().types.map((t) => (t.name === typeName ? updated : t)),
+      });
+      await this.refreshObjectsOf(typeName);
+    });
+  }
+
+  private async refreshAllObjects(): Promise<void> {
+    for (const view of this.userTypes()) {
+      await this.refreshObjectsOf(view.name);
+    }
   }
 
   userTypes(): readonly TypeView[] {

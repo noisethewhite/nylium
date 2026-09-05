@@ -69,6 +69,7 @@ class WProp:
         self._key: str = row.key
         self._value_type_uuid: UUID = row.value_type_uuid
         self._formula: str | None = row.formula
+        self._function_uuid: UUID | None = row.function_uuid
 
     @property
     def uuid(self) -> UUID:
@@ -81,6 +82,10 @@ class WProp:
     @property
     def formula(self) -> str | None:
         return self._formula
+
+    @property
+    def function_uuid(self) -> UUID | None:
+        return self._function_uuid
 
     def _live_row(self) -> Props:
         if sqla.inspect(self._row).detached:

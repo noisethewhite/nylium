@@ -11,12 +11,12 @@ Props helpers); this file only orchestrates and adapts caller input.
 """
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from decimal import Decimal
 from typing import TypeAlias, cast
 from uuid import UUID
 
-from nylium.api.views import FileView, ObjectRef, ObjectView, TypeView
+from nylium.api.views import FileView, FunctionView, ObjectRef, ObjectView, TypeView
 from nylium.database import (
     Database,
     EnumOptions,
@@ -29,6 +29,7 @@ from nylium.database import (
 from nylium.objects.wembedded import EMBEDDED_NAME_SEPARATOR, WEmbedded
 from nylium.objects.wenum import WEnum
 from nylium.objects.wformula import Formula
+from nylium.objects.wfunction import INPUT_PROP_KEY, WFunction
 from nylium.objects.wobject import WObject
 from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import WColor, WInteger, WNumeric, WScalar, WString
@@ -612,6 +613,146 @@ class Api:
         WObject.wrap(uuid).delete()
         return True
 
+    # --- functions (ADR-0007) ---
+
+    @classmethod
+    @Database.sessionmethod(bundled=True, commit=False)
+    def list_functions(cls) -> list[FunctionView]:
+        views = [FunctionView.from_uuid(uuid) for uuid in WFunction.instance_uuids()]
+        return [view for view in views if view is not None]
+
+    @classmethod
+    @Database.sessionmethod(bundled=True, commit=False)
+    def get_function(cls, uuid: UUID) -> FunctionView | None:
+        return FunctionView.from_uuid(uuid)
+
+    @classmethod
+    @Database.sessionmethod(bundled=True, commit=True)
+    def create_function(
+        cls,
+        input_type: str,
+        output_type: str,
+        name: str,
+        input_object_uuid: UUID | None,
+        nodes: list[tuple[UUID, str, int, Mapping[str, object]]],
+        edges: list[tuple[UUID, int, UUID, int]],
+    ) -> FunctionView:
+        """Create a Function<T,R> instance: validate the DAG draft before
+        anything persists, materialize the parameterized type, create the
+        object (name + input link), then save the graph, index deps and
+        refuse a cross-function cycle. `nodes` items are (uuid, kind,
+        position, config) — client-generated uuids so edges can reference
+        them; `edges` items are (from_node_uuid, from_port, to_node_uuid,
+        to_port)."""
+        from nylium.server.errors import ValidationError
+
+        if not name.strip():
+            raise ValidationError("function name must not be empty")
+        cls._check_reserved_name(name, "function name")
+        # validate the DAG before creating anything (fail-fast, no orphans)
+        WFunction.validate_graph(
+            [(uuid, kind, config) for uuid, kind, _, config in nodes],
+            edges,
+            input_type,
+            output_type,
+        )
+        owner = WFunction.ensure_type(input_type, output_type)
+        props: dict[str, PropInput] = {NAME_PROP_KEY: name}
+        if input_object_uuid is not None:
+            props[INPUT_PROP_KEY] = input_object_uuid
+        view = cls.create_object(owner.name, props)
+        WFunction.sync_graph(view.uuid, nodes, edges)
+        WFunction.sync_deps(view.uuid)
+        WFunction.assert_no_dependency_cycle()
+        result = FunctionView.from_uuid(view.uuid)
+        if result is None:
+            raise RuntimeError(f"created function {view.uuid} vanished")
+        return result
+
+    @classmethod
+    @Database.sessionmethod(bundled=True, commit=True)
+    def update_function(
+        cls,
+        uuid: UUID,
+        name: str,
+        input_object_uuid: UUID | None,
+        nodes: list[tuple[UUID, str, int, Mapping[str, object]]],
+        edges: list[tuple[UUID, int, UUID, int]],
+    ) -> FunctionView:
+        """Replace a function's DAG and re-point its input in one draft.
+        The declared input/output types are fixed (they parameterize the
+        type); only the graph, name and input link change here."""
+        from nylium.server.errors import ValidationError
+
+        if not name.strip():
+            raise ValidationError("function name must not be empty")
+        existing = FunctionView.from_uuid(uuid)
+        if existing is None:
+            raise ValidationError(f"{uuid} is not a function instance")
+        cls._check_reserved_name(name, "function name")
+        WFunction.validate_graph(
+            [(n_uuid, kind, config) for n_uuid, kind, _, config in nodes],
+            edges,
+            existing.input_type,
+            existing.output_type,
+        )
+        props: dict[str, PropInput] = {NAME_PROP_KEY: name}
+        if input_object_uuid is not None:
+            props[INPUT_PROP_KEY] = input_object_uuid
+        _ = cls.update_object(uuid, props)
+        WFunction.sync_graph(uuid, nodes, edges)
+        WFunction.sync_deps(uuid)
+        WFunction.assert_no_dependency_cycle()
+        result = FunctionView.from_uuid(uuid)
+        if result is None:
+            raise RuntimeError(f"updated function {uuid} vanished")
+        return result
+
+    @classmethod
+    @Database.sessionmethod(bundled=True, commit=True)
+    def delete_function(cls, uuid: UUID) -> bool:
+        if FunctionView.from_uuid(uuid) is None:
+            return False
+        # unbind every prop computed through it first, then drop the object
+        # (graph + deps cascade on the FK)
+        Props.clear_function_references(uuid)
+        return cls.delete_object(uuid)
+
+    @classmethod
+    @Database.sessionmethod(bundled=True, commit=True)
+    def set_prop_function(
+        cls, type_name: str, prop_key: str, function_uuid: UUID | None
+    ) -> TypeView:
+        """Bind a Function<T,R> instance to a prop (None unbinds). The
+        function's output type must equal the prop's value type, and a
+        formula-backed prop cannot become function-backed. Refuses a
+        cross-function dependency cycle."""
+        from nylium.server.errors import ValidationError
+
+        owner = WType.by_name(type_name)
+        if owner is None:
+            raise KeyError(f"no type {type_name!r}")
+        prop = WProp.by_key(owner, prop_key)
+        if prop is None:
+            raise ValidationError(f"type {type_name!r} has no prop {prop_key!r}")
+        if function_uuid is not None:
+            fn = FunctionView.from_uuid(function_uuid)
+            if fn is None:
+                raise ValidationError(f"{function_uuid} is not a function instance")
+            if fn.output_type != prop.value_type().name:
+                raise ValidationError(
+                    f"function output {fn.output_type!r} does not match "
+                    + f"prop type {prop.value_type().name!r}"
+                )
+        if prop.formula is not None:
+            raise ValidationError(
+                f"prop {prop_key!r} already has a formula — a prop cannot be both"
+            )
+        Props.set_function(prop.uuid, function_uuid)
+        WFunction.assert_no_dependency_cycle()
+        result = TypeView.from_name(type_name)
+        return result
+
     # --- internals ---
 
     @classmethod
@@ -734,14 +875,21 @@ class Api:
         owner_type_uuid = Types.uuid_by_name(type_name)
         if owner_type_uuid is None:
             raise KeyError(f"no type {type_name!r}")
-        readonly = Props.formula_keys(owner_type_uuid)
+        formula_readonly = Props.formula_keys(owner_type_uuid)
+        function_readonly = Props.function_keys(owner_type_uuid)
         result: dict[str, StoredValue] = {}
         for key, value in props.items():
-            if key in readonly:
+            if key in formula_readonly:
                 from nylium.server.errors import ValidationError
 
                 raise ValidationError(
                     f"prop {key!r} of {type_name!r} is computed by a formula — it is read-only"
+                )
+            if key in function_readonly:
+                from nylium.server.errors import ValidationError
+
+                raise ValidationError(
+                    f"prop {key!r} of {type_name!r} is computed by a function — it is read-only"
                 )
             normalized = cls._normalize_value(
                 value, Props.get_type_name(owner_type_uuid, key)
@@ -779,13 +927,20 @@ class Api:
                 raise TypeError(
                     f"embedded prop of type {type_name!r} takes an inline props draft, got {type(value).__name__}"
                 )
-            readonly = Props.formula_keys(resolved.uuid)
+            formula_readonly = Props.formula_keys(resolved.uuid)
+            function_readonly = Props.function_keys(resolved.uuid)
             for child_key in value:
-                if child_key in readonly:
+                if child_key in formula_readonly:
                     from nylium.server.errors import ValidationError
 
                     raise ValidationError(
                         f"prop {child_key!r} of {type_name!r} is computed by a formula — it is read-only"
+                    )
+                if child_key in function_readonly:
+                    from nylium.server.errors import ValidationError
+
+                    raise ValidationError(
+                        f"prop {child_key!r} of {type_name!r} is computed by a function — it is read-only"
                     )
             return {
                 key: cls._normalize_value(item, Props.get_type_name(resolved.uuid, key))

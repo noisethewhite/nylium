@@ -21,9 +21,11 @@ from nylium.database import Database, Types
 class WType:
     ARRAY_TYPE_PREFIX: ClassVar[str] = "Array<"
     UNIT_NUMERIC_PREFIX: ClassVar[str] = "Numeric<"
+    FUNCTION_PREFIX: ClassVar[str] = "Function<"
     KIND_OBJECT: ClassVar[str] = "object"
     KIND_ENUM: ClassVar[str] = "enum"
     KIND_UNIT: ClassVar[str] = "unit"
+    KIND_FUNCTION: ClassVar[str] = "function"
 
     def __init__(self, row: Types):
         # snapshot, not a live row: reads must not depend on the session
@@ -69,6 +71,10 @@ class WType:
         return self._kind == self.KIND_UNIT
 
     @property
+    def is_function(self) -> bool:
+        return self._kind == self.KIND_FUNCTION
+
+    @property
     def is_embedded(self) -> bool:
         return self._embedded
 
@@ -99,6 +105,29 @@ class WType:
         if type_name.startswith(cls.UNIT_NUMERIC_PREFIX) and type_name.endswith(">"):
             return type_name[len(cls.UNIT_NUMERIC_PREFIX) : -1]
         return None
+
+    @classmethod
+    def function_name(cls, input_name: str, output_name: str) -> str:
+        """The parameterized function type name: Function<T, R>."""
+        return f"{cls.FUNCTION_PREFIX}{input_name}, {output_name}>"
+
+    @classmethod
+    def is_function_name(cls, name: str) -> bool:
+        return name.startswith(cls.FUNCTION_PREFIX) and name.endswith(">")
+
+    @classmethod
+    def function_params(cls, type_name: str) -> tuple[str, str] | None:
+        """Syntactic split only — 'Function<Invoice, Numeric>' ->
+        ('Invoice', 'Numeric'). The comma is the single separator because
+        neither T (an object kind) nor R (a scalar) can itself contain a
+        comma."""
+        if not cls.is_function_name(type_name):
+            return None
+        inner = type_name[len(cls.FUNCTION_PREFIX) : -1]
+        input_name, sep, output_name = inner.partition(",")
+        if not sep:
+            return None
+        return (input_name.strip(), output_name.strip())
 
     # --- row access ---
 

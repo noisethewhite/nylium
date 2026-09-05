@@ -36,6 +36,7 @@ from nylium.objects.quantity import Quantity
 from nylium.objects.wembedded import EMBEDDED_NAME_SEPARATOR
 from nylium.objects.wenum import WEnum
 from nylium.objects.wformula import Formula
+from nylium.objects.wfunction import WFunction
 from nylium.objects.wscalar import ScalarPayload, WInteger, WScalar
 from nylium.objects.wtypemeta import StoredValue
 
@@ -72,6 +73,8 @@ class PropView:
     # ADR-0005: a formula over the owner's Array<T> props, or None for a
     # plain stored prop
     formula: str | None = None
+    # ADR-0007: the Function<T,R> instance computing this prop, or None
+    function_uuid: UUID | None = None
 
 
 @dataclass(config=_CONFIG)
@@ -121,6 +124,7 @@ class TypeView:
                     key=prop.key,
                     value_type=prop.value_type().name,
                     formula=prop.formula,
+                    function_uuid=prop.function_uuid,
                 )
                 for prop in WProp.all_for(owner)
             ],
@@ -189,6 +193,85 @@ class FileView:
 
 
 @dataclass(config=_CONFIG)
+class FunctionNodeView:
+    """One node of a function's action DAG (ADR-0007)."""
+
+    uuid: UUID
+    kind: str
+    position: int
+    config: dict[str, object]
+
+
+@dataclass(config=_CONFIG)
+class FunctionEdgeView:
+    """A dataflow edge between two function nodes (ADR-0007)."""
+
+    uuid: UUID
+    from_node_uuid: UUID
+    from_port: int
+    to_node_uuid: UUID
+    to_port: int
+
+
+@dataclass(config=_CONFIG)
+class FunctionView:
+    """Snapshot of one Function<T,R> instance: its parameterization, its
+    input link, and its full action DAG (nodes + edges)."""
+
+    uuid: UUID
+    name: str
+    type_name: str
+    input_type: str
+    output_type: str
+    input_object_uuid: UUID | None
+    nodes: list[FunctionNodeView]
+    edges: list[FunctionEdgeView]
+
+    @classmethod
+    @Database.sessionmethod(bundled=True, commit=False)
+    def from_uuid(cls, uuid: UUID) -> Self | None:
+        type_uuid = Instances.type_uuid_of(uuid)
+        if type_uuid is None:
+            return None
+        owner = WType.by_uuid(type_uuid)
+        if owner is None or not owner.is_function:
+            return None
+        params = WType.function_params(owner.name)
+        if params is None:
+            return None
+        input_type, output_type = params
+        wrapper = WObject.wrap(uuid)
+        name = cast(str | None, getattr(wrapper, NAME_PROP_KEY)) or Instances.name_of(uuid)
+        return cls(
+            uuid=uuid,
+            name=name,
+            type_name=owner.name,
+            input_type=input_type,
+            output_type=output_type,
+            input_object_uuid=WFunction.input_object_uuid(uuid),
+            nodes=[
+                FunctionNodeView(
+                    uuid=node.uuid,
+                    kind=node.kind,
+                    position=node.position,
+                    config=node.config,
+                )
+                for node in WFunction.nodes(uuid)
+            ],
+            edges=[
+                FunctionEdgeView(
+                    uuid=edge.uuid,
+                    from_node_uuid=edge.from_node_uuid,
+                    from_port=edge.from_port,
+                    to_node_uuid=edge.to_node_uuid,
+                    to_port=edge.to_port,
+                )
+                for edge in WFunction.edges(uuid)
+            ],
+        )
+
+
+@dataclass(config=_CONFIG)
 class TagView:
     """A derived tag (ADR-0005): one array-membership edge projected back
     onto the member object. Nothing is stored — the name is recomputed on
@@ -225,7 +308,9 @@ class ObjectView:
             raise RuntimeError(f"instance {uuid} has dangling type")
         wrapper = WObject.wrap(uuid)
         props = {
-            prop.key: cls._eval_formula(wrapper, prop)
+            prop.key: cls._eval_function(prop)
+            if prop.function_uuid is not None
+            else cls._eval_formula(wrapper, prop)
             if prop.formula is not None
             else cls._render_prop(
                 cast(StoredValue, getattr(wrapper, prop.key)),
@@ -297,6 +382,15 @@ class ObjectView:
             )
         tags.sort(key=lambda tag: (tag.owner_name, tag.prop_key))
         return tags
+
+    @classmethod
+    @Database.sessionmethod(bundled=False, commit=False)
+    def _eval_function(cls, _session: Session, prop: WProp) -> ScalarValue:
+        """ADR-0007 read-time evaluation: fold the function's DAG over its
+        current input object. A div-by-zero / missing input renders empty."""
+        assert prop.function_uuid is not None
+        value = WFunction.evaluate_for(prop.function_uuid)
+        return ScalarValue(value=value)
 
     @classmethod
     @Database.sessionmethod(bundled=False, commit=False)

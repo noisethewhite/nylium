@@ -55,6 +55,13 @@ class Instances(Base):
 
     @classmethod
     @Database.sessionmethod(bundled=False, commit=False)
+    def name_of(cls, session: Session, uuid: UUID) -> str:
+        """The registry name of an instance (fallback display title)."""
+        inst = session.get(cls, uuid)
+        return "" if inst is None else inst.name
+
+    @classmethod
+    @Database.sessionmethod(bundled=False, commit=False)
     def uuids_of_type(cls, session: Session, type_uuid: UUID) -> list[UUID]:
         return list(
             session.scalars(

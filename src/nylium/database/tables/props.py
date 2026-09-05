@@ -33,6 +33,10 @@ class Props(Base):
     # ADR-0005: a formula string over the owner's Array<T> props (e.g.
     # "SUM(items.price) * 1.21"); NULL means a plain stored prop
     formula: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # ADR-0007: a reference to a Function<T,R> instance whose output type
+    # is this prop's value type; the result is computed lazily at read time
+    # (like a formula). Mutually exclusive with `formula`.
+    function_uuid: Mapped[UUID | None] = mapped_column(nullable=True)
 
     @classmethod
     @Database.sessionmethod(bundled=False, commit=False)
@@ -77,6 +81,18 @@ class Props(Base):
 
     @classmethod
     @Database.sessionmethod(bundled=False, commit=False)
+    def function_keys(cls, session: Session, owner_type_uuid: UUID) -> set[str]:
+        """Keys of the owner type's function-backed props (ADR-0007) —
+        writes to these are refused (they are computed by a Function)."""
+        rows = session.scalars(
+            sqla.select(cls.key).where(
+                cls.owner_type_uuid == owner_type_uuid, cls.function_uuid.is_not(None)
+            )
+        ).all()
+        return set(rows)
+
+    @classmethod
+    @Database.sessionmethod(bundled=False, commit=False)
     def usages_of_value_type(
         cls, session: Session, value_type_uuid: UUID
     ) -> list[tuple[UUID, str]]:
@@ -100,3 +116,27 @@ class Props(Base):
         if row is None:
             raise KeyError(f"no prop {prop_uuid}")
         row.formula = formula
+
+    @classmethod
+    @Database.sessionmethod(bundled=False, commit=False)
+    def set_function(cls, session: Session, prop_uuid: UUID, function_uuid: UUID | None) -> None:
+        """Bind (or unbind, with None) a Function<T,R> instance to a prop —
+        the prop becomes function-backed and is computed at read time
+        (ADR-0007). Mutually exclusive with `formula`; the caller validates."""
+        row = session.get(cls, prop_uuid)
+        if row is None:
+            raise KeyError(f"no prop {prop_uuid}")
+        row.function_uuid = function_uuid
+
+    @classmethod
+    @Database.sessionmethod(bundled=False, commit=False)
+    def clear_function_references(
+        cls, session: Session, function_uuid: UUID
+    ) -> None:
+        """Unbind every prop computed through this function — called before
+        deleting the function instance so no prop strands a dangling uuid."""
+        rows = session.scalars(
+            sqla.select(cls).where(cls.function_uuid == function_uuid)
+        ).all()
+        for row in rows:
+            row.function_uuid = None

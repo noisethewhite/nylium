@@ -127,6 +127,15 @@ export function Sidebar(props: {
                 >
                   New unit
                 </button>
+                <button
+                  className="type-menu-row"
+                  onClick={() => {
+                    dismiss();
+                    props.workspace.openCreateFunction();
+                  }}
+                >
+                  New function
+                </button>
               </div>
             );
           }}
@@ -148,6 +157,25 @@ export function Sidebar(props: {
               className="icon-button type-row-delete"
               title={`Delete type ${view.name}`}
               onClick={() => void props.workspace.deleteType(view.name)}
+            >
+              ×
+            </button>
+          </div>
+        ))}
+        <div className="sidebar-section">Functions</div>
+        {state.functions.map((fn) => (
+          <div className="type-row" key={fn.uuid}>
+            <button
+              className="type-row-name"
+              onClick={() => props.workspace.openFunction(fn.uuid)}
+            >
+              <span className="tab-function-icon">ƒ</span>
+              <span>{fn.name}</span>
+            </button>
+            <button
+              className="icon-button type-row-delete"
+              title={`Delete function ${fn.name}`}
+              onClick={() => void props.workspace.deleteFunction(fn.uuid)}
             >
               ×
             </button>

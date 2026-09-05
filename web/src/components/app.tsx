@@ -7,6 +7,7 @@ import { WorkspaceStore } from "../state/workspace";
 import { ErrorCenter } from "./error-center";
 import { EnumCreateForm } from "./enum-create-form";
 import { EnumTypePanel } from "./enum-type-view";
+import { FunctionEditor } from "./function-editor";
 import { LoginView } from "./login-view";
 import { ObjectEditor } from "./object-editor";
 import { Sidebar } from "./sidebar";
@@ -67,6 +68,24 @@ export function App(props: {
       return (
         <div className="tab-content create-type-page">
           <UnitCreateForm workspace={props.workspace} />
+        </div>
+      );
+    }
+    if (tab.kind === "create-function") {
+      return (
+        <div className="tab-content create-type-page">
+          <FunctionEditor workspace={props.workspace} />
+        </div>
+      );
+    }
+    if (tab.kind === "function") {
+      const fn = state.functions.find((view) => view.uuid === tab.uuid);
+      if (fn === undefined) {
+        return <div className="empty-state dim">Function is gone.</div>;
+      }
+      return (
+        <div className="tab-content">
+          <FunctionEditor key={fn.uuid} workspace={props.workspace} uuid={fn.uuid} />
         </div>
       );
     }

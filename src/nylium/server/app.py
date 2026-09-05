@@ -11,7 +11,7 @@ from sqlalchemy.engine import Connection
 
 from nylium.auth.guard import require_user
 from nylium.auth.routes import auth_routes
-from nylium.api.views import ObjectView, TypeView
+from nylium.api.views import FunctionView, ObjectView, TypeView
 from nylium.database.database import Database
 from nylium.database.tables import Base
 from nylium.objects.wfile import WFile
@@ -63,6 +63,8 @@ class NyliumApp:
             "ALTER TABLE props ADD COLUMN IF NOT EXISTS formula TEXT",
             "ALTER TABLE instances ADD COLUMN IF NOT EXISTS owner_object_uuid UUID",
             "ALTER TABLE instances ADD COLUMN IF NOT EXISTS owner_prop_uuid UUID",
+            # ADR-0007: computed-scalar reference (mutually exclusive with formula)
+            "ALTER TABLE props ADD COLUMN IF NOT EXISTS function_uuid UUID",
             # ADR-0005: color stores hex now — align the pre-existing default
             "ALTER TABLE types ALTER COLUMN color SET DEFAULT '#9e9e9e'",
         ]
@@ -187,4 +189,29 @@ class NyliumApp:
         app.add_api_route(
             f"{prefix}/files/{{file_uuid}}", routes.download_file, methods=["GET"],
             dependencies=guard,
+        )
+        app.add_api_route(
+            f"{prefix}/functions", routes.list_functions, methods=["GET"],
+            response_model=list[FunctionView], dependencies=guard,
+        )
+        app.add_api_route(
+            f"{prefix}/functions", routes.create_function, methods=["POST"],
+            status_code=created, response_model=FunctionView, dependencies=guard,
+        )
+        app.add_api_route(
+            f"{prefix}/functions/{{function_uuid}}", routes.get_function, methods=["GET"],
+            response_model=FunctionView, dependencies=guard,
+        )
+        app.add_api_route(
+            f"{prefix}/functions/{{function_uuid}}", routes.update_function, methods=["PUT"],
+            response_model=FunctionView, dependencies=guard,
+        )
+        app.add_api_route(
+            f"{prefix}/functions/{{function_uuid}}", routes.delete_function, methods=["DELETE"],
+            status_code=no_content, dependencies=guard,
+        )
+        app.add_api_route(
+            f"{prefix}/types/{{name}}/props/{{prop_key}}/function",
+            routes.set_prop_function,
+            methods=["PUT"], response_model=TypeView, dependencies=guard,
         )

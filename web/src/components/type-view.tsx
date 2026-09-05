@@ -1,9 +1,11 @@
 import type { DragEvent, ReactElement } from "react";
 import { useEffect, useState } from "react";
-import type { TypeView } from "../contracts";
+import type { FunctionView, TypeView } from "../contracts";
 import { TypeNames } from "../contracts";
+import { useObservable } from "../state/use-observable";
 import { useSaveShortcut } from "../state/use-save-shortcut";
 import { WorkspaceStore } from "../state/workspace";
+import { FloatingMenu } from "./floating-menu";
 import { IconPicker } from "./icon-picker";
 import { TypePicker } from "./type-picker";
 
@@ -45,6 +47,7 @@ export function TypeViewPanel(props: {
   schema: TypeView;
 }): ReactElement {
   const { workspace, schema } = props;
+  const state = useObservable(workspace);
   const [nameDraft, setNameDraft] = useState(schema.name);
   const [pluralDraft, setPluralDraft] = useState(schema.plural_name ?? "");
   const [iconDraft, setIconDraft] = useState(schema.icon);
@@ -193,6 +196,21 @@ export function TypeViewPanel(props: {
           // the schema's first row is the pinned `name` title — no grip,
           // locked key and type, not draggable, not a drop target
           const pinned = index === 0 && row.key === "name";
+          // ADR-0007: an existing scalar prop can carry a function-backed
+          // value — the bind menu offers functions whose output matches.
+          const schemaProp =
+            row.uuid === null
+              ? undefined
+              : schema.props.find((prop) => prop.uuid === row.uuid);
+          const boundUuid = schemaProp?.function_uuid ?? null;
+          const boundName =
+            boundUuid === null
+              ? null
+              : (state.functions.find((fn) => fn.uuid === boundUuid)?.name ?? null);
+          const matchingFunctions = state.functions.filter((fn) => {
+            const params = TypeNames.functionParams(fn.type_name);
+            return params !== null && params.output === row.valueType;
+          });
           return (
             <div
               key={row.uuid ?? `new-${index}`}
@@ -246,6 +264,16 @@ export function TypeViewPanel(props: {
                     value={row.valueType}
                     onChange={(valueType) => updateRow(index, { valueType })}
                   />
+                  {schemaProp !== undefined && TypeNames.isScalar(row.valueType) && (
+                    <FunctionBindButton
+                      bound={boundUuid !== null}
+                      boundName={boundName}
+                      functions={matchingFunctions}
+                      onBind={(uuid) =>
+                        void workspace.setPropFunction(schema.name, schemaProp.key, uuid)
+                      }
+                    />
+                  )}
                   <button
                     className="icon-button"
                     title="Delete prop — removes it from every instance"
@@ -275,5 +303,62 @@ export function TypeViewPanel(props: {
         </button>
       </div>
     </div>
+  );
+}
+
+/** ADR-0007: binds a Function<T,R> to a scalar prop (or unbinds it). The
+ * menu lists every function whose output type equals the prop's value
+ * type — the backend enforces the same match on save. */
+function FunctionBindButton(props: {
+  bound: boolean;
+  boundName: string | null;
+  functions: FunctionView[];
+  onBind: (uuid: string | null) => void;
+}): ReactElement {
+  return (
+    <FloatingMenu
+      wrapperClassName="function-bind"
+      triggerClassName={props.bound ? "function-bind-trigger bound" : "function-bind-trigger"}
+      menuClassName="type-menu"
+      title={props.bound ? `Bound to ${props.boundName ?? "function"}` : "Bind function"}
+      trigger={
+        <span className="function-bind-label">
+          <span className="tab-function-icon">ƒ</span>
+          {props.boundName !== null && <span className="function-bind-name">{props.boundName}</span>}
+        </span>
+      }
+    >
+      {(close) => (
+        <div className="type-menu-list">
+          {props.bound && (
+            <button
+              className="type-menu-row"
+              onClick={() => {
+                props.onBind(null);
+                close();
+              }}
+            >
+              Unbind
+            </button>
+          )}
+          {props.functions.length === 0 && (
+            <div className="type-menu-empty dim">No function with a matching output.</div>
+          )}
+          {props.functions.map((fn) => (
+            <button
+              key={fn.uuid}
+              className="type-menu-row"
+              onClick={() => {
+                props.onBind(fn.uuid);
+                close();
+              }}
+            >
+              <span className="tab-function-icon">ƒ</span>
+              <span>{fn.name}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </FloatingMenu>
   );
 }

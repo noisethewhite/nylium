@@ -10,9 +10,20 @@ import { WorkspaceStore } from "./workspace";
 export interface EditorState {
   readonly object: ObjectView;
   readonly fields: readonly FieldModel[];
+  /** Read-only projections: formula- (ADR-0005) and function-backed
+   * (ADR-0007) props are computed on read and never edited here. */
+  readonly computed: readonly ComputedProp[];
   readonly saving: boolean;
   readonly dirty: boolean;
   readonly error: string | null;
+}
+
+export interface ComputedProp {
+  readonly key: string;
+  readonly valueType: string;
+  readonly value: PropValue | undefined;
+  readonly formula: string | null;
+  readonly functionUuid: string | null;
 }
 
 export interface TagCandidate {
@@ -61,11 +72,22 @@ export class ObjectEditorStore extends Observable<EditorState> {
       const view = workspace.typeView(typeName);
       return view !== undefined && view.embedded ? view : undefined;
     };
-    const fields = schema.props.map((prop) =>
-      FieldFactory.create(prop, object.props[prop.key], enumOptionsOf, unitPartsOf, embeddedSchemaOf),
-    );
+    const fields = schema.props
+      .filter((prop) => prop.formula === null && prop.function_uuid === null)
+      .map((prop) =>
+        FieldFactory.create(prop, object.props[prop.key], enumOptionsOf, unitPartsOf, embeddedSchemaOf),
+      );
+    const computed: ComputedProp[] = schema.props
+      .filter((prop) => prop.formula !== null || prop.function_uuid !== null)
+      .map((prop) => ({
+        key: prop.key,
+        valueType: prop.value_type,
+        value: object.props[prop.key],
+        formula: prop.formula,
+        functionUuid: prop.function_uuid,
+      }));
     const store = new ObjectEditorStore(
-      { object, fields, saving: false, dirty: false, error: null },
+      { object, fields, computed, saving: false, dirty: false, error: null },
       workspace,
     );
     void store.loadRefOptions();

@@ -11,16 +11,19 @@ from fastapi import UploadFile
 from fastapi.responses import FileResponse
 
 from nylium.api.api import Api
-from nylium.api.views import ObjectView, ScalarValue, TypeView
+from nylium.api.views import FunctionView, ObjectView, ScalarValue, TypeView
 from nylium.server.bodies import (
     CreateEnumBody,
+    CreateFunctionBody,
     CreateObjectBody,
     CreateTypeBody,
     CreateUnitBody,
     ReorderPropsBody,
+    SetPropFunctionBody,
     SyncEnumOptionsBody,
     SyncPropsBody,
     SyncUnitPartsBody,
+    UpdateFunctionBody,
     UpdateObjectBody,
     UpdateTypeBody,
 )
@@ -166,3 +169,55 @@ class routes:
             ):
                 filename = name_prop.value
         return FileResponse(path, media_type=view.mime, filename=filename)
+
+    # --- functions (ADR-0007) ---
+
+    @classmethod
+    def list_functions(cls) -> list[FunctionView]:
+        return Api.list_functions()
+
+    @classmethod
+    def get_function(cls, function_uuid: UUID) -> FunctionView:
+        view = Api.get_function(function_uuid)
+        if view is None:
+            raise NotFoundError(f"no function {function_uuid}")
+        return view
+
+    @classmethod
+    def create_function(cls, body: CreateFunctionBody) -> FunctionView:
+        return Api.create_function(
+            body.input_type,
+            body.output_type,
+            body.name,
+            body.input_object_uuid,
+            [(n.uuid, n.kind, n.position, n.config) for n in body.nodes],
+            [
+                (e.from_node_uuid, e.from_port, e.to_node_uuid, e.to_port)
+                for e in body.edges
+            ],
+        )
+
+    @classmethod
+    def update_function(cls, function_uuid: UUID, body: UpdateFunctionBody) -> FunctionView:
+        return Api.update_function(
+            function_uuid,
+            body.name,
+            body.input_object_uuid,
+            [(n.uuid, n.kind, n.position, n.config) for n in body.nodes],
+            [
+                (e.from_node_uuid, e.from_port, e.to_node_uuid, e.to_port)
+                for e in body.edges
+            ],
+        )
+
+    @classmethod
+    def delete_function(cls, function_uuid: UUID) -> None:
+        if not Api.delete_function(function_uuid):
+            raise NotFoundError(f"no function {function_uuid}")
+
+    @classmethod
+    def set_prop_function(
+        cls, name: str, prop_key: str, body: SetPropFunctionBody
+    ) -> TypeView:
+        return Api.set_prop_function(name, prop_key, body.function_uuid)
+

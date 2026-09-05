@@ -21,6 +21,13 @@ export function TabBar(props: { workspace: WorkspaceStore }): ReactElement {
     if (tab.kind === "create-unit") {
       return "New Unit";
     }
+    if (tab.kind === "create-function") {
+      return "New Function";
+    }
+    if (tab.kind === "function") {
+      const fn = state.functions.find((view) => view.uuid === tab.uuid);
+      return fn === undefined ? tab.uuid.slice(0, 8) : fn.name;
+    }
     const object = state.objects.find((view) => view.uuid === tab.uuid);
     return object === undefined ? tab.uuid.slice(0, 8) : ObjectLabels.of(object);
   };
@@ -44,6 +51,9 @@ export function TabBar(props: { workspace: WorkspaceStore }): ReactElement {
       }
       return <TypeIcon icon={type.icon} color={type.color} size={14} />;
     }
+    if (tab.kind === "function") {
+      return <span className="tab-function-icon">ƒ</span>;
+    }
     return null;
   };
 
@@ -56,12 +66,20 @@ export function TabBar(props: { workspace: WorkspaceStore }): ReactElement {
       props.workspace.openObject(tab.uuid);
       return;
     }
+    if (tab.kind === "function") {
+      props.workspace.openFunction(tab.uuid);
+      return;
+    }
     if (tab.kind === "create-enum") {
       props.workspace.openCreateEnum();
       return;
     }
     if (tab.kind === "create-unit") {
       props.workspace.openCreateUnit();
+      return;
+    }
+    if (tab.kind === "create-function") {
+      props.workspace.openCreateFunction();
       return;
     }
     props.workspace.openCreateType();

@@ -7,6 +7,10 @@ export interface PropView {
   /** ADR-0005: a formula over the owner's Array<T> props, or null for a
    * plain stored prop */
   formula: string | null;
+  /** ADR-0007: uuid of a Function<T,R> instance whose DAG computes this
+   * prop on read, or null. Mutually exclusive with `formula`; like
+   * formula-backed props it is read-only on the wire. */
+  function_uuid: string | null;
 }
 
 export interface EnumOptionView {
@@ -95,6 +99,52 @@ export interface TagView {
   color: string;
 }
 
+/** ADR-0007: one node of a function's action DAG. */
+export interface FunctionNodeView {
+  uuid: string;
+  kind: string;
+  position: number;
+  config: Record<string, unknown>;
+}
+
+/** ADR-0007: one dataflow edge between two function nodes. */
+export interface FunctionEdgeView {
+  uuid: string;
+  from_node_uuid: string;
+  from_port: number;
+  to_node_uuid: string;
+  to_port: number;
+}
+
+/** ADR-0007: a Function<T,R> instance — parameterization, input link,
+ * and the full action DAG. */
+export interface FunctionView {
+  uuid: string;
+  name: string;
+  type_name: string;
+  input_type: string;
+  output_type: string;
+  input_object_uuid: string | null;
+  nodes: FunctionNodeView[];
+  edges: FunctionEdgeView[];
+}
+
+/** Wire draft of one node (client-generated uuid; config is scalar). */
+export interface FunctionNodeInput {
+  uuid: string;
+  kind: string;
+  position: number;
+  config: Record<string, string | number>;
+}
+
+/** Wire draft of one edge (the server assigns the edge uuid). */
+export interface FunctionEdgeInput {
+  from_node_uuid: string;
+  from_port: number;
+  to_node_uuid: string;
+  to_port: number;
+}
+
 /** Static helpers on the wire shapes — namespace-only, never instantiated. */
 export abstract class PropValues {
   static isScalar(value: PropValue): value is ScalarValue {
@@ -158,6 +208,7 @@ export abstract class TypeNames {
   ];
   private static readonly ARRAY_PREFIX = "Array<";
   private static readonly UNIT_NUMERIC_PREFIX = "Numeric<";
+  private static readonly FUNCTION_PREFIX = "Function<";
 
   static isScalar(name: string): boolean {
     return TypeNames.SCALARS.includes(name);
@@ -165,6 +216,25 @@ export abstract class TypeNames {
 
   static isFileType(name: string): boolean {
     return TypeNames.FILES.includes(name);
+  }
+
+  /** ADR-0007: parameterized function types — "Function<Invoice, Numeric>".
+   * Never user-editable; they exist only as a function instance's type. */
+  static isFunction(name: string): boolean {
+    return name.startsWith(TypeNames.FUNCTION_PREFIX) && name.endsWith(">");
+  }
+
+  /** "Function<Invoice, Numeric>" -> { input: "Invoice", output: "Numeric" }. */
+  static functionParams(name: string): { input: string; output: string } | null {
+    if (!TypeNames.isFunction(name)) {
+      return null;
+    }
+    const inner = name.slice(TypeNames.FUNCTION_PREFIX.length, -1);
+    const comma = inner.indexOf(",");
+    if (comma < 0) {
+      return null;
+    }
+    return { input: inner.slice(0, comma).trim(), output: inner.slice(comma + 1).trim() };
   }
 
   /** ADR-0006: `img:<uuid>` type icons — blob of a live Image instance.
@@ -206,12 +276,13 @@ export abstract class TypeNames {
   }
 
   /** Types a human edits in the sidebar — not builtins, not arrays,
-   * not parameterized forms like Numeric<Unit>. */
+   * not parameterized forms like Numeric<Unit>, not Function<T,R>. */
   static isUserType(name: string): boolean {
     return (
       !TypeNames.isScalar(name) &&
       !TypeNames.isArray(name) &&
-      !TypeNames.isUnitNumeric(name)
+      !TypeNames.isUnitNumeric(name) &&
+      !TypeNames.isFunction(name)
     );
   }
 }

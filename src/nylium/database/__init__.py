@@ -18,6 +18,9 @@ from .tables import (
     InstanceValues,
     ArrayValues,
     Files,
+    FunctionNodes,
+    FunctionEdges,
+    FunctionDeps,
 )
 
 
@@ -40,4 +43,7 @@ __all__ = [
     "InstanceValues",
     "ArrayValues",
     "Files",
+    "FunctionNodes",
+    "FunctionEdges",
+    "FunctionDeps",
 ]

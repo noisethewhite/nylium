@@ -152,3 +152,56 @@ class UpdateTypeBody:
     plural_name: str | None = None
     icon: str | None = None
     color: str | None = None
+
+
+@dataclass(config=_CONFIG)
+class FunctionNodeInput:
+    """One node of a function's action DAG draft (ADR-0007). The client
+    generates the uuid so edges can reference not-yet-created nodes."""
+
+    uuid: UUID
+    kind: str
+    position: int
+    config: dict[str, object] = field(default_factory=dict)
+
+
+@dataclass(config=_CONFIG)
+class FunctionEdgeInput:
+    """A dataflow edge between two node uuids in a DAG draft."""
+
+    from_node_uuid: UUID
+    from_port: int
+    to_node_uuid: UUID
+    to_port: int
+
+
+@dataclass(config=_CONFIG)
+class CreateFunctionBody:
+    """A Function<T,R> instance: parameterization, input link and the
+    full action DAG in one draft."""
+
+    input_type: str
+    output_type: str
+    name: str
+    input_object_uuid: UUID | None = None
+    nodes: list[FunctionNodeInput] = field(default_factory=list)
+    edges: list[FunctionEdgeInput] = field(default_factory=list)
+
+
+@dataclass(config=_CONFIG)
+class UpdateFunctionBody:
+    """Replace a function's name, input link and DAG (full-draft PUT
+    semantics — the input/output parameterization is fixed)."""
+
+    name: str
+    input_object_uuid: UUID | None = None
+    nodes: list[FunctionNodeInput] = field(default_factory=list)
+    edges: list[FunctionEdgeInput] = field(default_factory=list)
+
+
+@dataclass(config=_CONFIG)
+class SetPropFunctionBody:
+    """Bind a Function<T,R> instance to a prop (None unbinds)."""
+
+    function_uuid: UUID | None = None
+

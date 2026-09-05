@@ -1,4 +1,11 @@
-import type { ObjectView, PropValue, TypeView } from "../contracts";
+import type {
+  FunctionEdgeInput,
+  FunctionNodeInput,
+  FunctionView,
+  ObjectView,
+  PropValue,
+  TypeView,
+} from "../contracts";
 import type { ErrorReporter } from "./http-transport";
 import { HttpTransport } from "./http-transport";
 
@@ -117,6 +124,65 @@ export class NyliumApi extends HttpTransport {
 
   deleteObject(uuid: string): Promise<void> {
     return this.requestVoid("DELETE", `/objects/${uuid}`);
+  }
+
+  /** ADR-0007: function instances — parameterization + DAG. */
+  listFunctions(): Promise<FunctionView[]> {
+    return this.request("GET", "/functions");
+  }
+
+  getFunction(uuid: string): Promise<FunctionView> {
+    return this.request("GET", `/functions/${encodeURIComponent(uuid)}`);
+  }
+
+  createFunction(
+    inputType: string,
+    outputType: string,
+    name: string,
+    inputObjectUuid: string | null,
+    nodes: FunctionNodeInput[],
+    edges: FunctionEdgeInput[],
+  ): Promise<FunctionView> {
+    return this.request("POST", "/functions", {
+      input_type: inputType,
+      output_type: outputType,
+      name,
+      input_object_uuid: inputObjectUuid,
+      nodes,
+      edges,
+    });
+  }
+
+  updateFunction(
+    uuid: string,
+    name: string,
+    inputObjectUuid: string | null,
+    nodes: FunctionNodeInput[],
+    edges: FunctionEdgeInput[],
+  ): Promise<FunctionView> {
+    return this.request("PUT", `/functions/${encodeURIComponent(uuid)}`, {
+      name,
+      input_object_uuid: inputObjectUuid,
+      nodes,
+      edges,
+    });
+  }
+
+  deleteFunction(uuid: string): Promise<void> {
+    return this.requestVoid("DELETE", `/functions/${encodeURIComponent(uuid)}`);
+  }
+
+  /** Bind (or, with null, unbind) a Function<T,R> to a prop. */
+  setPropFunction(
+    typeName: string,
+    propKey: string,
+    functionUuid: string | null,
+  ): Promise<TypeView> {
+    return this.request(
+      "PUT",
+      `/types/${encodeURIComponent(typeName)}/props/${encodeURIComponent(propKey)}/function`,
+      { function_uuid: functionUuid },
+    );
   }
 
   /** ADR-0006: upload a blob as a File/Document/Image instance. The

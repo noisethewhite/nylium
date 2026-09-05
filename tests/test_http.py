@@ -857,3 +857,142 @@ def test_img_icon_over_http(auth_client: TestClient) -> None:
     deleted = auth_client.delete(f"/api/objects/{up.json()['uuid']}")
     assert deleted.status_code == 204
     assert auth_client.get("/api/types/Book").json()["icon"] == "inventory_2"
+
+
+def _function_draft(input_type, output_type, name, input_object_uuid, nodes, edges):
+    """Wire shape of a Create/Update function draft (ADR-0007)."""
+    return {
+        "input_type": input_type,
+        "output_type": output_type,
+        "name": name,
+        "input_object_uuid": input_object_uuid,
+        "nodes": nodes,
+        "edges": edges,
+    }
+
+
+def test_function_lifecycle_over_http(auth_client: TestClient) -> None:
+    from uuid import uuid4
+
+    dsl.create_type(
+        auth_client, "Invoice", {"name": "String", "total": "Numeric", "tax": "Numeric"}
+    )
+    dsl.create_type(auth_client, "Report", {"name": "String", "amount": "Numeric"})
+    inv = dsl.create_object(
+        auth_client,
+        "Invoice",
+        {"name": {"value": "i1"}, "total": {"value": "100"}, "tax": {"value": "5"}},
+    )
+
+    n = uuid4()
+    created = auth_client.post(
+        "/api/functions",
+        json=_function_draft(
+            "Invoice",
+            "Numeric",
+            "total passthrough",
+            str(inv["uuid"]),
+            [{"uuid": str(n), "kind": "get_prop", "position": 0, "config": {"key": "total"}}],
+            [],
+        ),
+    )
+    assert created.status_code == 201, created.text
+    view = created.json()
+    assert view["type_name"] == "Function<Invoice, Numeric>"
+    assert view["nodes"][0]["kind"] == "get_prop"
+    fn_uuid = view["uuid"]
+
+    assert fn_uuid in [f["uuid"] for f in auth_client.get("/api/functions").json()]
+    got = auth_client.get(f"/api/functions/{fn_uuid}")
+    assert got.status_code == 200
+    assert got.json()["name"] == "total passthrough"
+
+    # bind to Report.amount and read the computed value (total = 100)
+    bound = auth_client.put(
+        "/api/types/Report/props/amount/function", json={"function_uuid": fn_uuid}
+    )
+    assert bound.status_code == 200, bound.text
+    assert {p["key"]: p for p in bound.json()["props"]}["amount"]["function_uuid"] == fn_uuid
+    rep = dsl.create_object(auth_client, "Report", {"name": {"value": "r1"}})
+    assert rep["props"]["amount"]["value"] == "100"
+
+    # replace the DAG (total * tax) — edges cross the wire, read updates
+    a, b, c = uuid4(), uuid4(), uuid4()
+    updated = auth_client.put(
+        f"/api/functions/{fn_uuid}",
+        json=_function_draft(
+            "Invoice",
+            "Numeric",
+            "taxed",
+            str(inv["uuid"]),
+            [
+                {"uuid": str(a), "kind": "get_prop", "position": 0, "config": {"key": "total"}},
+                {"uuid": str(b), "kind": "get_prop", "position": 1, "config": {"key": "tax"}},
+                {"uuid": str(c), "kind": "mul", "position": 2, "config": {}},
+            ],
+            [
+                {"from_node_uuid": str(a), "from_port": 0, "to_node_uuid": str(c), "to_port": 0},
+                {"from_node_uuid": str(b), "from_port": 0, "to_node_uuid": str(c), "to_port": 1},
+            ],
+        ),
+    )
+    assert updated.status_code == 200, updated.text
+    assert updated.json()["name"] == "taxed"
+    reloaded = auth_client.get(f"/api/objects/{rep['uuid']}").json()
+    assert reloaded["props"]["amount"]["value"] == "500"
+
+    # delete unbinds and removes the function instance
+    assert auth_client.delete(f"/api/functions/{fn_uuid}").status_code == 204
+    assert auth_client.get(f"/api/functions/{fn_uuid}").status_code == 404
+
+
+def test_function_validation_over_http(auth_client: TestClient) -> None:
+    from uuid import uuid4
+
+    dsl.create_type(auth_client, "Invoice", {"name": "String", "total": "Numeric"})
+    dsl.create_type(auth_client, "Report", {"name": "String", "amount": "Numeric"})
+
+    # internal cycle -> 422
+    a, b = uuid4(), uuid4()
+    cyclic = auth_client.post(
+        "/api/functions",
+        json=_function_draft(
+            "Invoice",
+            "Numeric",
+            "cyclic",
+            None,
+            [
+                {"uuid": str(a), "kind": "cast", "position": 0, "config": {"target": "Numeric"}},
+                {"uuid": str(b), "kind": "cast", "position": 1, "config": {"target": "Numeric"}},
+            ],
+            [
+                {"from_node_uuid": str(a), "from_port": 0, "to_node_uuid": str(b), "to_port": 0},
+                {"from_node_uuid": str(b), "from_port": 0, "to_node_uuid": str(a), "to_port": 0},
+            ],
+        ),
+    )
+    assert cyclic.status_code == 422
+    assert cyclic.json()["error"]["code"] == "validation"
+
+    # a function-backed prop refuses direct writes (write guard)
+    n = uuid4()
+    fn = auth_client.post(
+        "/api/functions",
+        json=_function_draft(
+            "Invoice",
+            "Numeric",
+            "x",
+            None,
+            [{"uuid": str(n), "kind": "get_prop", "position": 0, "config": {"key": "total"}}],
+            [],
+        ),
+    ).json()
+    bound = auth_client.put(
+        "/api/types/Report/props/amount/function", json={"function_uuid": fn["uuid"]}
+    )
+    assert bound.status_code == 200, bound.text
+    guarded = auth_client.post(
+        "/api/objects",
+        json={"type_name": "Report", "props": {"amount": {"value": "1"}}},
+    )
+    assert guarded.status_code == 422
