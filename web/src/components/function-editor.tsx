@@ -7,6 +7,7 @@ import { usePinTabOnEdit } from "../state/use-pin-tab-on-edit";
 import { WorkspaceStore } from "../state/workspace";
 import { ObjectLabels } from "./object-labels";
 import { TypeIcon } from "./type-icon";
+import { TypeSelect } from "./type-select";
 
 /** ADR-0007: a Function<T,R> is an action DAG of whitelisted nodes. The
  * editor is form-based — nodes and edges as rows — because the closed
@@ -292,37 +293,29 @@ export function FunctionEditor(props: {
         <label className="field">
           <span className="field-label">Input type</span>
           <span className="field-body">
-            <select
-              className="input"
+            <TypeSelect
+              workspace={props.workspace}
               value={inputType}
-              onChange={(event) => {
-                setInputType(event.target.value);
+              options={inputTypes.map((view) => view.name)}
+              onChange={(value) => {
+                setInputType(value);
                 setInputObjectUuid(null);
               }}
-            >
-              <option value="">— object type —</option>
-              {inputTypes.map((view) => (
-                <option key={view.name} value={view.name}>
-                  {view.name}
-                </option>
-              ))}
-            </select>
+              emptyLabel="— object type —"
+              placeholder="Search object types…"
+            />
           </span>
         </label>
         <label className="field">
           <span className="field-label">Output type</span>
           <span className="field-body">
-            <select
-              className="input"
+            <TypeSelect
+              workspace={props.workspace}
               value={outputType}
-              onChange={(event) => setOutputType(event.target.value)}
-            >
-              {TypeNames.SCALARS.map((scalar) => (
-                <option key={scalar} value={scalar}>
-                  {scalar}
-                </option>
-              ))}
-            </select>
+              options={TypeNames.SCALARS}
+              onChange={setOutputType}
+              placeholder="Search scalars…"
+            />
           </span>
         </label>
         <label className="field">
@@ -415,19 +408,14 @@ export function FunctionEditor(props: {
               />
             )}
             {node.kind === "cast" && (
-              <select
-                className="input function-node-config"
+              <TypeSelect
+                workspace={props.workspace}
                 value={String(node.config.target ?? "")}
-                onChange={(event) =>
-                  setNodeConfig(node.uuid, "target", event.target.value)
-                }
-              >
-                {TypeNames.SCALARS.map((scalar) => (
-                  <option key={scalar} value={scalar}>
-                    {scalar}
-                  </option>
-                ))}
-              </select>
+                options={TypeNames.SCALARS}
+                onChange={(value) => setNodeConfig(node.uuid, "target", value)}
+                placeholder="Search scalars…"
+                triggerClassName="input type-picker-trigger function-node-config"
+              />
             )}
             <button
               className="icon-button"
