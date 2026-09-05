@@ -218,4 +218,9 @@ export class NyliumApi extends HttpTransport {
   static fileUrl(uuid: string): string {
     return `/api/files/${encodeURIComponent(uuid)}/download`;
   }
+
+  /** Markdown export download — served from GET /api/objects/{uuid}/export. */
+  static objectExportUrl(uuid: string): string {
+    return `/api/objects/${encodeURIComponent(uuid)}/export`;
+  }
 }

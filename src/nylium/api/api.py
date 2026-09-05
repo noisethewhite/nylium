@@ -514,6 +514,29 @@ class Api:
         return ObjectView.from_uuid(uuid)
 
     @classmethod
+    @Database.sessionmethod(bundled=True, commit=False)
+    def export_markdown(cls, uuid: UUID) -> tuple[str, str] | None:
+        """Render an object as a markdown document for download.
+
+        Links to other objects render as `[label](object:<uuid>)` — the
+        display name up front, the pointer kept in the href. Nothing is
+        expanded recursively (a graph is not a tree). Returns
+        (filename, content) or None when the object does not exist.
+        """
+        from nylium.api.markdown import render_object_markdown
+
+        view = ObjectView.from_uuid(uuid)
+        if view is None:
+            return None
+
+        def ref_label(ref: ObjectRef) -> str:
+            wrapper = WObject.wrap(ref.uuid)
+            label = cast(str | None, getattr(wrapper, NAME_PROP_KEY))
+            return label or Instances.name_of(ref.uuid)
+
+        return render_object_markdown(view, ref_label)
+
+    @classmethod
     @Database.sessionmethod(bundled=True, commit=True)
     def create_object(
         cls, type_name: str, props: dict[str, PropInput] | None = None

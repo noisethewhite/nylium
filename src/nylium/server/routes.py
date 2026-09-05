@@ -8,7 +8,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from fastapi import UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 
 from nylium.api.api import Api
 from nylium.api.views import FileView, FunctionView, ObjectView, TypeView
@@ -141,6 +141,18 @@ class routes:
     def delete_object(cls, object_uuid: UUID) -> None:
         if not Api.delete_object(object_uuid):
             raise NotFoundError(f"no object {object_uuid}")
+
+    @classmethod
+    def export_object(cls, object_uuid: UUID) -> Response:
+        result = Api.export_markdown(object_uuid)
+        if result is None:
+            raise NotFoundError(f"no object {object_uuid}")
+        filename, content = result
+        return Response(
+            content=content,
+            media_type="text/markdown",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
 
     # --- files (ADR-0008) ---
 

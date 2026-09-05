@@ -107,6 +107,12 @@ function ObjectEditorInner(props: {
         >
           {editorState.saving ? "Saving…" : "Save"}
         </button>
+        <a
+          className="button"
+          href={NyliumApi.objectExportUrl(props.object.uuid)}
+        >
+          Export .md
+        </a>
         <button
           className="button button-danger"
           onClick={() => void store.deleteObject()}

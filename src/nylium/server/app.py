@@ -276,6 +276,10 @@ class NyliumApp:
             status_code=no_content, dependencies=guard,
         )
         app.add_api_route(
+            f"{prefix}/objects/{{object_uuid}}/export", routes.export_object,
+            methods=["GET"], dependencies=guard,
+        )
+        app.add_api_route(
             f"{prefix}/files", routes.upload_file, methods=["POST"],
             status_code=created, response_model=FileView, dependencies=guard,
         )

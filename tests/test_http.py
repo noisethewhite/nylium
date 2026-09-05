@@ -1005,3 +1005,24 @@ def test_function_validation_over_http(auth_client: TestClient) -> None:
         json={"type_name": "Report", "props": {"amount": {"value": "1"}}},
     )
     assert guarded.status_code == 422
+
+
+def test_object_export_markdown(auth_client: TestClient) -> None:
+    dsl.create_type(auth_client, "Org", {"name": "String", "city": "String"})
+    org = dsl.create_object(
+        auth_client,
+        "Org",
+        {"name": {"value": "Acme"}, "city": {"value": "Barcelona"}},
+    )
+    org_uuid = str(org["uuid"])
+
+    response = auth_client.get(f"/api/objects/{org_uuid}/export")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/markdown")
+    assert "attachment" in response.headers["content-disposition"]
+    assert "Acme.md" in response.headers["content-disposition"]
+    assert (
+        response.text
+        == "# Org: Acme\n\n- **name**: Acme\n- **city**: Barcelona\n"
+    )
