@@ -4,6 +4,7 @@ import type { FunctionView, TypeView } from "../contracts";
 import { TypeNames } from "../contracts";
 import { useObservable } from "../state/use-observable";
 import { useSaveShortcut } from "../state/use-save-shortcut";
+import { usePinTabOnEdit } from "../state/use-pin-tab-on-edit";
 import { WorkspaceStore } from "../state/workspace";
 import { FloatingMenu } from "./floating-menu";
 import { IconPicker } from "./icon-picker";
@@ -129,6 +130,7 @@ export function TypeViewPanel(props: {
     );
   };
   useSaveShortcut(save, !pristine && !invalid);
+  usePinTabOnEdit(workspace, !pristine);
 
   return (
     <div className="tab-content">

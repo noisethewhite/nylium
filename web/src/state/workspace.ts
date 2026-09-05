@@ -15,13 +15,13 @@ import { Observable } from "./observable";
 /** VS Code-style tabs: recently opened types/objects/functions, plus the
  * transient create-type / create-enum / create-function forms. */
 export type Tab =
-  | { readonly kind: "type"; readonly name: string }
-  | { readonly kind: "object"; readonly uuid: string }
-  | { readonly kind: "function"; readonly uuid: string }
-  | { readonly kind: "create-type" }
-  | { readonly kind: "create-enum" }
-  | { readonly kind: "create-unit" }
-  | { readonly kind: "create-function" };
+  | { readonly kind: "type"; readonly name: string; readonly preview: boolean }
+  | { readonly kind: "object"; readonly uuid: string; readonly preview: boolean }
+  | { readonly kind: "function"; readonly uuid: string; readonly preview: boolean }
+  | { readonly kind: "create-type"; readonly preview: boolean }
+  | { readonly kind: "create-enum"; readonly preview: boolean }
+  | { readonly kind: "create-unit"; readonly preview: boolean }
+  | { readonly kind: "create-function"; readonly preview: boolean };
 
 export interface WorkspaceState {
   readonly loading: boolean;
@@ -86,31 +86,31 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
   }
 
   openType(name: string): void {
-    this.activate({ kind: "type", name });
+    this.activate({ kind: "type", name, preview: true });
   }
 
   openObject(uuid: string): void {
-    this.activate({ kind: "object", uuid });
+    this.activate({ kind: "object", uuid, preview: true });
   }
 
   openCreateType(): void {
-    this.activate({ kind: "create-type" });
+    this.activate({ kind: "create-type", preview: false });
   }
 
   openCreateEnum(): void {
-    this.activate({ kind: "create-enum" });
+    this.activate({ kind: "create-enum", preview: false });
   }
 
   openCreateUnit(): void {
-    this.activate({ kind: "create-unit" });
+    this.activate({ kind: "create-unit", preview: false });
   }
 
   openFunction(uuid: string): void {
-    this.activate({ kind: "function", uuid });
+    this.activate({ kind: "function", uuid, preview: true });
   }
 
   openCreateFunction(): void {
-    this.activate({ kind: "create-function" });
+    this.activate({ kind: "create-function", preview: false });
   }
 
   closeTab(tab: Tab): void {
@@ -135,7 +135,7 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
       const created = await this.api.createType(name, pluralName, props, icon, color, embedded);
       const state = this.getSnapshot();
       const tabs = state.tabs.filter((tab) => tab.kind !== "create-type");
-      const tab: Tab = { kind: "type", name: created.name };
+      const tab: Tab = { kind: "type", name: created.name, preview: false };
       this.setState({
         ...state,
         types: [...state.types, created],
@@ -150,7 +150,7 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
       const created = await this.api.createEnum(name, options);
       const state = this.getSnapshot();
       const tabs = state.tabs.filter((tab) => tab.kind !== "create-enum");
-      const tab: Tab = { kind: "type", name: created.name };
+      const tab: Tab = { kind: "type", name: created.name, preview: false };
       this.setState({
         ...state,
         types: [...state.types, created],
@@ -169,7 +169,7 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
       const created = await this.api.createUnit(name, base, secondaries);
       const state = this.getSnapshot();
       const tabs = state.tabs.filter((tab) => tab.kind !== "create-unit");
-      const tab: Tab = { kind: "type", name: created.name };
+      const tab: Tab = { kind: "type", name: created.name, preview: false };
       this.setState({
         ...state,
         types: [...state.types, created],
@@ -222,12 +222,12 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
       const renamed = schema.name !== typeName;
       const tabs = state.tabs.map((tab) =>
         renamed && tab.kind === "type" && tab.name === typeName
-          ? { kind: "type" as const, name: schema.name }
+          ? { ...tab, name: schema.name }
           : tab,
       );
       const activeTab =
         renamed && state.activeTab?.kind === "type" && state.activeTab.name === typeName
-          ? { kind: "type" as const, name: schema.name }
+          ? { ...state.activeTab, name: schema.name }
           : state.activeTab;
       this.setState({
         ...state,
@@ -278,12 +278,12 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
       const renamed = schema.name !== typeName;
       const tabs = state.tabs.map((tab) =>
         renamed && tab.kind === "type" && tab.name === typeName
-          ? { kind: "type" as const, name: schema.name }
+          ? { ...tab, name: schema.name }
           : tab,
       );
       const activeTab =
         renamed && state.activeTab?.kind === "type" && state.activeTab.name === typeName
-          ? { kind: "type" as const, name: schema.name }
+          ? { ...state.activeTab, name: schema.name }
           : state.activeTab;
       this.setState({
         ...state,
@@ -378,12 +378,12 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
       const renamed = schema.name !== typeName;
       const tabs = state.tabs.map((tab) =>
         renamed && tab.kind === "type" && tab.name === typeName
-          ? { kind: "type" as const, name: schema.name }
+          ? { ...tab, name: schema.name }
           : tab,
       );
       const activeTab =
         renamed && state.activeTab?.kind === "type" && state.activeTab.name === typeName
-          ? { kind: "type" as const, name: schema.name }
+          ? { ...state.activeTab, name: schema.name }
           : state.activeTab;
       this.setState({
         ...state,
@@ -409,11 +409,16 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
       const created = await this.api.createObject(typeName, {
         name: { value: "New Object", unit: null },
       });
+      const state = this.getSnapshot();
+      const tab: Tab = { kind: "object", uuid: created.uuid, preview: false };
       this.setState({
-        ...this.getSnapshot(),
-        objects: [...this.getSnapshot().objects, created],
+        ...state,
+        objects: [...state.objects, created],
+        tabs: state.tabs.some((open) => sameTab(open, tab))
+          ? state.tabs
+          : [...state.tabs, tab],
+        activeTab: tab,
       });
-      this.openObject(created.uuid);
     });
   }
 
@@ -477,7 +482,7 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
         ...this.getSnapshot(),
         objects: this.getSnapshot().objects.filter((o) => o.uuid !== uuid),
       });
-      this.closeTab({ kind: "object", uuid });
+      this.closeTab({ kind: "object", uuid, preview: false });
     });
   }
 
@@ -523,7 +528,7 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
       );
       const state = this.getSnapshot();
       const tabs = state.tabs.filter((tab) => tab.kind !== "create-function");
-      const tab: Tab = { kind: "function", uuid: created.uuid };
+      const tab: Tab = { kind: "function", uuid: created.uuid, preview: false };
       this.setState({
         ...state,
         functions: [...state.functions, created],
@@ -618,12 +623,36 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
     return this.api.listObjects(typeName);
   }
 
+  /** Pin the active tab — the VS Code preview-tab rule: an italic tab is
+   * transient and the next open evicts it; save/edit pins it permanent. */
+  pinActiveTab(): void {
+    const state = this.getSnapshot();
+    const tab = state.activeTab;
+    if (tab === null || !tab.preview) {
+      return;
+    }
+    const pinned = { ...tab, preview: false };
+    this.setState({
+      ...state,
+      tabs: state.tabs.map((open) => (sameTab(open, tab) ? pinned : open)),
+      activeTab: pinned,
+    });
+  }
+
   private activate(tab: Tab): void {
     const state = this.getSnapshot();
-    const tabs = state.tabs.some((open) => sameTab(open, tab))
-      ? state.tabs
-      : [...state.tabs, tab];
-    this.setState({ ...state, tabs, activeTab: tab });
+    const existing = state.tabs.find((open) => sameTab(open, tab));
+    if (existing !== undefined) {
+      this.setState({ ...state, activeTab: existing });
+      return;
+    }
+    const active = state.activeTab;
+    if (active !== null && active.preview) {
+      const tabs = state.tabs.map((open) => (sameTab(open, active) ? tab : open));
+      this.setState({ ...state, tabs, activeTab: tab });
+      return;
+    }
+    this.setState({ ...state, tabs: [...state.tabs, tab], activeTab: tab });
   }
 
   private async refreshObjectsOf(typeName: string): Promise<void> {

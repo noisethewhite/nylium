@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import { useEffect, useState } from "react";
 import type { TypeView } from "../contracts";
 import { useSaveShortcut } from "../state/use-save-shortcut";
+import { usePinTabOnEdit } from "../state/use-pin-tab-on-edit";
 import { WorkspaceStore } from "../state/workspace";
 import { IconPicker } from "./icon-picker";
 
@@ -67,6 +68,7 @@ export function EnumTypePanel(props: {
     );
   };
   useSaveShortcut(save, !pristine && !invalid);
+  usePinTabOnEdit(workspace, !pristine);
 
   return (
     <div className="tab-content">

@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import type { FunctionEdgeInput, FunctionNodeInput } from "../contracts";
 import { TypeNames } from "../contracts";
 import { useObservable } from "../state/use-observable";
+import { usePinTabOnEdit } from "../state/use-pin-tab-on-edit";
 import { WorkspaceStore } from "../state/workspace";
 import { ObjectLabels } from "./object-labels";
 import { TypeIcon } from "./type-icon";
@@ -224,6 +225,16 @@ export function FunctionEditor(props: {
         })),
     [edges],
   );
+
+  const pristine =
+    existing === undefined ||
+    (name === existing.name &&
+      inputType === existing.input_type &&
+      outputType === existing.output_type &&
+      inputObjectUuid === existing.input_object_uuid &&
+      JSON.stringify(wireNodes) === JSON.stringify(existing.nodes) &&
+      JSON.stringify(wireEdges) === JSON.stringify(existing.edges));
+  usePinTabOnEdit(props.workspace, !pristine);
 
   const canSave = name.trim() !== "" && inputType !== "" && outputType !== "";
 

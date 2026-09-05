@@ -6,6 +6,7 @@ import { NyliumApi } from "../net/nylium-api";
 import { ObjectEditorStore } from "../state/object-editor";
 import { useObservable } from "../state/use-observable";
 import { useSaveShortcut } from "../state/use-save-shortcut";
+import { usePinTabOnEdit } from "../state/use-pin-tab-on-edit";
 import { WorkspaceStore } from "../state/workspace";
 import { FieldEditor } from "./field-editors";
 import { TagChips } from "./tag-chips";
@@ -46,6 +47,7 @@ function ObjectEditorInner(props: {
   );
   const editorState = useObservable(store);
   useSaveShortcut(() => void store.save(), editorState.dirty && !editorState.saving);
+  usePinTabOnEdit(props.workspace, editorState.dirty);
 
   const fields = editorState.fields;
   const first = fields[0];

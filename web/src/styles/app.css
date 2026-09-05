@@ -519,6 +519,11 @@ select.input option {
   gap: var(--space-2);
 }
 
+/* VS Code preview-tab: an unpinned (transient) tab renders italic. */
+.tab-label-preview {
+  font-style: italic;
+}
+
 .tab-close {
   visibility: hidden;
 }

@@ -98,7 +98,9 @@ export function TabBar(props: { workspace: WorkspaceStore }): ReactElement {
         >
           <button className="tab-label" onClick={() => activate(tab)}>
             {iconOf(tab)}
-            <span>{labelOf(tab)}</span>
+            <span className={tab.preview ? "tab-label-preview" : undefined}>
+              {labelOf(tab)}
+            </span>
           </button>
           <button
             className="icon-button tab-close"

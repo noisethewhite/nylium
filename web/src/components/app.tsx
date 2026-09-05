@@ -34,6 +34,21 @@ export function App(props: {
     }
   }, [authState.status, props.workspace]);
 
+  // Cmd+S / Ctrl+S pins the active preview tab even when the form is
+  // pristine — the save half of the VS Code preview-tab rule. The editor
+  // mounts its own useSaveShortcut for the actual write; this one is
+  // purely the tab-pinning concern and fires regardless of dirty state.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
+        event.preventDefault();
+        props.workspace.pinActiveTab();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [props.workspace]);
+
   if (authState.status === "loading") {
     return <div className="app-loading">…</div>;
   }
@@ -98,18 +113,18 @@ export function App(props: {
         return <div className="empty-state dim">Type is gone.</div>;
       }
       if (schema.kind === "enum") {
-        return <EnumTypePanel workspace={props.workspace} schema={schema} />;
+        return <EnumTypePanel key={tab.name} workspace={props.workspace} schema={schema} />;
       }
       if (schema.kind === "unit") {
-        return <UnitTypePanel workspace={props.workspace} schema={schema} />;
+        return <UnitTypePanel key={tab.name} workspace={props.workspace} schema={schema} />;
       }
       if (schema.kind === "file") {
-        return <FileTypePanel workspace={props.workspace} schema={schema} />;
+        return <FileTypePanel key={tab.name} workspace={props.workspace} schema={schema} />;
       }
       if (TypeNames.isScalar(schema.name)) {
-        return <ScalarTypePanel schema={schema} />;
+        return <ScalarTypePanel key={tab.name} schema={schema} />;
       }
-      return <TypeViewPanel workspace={props.workspace} schema={schema} />;
+      return <TypeViewPanel key={tab.name} workspace={props.workspace} schema={schema} />;
     }
     const object = state.objects.find((view) => view.uuid === tab.uuid);
     if (object === undefined) {
