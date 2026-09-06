@@ -12,7 +12,7 @@ import secrets
 from typing import ClassVar
 from uuid import UUID
 
-from nylium.database.tables import ApiTokens
+from nylium.tables import ApiTokens
 
 
 class tokens:

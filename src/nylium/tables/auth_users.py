@@ -6,10 +6,10 @@ from uuid import UUID, uuid4
 
 import sqlalchemy as sqla
 from sqlalchemy import DateTime, Text, func
-from sqlalchemy.orm import Mapped, Session, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column
 
-from nylium.database.database import Database
-from nylium.database.tables.base import Base
+from nylium.database import Database, databasemethod
+from nylium.tables.base import Base
 
 
 class AuthUsers(Base):
@@ -22,19 +22,19 @@ class AuthUsers(Base):
     )
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=True)
-    def create(cls, session: Session, name: str) -> "AuthUsers":
+    @databasemethod(commit=True)
+    def create(cls, name: str) -> "AuthUsers":
         user = cls(name=name)
-        session.add(user)
-        session.flush()  # populate uuid/created_at before the session ends
+        Database.session.add(user)
+        Database.session.flush()  # populate uuid/created_at before the session ends
         return user
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
-    def by_uuid(cls, session: Session, uuid: UUID) -> "AuthUsers | None":
-        return session.get(cls, uuid)
+    @databasemethod(commit=False)
+    def by_uuid(cls, uuid: UUID) -> "AuthUsers | None":
+        return Database.session.get(cls, uuid)
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
-    def by_name(cls, session: Session, name: str) -> "AuthUsers | None":
-        return session.scalar(sqla.select(cls).where(cls.name == name))
+    @databasemethod(commit=False)
+    def by_name(cls, name: str) -> "AuthUsers | None":
+        return Database.session.scalar(sqla.select(cls).where(cls.name == name))

@@ -14,7 +14,7 @@ from webauthn import (
 from webauthn.helpers import base64url_to_bytes, options_to_json
 from webauthn.helpers.structs import PublicKeyCredentialDescriptor
 
-from nylium.database.tables import AuthChallenges, AuthCredentials, AuthUsers
+from nylium.tables import AuthChallenges, AuthCredentials, AuthUsers
 from nylium.system.environment import Environment
 
 from .sessions import sessions

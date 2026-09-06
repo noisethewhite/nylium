@@ -20,9 +20,10 @@ from typing import cast
 from uuid import UUID, uuid4
 
 import sqlalchemy as sqla
-from sqlalchemy.orm import Session
 
-from nylium.database import Database, Instances, InstanceValues, StringValues
+from nylium.database import Database, databasemethod
+
+from nylium.tables import Instances, InstanceValues, StringValues
 from nylium.objects.wprop import WProp
 from nylium.objects.wtype import WType
 from nylium.objects.wtypemeta import StoredValue, WTypeMeta
@@ -37,10 +38,9 @@ SHORT_UUID_LENGTH = 8
 
 class WEmbedded:
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=True)
+    @databasemethod(commit=True)
     def write(
         cls,
-        session: Session,
         owner_uuid: UUID,
         prop: WProp,
         draft: StoredValue,
@@ -48,7 +48,7 @@ class WEmbedded:
         """Create-or-update the child from a props draft; None deletes it.
         The draft maps prop key -> value, exactly like an object write.
         Caller-supplied `name` values are ignored — names are generated."""
-        link = session.scalar(
+        link = Database.session.scalar(
             sqla.select(InstanceValues).where(
                 InstanceValues.inst_uuid == owner_uuid,
                 InstanceValues.prop_uuid == prop.uuid,
@@ -78,14 +78,14 @@ class WEmbedded:
         cls._destroy_child(child_uuid)
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=True)
-    def destroy_children_of_prop(cls, session: Session, prop_uuid: UUID) -> None:
+    @databasemethod(commit=True)
+    def destroy_children_of_prop(cls, prop_uuid: UUID) -> None:
         """Every child linked through this prop, across all instances.
         Called from Api.sync_props before an embedded prop is deleted or
         retyped — otherwise the link rows cascade away and the child
         instances orphan."""
         child_uuids = list(
-            session.scalars(
+            Database.session.scalars(
                 sqla.select(InstanceValues.uuid).where(
                     InstanceValues.prop_uuid == prop_uuid
                 )
@@ -95,13 +95,13 @@ class WEmbedded:
             cls._destroy_child(child_uuid)
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=True)
-    def regenerate_names(cls, session: Session, object_uuid: UUID) -> None:
+    @databasemethod(commit=True)
+    def regenerate_names(cls, object_uuid: UUID) -> None:
         """Rewrite generated names of this object's embedded children,
         then recurse — grandchild names embed the child name. The
         instance graph is a tree (children are always created fresh),
         so the recursion terminates."""
-        inst = session.get(Instances, object_uuid)
+        inst = Database.session.get(Instances, object_uuid)
         if inst is None:
             return
         owner = WType.by_uuid(inst.type_uuid)
@@ -110,7 +110,7 @@ class WEmbedded:
         for prop in WProp.all_for(owner):
             if not prop.value_type().is_embedded:
                 continue
-            link = session.scalar(
+            link = Database.session.scalar(
                 sqla.select(InstanceValues).where(
                     InstanceValues.inst_uuid == object_uuid,
                     InstanceValues.prop_uuid == prop.uuid,
@@ -122,19 +122,19 @@ class WEmbedded:
             cls.regenerate_names(link.uuid)
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
-    def generated_name(cls, session: Session, owner_uuid: UUID, prop: WProp) -> str:
+    @databasemethod(commit=False)
+    def generated_name(cls, owner_uuid: UUID, prop: WProp) -> str:
         """"<parent display name> → <prop key>". Falls back to the
         registry name (Type:shortuuid) while the parent's name prop is
         still unset — a later name write regenerates it."""
         base: str | None = None
-        inst = session.get(Instances, owner_uuid)
+        inst = Database.session.get(Instances, owner_uuid)
         if inst is not None:
             owner = WType.by_uuid(inst.type_uuid)
             if owner is not None:
                 name_prop = WProp.by_key(owner, NAME_PROP_KEY)
                 if name_prop is not None:
-                    row = session.get(StringValues, (owner_uuid, name_prop.uuid))
+                    row = Database.session.get(StringValues, (owner_uuid, name_prop.uuid))
                     base = None if row is None else cast(str | None, row.value)
             if not base:
                 base = inst.name
@@ -145,8 +145,8 @@ class WEmbedded:
     # --- internals ---
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=True)
-    def _create_child(cls, session: Session, owner_uuid: UUID, prop: WProp) -> UUID:
+    @databasemethod(commit=True)
+    def _create_child(cls, owner_uuid: UUID, prop: WProp) -> UUID:
         child_type = prop.value_type()
         child_uuid = uuid4()
         Instances.register(
@@ -162,11 +162,11 @@ class WEmbedded:
         # flush before the link row: without ORM relationships the
         # pending-insert order is arbitrary, and instance_values.uuid
         # FKs into instances
-        session.flush()
-        session.add(
+        Database.session.flush()
+        Database.session.add(
             InstanceValues(uuid=child_uuid, prop_uuid=prop.uuid, inst_uuid=owner_uuid)
         )
-        session.flush()
+        Database.session.flush()
         return child_uuid
 
     @classmethod

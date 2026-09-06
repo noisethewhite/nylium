@@ -3,10 +3,10 @@ from uuid import UUID, uuid4
 
 import sqlalchemy as sqla
 from sqlalchemy import DateTime, ForeignKey, Text, func
-from sqlalchemy.orm import Mapped, Session, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column
 
-from nylium.database.database import Database
-from nylium.database.tables.base import Base
+from nylium.database import Database, databasemethod
+from nylium.tables.base import Base
 
 
 class ApiTokens(Base):
@@ -34,40 +34,40 @@ class ApiTokens(Base):
     )
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=True)
+    @databasemethod(commit=True)
     def create(
-        cls, session: Session, user_uuid: UUID, name: str, token_hash: str, scope: str
+        cls, user_uuid: UUID, name: str, token_hash: str, scope: str
     ) -> "ApiTokens":
         row = cls(user_uuid=user_uuid, name=name, token_hash=token_hash, scope=scope)
-        session.add(row)
-        session.flush()  # populate uuid/created_at before the session ends
+        Database.session.add(row)
+        Database.session.flush()  # populate uuid/created_at before the session ends
         return row
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
-    def by_hash(cls, session: Session, token_hash: str) -> "ApiTokens | None":
-        return session.scalar(sqla.select(cls).where(cls.token_hash == token_hash))
+    @databasemethod(commit=False)
+    def by_hash(cls, token_hash: str) -> "ApiTokens | None":
+        return Database.session.scalar(sqla.select(cls).where(cls.token_hash == token_hash))
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
-    def for_user(cls, session: Session, user_uuid: UUID) -> list["ApiTokens"]:
+    @databasemethod(commit=False)
+    def for_user(cls, user_uuid: UUID) -> list["ApiTokens"]:
         return list(
-            session.scalars(
+            Database.session.scalars(
                 sqla.select(cls).where(cls.user_uuid == user_uuid).order_by(cls.created_at)
             ).all()
         )
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=True)
-    def mark_used(cls, session: Session, uuid: UUID) -> None:
-        row = session.get(cls, uuid)
+    @databasemethod(commit=True)
+    def mark_used(cls, uuid: UUID) -> None:
+        row = Database.session.get(cls, uuid)
         if row is not None:
             row.last_used_at = datetime.now(timezone.utc)
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=True)
-    def revoke(cls, session: Session, user_uuid: UUID, uuid: UUID) -> bool:
-        row = session.get(cls, uuid)
+    @databasemethod(commit=True)
+    def revoke(cls, user_uuid: UUID, uuid: UUID) -> bool:
+        row = Database.session.get(cls, uuid)
         if row is None or row.user_uuid != user_uuid:
             return False
         row.revoked_at = datetime.now(timezone.utc)

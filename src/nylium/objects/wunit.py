@@ -12,9 +12,8 @@ from __future__ import annotations
 from decimal import Decimal
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-
-from nylium.database.tables import NumericValues, UnitParts
+from nylium.database import Database, databasemethod
+from nylium.tables import NumericValues, UnitParts
 from nylium.objects.quantity import Quantity
 from nylium.objects.wprop import WProp
 from nylium.objects.wtype import WType
@@ -56,10 +55,11 @@ class WUnit:
         return Quantity(value=canonical, unit=value.unit)
 
     @classmethod
+    @databasemethod(commit=False)
     def read(
-        cls, session: Session, inst_uuid: UUID, prop: WProp, type_name: str
+        cls, inst_uuid: UUID, prop: WProp, type_name: str
     ) -> Quantity | None:
-        row = session.get(NumericValues, (inst_uuid, prop.uuid))
+        row = Database.session.get(NumericValues, (inst_uuid, prop.uuid))
         if row is None:
             return None
         canonical = row.value
@@ -78,17 +78,18 @@ class WUnit:
         return Quantity(value=display, unit=entered_unit)
 
     @classmethod
+    @databasemethod(commit=True)
     def write(
-        cls, session: Session, inst_uuid: UUID, prop: WProp, quantity: Quantity | None
+        cls, inst_uuid: UUID, prop: WProp, quantity: Quantity | None
     ) -> None:
         if quantity is None:
-            row = session.get(NumericValues, (inst_uuid, prop.uuid))
+            row = Database.session.get(NumericValues, (inst_uuid, prop.uuid))
             if row is not None:
-                session.delete(row)
+                Database.session.delete(row)
             return
-        row = session.get(NumericValues, (inst_uuid, prop.uuid))
+        row = Database.session.get(NumericValues, (inst_uuid, prop.uuid))
         if row is None:
-            session.add(
+            Database.session.add(
                 NumericValues(
                     inst_uuid=inst_uuid,
                     prop_uuid=prop.uuid,

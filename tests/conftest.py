@@ -8,8 +8,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from nylium.system import Environment
-from nylium.database.database import Database
-from nylium.database.tables import AuthCredentials, AuthUsers, Base
+from nylium.database import Database
+from nylium.tables import AuthCredentials, AuthUsers, Base
 from nylium.auth.sessions import sessions
 from nylium.server import NyliumApp
 

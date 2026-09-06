@@ -6,7 +6,7 @@ from uuid import UUID, uuid4
 from sqlalchemy import ForeignKey, Integer
 from sqlalchemy.orm import Mapped, mapped_column
 
-from nylium.database.tables.base import Base
+from nylium.tables.base import Base
 
 
 class FunctionEdges(Base):

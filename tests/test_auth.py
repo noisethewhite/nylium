@@ -12,7 +12,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from nylium.auth.sessions import sessions
-from nylium.database.tables import AuthCredentials, AuthUsers
+from nylium.tables import AuthCredentials, AuthUsers
 from nylium.server import NyliumApp
 
 

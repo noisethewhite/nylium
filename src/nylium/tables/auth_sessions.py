@@ -3,10 +3,10 @@ from uuid import UUID
 
 import sqlalchemy as sqla
 from sqlalchemy import DateTime, ForeignKey, Text
-from sqlalchemy.orm import Mapped, Session, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column
 
-from nylium.database.database import Database
-from nylium.database.tables.base import Base
+from nylium.database import Database, databasemethod
+from nylium.tables.base import Base
 
 
 class AuthSessions(Base):
@@ -23,36 +23,36 @@ class AuthSessions(Base):
     )
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=True)
+    @databasemethod(commit=True)
     def create(
-        cls, session: Session, user_uuid: UUID, token_hash: str, expires_at: datetime
+        cls, user_uuid: UUID, token_hash: str, expires_at: datetime
     ) -> None:
-        session.add(
+        Database.session.add(
             cls(token_hash=token_hash, user_uuid=user_uuid, expires_at=expires_at)
         )
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
-    def by_hash(cls, session: Session, token_hash: str) -> "AuthSessions | None":
-        return session.get(cls, token_hash)
+    @databasemethod(commit=False)
+    def by_hash(cls, token_hash: str) -> "AuthSessions | None":
+        return Database.session.get(cls, token_hash)
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=True)
-    def refresh(cls, session: Session, token_hash: str, expires_at: datetime) -> None:
-        row = session.get(cls, token_hash)
+    @databasemethod(commit=True)
+    def refresh(cls, token_hash: str, expires_at: datetime) -> None:
+        row = Database.session.get(cls, token_hash)
         if row is not None:
             row.expires_at = expires_at
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=True)
-    def delete(cls, session: Session, token_hash: str) -> None:
-        row = session.get(cls, token_hash)
+    @databasemethod(commit=True)
+    def delete(cls, token_hash: str) -> None:
+        row = Database.session.get(cls, token_hash)
         if row is not None:
-            session.delete(row)
+            Database.session.delete(row)
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=True)
-    def purge_expired(cls, session: Session) -> None:
-        _ = session.execute(
+    @databasemethod(commit=True)
+    def purge_expired(cls,) -> None:
+        _ = Database.session.execute(
             sqla.delete(cls).where(cls.expires_at <= datetime.now(timezone.utc))
         )

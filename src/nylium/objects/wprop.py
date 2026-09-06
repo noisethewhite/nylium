@@ -9,11 +9,11 @@ from typing import TYPE_CHECKING, ClassVar, Protocol, TypeAlias
 from uuid import UUID, uuid4
 
 import sqlalchemy as sqla
-from sqlalchemy.orm import Mapped, Session
+from sqlalchemy.orm import Mapped
 
-from nylium.database import (
+from nylium.database import Database, databasemethod
+from nylium.tables import (
     BooleanValues,
-    Database,
     DatetimeValues,
     DateValues,
     InstanceValues,
@@ -94,9 +94,9 @@ class WProp:
         return self._row
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
-    def by_key(cls, session: Session, owner: "WType", key: str) -> "WProp | None":
-        row = session.scalar(
+    @databasemethod(commit=False)
+    def by_key(cls, owner: "WType", key: str) -> "WProp | None":
+        row = Database.session.scalar(
             sqla.select(Props).where(
                 Props.owner_type_uuid == owner.uuid, Props.key == key
             )
@@ -104,9 +104,9 @@ class WProp:
         return None if row is None else cls(row)
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
-    def all_for(cls, session: Session, owner: "WType") -> "list[WProp]":
-        rows = session.scalars(
+    @databasemethod(commit=False)
+    def all_for(cls, owner: "WType") -> "list[WProp]":
+        rows = Database.session.scalars(
             sqla.select(Props)
             .where(Props.owner_type_uuid == owner.uuid)
             .order_by(Props.position)
@@ -114,8 +114,8 @@ class WProp:
         return [cls(row) for row in rows]
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=True)
-    def reorder(cls, session: Session, owner: "WType", keys: list[str]) -> None:
+    @databasemethod(commit=True)
+    def reorder(cls, owner: "WType", keys: list[str]) -> None:
         """Rewrite positions so props render in `keys` order. The list
         must be a permutation of the whole schema — partial orders would
         silently orphan the props left out."""
@@ -126,12 +126,12 @@ class WProp:
             )
         for position, key in enumerate(keys):
             props[key].position = position
-        session.flush()
+        Database.session.flush()
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=True)
+    @databasemethod(commit=True)
     def sync_schema(
-        cls, session: Session, owner: "WType", items: list[SchemaItem]
+        cls, owner: "WType", items: list[SchemaItem]
     ) -> None:
         """Apply the editor's full draft: rows whose uuid matches an
         existing prop are renamed/retyped/repositioned in place, uuid-less
@@ -142,18 +142,18 @@ class WProp:
         new prop in the same sync."""
         existing = {
             row.uuid: row
-            for row in session.scalars(
+            for row in Database.session.scalars(
                 sqla.select(Props).where(Props.owner_type_uuid == owner.uuid)
             )
         }
         kept = {uuid for uuid, _, _, _ in items if uuid is not None}
         for stale_uuid, stale_row in existing.items():
             if stale_uuid not in kept:
-                session.delete(stale_row)
-        session.flush()
+                Database.session.delete(stale_row)
+        Database.session.flush()
         for position, (prop_uuid, key, value_type_uuid, formula) in enumerate(items):
             if prop_uuid is None or prop_uuid not in existing:
-                session.add(
+                Database.session.add(
                     Props(
                         uuid=uuid4(),
                         key=key,
@@ -166,25 +166,25 @@ class WProp:
                 continue
             row = existing[prop_uuid]
             if row.value_type_uuid != value_type_uuid:
-                cls._purge_values(session, prop_uuid)
+                cls._purge_values(prop_uuid)
                 row.value_type_uuid = value_type_uuid
             row.key = key
             row.position = position
             row.formula = formula
-        session.flush()
+        Database.session.flush()
 
     @classmethod
-    def _purge_values(cls, session: Session, prop_uuid: UUID) -> None:
+    def _purge_values(cls, prop_uuid: UUID) -> None:
         for table in VALUE_TABLES:
-            _ = session.execute(
+            _ = Database.session.execute(
                 sqla.delete(table).where(table.prop_uuid == prop_uuid)
             )
-        session.flush()
+        Database.session.flush()
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=True)
+    @databasemethod(commit=True)
     def ensure(
-        cls, session: Session, owner: "WType", key: str, value_type: "WType",
+        cls, owner: "WType", key: str, value_type: "WType",
         position: int = 0, formula: str | None = None,
     ) -> "WProp":
         existing = cls.by_key(owner, key)
@@ -202,11 +202,11 @@ class WProp:
             position=position,
             formula=formula,
         )
-        session.add(row)
-        session.flush()
+        Database.session.add(row)
+        Database.session.flush()
         return cls(row)
 
-    @Database.sessionmethod(bundled=True, commit=False)
+    @databasemethod(commit=False)
     def value_type(self) -> "WType":
         from nylium.objects.wtype import WType
 

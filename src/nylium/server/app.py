@@ -13,8 +13,8 @@ from nylium.auth.guard import require_user
 from nylium.auth.routes import auth_routes
 from nylium.auth.token_routes import token_routes
 from nylium.api.views import FileView, FunctionView, ObjectView, TypeView
-from nylium.database.database import Database
-from nylium.database.tables import Base
+from nylium.database import Database
+from nylium.tables import Base
 from nylium.objects.wfile import WFile
 from nylium.objects.wscalar import WScalar
 from nylium.server.errors import errors

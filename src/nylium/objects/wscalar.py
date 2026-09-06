@@ -18,8 +18,8 @@ from datetime import date, datetime, time
 from decimal import Decimal
 from typing import ClassVar, cast, final, override
 
-from nylium.database import (
-    Database,
+from nylium.database import databasemethod
+from nylium.tables import (
     BooleanValues,
     DateValues,
     DatetimeValues,
@@ -103,7 +103,7 @@ class WScalar:
         return cast(ScalarPayload, raw)
 
     @classmethod
-    @Database.sessionmethod(bundled=True, commit=True)
+    @databasemethod(commit=True)
     def ensure_builtins(cls) -> None:
         from nylium.objects.wprop import WProp
         from nylium.objects.wtype import WType

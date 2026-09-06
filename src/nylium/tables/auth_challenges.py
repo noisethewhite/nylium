@@ -4,10 +4,10 @@ from uuid import UUID
 
 import sqlalchemy as sqla
 from sqlalchemy import DateTime, ForeignKey, LargeBinary, Text
-from sqlalchemy.orm import Mapped, Session, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column
 
-from nylium.database.database import Database
-from nylium.database.tables.base import Base
+from nylium.database import Database, databasemethod
+from nylium.tables.base import Base
 
 
 class AuthChallenges(Base):
@@ -27,17 +27,16 @@ class AuthChallenges(Base):
     )
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=True)
+    @databasemethod(commit=True)
     def issue(
         cls,
-        session: Session,
         challenge: bytes,
         kind: str,
         user_uuid: UUID | None,
         ttl_seconds: int,
     ) -> None:
         cls.purge_expired()
-        session.add(
+        Database.session.add(
             cls(
                 challenge=challenge,
                 kind=kind,
@@ -48,26 +47,26 @@ class AuthChallenges(Base):
         )
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=True)
+    @databasemethod(commit=True)
     def consume(
-        cls, session: Session, challenge: bytes, kind: str
+        cls, challenge: bytes, kind: str
     ) -> tuple[bool, UUID | None]:
         """Pop a challenge row: valid only if it exists, matches the
         ceremony kind and has not expired. One use, then gone.
         Returns (valid, user_uuid bound at issue time — None for login)."""
-        row = session.get(cls, challenge)
+        row = Database.session.get(cls, challenge)
         if row is None:
             return False, None
         user_uuid = row.user_uuid
         alive = row.expires_at > datetime.now(timezone.utc)
-        _ = session.execute(sqla.delete(cls).where(cls.challenge == challenge))
+        _ = Database.session.execute(sqla.delete(cls).where(cls.challenge == challenge))
         if row.kind != kind or not alive:
             return False, None
         return True, user_uuid
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=True)
-    def purge_expired(cls, session: Session) -> None:
-        _ = session.execute(
+    @databasemethod(commit=True)
+    def purge_expired(cls,) -> None:
+        _ = Database.session.execute(
             sqla.delete(cls).where(cls.expires_at <= datetime.now(timezone.utc))
         )

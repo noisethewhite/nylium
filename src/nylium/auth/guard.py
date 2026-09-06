@@ -13,7 +13,7 @@ from fastapi import HTTPException, Request, status
 
 from nylium.auth.sessions import sessions
 from nylium.auth.tokens import tokens
-from nylium.database.tables import AuthUsers
+from nylium.tables import AuthUsers
 
 
 @dataclass

@@ -356,7 +356,7 @@ def test_unexpected_error_is_500_json(
     import secrets
 
     from nylium.auth.sessions import sessions
-    from nylium.database.tables import AuthCredentials, AuthUsers
+    from nylium.tables import AuthCredentials, AuthUsers
     from nylium.server import NyliumApp
 
     user = AuthUsers.create("boom-owner")

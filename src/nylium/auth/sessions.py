@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 from typing import ClassVar
 from uuid import UUID
 
-from nylium.database.tables import AuthSessions, AuthUsers
+from nylium.tables import AuthSessions, AuthUsers
 
 
 class sessions:

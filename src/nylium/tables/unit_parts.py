@@ -9,13 +9,13 @@ from uuid import UUID, uuid4
 
 import sqlalchemy as sqla
 from sqlalchemy import Boolean, ForeignKey, Integer, Numeric, Text, UniqueConstraint
-from sqlalchemy.orm import Mapped, Session, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column
 
-from nylium.database.database import Database
-from nylium.database.tables.base import Base
-from nylium.database.tables.numeric_values import NumericValues
-from nylium.database.tables.props import Props
-from nylium.database.tables.types import Types
+from nylium.database import Database, databasemethod
+from nylium.tables.base import Base
+from nylium.tables.numeric_values import NumericValues
+from nylium.tables.props import Props
+from nylium.tables.types import Types
 
 
 class UnitParts(Base):
@@ -41,10 +41,10 @@ class UnitParts(Base):
     )
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
-    def list_for(cls, session: Session, type_uuid: UUID) -> list["UnitParts"]:
+    @databasemethod(commit=False)
+    def list_for(cls, type_uuid: UUID) -> list["UnitParts"]:
         return list(
-            session.scalars(
+            Database.session.scalars(
                 sqla.select(cls)
                 .where(cls.type_uuid == type_uuid)
                 .order_by(cls.position)
@@ -52,16 +52,16 @@ class UnitParts(Base):
         )
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
-    def by_name(cls, session: Session, type_uuid: UUID, name: str) -> "UnitParts | None":
-        return session.scalar(
+    @databasemethod(commit=False)
+    def by_name(cls, type_uuid: UUID, name: str) -> "UnitParts | None":
+        return Database.session.scalar(
             sqla.select(cls).where(cls.type_uuid == type_uuid, cls.name == name)
         )
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
-    def base_of(cls, session: Session, type_uuid: UUID) -> "UnitParts | None":
-        return session.scalar(
+    @databasemethod(commit=False)
+    def base_of(cls, type_uuid: UUID) -> "UnitParts | None":
+        return Database.session.scalar(
             sqla.select(cls).where(cls.type_uuid == type_uuid, cls.is_base.is_(True))
         )
 
@@ -70,8 +70,8 @@ class UnitParts(Base):
         return [part.name for part in cls.list_for(type_uuid)]
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
-    def usage_count(cls, session: Session, unit_type_name: str, part_name: str) -> int:
+    @databasemethod(commit=False)
+    def usage_count(cls, unit_type_name: str, part_name: str) -> int:
         """Numeric values stored under this part. Values reference a part
         through their prop's parameterized type row (`Numeric<unit>`);
         the name convention lives on WType.unit_numeric_name and is
@@ -79,20 +79,20 @@ class UnitParts(Base):
         parameterized_uuid = Types.uuid_by_name(f"Numeric<{unit_type_name}>")
         if parameterized_uuid is None:
             return 0
-        return cls._count_stored(session, parameterized_uuid, part_name)
+        return cls._count_stored(parameterized_uuid, part_name)
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
-    def usage_total(cls, session: Session, unit_type_name: str) -> int:
+    @databasemethod(commit=False)
+    def usage_total(cls, unit_type_name: str) -> int:
         """Every stored value of the unit, any part (or none)."""
         parameterized_uuid = Types.uuid_by_name(f"Numeric<{unit_type_name}>")
         if parameterized_uuid is None:
             return 0
-        return cls._count_stored(session, parameterized_uuid, None)
+        return cls._count_stored(parameterized_uuid, None)
 
     @classmethod
     def _count_stored(
-        cls, session: Session, parameterized_uuid: UUID, part_name: str | None
+        cls, parameterized_uuid: UUID, part_name: str | None
     ) -> int:
         conditions = [
             Props.value_type_uuid == parameterized_uuid,
@@ -101,15 +101,14 @@ class UnitParts(Base):
         if part_name is not None:
             conditions.append(NumericValues.unit == part_name)
         return int(
-            session.scalar(sqla.select(sqla.func.count()).select_from(NumericValues).where(*conditions))
+            Database.session.scalar(sqla.select(sqla.func.count()).select_from(NumericValues).where(*conditions))
             or 0
         )
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=True)
+    @databasemethod(commit=True)
     def sync(
         cls,
-        session: Session,
         type_uuid: UUID,
         unit_type_name: str,
         items: list[tuple[UUID | None, str, Decimal, Decimal, bool]],
@@ -126,9 +125,9 @@ class UnitParts(Base):
             part = by_uuid.get(uuid) if uuid is not None else None
             if part is None:
                 part = cls(uuid=uuid4(), type_uuid=type_uuid, name=name)
-                session.add(part)
+                Database.session.add(part)
             elif part.name != name:
-                cls._propagate_rename(session, unit_type_name, part.name, name)
+                cls._propagate_rename(unit_type_name, part.name, name)
                 part.name = name
             part.multiplier = multiplier
             part.offset = offset
@@ -143,17 +142,17 @@ class UnitParts(Base):
                 raise ValueError(
                     f"unit part {part.name!r} still has {usage} values"
                 )
-            session.delete(part)
-        session.flush()
+            Database.session.delete(part)
+        Database.session.flush()
 
     @classmethod
     def _propagate_rename(
-        cls, session: Session, unit_type_name: str, old_name: str, new_name: str
+        cls, unit_type_name: str, old_name: str, new_name: str
     ) -> None:
         parameterized_uuid = Types.uuid_by_name(f"Numeric<{unit_type_name}>")
         if parameterized_uuid is None:
             return
-        _ = session.execute(
+        _ = Database.session.execute(
             sqla.update(NumericValues)
             .where(
                 NumericValues.prop_uuid.in_(

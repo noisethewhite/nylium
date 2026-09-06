@@ -6,12 +6,12 @@ from uuid import UUID, uuid4
 
 import sqlalchemy as sqla
 from sqlalchemy import ForeignKey, Integer, Text, UniqueConstraint
-from sqlalchemy.orm import Mapped, Session, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column
 
-from nylium.database.database import Database
-from nylium.database.tables.base import Base
-from nylium.database.tables.string_values import StringValues
-from nylium.database.tables.props import Props
+from nylium.database import Database, databasemethod
+from nylium.tables.base import Base
+from nylium.tables.string_values import StringValues
+from nylium.tables.props import Props
 
 
 class EnumOptions(Base):
@@ -26,10 +26,10 @@ class EnumOptions(Base):
     position: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
-    def list_for(cls, session: Session, type_uuid: UUID) -> list["EnumOptions"]:
+    @databasemethod(commit=False)
+    def list_for(cls, type_uuid: UUID) -> list["EnumOptions"]:
         return list(
-            session.scalars(
+            Database.session.scalars(
                 sqla.select(cls)
                 .where(cls.type_uuid == type_uuid)
                 .order_by(cls.position)
@@ -37,10 +37,10 @@ class EnumOptions(Base):
         )
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
-    def values_of(cls, session: Session, type_uuid: UUID) -> list[str]:
+    @databasemethod(commit=False)
+    def values_of(cls, type_uuid: UUID) -> list[str]:
         return list(
-            session.scalars(
+            Database.session.scalars(
                 sqla.select(cls.value)
                 .where(cls.type_uuid == type_uuid)
                 .order_by(cls.position)
@@ -48,11 +48,11 @@ class EnumOptions(Base):
         )
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
-    def count_usage(cls, session: Session, type_uuid: UUID, value: str) -> int:
+    @databasemethod(commit=False)
+    def count_usage(cls, type_uuid: UUID, value: str) -> int:
         """How many stored prop values currently equal this option."""
         return int(
-            session.scalar(
+            Database.session.scalar(
                 sqla.select(sqla.func.count())
                 .select_from(StringValues)
                 .join(Props, StringValues.prop_uuid == Props.uuid)
@@ -61,9 +61,9 @@ class EnumOptions(Base):
         )
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=True)
+    @databasemethod(commit=True)
     def sync(
-        cls, session: Session, type_uuid: UUID, items: list[tuple[UUID | None, str]]
+        cls, type_uuid: UUID, items: list[tuple[UUID | None, str]]
     ) -> None:
         """Apply the editor's full option draft, mirroring Props.sync_schema:
         a matching uuid renames the option in place (the rename rewrites
@@ -71,7 +71,7 @@ class EnumOptions(Base):
         but a delete refuses while the option is still in use."""
         existing = {
             row.uuid: row
-            for row in session.scalars(
+            for row in Database.session.scalars(
                 sqla.select(cls).where(cls.type_uuid == type_uuid)
             )
         }
@@ -84,17 +84,17 @@ class EnumOptions(Base):
                 raise ValueError(
                     f"option {stale_row.value!r} is still used by {usage} values"
                 )
-            session.delete(stale_row)
-        session.flush()
+            Database.session.delete(stale_row)
+        Database.session.flush()
         for position, (option_uuid, value) in enumerate(items):
             if option_uuid is None or option_uuid not in existing:
-                session.add(
+                Database.session.add(
                     cls(uuid=uuid4(), type_uuid=type_uuid, value=value, position=position)
                 )
                 continue
             row = existing[option_uuid]
             if row.value != value:
-                _ = session.execute(
+                _ = Database.session.execute(
                     sqla.update(StringValues)
                     .where(
                         StringValues.value == row.value,
@@ -106,4 +106,4 @@ class EnumOptions(Base):
                 )
                 row.value = value
             row.position = position
-        session.flush()
+        Database.session.flush()

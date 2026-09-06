@@ -17,11 +17,11 @@ from uuid import UUID
 import sqlalchemy as sqla
 from pydantic import ConfigDict
 from pydantic.dataclasses import dataclass
-from sqlalchemy.orm import Session, aliased
+from sqlalchemy.orm import aliased
 
-from nylium.database import (
+from nylium.database import Database, databasemethod
+from nylium.tables import (
     ArrayValues,
-    Database,
     EnumOptions,
     InstanceValues,
     Instances,
@@ -93,7 +93,7 @@ class TypeView:
     props: list[PropView]
 
     @classmethod
-    @Database.sessionmethod(bundled=True, commit=False)
+    @databasemethod(commit=False)
     def from_name(cls, name: str) -> Self:
         owner = WType.by_name(name)
         if owner is None:
@@ -233,7 +233,7 @@ class FunctionView:
     edges: list[FunctionEdgeView]
 
     @classmethod
-    @Database.sessionmethod(bundled=True, commit=False)
+    @databasemethod(commit=False)
     def from_uuid(cls, uuid: UUID) -> Self | None:
         type_uuid = Instances.type_uuid_of(uuid)
         if type_uuid is None:
@@ -303,7 +303,7 @@ class ObjectView:
     tags: list[TagView] = field(default_factory=list)
 
     @classmethod
-    @Database.sessionmethod(bundled=True, commit=False)
+    @databasemethod(commit=False)
     def from_uuid(cls, uuid: UUID) -> Self | None:
         type_uuid = Instances.type_uuid_of(uuid)
         if type_uuid is None:
@@ -331,15 +331,15 @@ class ObjectView:
         )
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
-    def _tags_for(cls, session: Session, uuid: UUID, type_name: str) -> list[TagView]:
+    @databasemethod(commit=False)
+    def _tags_for(cls, uuid: UUID, type_name: str) -> list[TagView]:
         """ADR-0005: reverse-projection of array membership. Every
         ``Array<type_name>`` prop whose stored array contains this object
         becomes one tag ``<owner display name> → <prop key>``. One query,
         no N+1."""
         name_prop = aliased(Props)
         owner_types = aliased(Types)
-        rows = session.execute(
+        rows = Database.session.execute(
             sqla.select(
                 InstanceValues.inst_uuid,  # owner object uuid
                 Props.key,  # array prop key
@@ -389,8 +389,8 @@ class ObjectView:
         return tags
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
-    def _eval_function(cls, _session: Session, prop: WProp) -> ScalarValue:
+    @databasemethod(commit=False)
+    def _eval_function(cls,  prop: WProp) -> ScalarValue:
         """ADR-0007 read-time evaluation: fold the function's DAG over its
         current input object. A div-by-zero / missing input renders empty."""
         assert prop.function_uuid is not None
@@ -398,8 +398,8 @@ class ObjectView:
         return ScalarValue(value=value)
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
-    def _eval_formula(cls, session: Session, wrapper: WObject, prop: WProp) -> ScalarValue:
+    @databasemethod(commit=False)
+    def _eval_formula(cls, wrapper: WObject, prop: WProp) -> ScalarValue:
         """ADR-0005 read-time evaluation: fold the stored formula over the
         live rows of the arrays it references. Unset cells count as 0; a
         dangling member keeps its stored row (COUNT sees it, the numeric
@@ -411,7 +411,7 @@ class ObjectView:
             members = cast(list[WObject] | None, getattr(wrapper, array_key)) or []
             existing: set[UUID] = (
                 set(
-                    session.scalars(
+                    Database.session.scalars(
                         sqla.select(Instances.uuid).where(
                             Instances.uuid.in_([member.uuid for member in members])
                         )
@@ -447,7 +447,7 @@ class ObjectView:
         return ScalarValue(value=result)
 
     @classmethod
-    @Database.sessionmethod(bundled=True, commit=False)
+    @databasemethod(commit=False)
     def _render_prop(cls, value: StoredValue, type_name: str) -> PropValue:
         """The declared prop type disambiguates None: an unset scalar,
         an unset link and an unset array are three different views."""

@@ -2,10 +2,11 @@ from uuid import UUID, uuid4
 
 import sqlalchemy as sqla
 from sqlalchemy import Boolean, Text
-from sqlalchemy.orm import Mapped, Session, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column
 
-from nylium.database.database import Database
-from nylium.database.tables.base import Base
+from nylium.database import Database
+from nylium.database.databasemethod import databasemethod
+from nylium.tables.base import Base
 
 
 class Types(Base):
@@ -38,15 +39,15 @@ class Types(Base):
     )
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
-    def name_by_uuid(cls, session: Session, uuid: UUID) -> str | None:
-        row = session.get(cls, uuid)
+    @databasemethod(commit=False)
+    def name_by_uuid(cls, uuid: UUID) -> str | None:
+        row = Database.session.get(cls, uuid)
         return None if row is None else row.name
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
-    def uuid_by_name(cls, session: Session, name: str) -> UUID | None:
-        row = session.scalar(
+    @databasemethod(commit=False)
+    def uuid_by_name(cls, name: str) -> UUID | None:
+        row = Database.session.scalar(
             sqla.select(cls).where(
                 cls.name == name
             )
@@ -54,33 +55,32 @@ class Types(Base):
         return None if row is None else row.uuid
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
-    def all_names(cls, session: Session) -> list[str]:
-        return list(session.scalars(sqla.select(cls.name)).all())
+    @databasemethod(commit=False)
+    def all_names(cls,) -> list[str]:
+        return list(Database.session.scalars(sqla.select(cls.name)).all())
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=True)
+    @databasemethod(commit=True)
     def update(
         cls,
-        session: Session,
         uuid: UUID,
         name: str,
         plural_name: str | None,
         icon: str,
         color: str,
     ) -> None:
-        row = session.get(cls, uuid)
+        row = Database.session.get(cls, uuid)
         if row is None:
             raise KeyError(f"no type with uuid {uuid}")
         row.name = name
         row.plural_name = plural_name
         row.icon = icon
         row.color = color
-        session.flush()
+        Database.session.flush()
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=True)
-    def delete_by_uuid(cls, session: Session, uuid: UUID) -> None:
-        row = session.get(cls, uuid)
+    @databasemethod(commit=True)
+    def delete_by_uuid(cls, uuid: UUID) -> None:
+        row = Database.session.get(cls, uuid)
         if row is not None:
-            session.delete(row)  # its props cascade
+            Database.session.delete(row)  # its props cascade

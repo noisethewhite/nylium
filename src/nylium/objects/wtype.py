@@ -13,9 +13,9 @@ from typing import ClassVar
 from uuid import UUID, uuid4
 
 import sqlalchemy as sqla
-from sqlalchemy.orm import Session
 
-from nylium.database import Database, Types
+from nylium.database import Database, databasemethod
+from nylium.tables import Types
 
 
 class WType:
@@ -137,22 +137,21 @@ class WType:
     # --- row access ---
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
-    def by_name(cls, session: Session, name: str) -> "WType | None":
-        row = session.scalar(sqla.select(Types).where(Types.name == name))
+    @databasemethod(commit=False)
+    def by_name(cls, name: str) -> "WType | None":
+        row = Database.session.scalar(sqla.select(Types).where(Types.name == name))
         return None if row is None else cls(row)
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
-    def by_uuid(cls, session: Session, uuid: UUID) -> "WType | None":
-        row = session.get(Types, uuid)
+    @databasemethod(commit=False)
+    def by_uuid(cls, uuid: UUID) -> "WType | None":
+        row = Database.session.get(Types, uuid)
         return None if row is None else cls(row)
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=True)
+    @databasemethod(commit=True)
     def ensure(
         cls,
-        session: Session,
         name: str,
         plural_name: str | None = None,
         icon: str | None = None,
@@ -184,6 +183,6 @@ class WType:
             row.kind = kind
         if embedded is not None:
             row.embedded = embedded
-        session.add(row)
-        session.flush()
+        Database.session.add(row)
+        Database.session.flush()
         return cls(row)

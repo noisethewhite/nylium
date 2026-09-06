@@ -17,10 +17,8 @@ from collections.abc import Callable
 from typing import ClassVar, Protocol, TypeAlias, cast, get_args, get_origin
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-
-from nylium.database import Database
-from nylium.database.tables import Instances
+from nylium.database import Database, databasemethod
+from nylium.tables import Instances
 from nylium.objects.quantity import Quantity
 from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import ScalarPayload, WScalar
@@ -96,8 +94,8 @@ class WTypeMeta(type):
         return mcls._root
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
-    def check_link(mcls, session: Session, expected_name: str, value: object) -> None:
+    @databasemethod(commit=False)
+    def check_link(mcls, expected_name: str, value: object) -> None:
         root = mcls.root()
         if not isinstance(value, root):
             raise TypeError(
@@ -110,7 +108,7 @@ class WTypeMeta(type):
                     f"{expected_name} prop takes {expected_name}, got {type(value).__name__}"
                 )
             return
-        inst = session.get(Instances, value.uuid)
+        inst = Database.session.get(Instances, value.uuid)
         actual = None if inst is None else WType.by_uuid(inst.type_uuid)
         if actual is None or actual.name != expected_name:
             raise TypeError(
@@ -122,7 +120,7 @@ class WTypeMeta(type):
             )
 
     @classmethod
-    @Database.sessionmethod(bundled=True, commit=True)
+    @databasemethod(commit=True)
     def _materialize(mcls, cls: type[WObjectShape], namespace: dict[str, object]) -> None:
         WScalar.ensure_builtins()
         owner = WType.ensure(cls.__name__)

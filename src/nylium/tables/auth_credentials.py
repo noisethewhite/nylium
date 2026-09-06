@@ -3,10 +3,10 @@ from uuid import UUID, uuid4
 
 import sqlalchemy as sqla
 from sqlalchemy import BigInteger, DateTime, ForeignKey, LargeBinary, Text, func
-from sqlalchemy.orm import Mapped, Session, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column
 
-from nylium.database.database import Database
-from nylium.database.tables.base import Base
+from nylium.database import Database, databasemethod
+from nylium.tables.base import Base
 
 
 class AuthCredentials(Base):
@@ -30,40 +30,39 @@ class AuthCredentials(Base):
     )
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
-    def count_all(cls, session: Session) -> int:
-        return session.scalar(sqla.select(sqla.func.count()).select_from(cls)) or 0
+    @databasemethod(commit=False)
+    def count_all(cls,) -> int:
+        return Database.session.scalar(sqla.select(sqla.func.count()).select_from(cls)) or 0
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
+    @databasemethod(commit=False)
     def by_credential_id(
-        cls, session: Session, credential_id: bytes
+        cls, credential_id: bytes
     ) -> "AuthCredentials | None":
-        return session.scalar(
+        return Database.session.scalar(
             sqla.select(cls).where(cls.credential_id == credential_id)
         )
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
-    def credential_ids_for(cls, session: Session, user_uuid: UUID) -> list[bytes]:
+    @databasemethod(commit=False)
+    def credential_ids_for(cls, user_uuid: UUID) -> list[bytes]:
         return list(
-            session.scalars(
+            Database.session.scalars(
                 sqla.select(cls.credential_id).where(cls.user_uuid == user_uuid)
             ).all()
         )
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=True)
+    @databasemethod(commit=True)
     def register(
         cls,
-        session: Session,
         user_uuid: UUID,
         credential_id: bytes,
         public_key: bytes,
         sign_count: int,
         transports: str,
     ) -> None:
-        session.add(
+        Database.session.add(
             cls(
                 user_uuid=user_uuid,
                 credential_id=credential_id,
@@ -74,9 +73,9 @@ class AuthCredentials(Base):
         )
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=True)
-    def mark_used(cls, session: Session, uuid: UUID, sign_count: int) -> None:
-        row = session.get(cls, uuid)
+    @databasemethod(commit=True)
+    def mark_used(cls, uuid: UUID, sign_count: int) -> None:
+        row = Database.session.get(cls, uuid)
         if row is not None:
             row.sign_count = sign_count
             row.last_used_at = datetime.now(timezone.utc)

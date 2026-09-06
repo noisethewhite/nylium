@@ -17,8 +17,8 @@ from typing import TypeAlias, cast
 from uuid import UUID, uuid4
 
 from nylium.api.views import FileView, FunctionView, ObjectRef, ObjectView, TypeView
-from nylium.database import (
-    Database,
+from nylium.database import databasemethod
+from nylium.tables import (
     EnumOptions,
     Files,
     Instances,
@@ -72,19 +72,19 @@ class Api:
     # --- types ---
 
     @classmethod
-    @Database.sessionmethod(bundled=True, commit=False)
+    @databasemethod(commit=False)
     def list_types(cls) -> list[TypeView]:
         return [TypeView.from_name(name) for name in Types.all_names()]
 
     @classmethod
-    @Database.sessionmethod(bundled=True, commit=False)
+    @databasemethod(commit=False)
     def get_type(cls, name: str) -> TypeView | None:
         if WType.by_name(name) is None:
             return None
         return TypeView.from_name(name)
 
     @classmethod
-    @Database.sessionmethod(bundled=True, commit=True)
+    @databasemethod(commit=True)
     def create_type(
         cls,
         name: str,
@@ -142,7 +142,7 @@ class Api:
         return TypeView.from_name(name)
 
     @classmethod
-    @Database.sessionmethod(bundled=True, commit=True)
+    @databasemethod(commit=True)
     def create_enum(
         cls,
         name: str,
@@ -167,7 +167,7 @@ class Api:
         return TypeView.from_name(final_name)
 
     @classmethod
-    @Database.sessionmethod(bundled=True, commit=True)
+    @databasemethod(commit=True)
     def sync_enum_options(
         cls, name: str, items: list[tuple[UUID | None, str]]
     ) -> TypeView:
@@ -190,7 +190,7 @@ class Api:
         return TypeView.from_name(name)
 
     @classmethod
-    @Database.sessionmethod(bundled=True, commit=True)
+    @databasemethod(commit=True)
     def create_unit(
         cls,
         name: str,
@@ -225,7 +225,7 @@ class Api:
         return TypeView.from_name(final_name)
 
     @classmethod
-    @Database.sessionmethod(bundled=True, commit=True)
+    @databasemethod(commit=True)
     def sync_unit_parts(
         cls, name: str, items: list[tuple[UUID | None, str, Decimal, Decimal, bool]]
     ) -> TypeView:
@@ -281,7 +281,7 @@ class Api:
                 )
 
     @classmethod
-    @Database.sessionmethod(bundled=True, commit=True)
+    @databasemethod(commit=True)
     def reorder_props(cls, type_name: str, keys: list[str]) -> TypeView:
         """Persist a new prop order; keys must cover the whole schema and
         keep the `name` prop first (see NAME_PROP_KEY)."""
@@ -301,7 +301,7 @@ class Api:
         return TypeView.from_name(type_name)
 
     @classmethod
-    @Database.sessionmethod(bundled=True, commit=True)
+    @databasemethod(commit=True)
     def sync_props(
         cls, type_name: str, items: list[tuple[UUID | None, str, str, str | None]]
     ) -> TypeView:
@@ -411,7 +411,7 @@ class Api:
         return TypeView.from_name(type_name)
 
     @classmethod
-    @Database.sessionmethod(bundled=True, commit=True)
+    @databasemethod(commit=True)
     def rename_type(
         cls,
         name: str,
@@ -461,7 +461,7 @@ class Api:
         return TypeView.from_name(final_name)
 
     @classmethod
-    @Database.sessionmethod(bundled=True, commit=True)
+    @databasemethod(commit=True)
     def delete_type(cls, name: str) -> bool:
         """Refuses while instances exist; other types referencing this one
         as a prop value type are stopped by the FK, on purpose."""
@@ -494,7 +494,7 @@ class Api:
     # --- objects ---
 
     @classmethod
-    @Database.sessionmethod(bundled=True, commit=False)
+    @databasemethod(commit=False)
     def list_objects(cls, type_name: str) -> list[ObjectView]:
         owner = WType.by_name(type_name)
         if owner is None:
@@ -514,7 +514,7 @@ class Api:
         return ObjectView.from_uuid(uuid)
 
     @classmethod
-    @Database.sessionmethod(bundled=True, commit=False)
+    @databasemethod(commit=False)
     def export_markdown(cls, uuid: UUID) -> tuple[str, str] | None:
         """Render an object as a markdown document for download.
 
@@ -537,7 +537,7 @@ class Api:
         return render_object_markdown(view, ref_label)
 
     @classmethod
-    @Database.sessionmethod(bundled=True, commit=True)
+    @databasemethod(commit=True)
     def create_object(
         cls, type_name: str, props: dict[str, PropInput] | None = None
     ) -> ObjectView:
@@ -566,7 +566,7 @@ class Api:
         return view
 
     @classmethod
-    @Database.sessionmethod(bundled=True, commit=True)
+    @databasemethod(commit=True)
     def update_object(cls, uuid: UUID, props: dict[str, PropInput]) -> ObjectView:
         from nylium.server.errors import ValidationError
 
@@ -590,7 +590,7 @@ class Api:
     # --- files (ADR-0006) ---
 
     @classmethod
-    @Database.sessionmethod(bundled=True, commit=True)
+    @databasemethod(commit=True)
     def create_file(
         cls, type_name: str, filename: str, mime: str, data: bytes
     ) -> FileView:
@@ -628,7 +628,7 @@ class Api:
         )
 
     @classmethod
-    @Database.sessionmethod(bundled=True, commit=False)
+    @databasemethod(commit=False)
     def get_file(cls, uuid: UUID) -> FileView | None:
         row = Files.by_uuid(uuid)
         if row is None:
@@ -639,7 +639,7 @@ class Api:
         )
 
     @classmethod
-    @Database.sessionmethod(bundled=True, commit=False)
+    @databasemethod(commit=False)
     def list_files(cls) -> list[FileView]:
         return [
             FileView(
@@ -650,7 +650,7 @@ class Api:
         ]
 
     @classmethod
-    @Database.sessionmethod(bundled=True, commit=True)
+    @databasemethod(commit=True)
     def rename_file(cls, uuid: UUID, name: str) -> FileView:
         """ADR-0008: rename is a display-name update — the uuid pointer is
         stable, so no reference ever breaks."""
@@ -665,7 +665,7 @@ class Api:
         return view
 
     @classmethod
-    @Database.sessionmethod(bundled=True, commit=True)
+    @databasemethod(commit=True)
     def delete_file(cls, uuid: UUID) -> bool:
         """ADR-0008: drop the files row and the blob. An Image used as an
         icon resets every referencing type to the default glyph."""
@@ -680,7 +680,7 @@ class Api:
         return True
 
     @classmethod
-    @Database.sessionmethod(bundled=True, commit=True)
+    @databasemethod(commit=True)
     def delete_object(cls, uuid: UUID) -> bool:
         from nylium.server.errors import ValidationError
 
@@ -696,18 +696,18 @@ class Api:
     # --- functions (ADR-0007) ---
 
     @classmethod
-    @Database.sessionmethod(bundled=True, commit=False)
+    @databasemethod(commit=False)
     def list_functions(cls) -> list[FunctionView]:
         views = [FunctionView.from_uuid(uuid) for uuid in WFunction.instance_uuids()]
         return [view for view in views if view is not None]
 
     @classmethod
-    @Database.sessionmethod(bundled=True, commit=False)
+    @databasemethod(commit=False)
     def get_function(cls, uuid: UUID) -> FunctionView | None:
         return FunctionView.from_uuid(uuid)
 
     @classmethod
-    @Database.sessionmethod(bundled=True, commit=True)
+    @databasemethod(commit=True)
     def create_function(
         cls,
         input_type: str,
@@ -750,7 +750,7 @@ class Api:
         return result
 
     @classmethod
-    @Database.sessionmethod(bundled=True, commit=True)
+    @databasemethod(commit=True)
     def update_function(
         cls,
         uuid: UUID,
@@ -789,7 +789,7 @@ class Api:
         return result
 
     @classmethod
-    @Database.sessionmethod(bundled=True, commit=True)
+    @databasemethod(commit=True)
     def delete_function(cls, uuid: UUID) -> bool:
         if FunctionView.from_uuid(uuid) is None:
             return False
@@ -799,7 +799,7 @@ class Api:
         return cls.delete_object(uuid)
 
     @classmethod
-    @Database.sessionmethod(bundled=True, commit=True)
+    @databasemethod(commit=True)
     def set_prop_function(
         cls, type_name: str, prop_key: str, function_uuid: UUID | None
     ) -> TypeView:
@@ -948,7 +948,7 @@ class Api:
         return resolved
 
     @classmethod
-    @Database.sessionmethod(bundled=True, commit=False)
+    @databasemethod(commit=False)
     def _normalize_props(
         cls, type_name: str, props: dict[str, PropInput]
     ) -> dict[str, StoredValue]:

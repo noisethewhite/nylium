@@ -11,10 +11,8 @@ from pathlib import Path
 from typing import ClassVar
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-
-from nylium.database.database import Database
-from nylium.database.tables import Files, Types
+from nylium.database import Database, databasemethod
+from nylium.tables import Files, Types
 
 
 class WFile:
@@ -84,7 +82,7 @@ class WFile:
         return type_name == cls.TYPE_FILE
 
     @classmethod
-    @Database.sessionmethod(bundled=True, commit=True)
+    @databasemethod(commit=True)
     def ensure_builtins(cls) -> None:
         from nylium.objects.wtype import WType
 
@@ -92,7 +90,7 @@ class WFile:
             _ = WType.ensure(name, icon=cls.ICONS[name], kind=WType.KIND_FILE)
 
     @classmethod
-    @Database.sessionmethod(bundled=True, commit=False)
+    @databasemethod(commit=False)
     def sweep_orphans(cls) -> None:
         """Crash-window cleanup: blobs on disk with no files row are
         deleted. Runs on boot; every survivor is logged."""
@@ -115,14 +113,14 @@ class WFile:
             path.unlink()
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
-    def reset_icons_referencing(cls, session: Session, image_uuid: UUID) -> None:
+    @databasemethod(commit=False)
+    def reset_icons_referencing(cls, image_uuid: UUID) -> None:
         """Deleting an Image used as an icon is allowed (ADR-0006): every
         type pointing at it falls back to the default glyph."""
         import sqlalchemy as sqla
 
         marker = f"{cls.ICON_IMAGE_PREFIX}{image_uuid}"
-        for type_row in session.scalars(
+        for type_row in Database.session.scalars(
             sqla.select(Types).where(Types.icon == marker)
         ).all():
             type_row.icon = cls.DEFAULT_GLYPH
@@ -139,21 +137,21 @@ class WFile:
             return None
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
-    def image_file_exists(cls, session: Session, uuid: UUID) -> bool:
-        row = session.get(Files, uuid)
+    @databasemethod(commit=False)
+    def image_file_exists(cls, uuid: UUID) -> bool:
+        row = Database.session.get(Files, uuid)
         return row is not None and row.type_name == cls.TYPE_IMAGE
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
-    def clear_array_refs(cls, session: Session, uuid: UUID) -> None:
+    @databasemethod(commit=False)
+    def clear_array_refs(cls, uuid: UUID) -> None:
         """Deleting a file also drops Array<File/Document/Image> members that
         pointed at it (ADR-0008) — mirrors WObject.delete's cleanup of array
         links, so no dangling files.uuid survives in an array."""
         import sqlalchemy as sqla
 
-        from nylium.database.tables import ArrayValues
+        from nylium.tables import ArrayValues
 
-        _ = session.execute(
+        _ = Database.session.execute(
             sqla.delete(ArrayValues).where(ArrayValues.value_uuid == uuid)
         )

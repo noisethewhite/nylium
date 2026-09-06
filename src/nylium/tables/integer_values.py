@@ -3,7 +3,7 @@ from uuid import UUID
 from sqlalchemy import ForeignKey, Integer
 from sqlalchemy.orm import Mapped, mapped_column
 
-from nylium.database.tables.base import Base
+from nylium.tables.base import Base
 
 
 class IntegerValues(Base):

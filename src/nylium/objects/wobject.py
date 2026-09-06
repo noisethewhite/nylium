@@ -23,10 +23,9 @@ from typing import ClassVar, cast, override
 from uuid import UUID, uuid4
 
 import sqlalchemy as sqla
-from sqlalchemy.orm import Session
 
-from nylium.database import Database
-from nylium.database.tables import ArrayValues, FileValues, Instances, InstanceValues
+from nylium.database import Database, databasemethod
+from nylium.tables import ArrayValues, FileValues, Instances, InstanceValues
 from nylium.objects.warray import WArray
 from nylium.objects.wembedded import WEmbedded
 from nylium.objects.wenum import WEnum
@@ -47,7 +46,7 @@ class WObject(metaclass=WTypeMeta):
 
     _uuid: UUID
 
-    @Database.sessionmethod(bundled=True, commit=True)
+    @databasemethod(commit=True)
     def __init__(self, _uuid: UUID | None = None, **props: StoredValue) -> None:
         # plain assignment: __setattr__ routes "_" names to object.__setattr__,
         # and the checker gets to see _uuid initialized
@@ -58,7 +57,7 @@ class WObject(metaclass=WTypeMeta):
         for key, value in props.items():
             setattr(self, key, value)
 
-    @Database.sessionmethod(bundled=True, commit=True)
+    @databasemethod(commit=True)
     def _register(self) -> None:
         owner = WType.ensure(type(self).__name__)
         Instances.register(
@@ -71,7 +70,7 @@ class WObject(metaclass=WTypeMeta):
         )
 
     @classmethod
-    @Database.sessionmethod(bundled=True, commit=True)
+    @databasemethod(commit=True)
     def create_db_only(cls, type_name: str, props: dict[str, StoredValue]) -> UUID:
         """Types with no registered python class: bare instance row, then
         writes through the generic WObject wrapper — same validation."""
@@ -95,9 +94,9 @@ class WObject(metaclass=WTypeMeta):
     # --- retrieval ---
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
-    def get(cls, session: Session, uuid: UUID) -> "WObject | None":
-        inst = session.get(Instances, uuid)
+    @databasemethod(commit=False)
+    def get(cls, uuid: UUID) -> "WObject | None":
+        inst = Database.session.get(Instances, uuid)
         if inst is None:
             return None
         owner = WType.by_uuid(inst.type_uuid)
@@ -114,9 +113,9 @@ class WObject(metaclass=WTypeMeta):
         raise TypeError(f"instance {uuid} is {actual_name}, not {cls.__name__}")
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
-    def wrap(cls, session: Session, uuid: UUID) -> "WObject":
-        inst = session.get(Instances, uuid)
+    @databasemethod(commit=False)
+    def wrap(cls, uuid: UUID) -> "WObject":
+        inst = Database.session.get(Instances, uuid)
         if inst is None:
             raise KeyError(f"no instance {uuid}")
         owner = WType.by_uuid(inst.type_uuid)
@@ -134,7 +133,7 @@ class WObject(metaclass=WTypeMeta):
     # --- dataclass-like facade for UI rendering ---
 
     @classmethod
-    @Database.sessionmethod(bundled=True, commit=False)
+    @databasemethod(commit=False)
     def fields(cls) -> dict[str, str]:
         """prop key -> value type name, e.g. {'tags': 'Array<String>'}"""
         owner = WType.by_name(cls.__name__)
@@ -174,9 +173,9 @@ class WObject(metaclass=WTypeMeta):
 
     # --- attribute machinery ---
 
-    @Database.sessionmethod(bundled=False, commit=False)
-    def _prop_and_type(self, session: Session, key: str) -> tuple[WProp, str]:
-        inst = session.get(Instances, self._uuid)
+    @databasemethod(commit=False)
+    def _prop_and_type(self, key: str) -> tuple[WProp, str]:
+        inst = Database.session.get(Instances, self._uuid)
         if inst is None:
             raise AttributeError(f"instance {self._uuid} does not exist")
         owner = WType.by_uuid(inst.type_uuid)
@@ -187,17 +186,17 @@ class WObject(metaclass=WTypeMeta):
             raise AttributeError(f"{owner.name} has no prop {key!r}")
         return prop, prop.value_type().name
 
-    @Database.sessionmethod(bundled=False, commit=False)
-    def __getattr__(self, session: Session, key: str) -> StoredValue:
+    @databasemethod(commit=False)
+    def __getattr__(self, key: str) -> StoredValue:
         prop, value_type = self._prop_and_type(key)
         scalar = WScalar.by_type_name(value_type)
         if scalar is not None:
-            row = session.get(scalar.TABLE, (self._uuid, prop.uuid))
+            row = Database.session.get(scalar.TABLE, (self._uuid, prop.uuid))
             return None if row is None else scalar.from_storage(row.value)
         if WType.unit_param_of(value_type) is not None:
-            return WUnit.read(session, self._uuid, prop, value_type)
+            return WUnit.read(self._uuid, prop, value_type)
         if WEnum.is_enum(value_type):
-            return WEnum.read(session, self._uuid, prop)
+            return WEnum.read(self._uuid, prop)
         if WFile.is_file_type(value_type):
             return self._file_ref(prop)
         link = self._link(prop)
@@ -208,8 +207,8 @@ class WObject(metaclass=WTypeMeta):
         return WObject.wrap(link.uuid)
 
     @override
-    @Database.sessionmethod(bundled=False, commit=True)
-    def __setattr__(self, session: Session, key: str, value: StoredValue) -> None:
+    @databasemethod(commit=True)
+    def __setattr__(self, key: str, value: StoredValue) -> None:
         if key.startswith(PRIVATE_PREFIX):
             object.__setattr__(self, key, value)
             return
@@ -220,9 +219,9 @@ class WObject(metaclass=WTypeMeta):
             WScalar.validate(value_type, payload)
             self._write_scalar(prop, scalar, payload)
         elif WType.unit_param_of(value_type) is not None:
-            WUnit.write(session, self._uuid, prop, WUnit.validate(value_type, value))
+            WUnit.write(self._uuid, prop, WUnit.validate(value_type, value))
         elif WEnum.is_enum(value_type):
-            WEnum.write(session, self._uuid, prop, WEnum.validate(value_type, value))
+            WEnum.write(self._uuid, prop, WEnum.validate(value_type, value))
         elif WType.is_array_name(value_type):
             WArray.write(
                 self._uuid,
@@ -248,25 +247,25 @@ class WObject(metaclass=WTypeMeta):
         self._touch()
 
     @override
-    @Database.sessionmethod(bundled=False, commit=True)
-    def __delattr__(self, session: Session, key: str) -> None:
+    @databasemethod(commit=True)
+    def __delattr__(self, key: str) -> None:
         if key.startswith(PRIVATE_PREFIX):
             object.__delattr__(self, key)
             return
         prop, value_type = self._prop_and_type(key)
         scalar = WScalar.by_type_name(value_type)
         if scalar is not None:
-            row = session.get(scalar.TABLE, (self._uuid, prop.uuid))
+            row = Database.session.get(scalar.TABLE, (self._uuid, prop.uuid))
             if row is not None:
-                session.delete(row)
+                Database.session.delete(row)
                 self._touch()
             return
         if WType.unit_param_of(value_type) is not None:
-            WUnit.write(session, self._uuid, prop, None)
+            WUnit.write(self._uuid, prop, None)
             self._touch()
             return
         if WEnum.is_enum(value_type):
-            WEnum.write(session, self._uuid, prop, None)
+            WEnum.write(self._uuid, prop, None)
             self._touch()
             return
         if WFile.is_file_type(value_type):
@@ -281,12 +280,12 @@ class WObject(metaclass=WTypeMeta):
         elif prop.value_type().is_embedded:
             WEmbedded.destroy(link.uuid)  # the child dies with the prop
         else:
-            session.delete(link)
+            Database.session.delete(link)
         self._touch()
 
-    @Database.sessionmethod(bundled=False, commit=True)
-    def _touch(self, session: Session) -> None:
-        _ = session.execute(
+    @databasemethod(commit=True)
+    def _touch(self, ) -> None:
+        _ = Database.session.execute(
             sqla.update(Instances)
             .where(Instances.uuid == self._uuid)
             .values(modified_at=sqla.func.now())
@@ -294,18 +293,18 @@ class WObject(metaclass=WTypeMeta):
 
     # --- reads ---
 
-    @Database.sessionmethod(bundled=False, commit=False)
-    def _link(self, session: Session, prop: WProp) -> InstanceValues | None:
-        return session.scalar(
+    @databasemethod(commit=False)
+    def _link(self, prop: WProp) -> InstanceValues | None:
+        return Database.session.scalar(
             sqla.select(InstanceValues).where(
                 InstanceValues.inst_uuid == self._uuid,
                 InstanceValues.prop_uuid == prop.uuid,
             )
         )
 
-    @Database.sessionmethod(bundled=False, commit=False)
-    def _file_ref(self, session: Session, prop: WProp) -> UUID | None:
-        return session.scalar(
+    @databasemethod(commit=False)
+    def _file_ref(self, prop: WProp) -> UUID | None:
+        return Database.session.scalar(
             sqla.select(FileValues.file_uuid).where(
                 FileValues.inst_uuid == self._uuid,
                 FileValues.prop_uuid == prop.uuid,
@@ -314,84 +313,83 @@ class WObject(metaclass=WTypeMeta):
 
     # --- writes ---
 
-    @Database.sessionmethod(bundled=False, commit=True)
+    @databasemethod(commit=True)
     def _write_scalar(
         self,
-        session: Session,
         prop: WProp,
         scalar: type[WScalar],
         value: ScalarPayload | None,
     ) -> None:
         table = scalar.TABLE
         stored = None if value is None else scalar.to_storage(value)
-        row = session.get(table, (self._uuid, prop.uuid))
+        row = Database.session.get(table, (self._uuid, prop.uuid))
         if row is None:
-            session.add(table(inst_uuid=self._uuid, prop_uuid=prop.uuid, value=stored))
+            Database.session.add(table(inst_uuid=self._uuid, prop_uuid=prop.uuid, value=stored))
             return
-        _ = session.execute(
+        _ = Database.session.execute(
             sqla.update(table)
             .where(table.inst_uuid == self._uuid, table.prop_uuid == prop.uuid)
             .values(value=stored)
         )
 
-    @Database.sessionmethod(bundled=False, commit=False)
-    def _write_link(self, session: Session, prop: WProp, value: "WObject") -> None:
-        _ = session.merge(
+    @databasemethod(commit=False)
+    def _write_link(self, prop: WProp, value: "WObject") -> None:
+        _ = Database.session.merge(
             InstanceValues(uuid=value._uuid, prop_uuid=prop.uuid, inst_uuid=self._uuid)
         )
 
-    @Database.sessionmethod(bundled=False, commit=True)
-    def _write_file_ref(self, session: Session, prop: WProp, value: UUID | None) -> None:
+    @databasemethod(commit=True)
+    def _write_file_ref(self, prop: WProp, value: UUID | None) -> None:
         if value is None:
-            _ = session.execute(
+            _ = Database.session.execute(
                 sqla.delete(FileValues).where(
                     FileValues.inst_uuid == self._uuid,
                     FileValues.prop_uuid == prop.uuid,
                 )
             )
             return
-        row = session.get(FileValues, (self._uuid, prop.uuid))
+        row = Database.session.get(FileValues, (self._uuid, prop.uuid))
         if row is None:
-            session.add(
+            Database.session.add(
                 FileValues(file_uuid=value, prop_uuid=prop.uuid, inst_uuid=self._uuid)
             )
         else:
             row.file_uuid = value
 
-    @Database.sessionmethod(bundled=False, commit=True)
-    def delete(self, session: Session) -> None:
+    @databasemethod(commit=True)
+    def delete(self, ) -> None:
         for array_uuid in self._owned_array_uuids():
             WArray.destroy(array_uuid)
         for child_uuid in self._owned_embedded_uuids():
             WEmbedded.destroy(child_uuid)
-        _ = session.execute(
+        _ = Database.session.execute(
             sqla.delete(InstanceValues).where(InstanceValues.uuid == self._uuid)
         )
-        _ = session.execute(
+        _ = Database.session.execute(
             sqla.delete(ArrayValues).where(ArrayValues.value_uuid == self._uuid)
         )
-        inst = session.get(Instances, self._uuid)
+        inst = Database.session.get(Instances, self._uuid)
         if inst is not None:
-            session.delete(inst)
+            Database.session.delete(inst)
 
-    @Database.sessionmethod(bundled=False, commit=False)
-    def _owned_embedded_uuids(self, session: Session) -> list[UUID]:
+    @databasemethod(commit=False)
+    def _owned_embedded_uuids(self, ) -> list[UUID]:
         """Instances held through embedded-typed props — composition
         children (ADR-0004), found via the owner_* read-index."""
         return list(
-            session.scalars(
+            Database.session.scalars(
                 sqla.select(Instances.uuid).where(
                     Instances.owner_object_uuid == self._uuid
                 )
             ).all()
         )
 
-    @Database.sessionmethod(bundled=False, commit=False)
-    def _owned_array_uuids(self, session: Session) -> list[UUID]:
-        from nylium.database.tables import Props, Types
+    @databasemethod(commit=False)
+    def _owned_array_uuids(self, ) -> list[UUID]:
+        from nylium.tables import Props, Types
 
         return list(
-            session.scalars(
+            Database.session.scalars(
                 sqla.select(InstanceValues.uuid)
                 .join(Props, InstanceValues.prop_uuid == Props.uuid)
                 .join(Types, Props.value_type_uuid == Types.uuid)

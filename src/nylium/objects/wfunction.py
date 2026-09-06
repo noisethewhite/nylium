@@ -23,10 +23,9 @@ from typing import ClassVar, NoReturn, TypeAlias, cast
 from uuid import UUID, uuid4
 
 import sqlalchemy as sqla
-from sqlalchemy.orm import Session
 
-from nylium.database import (
-    Database,
+from nylium.database import Database, databasemethod
+from nylium.tables import (
     FunctionDeps,
     FunctionEdges,
     FunctionNodes,
@@ -109,7 +108,7 @@ class WFunction:
     # --- type creation ---
 
     @classmethod
-    @Database.sessionmethod(bundled=True, commit=True)
+    @databasemethod(commit=True)
     def ensure_type(cls, input_name: str, output_name: str) -> WType:
         """Materialize (or fetch) the parameterized Function<T, R> type and
         its pinned props: `name` (String, like every object type) and
@@ -243,7 +242,7 @@ class WFunction:
     # --- graph validation ---
 
     @classmethod
-    @Database.sessionmethod(bundled=True, commit=False)
+    @databasemethod(commit=False)
     def validate_graph(
         cls,
         nodes: list[tuple[UUID, str, Mapping[str, object]]],
@@ -346,7 +345,7 @@ class WFunction:
     # --- evaluation ---
 
     @classmethod
-    @Database.sessionmethod(bundled=True, commit=False)
+    @databasemethod(commit=False)
     def evaluate(
         cls, function_uuid: UUID, input_values: Mapping[str, object]
     ) -> ScalarPayload | None:
@@ -477,13 +476,13 @@ class WFunction:
     # --- input materialization ---
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
+    @databasemethod(commit=False)
     def input_object_uuid(
-        cls, session: Session, function_uuid: UUID
+        cls, function_uuid: UUID
     ) -> UUID | None:
         """The object the function currently reads as its input (its pinned
         `input` link), or None when the link is unset."""
-        inst = session.get(Instances, function_uuid)
+        inst = Database.session.get(Instances, function_uuid)
         if inst is None:
             return None
         owner = WType.by_uuid(inst.type_uuid)
@@ -492,7 +491,7 @@ class WFunction:
         prop = WProp.by_key(owner, INPUT_PROP_KEY)
         if prop is None:
             return None
-        return session.scalar(
+        return Database.session.scalar(
             sqla.select(InstanceValues.uuid).where(
                 InstanceValues.inst_uuid == function_uuid,
                 InstanceValues.prop_uuid == prop.uuid,
@@ -500,7 +499,7 @@ class WFunction:
         )
 
     @classmethod
-    @Database.sessionmethod(bundled=True, commit=False)
+    @databasemethod(commit=False)
     def materialize_input(cls, function_uuid: UUID) -> dict[str, object]:
         """Project the function's input object to a prop-key -> value mapping
         the interpreter can fold over. A prop that is itself function-backed
@@ -527,7 +526,7 @@ class WFunction:
         return result
 
     @classmethod
-    @Database.sessionmethod(bundled=True, commit=False)
+    @databasemethod(commit=False)
     def evaluate_for(cls, function_uuid: UUID) -> ScalarPayload | None:
         """Fold the function over its current input object — the read-time
         entry point for rendering a function-backed prop."""
@@ -536,10 +535,10 @@ class WFunction:
     # --- graph persistence ---
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
-    def _nodes(cls, session: Session, function_uuid: UUID) -> list[FunctionNodes]:
+    @databasemethod(commit=False)
+    def _nodes(cls, function_uuid: UUID) -> list[FunctionNodes]:
         return list(
-            session.scalars(
+            Database.session.scalars(
                 sqla.select(FunctionNodes)
                 .where(FunctionNodes.function_uuid == function_uuid)
                 .order_by(FunctionNodes.position)
@@ -547,10 +546,10 @@ class WFunction:
         )
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
-    def _edges(cls, session: Session, function_uuid: UUID) -> list[FunctionEdges]:
+    @databasemethod(commit=False)
+    def _edges(cls, function_uuid: UUID) -> list[FunctionEdges]:
         return list(
-            session.scalars(
+            Database.session.scalars(
                 sqla.select(FunctionEdges).where(
                     FunctionEdges.function_uuid == function_uuid
                 )
@@ -558,10 +557,9 @@ class WFunction:
         )
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=True)
+    @databasemethod(commit=True)
     def sync_graph(
         cls,
-        session: Session,
         function_uuid: UUID,
         nodes: Sequence[tuple[UUID | None, str, int, Mapping[str, object]]],
         edges: Sequence[tuple[UUID, int, UUID, int]],
@@ -574,7 +572,7 @@ class WFunction:
         kept: set[UUID] = set()
         for node_uuid, kind, position, config in nodes:
             if node_uuid is not None and node_uuid in existing_uuids:
-                row = session.get(FunctionNodes, node_uuid)
+                row = Database.session.get(FunctionNodes, node_uuid)
                 if row is not None:
                     row.kind = kind
                     row.position = position
@@ -588,20 +586,20 @@ class WFunction:
                     position=position,
                     config=dict(config),
                 )
-                session.add(row)
+                Database.session.add(row)
                 kept.add(row.uuid)
         for stale in existing_nodes:
             if stale.uuid not in kept:
-                session.delete(stale)
-        session.flush()
+                Database.session.delete(stale)
+        Database.session.flush()
         # edges are non-identity (no client uuids) — drop and rebuild
-        _ = session.execute(
+        _ = Database.session.execute(
             sqla.delete(FunctionEdges).where(
                 FunctionEdges.function_uuid == function_uuid
             )
         )
         for from_uuid, from_port, to_uuid, to_port in edges:
-            session.add(
+            Database.session.add(
                 FunctionEdges(
                     function_uuid=function_uuid,
                     from_node_uuid=from_uuid,
@@ -610,16 +608,16 @@ class WFunction:
                     to_port=to_port,
                 )
             )
-        session.flush()
+        Database.session.flush()
 
     # --- recompute dependency index ---
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
-    def sync_deps(cls, session: Session, function_uuid: UUID) -> None:
+    @databasemethod(commit=False)
+    def sync_deps(cls, function_uuid: UUID) -> None:
         """Rebuild the function's function_deps row from its current input
         link. The input prop is a link to a T object; no link -> no row."""
-        inst = session.get(Instances, function_uuid)
+        inst = Database.session.get(Instances, function_uuid)
         if inst is None:
             return
         owner = WType.by_uuid(inst.type_uuid)
@@ -628,29 +626,29 @@ class WFunction:
         prop = WProp.by_key(owner, INPUT_PROP_KEY)
         if prop is None:
             return
-        link = session.scalar(
+        link = Database.session.scalar(
             sqla.select(InstanceValues.uuid).where(
                 InstanceValues.inst_uuid == function_uuid,
                 InstanceValues.prop_uuid == prop.uuid,
             )
         )
-        _ = session.execute(
+        _ = Database.session.execute(
             sqla.delete(FunctionDeps).where(FunctionDeps.function_uuid == function_uuid)
         )
         if link is not None:
-            session.add(
+            Database.session.add(
                 FunctionDeps(function_uuid=function_uuid, input_object_uuid=link)
             )
 
     # --- cross-function dependency cycle detection ---
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
-    def _function_instance_uuids(cls, session: Session) -> list[UUID]:
+    @databasemethod(commit=False)
+    def _function_instance_uuids(cls,) -> list[UUID]:
         """Every function instance uuid (instances whose type kind is
         'function')."""
         return list(
-            session.scalars(
+            Database.session.scalars(
                 sqla.select(Instances.uuid)
                 .join(Types, Types.uuid == Instances.type_uuid)
                 .where(Types.kind == WType.KIND_FUNCTION)
@@ -658,7 +656,7 @@ class WFunction:
         )
 
     @classmethod
-    @Database.sessionmethod(bundled=True, commit=False)
+    @databasemethod(commit=False)
     def assert_no_dependency_cycle(cls) -> None:
         """ADR-0007 cross-function cycle check: a function A depends on B
         when A's input object type carries a prop computed by B (reading A
@@ -705,16 +703,16 @@ class WFunction:
     # --- public readers (for the FunctionView render) ---
 
     @classmethod
-    @Database.sessionmethod(bundled=True, commit=False)
+    @databasemethod(commit=False)
     def nodes(cls, function_uuid: UUID) -> list[FunctionNodes]:
         return cls._nodes(function_uuid)
 
     @classmethod
-    @Database.sessionmethod(bundled=True, commit=False)
+    @databasemethod(commit=False)
     def edges(cls, function_uuid: UUID) -> list[FunctionEdges]:
         return cls._edges(function_uuid)
 
     @classmethod
-    @Database.sessionmethod(bundled=True, commit=False)
+    @databasemethod(commit=False)
     def instance_uuids(cls) -> list[UUID]:
         return cls._function_instance_uuids()

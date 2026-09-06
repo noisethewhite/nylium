@@ -7,9 +7,8 @@ from __future__ import annotations
 from typing import cast
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-
-from nylium.database.tables import EnumOptions, StringValues
+from nylium.database import Database, databasemethod
+from nylium.tables import EnumOptions, StringValues
 from nylium.objects.wprop import WProp
 from nylium.objects.wtype import WType
 from nylium.server.errors import ValidationError
@@ -38,18 +37,20 @@ class WEnum:
         return value
 
     @classmethod
-    def read(cls, session: Session, inst_uuid: UUID, prop: WProp) -> str | None:
-        row = session.get(StringValues, (inst_uuid, prop.uuid))
+    @databasemethod(commit=False)
+    def read(cls, inst_uuid: UUID, prop: WProp) -> str | None:
+        row = Database.session.get(StringValues, (inst_uuid, prop.uuid))
         return None if row is None else cast(str | None, row.value)
 
     @classmethod
-    def write(cls, session: Session, inst_uuid: UUID, prop: WProp, value: str | None) -> None:
-        row = session.get(StringValues, (inst_uuid, prop.uuid))
+    @databasemethod(commit=False)
+    def write(cls, inst_uuid: UUID, prop: WProp, value: str | None) -> None:
+        row = Database.session.get(StringValues, (inst_uuid, prop.uuid))
         if value is None:
             if row is not None:
-                session.delete(row)
+                Database.session.delete(row)
             return
         if row is None:
-            session.add(StringValues(inst_uuid=inst_uuid, prop_uuid=prop.uuid, value=value))
+            Database.session.add(StringValues(inst_uuid=inst_uuid, prop_uuid=prop.uuid, value=value))
             return
         row.value = value

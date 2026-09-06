@@ -1,14 +1,14 @@
-from datetime import date
+from datetime import time
 from uuid import UUID
 
-from sqlalchemy import Date, ForeignKey
+from sqlalchemy import ForeignKey, Time
 from sqlalchemy.orm import Mapped, mapped_column
 
-from nylium.database.tables.base import Base
+from nylium.tables.base import Base
 
 
-class DateValues(Base):
-    __tablename__: str = "date_values"
+class TimeValues(Base):
+    __tablename__: str = "time_values"
 
     inst_uuid: Mapped[UUID] = mapped_column(
         ForeignKey("instances.uuid", ondelete="CASCADE"), primary_key=True
@@ -16,4 +16,4 @@ class DateValues(Base):
     prop_uuid: Mapped[UUID] = mapped_column(
         ForeignKey("props.uuid", ondelete="CASCADE"), primary_key=True
     )
-    value: Mapped[date] = mapped_column(Date, nullable=False)
+    value: Mapped[time] = mapped_column(Time, nullable=False)

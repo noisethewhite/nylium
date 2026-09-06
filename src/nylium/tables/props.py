@@ -3,11 +3,11 @@ from uuid import UUID, uuid4
 
 import sqlalchemy as sqla
 from sqlalchemy import ForeignKey, Integer, Text, UniqueConstraint
-from sqlalchemy.orm import Mapped, Session, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column
 
-from nylium.database.database import Database
-from nylium.database.tables.base import Base
-from nylium.database.tables.types import Types
+from nylium.database import Database, databasemethod
+from nylium.tables.base import Base
+from nylium.tables.types import Types
 
 
 class Props(Base):
@@ -39,12 +39,12 @@ class Props(Base):
     function_uuid: Mapped[UUID | None] = mapped_column(nullable=True)
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
-    def count_with_value_type(cls, session: Session, value_type_uuid: UUID) -> int:
+    @databasemethod(commit=False)
+    def count_with_value_type(cls, value_type_uuid: UUID) -> int:
         """Props whose value type is this row — the FK stops deletes,
         callers that want a friendly error check here first."""
         return int(
-            session.scalar(
+            Database.session.scalar(
                 sqla.select(sqla.func.count())
                 .select_from(cls)
                 .where(cls.value_type_uuid == value_type_uuid)
@@ -53,9 +53,9 @@ class Props(Base):
         )
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
-    def get_type_name(cls, session: Session, owner_type_uuid: UUID, key: str) -> str:
-        row = session.scalar(
+    @databasemethod(commit=False)
+    def get_type_name(cls, owner_type_uuid: UUID, key: str) -> str:
+        row = Database.session.scalar(
             sqla.select(cls).where(
                 cls.owner_type_uuid == owner_type_uuid, cls.key == key
             )
@@ -68,11 +68,11 @@ class Props(Base):
         return value_type
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
-    def formula_keys(cls, session: Session, owner_type_uuid: UUID) -> set[str]:
+    @databasemethod(commit=False)
+    def formula_keys(cls, owner_type_uuid: UUID) -> set[str]:
         """Keys of the owner type's computed props (ADR-0005) — writes to
         these are refused."""
-        rows = session.scalars(
+        rows = Database.session.scalars(
             sqla.select(cls.key).where(
                 cls.owner_type_uuid == owner_type_uuid, cls.formula.is_not(None)
             )
@@ -80,11 +80,11 @@ class Props(Base):
         return set(rows)
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
-    def function_keys(cls, session: Session, owner_type_uuid: UUID) -> set[str]:
+    @databasemethod(commit=False)
+    def function_keys(cls, owner_type_uuid: UUID) -> set[str]:
         """Keys of the owner type's function-backed props (ADR-0007) —
         writes to these are refused (they are computed by a Function)."""
-        rows = session.scalars(
+        rows = Database.session.scalars(
             sqla.select(cls.key).where(
                 cls.owner_type_uuid == owner_type_uuid, cls.function_uuid.is_not(None)
             )
@@ -92,13 +92,13 @@ class Props(Base):
         return set(rows)
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
+    @databasemethod(commit=False)
     def usages_of_value_type(
-        cls, session: Session, value_type_uuid: UUID
+        cls, value_type_uuid: UUID
     ) -> list[tuple[UUID, str]]:
         """(owner_type_uuid, key) of every prop typed with this row — the
         dependency index for cross-type formula rewrites (ADR-0005)."""
-        rows = session.execute(
+        rows = Database.session.execute(
             sqla.select(cls.owner_type_uuid, cls.key).where(
                 cls.value_type_uuid == value_type_uuid
             )
@@ -109,33 +109,33 @@ class Props(Base):
         return result
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
-    def update_formula(cls, session: Session, prop_uuid: UUID, formula: str) -> None:
+    @databasemethod(commit=False)
+    def update_formula(cls, prop_uuid: UUID, formula: str) -> None:
         """Persist a rewritten formula string (ADR-0005 rename-rewrite)."""
-        row = session.get(cls, prop_uuid)
+        row = Database.session.get(cls, prop_uuid)
         if row is None:
             raise KeyError(f"no prop {prop_uuid}")
         row.formula = formula
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
-    def set_function(cls, session: Session, prop_uuid: UUID, function_uuid: UUID | None) -> None:
+    @databasemethod(commit=False)
+    def set_function(cls, prop_uuid: UUID, function_uuid: UUID | None) -> None:
         """Bind (or unbind, with None) a Function<T,R> instance to a prop —
         the prop becomes function-backed and is computed at read time
         (ADR-0007). Mutually exclusive with `formula`; the caller validates."""
-        row = session.get(cls, prop_uuid)
+        row = Database.session.get(cls, prop_uuid)
         if row is None:
             raise KeyError(f"no prop {prop_uuid}")
         row.function_uuid = function_uuid
 
     @classmethod
-    @Database.sessionmethod(bundled=False, commit=False)
+    @databasemethod(commit=False)
     def clear_function_references(
-        cls, session: Session, function_uuid: UUID
+        cls, function_uuid: UUID
     ) -> None:
         """Unbind every prop computed through this function — called before
         deleting the function instance so no prop strands a dangling uuid."""
-        rows = session.scalars(
+        rows = Database.session.scalars(
             sqla.select(cls).where(cls.function_uuid == function_uuid)
         ).all()
         for row in rows:

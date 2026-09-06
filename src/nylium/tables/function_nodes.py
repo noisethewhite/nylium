@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 from sqlalchemy import JSON, ForeignKey, Integer, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from nylium.database.tables.base import Base
+from nylium.tables.base import Base
 
 
 class FunctionNodes(Base):
