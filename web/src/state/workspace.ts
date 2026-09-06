@@ -18,6 +18,7 @@ export type Tab =
   | { readonly kind: "type"; readonly name: string; readonly preview: boolean }
   | { readonly kind: "object"; readonly uuid: string; readonly preview: boolean }
   | { readonly kind: "function"; readonly uuid: string; readonly preview: boolean }
+  | { readonly kind: "calendar"; readonly preview: boolean }
   | { readonly kind: "create-type"; readonly preview: boolean }
   | { readonly kind: "create-enum"; readonly preview: boolean }
   | { readonly kind: "create-unit"; readonly preview: boolean }
@@ -107,6 +108,10 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
 
   openFunction(uuid: string): void {
     this.activate({ kind: "function", uuid, preview: true });
+  }
+
+  openCalendar(): void {
+    this.activate({ kind: "calendar", preview: false });
   }
 
   openCreateFunction(): void {

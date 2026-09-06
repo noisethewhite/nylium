@@ -11,6 +11,7 @@ import { EnumTypePanel } from "./enum-type-view";
 import { FileTypePanel } from "./file-type-view";
 import { FunctionEditor } from "./function-editor";
 import { LoginView } from "./login-view";
+import { CalendarView } from "./calendar-view";
 import { ObjectEditor } from "./object-editor";
 import { ScalarTypePanel } from "./scalar-type-view";
 import { Sidebar } from "./sidebar";
@@ -93,6 +94,13 @@ export function App(props: {
       return (
         <div className="tab-content create-type-page">
           <FunctionEditor workspace={props.workspace} />
+        </div>
+      );
+    }
+    if (tab.kind === "calendar") {
+      return (
+        <div className="tab-content">
+          <CalendarView workspace={props.workspace} />
         </div>
       );
     }

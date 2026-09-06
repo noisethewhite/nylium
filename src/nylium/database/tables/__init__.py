@@ -21,6 +21,7 @@ from nylium.database.tables.auth_users import AuthUsers
 from nylium.database.tables.auth_credentials import AuthCredentials
 from nylium.database.tables.auth_challenges import AuthChallenges
 from nylium.database.tables.auth_sessions import AuthSessions
+from nylium.database.tables.api_tokens import ApiTokens
 from nylium.database.tables.files import Files
 from nylium.database.tables.file_values import FileValues
 from nylium.database.tables.function_nodes import FunctionNodes
@@ -49,6 +50,7 @@ __all__ = [
     "AuthCredentials",
     "AuthChallenges",
     "AuthSessions",
+    "ApiTokens",
     "Files",
     "FileValues",
     "FunctionNodes",

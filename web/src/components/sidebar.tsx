@@ -175,6 +175,20 @@ export function Sidebar(props: {
         </FloatingMenu>
       </div>
       <nav className="sidebar-scroll">
+        <div className="type-row" key="calendar">
+          <button
+            className="type-row-name"
+            onClick={() => props.workspace.openCalendar()}
+          >
+            <span
+              className="material-symbols-outlined"
+              style={{ fontSize: 15, color: "var(--fg-dim)" }}
+            >
+              calendar_month
+            </span>
+            <span>Calendar</span>
+          </button>
+        </div>
         <div className="sidebar-section">Types</div>
         {types.map((view) => (
           <div className="type-row" key={view.name}>

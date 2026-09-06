@@ -11,6 +11,7 @@ from sqlalchemy.engine import Connection
 
 from nylium.auth.guard import require_user
 from nylium.auth.routes import auth_routes
+from nylium.auth.token_routes import token_routes
 from nylium.api.views import FileView, FunctionView, ObjectView, TypeView
 from nylium.database.database import Database
 from nylium.database.tables import Base
@@ -210,6 +211,16 @@ class NyliumApp:
         app.add_api_route(
             f"{prefix}/auth/me", auth_routes.me, methods=["GET"],
             dependencies=guard,
+        )
+        app.add_api_route(
+            f"{prefix}/auth/tokens", token_routes.create, methods=["POST"],
+        )
+        app.add_api_route(
+            f"{prefix}/auth/tokens", token_routes.list, methods=["GET"],
+        )
+        app.add_api_route(
+            f"{prefix}/auth/tokens/{{token_uuid}}", token_routes.revoke,
+            methods=["DELETE"],
         )
         app.add_api_route(
             f"{prefix}/types", routes.list_types, methods=["GET"],

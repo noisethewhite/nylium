@@ -29,6 +29,9 @@ export function TabBar(props: { workspace: WorkspaceStore }): ReactElement {
       const fn = state.functions.find((view) => view.uuid === tab.uuid);
       return fn === undefined ? tab.uuid.slice(0, 8) : fn.name;
     }
+    if (tab.kind === "calendar") {
+      return "Calendar";
+    }
     const object = state.objects.find((view) => view.uuid === tab.uuid);
     return object === undefined ? tab.uuid.slice(0, 8) : ObjectLabels.of(object);
   };
@@ -62,6 +65,9 @@ export function TabBar(props: { workspace: WorkspaceStore }): ReactElement {
     if (tab.kind === "function") {
       return <span className="tab-function-icon">ƒ</span>;
     }
+    if (tab.kind === "calendar") {
+      return <span className="material-symbols-outlined" style={{ fontSize: 14 }}>calendar_month</span>;
+    }
     return null;
   };
 
@@ -87,6 +93,10 @@ export function TabBar(props: { workspace: WorkspaceStore }): ReactElement {
     }
     if (tab.kind === "function") {
       props.workspace.openFunction(tab.uuid);
+      return;
+    }
+    if (tab.kind === "calendar") {
+      props.workspace.openCalendar();
       return;
     }
     if (tab.kind === "create-enum") {

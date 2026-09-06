@@ -217,12 +217,22 @@ export abstract class TypeNames {
     TypeNames.MONTH_DAY,
     TypeNames.MONTH_DAY_TIME,
   ];
+  /** The year-bearing date props the calendar grid places. MonthDay /
+   * MonthDayTime have no year, so they can't anchor a month grid. */
+  static readonly DATE_TYPES: readonly string[] = [
+    TypeNames.DATE,
+    TypeNames.DATETIME,
+  ];
   private static readonly ARRAY_PREFIX = "Array<";
   private static readonly UNIT_NUMERIC_PREFIX = "Numeric<";
   private static readonly FUNCTION_PREFIX = "Function<";
 
   static isScalar(name: string): boolean {
     return TypeNames.SCALARS.includes(name);
+  }
+
+  static isDateType(name: string): boolean {
+    return TypeNames.DATE_TYPES.includes(name);
   }
 
   static isFileType(name: string): boolean {
