@@ -214,8 +214,8 @@ export function Sidebar(props: {
               className="type-row-name"
               onClick={() => props.workspace.openType(view.name)}
             >
-              <TypeIcon icon={view.icon} color={view.color} />
-              <span>{view.name}</span>
+              <TypeIcon icon={view.icon} color={view.color} variant="scalar" />
+              <span className="scalar-name">{view.name}</span>
             </button>
           </div>
         ))}

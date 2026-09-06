@@ -21,8 +21,8 @@ export function ScalarTypePanel(props: { schema: TypeView }): ReactElement {
         <div className="type-field-box">
           <span className="type-field-box-label">Type name</span>
           <div className="type-field-box-content">
-            <TypeIcon icon={schema.icon} color={schema.color} size={22} />
-            <span className="type-name-input">{schema.name}</span>
+            <TypeIcon icon={schema.icon} color={schema.color} size={22} variant="scalar" />
+            <span className="type-name-input scalar-name">{schema.name}</span>
           </div>
         </div>
       </div>

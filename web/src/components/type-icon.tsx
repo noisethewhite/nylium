@@ -71,8 +71,10 @@ export function TypeIcon(props: {
   icon: string;
   color: string;
   size?: number;
+  variant?: "default" | "scalar";
 }): ReactElement {
   const size = props.size ?? 16;
+  const scalar = props.variant === "scalar";
   const imageUuid = TypeNames.imgIconUuid(props.icon);
   if (imageUuid !== null) {
     return (
@@ -89,7 +91,11 @@ export function TypeIcon(props: {
   const hex = HEX_COLOR.test(props.color) ? props.color : DEFAULT_COLOR;
   return (
     <span
-      className="material-symbols-outlined type-icon"
+      className={
+        scalar
+          ? "material-symbols-outlined type-icon type-icon-scalar"
+          : "material-symbols-outlined type-icon"
+      }
       style={{ color: hex, fontSize: size, width: size, height: size }}
       aria-hidden
     >

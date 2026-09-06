@@ -1214,6 +1214,17 @@ select.input option {
   vertical-align: middle;
 }
 
+/* Built-in scalar types: muted, monospace "code" styling so language
+   primitives read as system-defined, distinct from user-authored types. */
+.type-icon-scalar {
+  filter: grayscale(1) opacity(0.72);
+}
+
+.scalar-name {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--fg-dim);
+}
+
 .file-block {
   display: flex;
   flex-direction: column;

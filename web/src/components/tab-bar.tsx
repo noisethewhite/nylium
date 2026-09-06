@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import { useObservable } from "../state/use-observable";
 import type { Tab } from "../state/workspace";
 import { sameTab, WorkspaceStore } from "../state/workspace";
+import { TypeNames } from "../contracts";
 import { ObjectLabels } from "./object-labels";
 import { TypeIcon } from "./type-icon";
 
@@ -38,7 +39,14 @@ export function TabBar(props: { workspace: WorkspaceStore }): ReactElement {
       if (view === undefined) {
         return null;
       }
-      return <TypeIcon icon={view.icon} color={view.color} size={14} />;
+      return (
+        <TypeIcon
+          icon={view.icon}
+          color={view.color}
+          size={14}
+          variant={TypeNames.isScalar(view.name) ? "scalar" : "default"}
+        />
+      );
     }
     if (tab.kind === "object") {
       const object = state.objects.find((view) => view.uuid === tab.uuid);
@@ -55,6 +63,17 @@ export function TabBar(props: { workspace: WorkspaceStore }): ReactElement {
       return <span className="tab-function-icon">ƒ</span>;
     }
     return null;
+  };
+
+  const labelClass = (tab: Tab): string | undefined => {
+    const classes: string[] = [];
+    if (tab.preview) {
+      classes.push("tab-label-preview");
+    }
+    if (tab.kind === "type" && TypeNames.isScalar(tab.name)) {
+      classes.push("scalar-name");
+    }
+    return classes.length > 0 ? classes.join(" ") : undefined;
   };
 
   const activate = (tab: Tab): void => {
@@ -98,7 +117,7 @@ export function TabBar(props: { workspace: WorkspaceStore }): ReactElement {
         >
           <button className="tab-label" onClick={() => activate(tab)}>
             {iconOf(tab)}
-            <span className={tab.preview ? "tab-label-preview" : undefined}>
+            <span className={labelClass(tab)}>
               {labelOf(tab)}
             </span>
           </button>
