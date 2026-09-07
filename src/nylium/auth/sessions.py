@@ -7,7 +7,8 @@ from datetime import datetime, timedelta, timezone
 from typing import ClassVar
 from uuid import UUID
 
-from nylium.tables import TABLE_AuthSessions, TABLE_AuthUsers
+from nylium.tables import auth_sessions, auth_users
+from nylium.tables.auth_users import AuthUser
 
 
 class sessions:
@@ -20,9 +21,9 @@ class sessions:
     @classmethod
     def issue(cls, user_uuid: UUID) -> str:
         """Create a session, return the raw token for the cookie."""
-        TABLE_AuthSessions.purge_expired()
+        auth_sessions.purge_expired()
         token = secrets.token_urlsafe(32)
-        TABLE_AuthSessions.create(user_uuid, cls._hash(token), cls._deadline())
+        auth_sessions.create(user_uuid, cls._hash(token), cls._deadline())
         return token
 
     @classmethod
@@ -30,26 +31,26 @@ class sessions:
         """Resolve a cookie token to a live user, sliding the expiry."""
         if not token:
             return None
-        row = TABLE_AuthSessions.by_hash(cls._hash(token))
+        row = auth_sessions.get(cls._hash(token))
         if row is None:
             return None
         if row.expires_at <= datetime.now(timezone.utc):
-            TABLE_AuthSessions.delete(row.token_hash)
+            auth_sessions.delete(row.token_hash)
             return None
-        TABLE_AuthSessions.refresh(row.token_hash, cls._deadline())
+        auth_sessions.refresh(row.token_hash, cls._deadline())
         return row.user_uuid
 
     @classmethod
-    def user_for(cls, token: str | None) -> TABLE_AuthUsers | None:
+    def user_for(cls, token: str | None) -> AuthUser | None:
         user_uuid = cls.user_uuid_for(token)
         if user_uuid is None:
             return None
-        return TABLE_AuthUsers.by_uuid(user_uuid)
+        return auth_users.get(user_uuid)
 
     @classmethod
     def revoke(cls, token: str | None) -> None:
         if token:
-            TABLE_AuthSessions.delete(cls._hash(token))
+            auth_sessions.delete(cls._hash(token))
 
     @classmethod
     def _hash(cls, token: str) -> str:

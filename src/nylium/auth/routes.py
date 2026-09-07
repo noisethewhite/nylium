@@ -11,7 +11,7 @@ from fastapi.responses import JSONResponse
 from nylium.auth.ceremonies import ceremonies
 from nylium.auth.guard import require_user
 from nylium.auth.sessions import sessions
-from nylium.tables import TABLE_AuthUsers
+from nylium.tables.auth_users import AuthUser
 from nylium.system.environment import Environment
 
 
@@ -54,7 +54,7 @@ class auth_routes:
 
     @classmethod
     async def me(
-        cls, user: Annotated[TABLE_AuthUsers, Depends(require_user)]
+        cls, user: Annotated[AuthUser, Depends(require_user)]
     ) -> JSONResponse:
         return JSONResponse({"name": user.name})
 

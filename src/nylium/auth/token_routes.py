@@ -16,11 +16,13 @@ from fastapi.responses import JSONResponse
 
 from nylium.auth.guard import require_cookie_user
 from nylium.auth.tokens import tokens
-from nylium.tables import TABLE_ApiTokens, TABLE_AuthUsers
+from nylium.tables import api_tokens
+from nylium.tables.api_tokens import ApiToken
+from nylium.tables.auth_users import AuthUser
 from nylium.server.errors import ValidationError
 
 
-def _token_view(row: TABLE_ApiTokens) -> dict[str, object]:
+def _token_view(row: ApiToken) -> dict[str, object]:
     return {
         "uuid": str(row.uuid),
         "name": row.name,
@@ -37,7 +39,7 @@ class token_routes:
 
     @classmethod
     async def create(
-        cls, request: Request, user: Annotated[TABLE_AuthUsers, Depends(require_cookie_user)]
+        cls, request: Request, user: Annotated[AuthUser, Depends(require_cookie_user)]
     ) -> JSONResponse:
         body = await cls._body(request)
         name = body.get("name")
@@ -60,14 +62,14 @@ class token_routes:
         )
 
     @classmethod
-    def list(cls, user: Annotated[TABLE_AuthUsers, Depends(require_cookie_user)]) -> JSONResponse:
-        return JSONResponse([_token_view(row) for row in TABLE_ApiTokens.for_user(user.uuid)])
+    def list(cls, user: Annotated[AuthUser, Depends(require_cookie_user)]) -> JSONResponse:
+        return JSONResponse([_token_view(row) for row in api_tokens.for_user(user.uuid)])
 
     @classmethod
     def revoke(
-        cls, token_uuid: UUID, user: Annotated[TABLE_AuthUsers, Depends(require_cookie_user)]
+        cls, token_uuid: UUID, user: Annotated[AuthUser, Depends(require_cookie_user)]
     ) -> JSONResponse:
-        if not TABLE_ApiTokens.revoke(user.uuid, token_uuid):
+        if not api_tokens.revoke(user.uuid, token_uuid):
             raise KeyError(f"no token {token_uuid}")
         return JSONResponse({"ok": True})
 

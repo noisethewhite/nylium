@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from typing import ClassVar
 from uuid import UUID
 
 import sqlalchemy as sqla
@@ -6,6 +7,7 @@ from sqlalchemy import DateTime, ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from nylium.database import Database, databasemethod
+from nylium.database.tabledomain import TableDomain, TableMapping, tableproperty
 from nylium.tables.base import Base
 
 
@@ -22,37 +24,49 @@ class TABLE_AuthSessions(Base):
         DateTime(timezone=True), nullable=False
     )
 
-    @classmethod
+
+class AuthSession(TableDomain):
+    """One server-side session: a writable snapshot of an auth_sessions row."""
+
+    __table__: ClassVar[type[Base]] = TABLE_AuthSessions
+
+    token_hash: tableproperty[str] = tableproperty()
+    user_uuid: tableproperty[UUID] = tableproperty()
+    expires_at: tableproperty[datetime] = tableproperty()
+
+
+class AuthSessions(TableMapping[str, AuthSession]):
+    """The auth_sessions table as a Mapping keyed by token hash."""
+
+    __domain__: ClassVar[type[TableDomain]] = AuthSession
+
     @databasemethod(commit=True)
-    def create(
-        cls, user_uuid: UUID, token_hash: str, expires_at: datetime
-    ) -> None:
+    def create(self, user_uuid: UUID, token_hash: str, expires_at: datetime) -> None:
         Database.session.add(
-            cls(token_hash=token_hash, user_uuid=user_uuid, expires_at=expires_at)
+            TABLE_AuthSessions(
+                token_hash=token_hash, user_uuid=user_uuid, expires_at=expires_at
+            )
         )
 
-    @classmethod
-    @databasemethod(commit=False)
-    def by_hash(cls, token_hash: str) -> "TABLE_AuthSessions | None":
-        return Database.session.get(cls, token_hash)
-
-    @classmethod
     @databasemethod(commit=True)
-    def refresh(cls, token_hash: str, expires_at: datetime) -> None:
-        row = Database.session.get(cls, token_hash)
-        if row is not None:
-            row.expires_at = expires_at
+    def refresh(self, token_hash: str, expires_at: datetime) -> None:
+        session = self.get(token_hash)
+        if session is not None:
+            session.expires_at = expires_at
 
-    @classmethod
     @databasemethod(commit=True)
-    def delete(cls, token_hash: str) -> None:
-        row = Database.session.get(cls, token_hash)
+    def delete(self, token_hash: str) -> None:
+        row = Database.session.get(TABLE_AuthSessions, token_hash)
         if row is not None:
             Database.session.delete(row)
 
-    @classmethod
     @databasemethod(commit=True)
-    def purge_expired(cls,) -> None:
+    def purge_expired(self) -> None:
         _ = Database.session.execute(
-            sqla.delete(cls).where(cls.expires_at <= datetime.now(timezone.utc))
+            sqla.delete(TABLE_AuthSessions).where(
+                TABLE_AuthSessions.expires_at <= datetime.now(timezone.utc)
+            )
         )
+
+
+auth_sessions = AuthSessions()

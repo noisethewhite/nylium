@@ -13,12 +13,13 @@ from fastapi import HTTPException, Request, status
 
 from nylium.auth.sessions import sessions
 from nylium.auth.tokens import tokens
-from nylium.tables import TABLE_AuthUsers
+from nylium.tables import auth_users
+from nylium.tables.auth_users import AuthUser
 
 
 @dataclass
 class _Credential:
-    user: TABLE_AuthUsers
+    user: AuthUser
     via_cookie: bool
     scope: str | None
 
@@ -40,7 +41,7 @@ def _resolve(request: Request) -> _Credential | None:
         row = tokens.resolve(raw)
         if row is None:
             return None
-        user = TABLE_AuthUsers.by_uuid(row.user_uuid)
+        user = auth_users.get(row.user_uuid)
         if user is None:
             return None
         return _Credential(user, False, row.scope)
@@ -50,7 +51,7 @@ def _resolve(request: Request) -> _Credential | None:
     return _Credential(user, True, None)
 
 
-def require_user(request: Request) -> TABLE_AuthUsers:
+def require_user(request: Request) -> AuthUser:
     # HTTPException is fine here: errors.register maps it onto the
     # uniform {"error": ...} wire shape. Importing ApiError subclasses
     # would create a circular import (server package -> app -> guard).
@@ -64,7 +65,7 @@ def require_user(request: Request) -> TABLE_AuthUsers:
     return credential.user
 
 
-def require_cookie_user(request: Request) -> TABLE_AuthUsers:
+def require_cookie_user(request: Request) -> AuthUser:
     """Session-only guard: a bearer token must never mint/revoke tokens,
     so the token-management surface depends on this instead of require_user."""
     credential = _resolve(request)

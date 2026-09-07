@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from typing import ClassVar, cast
 from uuid import UUID, uuid4
 
 import sqlalchemy as sqla
@@ -6,6 +7,7 @@ from sqlalchemy import DateTime, ForeignKey, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from nylium.database import Database, databasemethod
+from nylium.database.tabledomain import TableDomain, TableMapping, tableproperty
 from nylium.tables.base import Base
 
 
@@ -33,42 +35,69 @@ class TABLE_ApiTokens(Base):
         DateTime(timezone=True), nullable=True
     )
 
-    @classmethod
+
+class ApiToken(TableDomain):
+    """One API token: a writable snapshot of an api_tokens row."""
+
+    __table__: ClassVar[type[Base]] = TABLE_ApiTokens
+
+    uuid: tableproperty[UUID] = tableproperty()
+    user_uuid: tableproperty[UUID] = tableproperty()
+    name: tableproperty[str] = tableproperty()
+    token_hash: tableproperty[str] = tableproperty()
+    scope: tableproperty[str] = tableproperty()
+    created_at: tableproperty[datetime] = tableproperty()
+    last_used_at: tableproperty[datetime | None] = tableproperty()
+    revoked_at: tableproperty[datetime | None] = tableproperty()
+
+
+class ApiTokens(TableMapping[UUID, ApiToken]):
+    """The api_tokens table as a Mapping of writable tokens."""
+
+    __domain__: ClassVar[type[TableDomain]] = ApiToken
+
     @databasemethod(commit=True)
-    def create(
-        cls, user_uuid: UUID, name: str, token_hash: str, scope: str
-    ) -> "TABLE_ApiTokens":
-        row = cls(user_uuid=user_uuid, name=name, token_hash=token_hash, scope=scope)
+    def create(self, user_uuid: UUID, name: str, token_hash: str, scope: str) -> ApiToken:
+        row = TABLE_ApiTokens(
+            user_uuid=user_uuid, name=name, token_hash=token_hash, scope=scope
+        )
         Database.session.add(row)
         Database.session.flush()  # populate uuid/created_at before the session ends
-        return row
+        return cast(ApiToken, ApiToken.from_row(row))
 
-    @classmethod
     @databasemethod(commit=False)
-    def by_hash(cls, token_hash: str) -> "TABLE_ApiTokens | None":
-        return Database.session.scalar(sqla.select(cls).where(cls.token_hash == token_hash))
+    def by_hash(self, token_hash: str) -> ApiToken | None:
+        row = Database.session.scalar(
+            sqla.select(TABLE_ApiTokens).where(
+                TABLE_ApiTokens.token_hash == token_hash
+            )
+        )
+        return None if row is None else cast(ApiToken, ApiToken.from_row(row))
 
-    @classmethod
     @databasemethod(commit=False)
-    def for_user(cls, user_uuid: UUID) -> list["TABLE_ApiTokens"]:
-        return list(
+    def for_user(self, user_uuid: UUID) -> list[ApiToken]:
+        rows = list(
             Database.session.scalars(
-                sqla.select(cls).where(cls.user_uuid == user_uuid).order_by(cls.created_at)
+                sqla.select(TABLE_ApiTokens)
+                .where(TABLE_ApiTokens.user_uuid == user_uuid)
+                .order_by(TABLE_ApiTokens.created_at)
             ).all()
         )
+        return [cast(ApiToken, ApiToken.from_row(row)) for row in rows]
 
-    @classmethod
     @databasemethod(commit=True)
-    def mark_used(cls, uuid: UUID) -> None:
-        row = Database.session.get(cls, uuid)
-        if row is not None:
-            row.last_used_at = datetime.now(timezone.utc)
+    def mark_used(self, uuid: UUID) -> None:
+        token = self.get(uuid)
+        if token is not None:
+            token.last_used_at = datetime.now(timezone.utc)
 
-    @classmethod
     @databasemethod(commit=True)
-    def revoke(cls, user_uuid: UUID, uuid: UUID) -> bool:
-        row = Database.session.get(cls, uuid)
-        if row is None or row.user_uuid != user_uuid:
+    def revoke(self, user_uuid: UUID, uuid: UUID) -> bool:
+        token = self.get(uuid)
+        if token is None or token.user_uuid != user_uuid:
             return False
-        row.revoked_at = datetime.now(timezone.utc)
+        token.revoked_at = datetime.now(timezone.utc)
         return True
+
+
+api_tokens = ApiTokens()

@@ -19,11 +19,11 @@ from nylium.tables.enum_options import TABLE_EnumOptions, enum_options
 from nylium.tables.unit_parts import TABLE_UnitParts, unit_parts
 from nylium.tables.instance_values import TABLE_InstanceValues
 from nylium.tables.array_values import TABLE_ArrayValues
-from nylium.tables.auth_users import TABLE_AuthUsers
-from nylium.tables.auth_credentials import TABLE_AuthCredentials
-from nylium.tables.auth_challenges import TABLE_AuthChallenges
-from nylium.tables.auth_sessions import TABLE_AuthSessions
-from nylium.tables.api_tokens import TABLE_ApiTokens
+from nylium.tables.auth_users import AuthUser, auth_users
+from nylium.tables.auth_credentials import AuthCredential, auth_credentials
+from nylium.tables.auth_challenges import AuthChallenge, auth_challenges
+from nylium.tables.auth_sessions import AuthSession, auth_sessions
+from nylium.tables.api_tokens import ApiToken, api_tokens
 from nylium.tables.files import TABLE_Files, files
 from nylium.tables.file_values import TABLE_FileValues
 from nylium.tables.function_nodes import TABLE_FunctionNodes
@@ -53,11 +53,16 @@ __all__ = [
     "TABLE_UnitParts",
     "TABLE_InstanceValues",
     "TABLE_ArrayValues",
-    "TABLE_AuthUsers",
-    "TABLE_AuthCredentials",
-    "TABLE_AuthChallenges",
-    "TABLE_AuthSessions",
-    "TABLE_ApiTokens",
+    "AuthUser",
+    "AuthCredential",
+    "AuthChallenge",
+    "AuthSession",
+    "ApiToken",
+    "auth_users",
+    "auth_credentials",
+    "auth_challenges",
+    "auth_sessions",
+    "api_tokens",
     "TABLE_Files",
     "TABLE_FileValues",
     "TABLE_FunctionNodes",
