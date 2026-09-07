@@ -1,60 +1,61 @@
 # One file per table; this package keeps the flat import surface for the
-# row classes. The `types` store (ADR-0010) is the public entry point for
-# type access; `_Types` is imported explicitly where a SQL join needs it.
+# mapped classes, named TABLE_<Name>. The `types` store (ADR-0010) is the
+# public entry point for type access; TABLE_Types is imported explicitly
+# where a SQL join needs the mapped class.
 from nylium.tables.base import Base
 from nylium.tables.types import types
-from nylium.tables.props import Props
-from nylium.tables.instances import Instances
-from nylium.tables.string_values import StringValues
-from nylium.tables.integer_values import IntegerValues
-from nylium.tables.numeric_values import NumericValues
-from nylium.tables.boolean_values import BooleanValues
-from nylium.tables.datetime_values import DatetimeValues
-from nylium.tables.date_values import DateValues
-from nylium.tables.time_values import TimeValues
-from nylium.tables.monthday_values import MonthDayValues
-from nylium.tables.monthdaytime_values import MonthDayTimeValues
-from nylium.tables.enum_options import EnumOptions
-from nylium.tables.unit_parts import UnitParts
-from nylium.tables.instance_values import InstanceValues
-from nylium.tables.array_values import ArrayValues
-from nylium.tables.auth_users import AuthUsers
-from nylium.tables.auth_credentials import AuthCredentials
-from nylium.tables.auth_challenges import AuthChallenges
-from nylium.tables.auth_sessions import AuthSessions
-from nylium.tables.api_tokens import ApiTokens
-from nylium.tables.files import Files
-from nylium.tables.file_values import FileValues
-from nylium.tables.function_nodes import FunctionNodes
-from nylium.tables.function_edges import FunctionEdges
-from nylium.tables.function_deps import FunctionDeps
+from nylium.tables.props import TABLE_Props
+from nylium.tables.instances import TABLE_Instances
+from nylium.tables.string_values import TABLE_StringValues
+from nylium.tables.integer_values import TABLE_IntegerValues
+from nylium.tables.numeric_values import TABLE_NumericValues
+from nylium.tables.boolean_values import TABLE_BooleanValues
+from nylium.tables.datetime_values import TABLE_DatetimeValues
+from nylium.tables.date_values import TABLE_DateValues
+from nylium.tables.time_values import TABLE_TimeValues
+from nylium.tables.monthday_values import TABLE_MonthDayValues
+from nylium.tables.monthdaytime_values import TABLE_MonthDayTimeValues
+from nylium.tables.enum_options import TABLE_EnumOptions
+from nylium.tables.unit_parts import TABLE_UnitParts
+from nylium.tables.instance_values import TABLE_InstanceValues
+from nylium.tables.array_values import TABLE_ArrayValues
+from nylium.tables.auth_users import TABLE_AuthUsers
+from nylium.tables.auth_credentials import TABLE_AuthCredentials
+from nylium.tables.auth_challenges import TABLE_AuthChallenges
+from nylium.tables.auth_sessions import TABLE_AuthSessions
+from nylium.tables.api_tokens import TABLE_ApiTokens
+from nylium.tables.files import TABLE_Files
+from nylium.tables.file_values import TABLE_FileValues
+from nylium.tables.function_nodes import TABLE_FunctionNodes
+from nylium.tables.function_edges import TABLE_FunctionEdges
+from nylium.tables.function_deps import TABLE_FunctionDeps
 
 __all__ = [
     "Base",
     "types",
-    "Props",
-    "Instances",
-    "StringValues",
-    "IntegerValues",
-    "NumericValues",
-    "BooleanValues",
-    "DatetimeValues",
-    "DateValues",
-    "TimeValues",
-    "MonthDayValues",
-    "MonthDayTimeValues",
-    "EnumOptions",
-    "UnitParts",
-    "InstanceValues",
-    "ArrayValues",
-    "AuthUsers",
-    "AuthCredentials",
-    "AuthChallenges",
-    "AuthSessions",
-    "ApiTokens",
-    "Files",
-    "FileValues",
-    "FunctionNodes",
-    "FunctionEdges",
-    "FunctionDeps",
+    "TABLE_Props",
+    "TABLE_Instances",
+    "TABLE_StringValues",
+    "TABLE_IntegerValues",
+    "TABLE_NumericValues",
+    "TABLE_BooleanValues",
+    "TABLE_DatetimeValues",
+    "TABLE_DateValues",
+    "TABLE_TimeValues",
+    "TABLE_MonthDayValues",
+    "TABLE_MonthDayTimeValues",
+    "TABLE_EnumOptions",
+    "TABLE_UnitParts",
+    "TABLE_InstanceValues",
+    "TABLE_ArrayValues",
+    "TABLE_AuthUsers",
+    "TABLE_AuthCredentials",
+    "TABLE_AuthChallenges",
+    "TABLE_AuthSessions",
+    "TABLE_ApiTokens",
+    "TABLE_Files",
+    "TABLE_FileValues",
+    "TABLE_FunctionNodes",
+    "TABLE_FunctionEdges",
+    "TABLE_FunctionDeps",
 ]

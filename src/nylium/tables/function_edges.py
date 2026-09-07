@@ -9,7 +9,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from nylium.tables.base import Base
 
 
-class FunctionEdges(Base):
+class TABLE_FunctionEdges(Base):
     __tablename__: str = "function_edges"
 
     uuid: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)

@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 
 from nylium.system import Environment
 from nylium.database import Database
-from nylium.tables import AuthCredentials, AuthUsers, Base
+from nylium.tables import TABLE_AuthCredentials, TABLE_AuthUsers, Base
 from nylium.auth.sessions import sessions
 from nylium.server import NyliumApp
 
@@ -40,8 +40,8 @@ def _fresh_schema():
 def auth_client() -> TestClient:
     """Client with a live session cookie: owner user + one credential +
     issued token, planted directly (passkey bytes can't be faked here)."""
-    user = AuthUsers.create("owner")
-    AuthCredentials.register(user.uuid, secrets.token_bytes(32), b"pk", 0, "")
+    user = TABLE_AuthUsers.create("owner")
+    TABLE_AuthCredentials.register(user.uuid, secrets.token_bytes(32), b"pk", 0, "")
     client = TestClient(NyliumApp.create())
     client.cookies.set(sessions.COOKIE_NAME, sessions.issue(user.uuid))
     return client

@@ -18,7 +18,7 @@ from typing import ClassVar, Protocol, TypeAlias, cast, get_args, get_origin
 from uuid import UUID
 
 from nylium.database import Database, databasemethod
-from nylium.tables import Instances
+from nylium.tables import TABLE_Instances
 from nylium.objects.quantity import Quantity
 from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import ScalarPayload, WScalar
@@ -108,7 +108,7 @@ class WTypeMeta(type):
                     f"{expected_name} prop takes {expected_name}, got {type(value).__name__}"
                 )
             return
-        inst = Database.session.get(Instances, value.uuid)
+        inst = Database.session.get(TABLE_Instances, value.uuid)
         actual = None if inst is None else WType.by_uuid(inst.type_uuid)
         if actual is None or actual.name != expected_name:
             raise TypeError(

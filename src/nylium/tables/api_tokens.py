@@ -9,7 +9,7 @@ from nylium.database import Database, databasemethod
 from nylium.tables.base import Base
 
 
-class ApiTokens(Base):
+class TABLE_ApiTokens(Base):
     """API access tokens (ADR-0009 §3): the client holds a raw bearer
     token, the table stores only its sha256. Scoped ('read' | 'read-write')
     and revocable — the seam for Grimaud's automation, never a back door."""
@@ -37,7 +37,7 @@ class ApiTokens(Base):
     @databasemethod(commit=True)
     def create(
         cls, user_uuid: UUID, name: str, token_hash: str, scope: str
-    ) -> "ApiTokens":
+    ) -> "TABLE_ApiTokens":
         row = cls(user_uuid=user_uuid, name=name, token_hash=token_hash, scope=scope)
         Database.session.add(row)
         Database.session.flush()  # populate uuid/created_at before the session ends
@@ -45,12 +45,12 @@ class ApiTokens(Base):
 
     @classmethod
     @databasemethod(commit=False)
-    def by_hash(cls, token_hash: str) -> "ApiTokens | None":
+    def by_hash(cls, token_hash: str) -> "TABLE_ApiTokens | None":
         return Database.session.scalar(sqla.select(cls).where(cls.token_hash == token_hash))
 
     @classmethod
     @databasemethod(commit=False)
-    def for_user(cls, user_uuid: UUID) -> list["ApiTokens"]:
+    def for_user(cls, user_uuid: UUID) -> list["TABLE_ApiTokens"]:
         return list(
             Database.session.scalars(
                 sqla.select(cls).where(cls.user_uuid == user_uuid).order_by(cls.created_at)

@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 from typing import ClassVar
 from uuid import UUID
 
-from nylium.tables import AuthSessions, AuthUsers
+from nylium.tables import TABLE_AuthSessions, TABLE_AuthUsers
 
 
 class sessions:
@@ -20,9 +20,9 @@ class sessions:
     @classmethod
     def issue(cls, user_uuid: UUID) -> str:
         """Create a session, return the raw token for the cookie."""
-        AuthSessions.purge_expired()
+        TABLE_AuthSessions.purge_expired()
         token = secrets.token_urlsafe(32)
-        AuthSessions.create(user_uuid, cls._hash(token), cls._deadline())
+        TABLE_AuthSessions.create(user_uuid, cls._hash(token), cls._deadline())
         return token
 
     @classmethod
@@ -30,26 +30,26 @@ class sessions:
         """Resolve a cookie token to a live user, sliding the expiry."""
         if not token:
             return None
-        row = AuthSessions.by_hash(cls._hash(token))
+        row = TABLE_AuthSessions.by_hash(cls._hash(token))
         if row is None:
             return None
         if row.expires_at <= datetime.now(timezone.utc):
-            AuthSessions.delete(row.token_hash)
+            TABLE_AuthSessions.delete(row.token_hash)
             return None
-        AuthSessions.refresh(row.token_hash, cls._deadline())
+        TABLE_AuthSessions.refresh(row.token_hash, cls._deadline())
         return row.user_uuid
 
     @classmethod
-    def user_for(cls, token: str | None) -> AuthUsers | None:
+    def user_for(cls, token: str | None) -> TABLE_AuthUsers | None:
         user_uuid = cls.user_uuid_for(token)
         if user_uuid is None:
             return None
-        return AuthUsers.by_uuid(user_uuid)
+        return TABLE_AuthUsers.by_uuid(user_uuid)
 
     @classmethod
     def revoke(cls, token: str | None) -> None:
         if token:
-            AuthSessions.delete(cls._hash(token))
+            TABLE_AuthSessions.delete(cls._hash(token))
 
     @classmethod
     def _hash(cls, token: str) -> str:

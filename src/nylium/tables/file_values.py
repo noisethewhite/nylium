@@ -11,7 +11,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from nylium.tables.base import Base
 
 
-class FileValues(Base):
+class TABLE_FileValues(Base):
     __tablename__: str = "file_values"
 
     file_uuid: Mapped[UUID] = mapped_column(

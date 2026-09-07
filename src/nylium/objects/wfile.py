@@ -1,6 +1,6 @@
 """File/Document/Image builtin types and blob storage (ADR-0006, ADR-0008).
 
-Files are first-class entities: the bytes live on disk at
+TABLE_Files are first-class entities: the bytes live on disk at
 FILES_DIR/<uuid>, the self-contained `files` row carries type_name, name
 (renameable), mime and size. No instance exists for a file — the uuid is
 the stable pointer and never changes on rename.
@@ -12,8 +12,8 @@ from typing import ClassVar
 from uuid import UUID
 
 from nylium.database import Database, databasemethod
-from nylium.tables import Files
-from nylium.tables.types import TypesRow
+from nylium.tables import TABLE_Files
+from nylium.tables.types import TABLE_Types
 
 
 class WFile:
@@ -97,7 +97,7 @@ class WFile:
         deleted. Runs on boot; every survivor is logged."""
         import logging
 
-        live = {str(uuid) for uuid in Files.all_uuids()}
+        live = {str(uuid) for uuid in TABLE_Files.all_uuids()}
         for blob in cls.storage_dir().iterdir():
             if blob.is_file() and blob.name not in live:
                 logging.getLogger("nylium").warning(
@@ -122,7 +122,7 @@ class WFile:
 
         marker = f"{cls.ICON_IMAGE_PREFIX}{image_uuid}"
         for type_row in Database.session.scalars(
-            sqla.select(TypesRow).where(TypesRow.icon == marker)
+            sqla.select(TABLE_Types).where(TABLE_Types.icon == marker)
         ).all():
             type_row.icon = cls.DEFAULT_GLYPH
 
@@ -140,7 +140,7 @@ class WFile:
     @classmethod
     @databasemethod(commit=False)
     def image_file_exists(cls, uuid: UUID) -> bool:
-        row = Database.session.get(Files, uuid)
+        row = Database.session.get(TABLE_Files, uuid)
         return row is not None and row.type_name == cls.TYPE_IMAGE
 
     @classmethod
@@ -151,8 +151,8 @@ class WFile:
         links, so no dangling files.uuid survives in an array."""
         import sqlalchemy as sqla
 
-        from nylium.tables import ArrayValues
+        from nylium.tables import TABLE_ArrayValues
 
         _ = Database.session.execute(
-            sqla.delete(ArrayValues).where(ArrayValues.value_uuid == uuid)
+            sqla.delete(TABLE_ArrayValues).where(TABLE_ArrayValues.value_uuid == uuid)
         )

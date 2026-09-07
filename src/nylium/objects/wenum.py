@@ -8,7 +8,7 @@ from typing import cast
 from uuid import UUID
 
 from nylium.database import Database, databasemethod
-from nylium.tables import EnumOptions, StringValues
+from nylium.tables import TABLE_EnumOptions, TABLE_StringValues
 from nylium.objects.wprop import WProp
 from nylium.objects.wtype import WType
 from nylium.server.errors import ValidationError
@@ -32,25 +32,25 @@ class WEnum:
         owner = WType.by_name(type_name)
         if owner is None or not owner.is_enum:
             raise KeyError(f"no enum {type_name!r}")
-        if value not in EnumOptions.values_of(owner.uuid):
+        if value not in TABLE_EnumOptions.values_of(owner.uuid):
             raise ValidationError(f"{value!r} is not an option of enum {type_name}")
         return value
 
     @classmethod
     @databasemethod(commit=False)
     def read(cls, inst_uuid: UUID, prop: WProp) -> str | None:
-        row = Database.session.get(StringValues, (inst_uuid, prop.uuid))
+        row = Database.session.get(TABLE_StringValues, (inst_uuid, prop.uuid))
         return None if row is None else cast(str | None, row.value)
 
     @classmethod
     @databasemethod(commit=False)
     def write(cls, inst_uuid: UUID, prop: WProp, value: str | None) -> None:
-        row = Database.session.get(StringValues, (inst_uuid, prop.uuid))
+        row = Database.session.get(TABLE_StringValues, (inst_uuid, prop.uuid))
         if value is None:
             if row is not None:
                 Database.session.delete(row)
             return
         if row is None:
-            Database.session.add(StringValues(inst_uuid=inst_uuid, prop_uuid=prop.uuid, value=value))
+            Database.session.add(TABLE_StringValues(inst_uuid=inst_uuid, prop_uuid=prop.uuid, value=value))
             return
         row.value = value

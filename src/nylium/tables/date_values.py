@@ -7,7 +7,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from nylium.tables.base import Base
 
 
-class DateValues(Base):
+class TABLE_DateValues(Base):
     __tablename__: str = "date_values"
 
     inst_uuid: Mapped[UUID] = mapped_column(

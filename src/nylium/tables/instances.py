@@ -10,9 +10,9 @@ from nylium.tables.base import Base
 from nylium.tables.types import types
 
 
-# Instances of types
+# TABLE_Instances of types
 # (Both arrays and scalars are considered types, too)
-class Instances(Base):
+class TABLE_Instances(Base):
     __tablename__: str = "instances"
 
     uuid: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)

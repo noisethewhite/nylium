@@ -10,7 +10,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from nylium.tables.base import Base
 
 
-class FunctionDeps(Base):
+class TABLE_FunctionDeps(Base):
     __tablename__: str = "function_deps"
 
     function_uuid: Mapped[UUID] = mapped_column(

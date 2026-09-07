@@ -26,13 +26,13 @@ import sqlalchemy as sqla
 
 from nylium.database import Database, databasemethod
 from nylium.tables import (
-    FunctionDeps,
-    FunctionEdges,
-    FunctionNodes,
-    InstanceValues,
-    Instances,
+    TABLE_FunctionDeps,
+    TABLE_FunctionEdges,
+    TABLE_FunctionNodes,
+    TABLE_InstanceValues,
+    TABLE_Instances,
 )
-from nylium.tables.types import TypesRow
+from nylium.tables.types import TABLE_Types
 from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import ScalarPayload, WInteger, WNumeric, WString, WScalar
 from nylium.objects.wtype import WType
@@ -383,7 +383,7 @@ class WFunction:
         return cast(ScalarPayload | None, values[sink])
 
     @classmethod
-    def _is_sink(cls, node_uuid: UUID, edges: Iterable[FunctionEdges]) -> bool:
+    def _is_sink(cls, node_uuid: UUID, edges: Iterable[TABLE_FunctionEdges]) -> bool:
         return all(edge.from_node_uuid != node_uuid for edge in edges)
 
     @classmethod
@@ -482,7 +482,7 @@ class WFunction:
     ) -> UUID | None:
         """The object the function currently reads as its input (its pinned
         `input` link), or None when the link is unset."""
-        inst = Database.session.get(Instances, function_uuid)
+        inst = Database.session.get(TABLE_Instances, function_uuid)
         if inst is None:
             return None
         owner = WType.by_uuid(inst.type_uuid)
@@ -492,9 +492,9 @@ class WFunction:
         if prop is None:
             return None
         return Database.session.scalar(
-            sqla.select(InstanceValues.uuid).where(
-                InstanceValues.inst_uuid == function_uuid,
-                InstanceValues.prop_uuid == prop.uuid,
+            sqla.select(TABLE_InstanceValues.uuid).where(
+                TABLE_InstanceValues.inst_uuid == function_uuid,
+                TABLE_InstanceValues.prop_uuid == prop.uuid,
             )
         )
 
@@ -511,7 +511,7 @@ class WFunction:
         if input_uuid is None:
             return {}
         wrapper = WObject.wrap(input_uuid)
-        type_uuid = Instances.type_uuid_of(input_uuid)
+        type_uuid = TABLE_Instances.type_uuid_of(input_uuid)
         if type_uuid is None:
             return {}
         owner = WType.by_uuid(type_uuid)
@@ -536,22 +536,22 @@ class WFunction:
 
     @classmethod
     @databasemethod(commit=False)
-    def _nodes(cls, function_uuid: UUID) -> list[FunctionNodes]:
+    def _nodes(cls, function_uuid: UUID) -> list[TABLE_FunctionNodes]:
         return list(
             Database.session.scalars(
-                sqla.select(FunctionNodes)
-                .where(FunctionNodes.function_uuid == function_uuid)
-                .order_by(FunctionNodes.position)
+                sqla.select(TABLE_FunctionNodes)
+                .where(TABLE_FunctionNodes.function_uuid == function_uuid)
+                .order_by(TABLE_FunctionNodes.position)
             ).all()
         )
 
     @classmethod
     @databasemethod(commit=False)
-    def _edges(cls, function_uuid: UUID) -> list[FunctionEdges]:
+    def _edges(cls, function_uuid: UUID) -> list[TABLE_FunctionEdges]:
         return list(
             Database.session.scalars(
-                sqla.select(FunctionEdges).where(
-                    FunctionEdges.function_uuid == function_uuid
+                sqla.select(TABLE_FunctionEdges).where(
+                    TABLE_FunctionEdges.function_uuid == function_uuid
                 )
             ).all()
         )
@@ -572,14 +572,14 @@ class WFunction:
         kept: set[UUID] = set()
         for node_uuid, kind, position, config in nodes:
             if node_uuid is not None and node_uuid in existing_uuids:
-                row = Database.session.get(FunctionNodes, node_uuid)
+                row = Database.session.get(TABLE_FunctionNodes, node_uuid)
                 if row is not None:
                     row.kind = kind
                     row.position = position
                     row.config = dict(config)
                     kept.add(node_uuid)
             else:
-                row = FunctionNodes(
+                row = TABLE_FunctionNodes(
                     uuid=node_uuid or uuid4(),
                     function_uuid=function_uuid,
                     kind=kind,
@@ -594,13 +594,13 @@ class WFunction:
         Database.session.flush()
         # edges are non-identity (no client uuids) — drop and rebuild
         _ = Database.session.execute(
-            sqla.delete(FunctionEdges).where(
-                FunctionEdges.function_uuid == function_uuid
+            sqla.delete(TABLE_FunctionEdges).where(
+                TABLE_FunctionEdges.function_uuid == function_uuid
             )
         )
         for from_uuid, from_port, to_uuid, to_port in edges:
             Database.session.add(
-                FunctionEdges(
+                TABLE_FunctionEdges(
                     function_uuid=function_uuid,
                     from_node_uuid=from_uuid,
                     from_port=from_port,
@@ -617,7 +617,7 @@ class WFunction:
     def sync_deps(cls, function_uuid: UUID) -> None:
         """Rebuild the function's function_deps row from its current input
         link. The input prop is a link to a T object; no link -> no row."""
-        inst = Database.session.get(Instances, function_uuid)
+        inst = Database.session.get(TABLE_Instances, function_uuid)
         if inst is None:
             return
         owner = WType.by_uuid(inst.type_uuid)
@@ -627,17 +627,17 @@ class WFunction:
         if prop is None:
             return
         link = Database.session.scalar(
-            sqla.select(InstanceValues.uuid).where(
-                InstanceValues.inst_uuid == function_uuid,
-                InstanceValues.prop_uuid == prop.uuid,
+            sqla.select(TABLE_InstanceValues.uuid).where(
+                TABLE_InstanceValues.inst_uuid == function_uuid,
+                TABLE_InstanceValues.prop_uuid == prop.uuid,
             )
         )
         _ = Database.session.execute(
-            sqla.delete(FunctionDeps).where(FunctionDeps.function_uuid == function_uuid)
+            sqla.delete(TABLE_FunctionDeps).where(TABLE_FunctionDeps.function_uuid == function_uuid)
         )
         if link is not None:
             Database.session.add(
-                FunctionDeps(function_uuid=function_uuid, input_object_uuid=link)
+                TABLE_FunctionDeps(function_uuid=function_uuid, input_object_uuid=link)
             )
 
     # --- cross-function dependency cycle detection ---
@@ -649,9 +649,9 @@ class WFunction:
         'function')."""
         return list(
             Database.session.scalars(
-                sqla.select(Instances.uuid)
-                .join(TypesRow, TypesRow.uuid == Instances.type_uuid)
-                .where(TypesRow.kind == WType.KIND_FUNCTION)
+                sqla.select(TABLE_Instances.uuid)
+                .join(TABLE_Types, TABLE_Types.uuid == TABLE_Instances.type_uuid)
+                .where(TABLE_Types.kind == WType.KIND_FUNCTION)
             ).all()
         )
 
@@ -670,7 +670,7 @@ class WFunction:
             input_uuid = cls.input_object_uuid(function_uuid)
             if input_uuid is None:
                 continue
-            type_uuid = Instances.type_uuid_of(input_uuid)
+            type_uuid = TABLE_Instances.type_uuid_of(input_uuid)
             if type_uuid is None:
                 continue
             owner = WType.by_uuid(type_uuid)
@@ -704,12 +704,12 @@ class WFunction:
 
     @classmethod
     @databasemethod(commit=False)
-    def nodes(cls, function_uuid: UUID) -> list[FunctionNodes]:
+    def nodes(cls, function_uuid: UUID) -> list[TABLE_FunctionNodes]:
         return cls._nodes(function_uuid)
 
     @classmethod
     @databasemethod(commit=False)
-    def edges(cls, function_uuid: UUID) -> list[FunctionEdges]:
+    def edges(cls, function_uuid: UUID) -> list[TABLE_FunctionEdges]:
         return cls._edges(function_uuid)
 
     @classmethod

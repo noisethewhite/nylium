@@ -9,7 +9,7 @@ from nylium.database import Database, databasemethod
 from nylium.tables.base import Base
 
 
-class AuthCredentials(Base):
+class TABLE_AuthCredentials(Base):
     __tablename__: str = "auth_credentials"
 
     uuid: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
@@ -38,7 +38,7 @@ class AuthCredentials(Base):
     @databasemethod(commit=False)
     def by_credential_id(
         cls, credential_id: bytes
-    ) -> "AuthCredentials | None":
+    ) -> "TABLE_AuthCredentials | None":
         return Database.session.scalar(
             sqla.select(cls).where(cls.credential_id == credential_id)
         )

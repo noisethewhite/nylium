@@ -25,7 +25,7 @@ from uuid import UUID, uuid4
 import sqlalchemy as sqla
 
 from nylium.database import Database, databasemethod
-from nylium.tables import ArrayValues, FileValues, Instances, InstanceValues
+from nylium.tables import TABLE_ArrayValues, TABLE_FileValues, TABLE_Instances, TABLE_InstanceValues
 from nylium.objects.warray import WArray
 from nylium.objects.wembedded import WEmbedded
 from nylium.objects.wenum import WEnum
@@ -60,7 +60,7 @@ class WObject(metaclass=WTypeMeta):
     @databasemethod(commit=True)
     def _register(self) -> None:
         owner = WType.ensure(type(self).__name__)
-        Instances.register(
+        TABLE_Instances.register(
             self._uuid,
             owner.uuid,
             INSTANCE_NAME_FORMAT.format(
@@ -78,7 +78,7 @@ class WObject(metaclass=WTypeMeta):
         if owner is None:
             raise KeyError(f"no type {type_name!r}")
         instance_uuid = uuid4()
-        Instances.register(
+        TABLE_Instances.register(
             instance_uuid,
             owner.uuid,
             INSTANCE_NAME_FORMAT.format(
@@ -96,7 +96,7 @@ class WObject(metaclass=WTypeMeta):
     @classmethod
     @databasemethod(commit=False)
     def get(cls, uuid: UUID) -> "WObject | None":
-        inst = Database.session.get(Instances, uuid)
+        inst = Database.session.get(TABLE_Instances, uuid)
         if inst is None:
             return None
         owner = WType.by_uuid(inst.type_uuid)
@@ -115,7 +115,7 @@ class WObject(metaclass=WTypeMeta):
     @classmethod
     @databasemethod(commit=False)
     def wrap(cls, uuid: UUID) -> "WObject":
-        inst = Database.session.get(Instances, uuid)
+        inst = Database.session.get(TABLE_Instances, uuid)
         if inst is None:
             raise KeyError(f"no instance {uuid}")
         owner = WType.by_uuid(inst.type_uuid)
@@ -175,7 +175,7 @@ class WObject(metaclass=WTypeMeta):
 
     @databasemethod(commit=False)
     def _prop_and_type(self, key: str) -> tuple[WProp, str]:
-        inst = Database.session.get(Instances, self._uuid)
+        inst = Database.session.get(TABLE_Instances, self._uuid)
         if inst is None:
             raise AttributeError(f"instance {self._uuid} does not exist")
         owner = WType.by_uuid(inst.type_uuid)
@@ -286,28 +286,28 @@ class WObject(metaclass=WTypeMeta):
     @databasemethod(commit=True)
     def _touch(self, ) -> None:
         _ = Database.session.execute(
-            sqla.update(Instances)
-            .where(Instances.uuid == self._uuid)
+            sqla.update(TABLE_Instances)
+            .where(TABLE_Instances.uuid == self._uuid)
             .values(modified_at=sqla.func.now())
         )
 
     # --- reads ---
 
     @databasemethod(commit=False)
-    def _link(self, prop: WProp) -> InstanceValues | None:
+    def _link(self, prop: WProp) -> TABLE_InstanceValues | None:
         return Database.session.scalar(
-            sqla.select(InstanceValues).where(
-                InstanceValues.inst_uuid == self._uuid,
-                InstanceValues.prop_uuid == prop.uuid,
+            sqla.select(TABLE_InstanceValues).where(
+                TABLE_InstanceValues.inst_uuid == self._uuid,
+                TABLE_InstanceValues.prop_uuid == prop.uuid,
             )
         )
 
     @databasemethod(commit=False)
     def _file_ref(self, prop: WProp) -> UUID | None:
         return Database.session.scalar(
-            sqla.select(FileValues.file_uuid).where(
-                FileValues.inst_uuid == self._uuid,
-                FileValues.prop_uuid == prop.uuid,
+            sqla.select(TABLE_FileValues.file_uuid).where(
+                TABLE_FileValues.inst_uuid == self._uuid,
+                TABLE_FileValues.prop_uuid == prop.uuid,
             )
         )
 
@@ -335,23 +335,23 @@ class WObject(metaclass=WTypeMeta):
     @databasemethod(commit=False)
     def _write_link(self, prop: WProp, value: "WObject") -> None:
         _ = Database.session.merge(
-            InstanceValues(uuid=value._uuid, prop_uuid=prop.uuid, inst_uuid=self._uuid)
+            TABLE_InstanceValues(uuid=value._uuid, prop_uuid=prop.uuid, inst_uuid=self._uuid)
         )
 
     @databasemethod(commit=True)
     def _write_file_ref(self, prop: WProp, value: UUID | None) -> None:
         if value is None:
             _ = Database.session.execute(
-                sqla.delete(FileValues).where(
-                    FileValues.inst_uuid == self._uuid,
-                    FileValues.prop_uuid == prop.uuid,
+                sqla.delete(TABLE_FileValues).where(
+                    TABLE_FileValues.inst_uuid == self._uuid,
+                    TABLE_FileValues.prop_uuid == prop.uuid,
                 )
             )
             return
-        row = Database.session.get(FileValues, (self._uuid, prop.uuid))
+        row = Database.session.get(TABLE_FileValues, (self._uuid, prop.uuid))
         if row is None:
             Database.session.add(
-                FileValues(file_uuid=value, prop_uuid=prop.uuid, inst_uuid=self._uuid)
+                TABLE_FileValues(file_uuid=value, prop_uuid=prop.uuid, inst_uuid=self._uuid)
             )
         else:
             row.file_uuid = value
@@ -363,40 +363,40 @@ class WObject(metaclass=WTypeMeta):
         for child_uuid in self._owned_embedded_uuids():
             WEmbedded.destroy(child_uuid)
         _ = Database.session.execute(
-            sqla.delete(InstanceValues).where(InstanceValues.uuid == self._uuid)
+            sqla.delete(TABLE_InstanceValues).where(TABLE_InstanceValues.uuid == self._uuid)
         )
         _ = Database.session.execute(
-            sqla.delete(ArrayValues).where(ArrayValues.value_uuid == self._uuid)
+            sqla.delete(TABLE_ArrayValues).where(TABLE_ArrayValues.value_uuid == self._uuid)
         )
-        inst = Database.session.get(Instances, self._uuid)
+        inst = Database.session.get(TABLE_Instances, self._uuid)
         if inst is not None:
             Database.session.delete(inst)
 
     @databasemethod(commit=False)
     def _owned_embedded_uuids(self, ) -> list[UUID]:
-        """Instances held through embedded-typed props — composition
+        """TABLE_Instances held through embedded-typed props — composition
         children (ADR-0004), found via the owner_* read-index."""
         return list(
             Database.session.scalars(
-                sqla.select(Instances.uuid).where(
-                    Instances.owner_object_uuid == self._uuid
+                sqla.select(TABLE_Instances.uuid).where(
+                    TABLE_Instances.owner_object_uuid == self._uuid
                 )
             ).all()
         )
 
     @databasemethod(commit=False)
     def _owned_array_uuids(self, ) -> list[UUID]:
-        from nylium.tables import Props
-        from nylium.tables.types import TypesRow
+        from nylium.tables import TABLE_Props
+        from nylium.tables.types import TABLE_Types
 
         return list(
             Database.session.scalars(
-                sqla.select(InstanceValues.uuid)
-                .join(Props, InstanceValues.prop_uuid == Props.uuid)
-                .join(TypesRow, Props.value_type_uuid == TypesRow.uuid)
+                sqla.select(TABLE_InstanceValues.uuid)
+                .join(TABLE_Props, TABLE_InstanceValues.prop_uuid == TABLE_Props.uuid)
+                .join(TABLE_Types, TABLE_Props.value_type_uuid == TABLE_Types.uuid)
                 .where(
-                    InstanceValues.inst_uuid == self._uuid,
-                    TypesRow.name.like(WType.ARRAY_TYPE_PREFIX + "%"),
+                    TABLE_InstanceValues.inst_uuid == self._uuid,
+                    TABLE_Types.name.like(WType.ARRAY_TYPE_PREFIX + "%"),
                 )
             ).all()
         )

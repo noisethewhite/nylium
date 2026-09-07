@@ -18,7 +18,7 @@ from uuid import UUID, uuid4
 import sqlalchemy as sqla
 
 from nylium.database import Database, databasemethod
-from nylium.tables import ArrayValues, Files, Instances, InstanceValues
+from nylium.tables import TABLE_ArrayValues, TABLE_Files, TABLE_Instances, TABLE_InstanceValues
 from nylium.objects.wenum import WEnum
 from nylium.objects.wfile import WFile
 from nylium.objects.wprop import WProp
@@ -34,9 +34,9 @@ class WArray:
     @databasemethod(commit=False)
     def read(cls, array_uuid: UUID, elem_type: str) -> list[StoredValue]:
         rows = Database.session.scalars(
-            sqla.select(ArrayValues)
-            .where(ArrayValues.inst_uuid == array_uuid)
-            .order_by(ArrayValues.index)
+            sqla.select(TABLE_ArrayValues)
+            .where(TABLE_ArrayValues.inst_uuid == array_uuid)
+            .order_by(TABLE_ArrayValues.index)
         ).all()
         return [cls._unwrap(row.value_uuid, elem_type) for row in rows]
 
@@ -58,9 +58,9 @@ class WArray:
         """Delete the array instance and every box it owns, recursively."""
         cls._destroy_boxes(array_uuid)
         _ = Database.session.execute(
-            sqla.delete(InstanceValues).where(InstanceValues.uuid == array_uuid)
+            sqla.delete(TABLE_InstanceValues).where(TABLE_InstanceValues.uuid == array_uuid)
         )
-        instance = Database.session.get(Instances, array_uuid)
+        instance = Database.session.get(TABLE_Instances, array_uuid)
         if instance is not None:
             Database.session.delete(instance)
 
@@ -74,7 +74,7 @@ class WArray:
         cls._destroy_boxes(array_uuid)
         for index, item in enumerate(values):
             Database.session.add(
-                ArrayValues(
+                TABLE_ArrayValues(
                     inst_uuid=array_uuid,
                     index=index,
                     value_uuid=cls._box(elem_type, item),
@@ -86,15 +86,15 @@ class WArray:
     def _destroy_boxes(cls, array_uuid: UUID) -> None:
         box_uuids = list(
             Database.session.scalars(
-                sqla.select(ArrayValues.value_uuid).where(
-                    ArrayValues.inst_uuid == array_uuid
+                sqla.select(TABLE_ArrayValues.value_uuid).where(
+                    TABLE_ArrayValues.inst_uuid == array_uuid
                 )
             ).all()
         )
         # detach pointer rows first: FK array_values.value_uuid -> instances
         # forbids deleting a box that is still referenced
         _ = Database.session.execute(
-            sqla.delete(ArrayValues).where(ArrayValues.inst_uuid == array_uuid)
+            sqla.delete(TABLE_ArrayValues).where(TABLE_ArrayValues.inst_uuid == array_uuid)
         )
         Database.session.flush()
         for box_uuid in box_uuids:
@@ -103,7 +103,7 @@ class WArray:
     @classmethod
     @databasemethod(commit=True)
     def _destroy_box(cls, box_uuid: UUID) -> None:
-        inst = Database.session.get(Instances, box_uuid)
+        inst = Database.session.get(TABLE_Instances, box_uuid)
         if inst is None:
             return
         owner = WType.by_uuid(inst.type_uuid)
@@ -123,16 +123,16 @@ class WArray:
         cls, owner_uuid: UUID, prop: WProp, elem_type: str
     ) -> UUID:
         link = Database.session.scalar(
-            sqla.select(InstanceValues).where(
-                InstanceValues.inst_uuid == owner_uuid,
-                InstanceValues.prop_uuid == prop.uuid,
+            sqla.select(TABLE_InstanceValues).where(
+                TABLE_InstanceValues.inst_uuid == owner_uuid,
+                TABLE_InstanceValues.prop_uuid == prop.uuid,
             )
         )
         if link is not None:
             return link.uuid
         array_uuid = cls._create_array_instance(WType.array_name(elem_type))
         Database.session.add(
-            InstanceValues(uuid=array_uuid, prop_uuid=prop.uuid, inst_uuid=owner_uuid)
+            TABLE_InstanceValues(uuid=array_uuid, prop_uuid=prop.uuid, inst_uuid=owner_uuid)
         )
         Database.session.flush()
         return array_uuid
@@ -143,7 +143,7 @@ class WArray:
         array_uuid = uuid4()
         array_type = WType.ensure(array_type_name)
         Database.session.add(
-            Instances(uuid=array_uuid, type_uuid=array_type.uuid, name=ARRAY_INSTANCE_NAME)
+            TABLE_Instances(uuid=array_uuid, type_uuid=array_type.uuid, name=ARRAY_INSTANCE_NAME)
         )
         Database.session.flush()
         return array_uuid
@@ -162,7 +162,7 @@ class WArray:
             scalar = WString
         if scalar is None:
             return WTypeMeta.root().wrap(uuid)
-        inst = Database.session.get(Instances, uuid)
+        inst = Database.session.get(TABLE_Instances, uuid)
         if inst is None:
             raise KeyError(f"no instance {uuid}")
         owner = WType.by_uuid(inst.type_uuid)
@@ -195,7 +195,7 @@ class WArray:
                     raise TypeError(
                         f"{type_name} element takes a files.uuid, got {type(value).__name__}"
                     )
-                if Database.session.get(Files, value) is None:
+                if Database.session.get(TABLE_Files, value) is None:
                     raise TypeError(f"{type_name} element references missing file {value}")
                 return value
             if WEnum.is_enum(type_name):
@@ -208,7 +208,7 @@ class WArray:
         WScalar.validate(scalar.TYPE_NAME, cast(ScalarPayload | None, value))
         box_uuid = uuid4()
         owner = WType.ensure(scalar.TYPE_NAME)
-        Database.session.add(Instances(uuid=box_uuid, type_uuid=owner.uuid, name=str(value)))
+        Database.session.add(TABLE_Instances(uuid=box_uuid, type_uuid=owner.uuid, name=str(value)))
         Database.session.flush()
         value_prop = WProp.by_key(owner, VALUE_PROP_KEY)
         if value_prop is None:

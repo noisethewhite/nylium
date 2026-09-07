@@ -9,7 +9,7 @@ from nylium.database import Database, databasemethod
 from nylium.tables.base import Base
 
 
-class AuthSessions(Base):
+class TABLE_AuthSessions(Base):
     """Server-side sessions: the cookie carries a random token, the table
     stores only its sha256 — a leaked dump yields no usable tokens."""
     __tablename__: str = "auth_sessions"
@@ -33,7 +33,7 @@ class AuthSessions(Base):
 
     @classmethod
     @databasemethod(commit=False)
-    def by_hash(cls, token_hash: str) -> "AuthSessions | None":
+    def by_hash(cls, token_hash: str) -> "TABLE_AuthSessions | None":
         return Database.session.get(cls, token_hash)
 
     @classmethod

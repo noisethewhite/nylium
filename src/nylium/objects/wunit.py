@@ -13,7 +13,7 @@ from decimal import Decimal
 from uuid import UUID
 
 from nylium.database import Database, databasemethod
-from nylium.tables import NumericValues, UnitParts
+from nylium.tables import TABLE_NumericValues, TABLE_UnitParts
 from nylium.objects.quantity import Quantity
 from nylium.objects.wprop import WProp
 from nylium.objects.wtype import WType
@@ -44,7 +44,7 @@ class WUnit:
         owner = cls._unit_owner(type_name)
         if value.unit is None:
             return Quantity(value=value.value, unit=None)
-        part = UnitParts.by_name(owner.uuid, value.unit)
+        part = TABLE_UnitParts.by_name(owner.uuid, value.unit)
         if part is None:
             raise ValidationError(
                 f"{value.unit!r} is not a part of unit {owner.name!r}"
@@ -59,7 +59,7 @@ class WUnit:
     def read(
         cls, inst_uuid: UUID, prop: WProp, type_name: str
     ) -> Quantity | None:
-        row = Database.session.get(NumericValues, (inst_uuid, prop.uuid))
+        row = Database.session.get(TABLE_NumericValues, (inst_uuid, prop.uuid))
         if row is None:
             return None
         canonical = row.value
@@ -67,7 +67,7 @@ class WUnit:
         if entered_unit is None:
             return Quantity(value=canonical, unit=None)
         owner = cls._unit_owner(type_name)
-        part = UnitParts.by_name(owner.uuid, entered_unit)
+        part = TABLE_UnitParts.by_name(owner.uuid, entered_unit)
         if part is None:
             # delete-in-use is refused and renames propagate, so a missing
             # part means corrupted data — fail loud, never silently re-scale
@@ -83,14 +83,14 @@ class WUnit:
         cls, inst_uuid: UUID, prop: WProp, quantity: Quantity | None
     ) -> None:
         if quantity is None:
-            row = Database.session.get(NumericValues, (inst_uuid, prop.uuid))
+            row = Database.session.get(TABLE_NumericValues, (inst_uuid, prop.uuid))
             if row is not None:
                 Database.session.delete(row)
             return
-        row = Database.session.get(NumericValues, (inst_uuid, prop.uuid))
+        row = Database.session.get(TABLE_NumericValues, (inst_uuid, prop.uuid))
         if row is None:
             Database.session.add(
-                NumericValues(
+                TABLE_NumericValues(
                     inst_uuid=inst_uuid,
                     prop_uuid=prop.uuid,
                     value=quantity.value,

@@ -6,8 +6,8 @@ WObject wrappers or SQLAlchemy rows to callers: everything in and out
 is a view, a UUID, or a plain python value. Writes go through the
 WObject layer, so all type validation applies here too.
 
-Table access lives on the table classes themselves (Types/Instances/
-Props helpers); this file only orchestrates and adapts caller input.
+Table access lives on the table classes themselves (Types/TABLE_Instances/
+TABLE_Props helpers); this file only orchestrates and adapts caller input.
 """
 from __future__ import annotations
 
@@ -20,11 +20,11 @@ from nylium.api.views import FileView, FunctionView, ObjectRef, ObjectView, Type
 from nylium.database import databasemethod
 from nylium.tables.types import types
 from nylium.tables import (
-    EnumOptions,
-    Files,
-    Instances,
-    Props,
-    UnitParts,
+    TABLE_EnumOptions,
+    TABLE_Files,
+    TABLE_Instances,
+    TABLE_Props,
+    TABLE_UnitParts,
 )
 from nylium.objects.wembedded import EMBEDDED_NAME_SEPARATOR, WEmbedded
 from nylium.objects.wenum import WEnum
@@ -162,7 +162,7 @@ class Api:
         cls._check_color(color)
         cls._check_icon(icon)
         owner = WType.ensure(final_name, kind=WType.KIND_ENUM)
-        EnumOptions.sync(owner.uuid, [(None, v) for v in (options or [])])
+        TABLE_EnumOptions.sync(owner.uuid, [(None, v) for v in (options or [])])
         types.update(owner.uuid, owner.name, None, icon, color)
         return TypeView.from_name(final_name)
 
@@ -186,7 +186,7 @@ class Api:
             raise ValidationError("enum options must not be empty")
         if len(set(values)) != len(values):
             raise ValidationError(f"duplicate enum options in {values!r}")
-        EnumOptions.sync(owner.uuid, items)
+        TABLE_EnumOptions.sync(owner.uuid, items)
         return TypeView.from_name(name)
 
     @classmethod
@@ -220,7 +220,7 @@ class Api:
             *[(None, n, m, o, False) for n, m, o in (secondaries or [])],
         ]
         cls._validate_unit_draft(items)
-        UnitParts.sync(owner.uuid, final_name, items)
+        TABLE_UnitParts.sync(owner.uuid, final_name, items)
         types.update(owner.uuid, owner.name, None, icon, color)
         return TypeView.from_name(final_name)
 
@@ -243,17 +243,17 @@ class Api:
         if not owner.is_unit:
             raise ValidationError(f"type {name!r} is not a unit")
         cls._validate_unit_draft(items)
-        old_base = UnitParts.base_of(owner.uuid)
+        old_base = TABLE_UnitParts.base_of(owner.uuid)
         new_base_uuid = next(uuid for uuid, _, _, _, is_base in items if is_base)
         if (
             old_base is not None
             and new_base_uuid != old_base.uuid
-            and UnitParts.usage_total(owner.name) > 0
+            and TABLE_UnitParts.usage_total(owner.name) > 0
         ):
             raise ValidationError(
                 f"unit {name!r} still has values; its base part cannot change"
             )
-        UnitParts.sync(owner.uuid, owner.name, items)
+        TABLE_UnitParts.sync(owner.uuid, owner.name, items)
         return TypeView.from_name(name)
 
     @classmethod
@@ -402,11 +402,11 @@ class Api:
                 embedded_renamed = True
         WProp.sync_schema(owner, resolved)
         for prop_uuid, rewritten in formula_updates:
-            Props.update_formula(prop_uuid, rewritten)
+            TABLE_Props.update_formula(prop_uuid, rewritten)
         if embedded_renamed:
             # a renamed embedded prop key invalidates every generated
             # child name of every instance of this type
-            for instance_uuid in Instances.uuids_of_type(owner.uuid):
+            for instance_uuid in TABLE_Instances.uuids_of_type(owner.uuid):
                 WEmbedded.regenerate_names(instance_uuid)
         return TypeView.from_name(type_name)
 
@@ -472,7 +472,7 @@ class Api:
             return False
         if _is_builtin_type(owner):
             raise ValidationError(f"type {name!r} is builtin and cannot be deleted")
-        instance_count = Instances.count_of_type(owner.uuid)
+        instance_count = TABLE_Instances.count_of_type(owner.uuid)
         if instance_count:
             raise ValueError(
                 f"type {name!r} still has {instance_count} instances"
@@ -482,7 +482,7 @@ class Api:
             # drop the orphaned parameterized row with the unit itself
             parameterized_row = types.by_name(WType.unit_numeric_name(name))
             if parameterized_row is not None:
-                refs = Props.count_with_value_type(parameterized_row.uuid)
+                refs = TABLE_Props.count_with_value_type(parameterized_row.uuid)
                 if refs:
                     raise ValueError(
                         f"unit {name!r} still parameterizes {refs} props"
@@ -505,7 +505,7 @@ class Api:
             return []
         views = [
             ObjectView.from_uuid(uuid)
-            for uuid in Instances.uuids_of_type(owner.uuid)
+            for uuid in TABLE_Instances.uuids_of_type(owner.uuid)
         ]
         return [view for view in views if view is not None]
 
@@ -532,7 +532,7 @@ class Api:
         def ref_label(ref: ObjectRef) -> str:
             wrapper = WObject.wrap(ref.uuid)
             label = cast(str | None, getattr(wrapper, NAME_PROP_KEY))
-            return label or Instances.name_of(ref.uuid)
+            return label or TABLE_Instances.name_of(ref.uuid)
 
         return render_object_markdown(view, ref_label)
 
@@ -570,12 +570,12 @@ class Api:
     def update_object(cls, uuid: UUID, props: dict[str, PropInput]) -> ObjectView:
         from nylium.server.errors import ValidationError
 
-        if Instances.owner_of(uuid) is not None:
+        if TABLE_Instances.owner_of(uuid) is not None:
             raise ValidationError(
                 "embedded objects are edited through their owner — write the embedded prop on the parent instead"
             )
         wrapper = WObject.wrap(uuid)
-        type_name = Instances.get_type_name(uuid)
+        type_name = TABLE_Instances.get_type_name(uuid)
         normalized = cls._normalize_props(type_name, props)
         for key, value in normalized.items():
             setattr(wrapper, key, value)
@@ -614,7 +614,7 @@ class Api:
                 f"{type_name} does not accept MIME {mime!r}"
             )
         file_uuid = uuid4()
-        Files.create(file_uuid, type_name, filename, mime, len(data))
+        TABLE_Files.create(file_uuid, type_name, filename, mime, len(data))
         blob = WFile.blob_path(file_uuid)
         tmp = blob.with_suffix(".tmp")
         try:
@@ -630,7 +630,7 @@ class Api:
     @classmethod
     @databasemethod(commit=False)
     def get_file(cls, uuid: UUID) -> FileView | None:
-        row = Files.by_uuid(uuid)
+        row = TABLE_Files.by_uuid(uuid)
         if row is None:
             return None
         return FileView(
@@ -646,7 +646,7 @@ class Api:
                 uuid=row.uuid, type_name=row.type_name, name=row.name,
                 mime=row.mime, size_bytes=row.size_bytes,
             )
-            for row in Files.list_all()
+            for row in TABLE_Files.list_all()
         ]
 
     @classmethod
@@ -658,7 +658,7 @@ class Api:
 
         if not name.strip():
             raise ValidationError("filename must not be empty")
-        Files.rename(uuid, name)
+        TABLE_Files.rename(uuid, name)
         view = cls.get_file(uuid)
         if view is None:
             raise KeyError(f"no file {uuid}")
@@ -669,13 +669,13 @@ class Api:
     def delete_file(cls, uuid: UUID) -> bool:
         """ADR-0008: drop the files row and the blob. An Image used as an
         icon resets every referencing type to the default glyph."""
-        row = Files.by_uuid(uuid)
+        row = TABLE_Files.by_uuid(uuid)
         if row is None:
             return False
         if row.type_name == WFile.TYPE_IMAGE:
             WFile.reset_icons_referencing(uuid)
         WFile.clear_array_refs(uuid)
-        Files.delete_by_uuid(uuid)
+        TABLE_Files.delete_by_uuid(uuid)
         WFile.delete_blob(uuid)
         return True
 
@@ -684,9 +684,9 @@ class Api:
     def delete_object(cls, uuid: UUID) -> bool:
         from nylium.server.errors import ValidationError
 
-        if not Instances.exists(uuid):
+        if not TABLE_Instances.exists(uuid):
             return False
-        if Instances.owner_of(uuid) is not None:
+        if TABLE_Instances.owner_of(uuid) is not None:
             raise ValidationError(
                 "embedded objects are deleted with their owner or by clearing the prop that holds them"
             )
@@ -795,7 +795,7 @@ class Api:
             return False
         # unbind every prop computed through it first, then drop the object
         # (graph + deps cascade on the FK)
-        Props.clear_function_references(uuid)
+        TABLE_Props.clear_function_references(uuid)
         return cls.delete_object(uuid)
 
     @classmethod
@@ -830,7 +830,7 @@ class Api:
             raise ValidationError(
                 f"prop {prop_key!r} already has a formula — a prop cannot be both"
             )
-        Props.set_function(prop.uuid, function_uuid)
+        TABLE_Props.set_function(prop.uuid, function_uuid)
         WFunction.assert_no_dependency_cycle()
         result = TypeView.from_name(type_name)
         return result
@@ -871,7 +871,7 @@ class Api:
             return cls._member_props(element_name)
 
         updates: list[tuple[UUID, str]] = []
-        usages = Props.usages_of_value_type(array_type_row.uuid)
+        usages = TABLE_Props.usages_of_value_type(array_type_row.uuid)
         by_owner: dict[UUID, list[str]] = {}
         for dependent_uuid, array_key in usages:
             if dependent_uuid == owner_uuid:
@@ -957,8 +957,8 @@ class Api:
         owner_type_row = types.by_name(type_name)
         if owner_type_row is None:
             raise KeyError(f"no type {type_name!r}")
-        formula_readonly = Props.formula_keys(owner_type_row.uuid)
-        function_readonly = Props.function_keys(owner_type_row.uuid)
+        formula_readonly = TABLE_Props.formula_keys(owner_type_row.uuid)
+        function_readonly = TABLE_Props.function_keys(owner_type_row.uuid)
         result: dict[str, StoredValue] = {}
         for key, value in props.items():
             if key in formula_readonly:
@@ -974,7 +974,7 @@ class Api:
                     f"prop {key!r} of {type_name!r} is computed by a function — it is read-only"
                 )
             normalized = cls._normalize_value(
-                value, Props.get_type_name(owner_type_row.uuid, key)
+                value, TABLE_Props.get_type_name(owner_type_row.uuid, key)
             )
             if key == NAME_PROP_KEY and isinstance(normalized, str):
                 # → would make a user-typed name indistinguishable from a
@@ -1021,8 +1021,8 @@ class Api:
                 raise TypeError(
                     f"embedded prop of type {type_name!r} takes an inline props draft, got {type(value).__name__}"
                 )
-            formula_readonly = Props.formula_keys(resolved.uuid)
-            function_readonly = Props.function_keys(resolved.uuid)
+            formula_readonly = TABLE_Props.formula_keys(resolved.uuid)
+            function_readonly = TABLE_Props.function_keys(resolved.uuid)
             for child_key in value:
                 if child_key in formula_readonly:
                     from nylium.server.errors import ValidationError
@@ -1037,7 +1037,7 @@ class Api:
                         f"prop {child_key!r} of {type_name!r} is computed by a function — it is read-only"
                     )
             return {
-                key: cls._normalize_value(item, Props.get_type_name(resolved.uuid, key))
+                key: cls._normalize_value(item, TABLE_Props.get_type_name(resolved.uuid, key))
                 for key, item in value.items()
             }
         if isinstance(value, ObjectRef):

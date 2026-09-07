@@ -8,13 +8,13 @@ import sqlalchemy as sqla
 from sqlalchemy.orm import Session
 
 from nylium.database import Database
-from nylium.tables import Instances
+from nylium.tables import TABLE_Instances
 from nylium.objects import WInteger, WObject, WString
 
 
 def instance_count() -> int:
     with Session(Database.engine) as session:
-        count = session.scalar(sqla.select(sqla.func.count()).select_from(Instances))
+        count = session.scalar(sqla.select(sqla.func.count()).select_from(TABLE_Instances))
         assert count is not None
         return count
 
@@ -110,11 +110,11 @@ def test_array_box_cascade_on_rewrite_and_delete():
 def test_modified_at_moves():
     person = person_class()(name="Max", age=26)
     with Session(Database.engine) as session:
-        row = session.get(Instances, person.uuid)
+        row = session.get(TABLE_Instances, person.uuid)
         assert row is not None
         first = row.modified_at
     person.name = "Maxim"
     with Session(Database.engine) as session:
-        row = session.get(Instances, person.uuid)
+        row = session.get(TABLE_Instances, person.uuid)
         assert row is not None
         assert row.modified_at > first

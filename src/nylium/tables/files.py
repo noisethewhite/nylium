@@ -12,7 +12,7 @@ from nylium.tables.base import Base
 # the pointer, stable for the life of the file. The blob lives on disk at
 # FILES_DIR/<uuid>. `name` is a freely renameable display name (defaults to
 # the original filename on upload); `type_name` is File/Document/Image.
-class Files(Base):
+class TABLE_Files(Base):
     __tablename__: str = "files"
 
     uuid: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
@@ -32,13 +32,13 @@ class Files(Base):
         size_bytes: int,
     ) -> None:
         Database.session.add(
-            Files(uuid=uuid, type_name=type_name, name=name, mime=mime, size_bytes=size_bytes)
+            TABLE_Files(uuid=uuid, type_name=type_name, name=name, mime=mime, size_bytes=size_bytes)
         )
         Database.session.flush()
 
     @classmethod
     @databasemethod(commit=False)
-    def by_uuid(cls, uuid: UUID) -> "Files | None":
+    def by_uuid(cls, uuid: UUID) -> "TABLE_Files | None":
         return Database.session.get(cls, uuid)
 
     @classmethod
@@ -48,7 +48,7 @@ class Files(Base):
 
     @classmethod
     @databasemethod(commit=False)
-    def list_all(cls,) -> list["Files"]:
+    def list_all(cls,) -> list["TABLE_Files"]:
         return list(Database.session.scalars(sqla.select(cls).order_by(cls.name)).all())
 
     @classmethod

@@ -12,7 +12,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from nylium.tables.base import Base
 
 
-class ArrayValues(Base):
+class TABLE_ArrayValues(Base):
     __tablename__: str = "array_values"
 
     inst_uuid: Mapped[UUID] = mapped_column(

@@ -14,7 +14,7 @@ from webauthn import (
 from webauthn.helpers import base64url_to_bytes, options_to_json
 from webauthn.helpers.structs import PublicKeyCredentialDescriptor
 
-from nylium.tables import AuthChallenges, AuthCredentials, AuthUsers
+from nylium.tables import TABLE_AuthChallenges, TABLE_AuthCredentials, TABLE_AuthUsers
 from nylium.system.environment import Environment
 
 from .sessions import sessions
@@ -36,10 +36,10 @@ class ceremonies:
         """Open while zero credentials exist (first passkey = owner);
         afterwards requires a live session — adding keys = being logged in."""
         user_uuid = cls._register_subject(user_name, current_user_uuid)
-        user = AuthUsers.by_uuid(user_uuid)
+        user = TABLE_AuthUsers.by_uuid(user_uuid)
         if user is None:
             raise PermissionError("registration requires a session")
-        known = AuthCredentials.credential_ids_for(user_uuid)
+        known = TABLE_AuthCredentials.credential_ids_for(user_uuid)
         options = generate_registration_options(
             rp_id=str(Environment.rp_id),
             rp_name=cls.RP_NAME,
@@ -50,9 +50,9 @@ class ceremonies:
                 for credential_id in known
             ],
         )
-        AuthChallenges.issue(
+        TABLE_AuthChallenges.issue(
             options.challenge,
-            AuthChallenges.REGISTER_KIND,
+            TABLE_AuthChallenges.REGISTER_KIND,
             user_uuid,
             cls.CHALLENGE_TTL_SECONDS,
         )
@@ -63,7 +63,7 @@ class ceremonies:
         """Verify a fresh passkey, store it, return a session token."""
         payload = cls._payload(body)
         challenge = cls._client_challenge(payload)
-        ok, user_uuid = AuthChallenges.consume(challenge, AuthChallenges.REGISTER_KIND)
+        ok, user_uuid = TABLE_AuthChallenges.consume(challenge, TABLE_AuthChallenges.REGISTER_KIND)
         if not ok or user_uuid is None:
             raise PermissionError("unknown or expired challenge")
         try:
@@ -75,7 +75,7 @@ class ceremonies:
             )
         except Exception as exc:
             raise PermissionError("passkey rejected") from exc
-        AuthCredentials.register(
+        TABLE_AuthCredentials.register(
             user_uuid,
             verification.credential_id,
             verification.credential_public_key,
@@ -89,8 +89,8 @@ class ceremonies:
     @classmethod
     def login_start(cls) -> str:
         options = generate_authentication_options(rp_id=str(Environment.rp_id))
-        AuthChallenges.issue(
-            options.challenge, AuthChallenges.LOGIN_KIND, None, cls.CHALLENGE_TTL_SECONDS
+        TABLE_AuthChallenges.issue(
+            options.challenge, TABLE_AuthChallenges.LOGIN_KIND, None, cls.CHALLENGE_TTL_SECONDS
         )
         return options_to_json(options)
 
@@ -98,11 +98,11 @@ class ceremonies:
     def login_finish(cls, body: str) -> str:
         payload = cls._payload(body)
         credential_id = base64url_to_bytes(cls._string(payload, "rawId"))
-        credential = AuthCredentials.by_credential_id(credential_id)
+        credential = TABLE_AuthCredentials.by_credential_id(credential_id)
         if credential is None:
             raise PermissionError("unknown credential")
         challenge = cls._client_challenge(payload)
-        ok, _ = AuthChallenges.consume(challenge, AuthChallenges.LOGIN_KIND)
+        ok, _ = TABLE_AuthChallenges.consume(challenge, TABLE_AuthChallenges.LOGIN_KIND)
         if not ok:
             raise PermissionError("unknown or expired challenge")
         try:
@@ -116,7 +116,7 @@ class ceremonies:
             )
         except Exception as exc:
             raise PermissionError("passkey rejected") from exc
-        AuthCredentials.mark_used(credential.uuid, verification.new_sign_count)
+        TABLE_AuthCredentials.mark_used(credential.uuid, verification.new_sign_count)
         return sessions.issue(credential.user_uuid)
 
     # --- internals ---
@@ -125,14 +125,14 @@ class ceremonies:
     def _register_subject(
         cls, user_name: str | None, current_user_uuid: UUID | None
     ) -> UUID:
-        if AuthCredentials.count_all() == 0:
+        if TABLE_AuthCredentials.count_all() == 0:
             if not user_name:
                 raise TypeError("user name required for the first passkey")
             # Retry after an aborted ceremony reuses the orphaned user row.
-            existing = AuthUsers.by_name(user_name)
+            existing = TABLE_AuthUsers.by_name(user_name)
             if existing is not None:
                 return existing.uuid
-            return AuthUsers.create(user_name).uuid
+            return TABLE_AuthUsers.create(user_name).uuid
         if current_user_uuid is None:
             raise PermissionError("registration requires a session")
         return current_user_uuid

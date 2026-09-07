@@ -21,15 +21,15 @@ from sqlalchemy.orm import aliased
 
 from nylium.database import Database, databasemethod
 from nylium.tables import (
-    ArrayValues,
-    EnumOptions,
-    InstanceValues,
-    Instances,
-    Props,
-    StringValues,
-    UnitParts,
+    TABLE_ArrayValues,
+    TABLE_EnumOptions,
+    TABLE_InstanceValues,
+    TABLE_Instances,
+    TABLE_Props,
+    TABLE_StringValues,
+    TABLE_UnitParts,
 )
-from nylium.tables.types import TypesRow
+from nylium.tables.types import TABLE_Types
 from nylium.objects import WObject, WProp, WType
 from nylium.objects.monthday import MonthDay, MonthDayTime
 from nylium.objects.quantity import Quantity
@@ -107,7 +107,7 @@ class TypeView:
             embedded=owner.is_embedded,
             enum_options=[
                 EnumOptionView(uuid=option.uuid, value=option.value)
-                for option in EnumOptions.list_for(owner.uuid)
+                for option in TABLE_EnumOptions.list_for(owner.uuid)
             ],
             unit_parts=[
                 UnitPartView(
@@ -117,7 +117,7 @@ class TypeView:
                     offset=part.offset,
                     is_base=part.is_base,
                 )
-                for part in UnitParts.list_for(owner.uuid)
+                for part in TABLE_UnitParts.list_for(owner.uuid)
             ],
             props=[
                 PropView(
@@ -235,7 +235,7 @@ class FunctionView:
     @classmethod
     @databasemethod(commit=False)
     def from_uuid(cls, uuid: UUID) -> Self | None:
-        type_uuid = Instances.type_uuid_of(uuid)
+        type_uuid = TABLE_Instances.type_uuid_of(uuid)
         if type_uuid is None:
             return None
         owner = WType.by_uuid(type_uuid)
@@ -246,7 +246,7 @@ class FunctionView:
             return None
         input_type, output_type = params
         wrapper = WObject.wrap(uuid)
-        name = cast(str | None, getattr(wrapper, NAME_PROP_KEY)) or Instances.name_of(uuid)
+        name = cast(str | None, getattr(wrapper, NAME_PROP_KEY)) or TABLE_Instances.name_of(uuid)
         return cls(
             uuid=uuid,
             name=name,
@@ -305,7 +305,7 @@ class ObjectView:
     @classmethod
     @databasemethod(commit=False)
     def from_uuid(cls, uuid: UUID) -> Self | None:
-        type_uuid = Instances.type_uuid_of(uuid)
+        type_uuid = TABLE_Instances.type_uuid_of(uuid)
         if type_uuid is None:
             return None
         owner = WType.by_uuid(type_uuid)
@@ -337,34 +337,34 @@ class ObjectView:
         ``Array<type_name>`` prop whose stored array contains this object
         becomes one tag ``<owner display name> → <prop key>``. One query,
         no N+1."""
-        name_prop = aliased(Props)
-        owner_types = aliased(TypesRow)
+        name_prop = aliased(TABLE_Props)
+        owner_types = aliased(TABLE_Types)
         rows = Database.session.execute(
             sqla.select(
-                InstanceValues.inst_uuid,  # owner object uuid
-                Props.key,  # array prop key
-                Instances.name,  # owner registry name (fallback title)
-                StringValues.value,  # owner's `name` prop value (display title)
+                TABLE_InstanceValues.inst_uuid,  # owner object uuid
+                TABLE_Props.key,  # array prop key
+                TABLE_Instances.name,  # owner registry name (fallback title)
+                TABLE_StringValues.value,  # owner's `name` prop value (display title)
                 owner_types.color,  # owner type's color paints the chip
             )
-            .select_from(ArrayValues)
-            .join(InstanceValues, InstanceValues.uuid == ArrayValues.inst_uuid)
-            .join(Props, Props.uuid == InstanceValues.prop_uuid)
-            .join(TypesRow, TypesRow.uuid == Props.value_type_uuid)
-            .join(Instances, Instances.uuid == InstanceValues.inst_uuid)
-            .join(owner_types, owner_types.uuid == Instances.type_uuid)
-            .join(name_prop, name_prop.owner_type_uuid == Instances.type_uuid)
+            .select_from(TABLE_ArrayValues)
+            .join(TABLE_InstanceValues, TABLE_InstanceValues.uuid == TABLE_ArrayValues.inst_uuid)
+            .join(TABLE_Props, TABLE_Props.uuid == TABLE_InstanceValues.prop_uuid)
+            .join(TABLE_Types, TABLE_Types.uuid == TABLE_Props.value_type_uuid)
+            .join(TABLE_Instances, TABLE_Instances.uuid == TABLE_InstanceValues.inst_uuid)
+            .join(owner_types, owner_types.uuid == TABLE_Instances.type_uuid)
+            .join(name_prop, name_prop.owner_type_uuid == TABLE_Instances.type_uuid)
             .join(
-                StringValues,
+                TABLE_StringValues,
                 sqla.and_(
-                    StringValues.inst_uuid == Instances.uuid,
-                    StringValues.prop_uuid == name_prop.uuid,
+                    TABLE_StringValues.inst_uuid == TABLE_Instances.uuid,
+                    TABLE_StringValues.prop_uuid == name_prop.uuid,
                 ),
                 isouter=True,
             )
             .where(
-                ArrayValues.value_uuid == uuid,
-                TypesRow.name == WType.array_name(type_name),
+                TABLE_ArrayValues.value_uuid == uuid,
+                TABLE_Types.name == WType.array_name(type_name),
                 name_prop.key == NAME_PROP_KEY,
             )
             .distinct()
@@ -412,8 +412,8 @@ class ObjectView:
             existing: set[UUID] = (
                 set(
                     Database.session.scalars(
-                        sqla.select(Instances.uuid).where(
-                            Instances.uuid.in_([member.uuid for member in members])
+                        sqla.select(TABLE_Instances.uuid).where(
+                            TABLE_Instances.uuid.in_([member.uuid for member in members])
                         )
                     ).all()
                 )
@@ -500,5 +500,5 @@ class ObjectView:
         if not isinstance(value, WObject):
             raise TypeError(f"link prop rendered a {type(value).__name__}")
         return RefValue(
-            ref=ObjectRef(uuid=value.uuid, type_name=Instances.get_type_name(value.uuid))
+            ref=ObjectRef(uuid=value.uuid, type_name=TABLE_Instances.get_type_name(value.uuid))
         )

@@ -1,4 +1,4 @@
-# Passkey (WebAuthn) infrastructure. System tables like Instances/Types,
+# Passkey (WebAuthn) infrastructure. System tables like TABLE_Instances/Types,
 # deliberately NOT nylium objects: auth sits below the object layer, and
 # the type system has no blob scalar for public keys / credential IDs.
 from datetime import datetime
@@ -12,7 +12,7 @@ from nylium.database import Database, databasemethod
 from nylium.tables.base import Base
 
 
-class AuthUsers(Base):
+class TABLE_AuthUsers(Base):
     __tablename__: str = "auth_users"
 
     uuid: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
@@ -23,7 +23,7 @@ class AuthUsers(Base):
 
     @classmethod
     @databasemethod(commit=True)
-    def create(cls, name: str) -> "AuthUsers":
+    def create(cls, name: str) -> "TABLE_AuthUsers":
         user = cls(name=name)
         Database.session.add(user)
         Database.session.flush()  # populate uuid/created_at before the session ends
@@ -31,10 +31,10 @@ class AuthUsers(Base):
 
     @classmethod
     @databasemethod(commit=False)
-    def by_uuid(cls, uuid: UUID) -> "AuthUsers | None":
+    def by_uuid(cls, uuid: UUID) -> "TABLE_AuthUsers | None":
         return Database.session.get(cls, uuid)
 
     @classmethod
     @databasemethod(commit=False)
-    def by_name(cls, name: str) -> "AuthUsers | None":
+    def by_name(cls, name: str) -> "TABLE_AuthUsers | None":
         return Database.session.scalar(sqla.select(cls).where(cls.name == name))

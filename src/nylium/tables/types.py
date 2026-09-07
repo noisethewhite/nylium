@@ -9,11 +9,11 @@ from nylium.database.store import Store
 from nylium.tables.base import Base
 
 
-class TypesRow(Base):
+class TABLE_Types(Base):
     """The raw `types` row — a plain mapped class, no behaviour (ADR-0010).
 
     Writers go through the ``Types`` store below (``create``/``update``/
-    ``delete``), never by constructing ``TypesRow`` directly. The mapped
+    ``delete``), never by constructing ``TABLE_Types`` directly. The mapped
     class stays importable where a SQL join needs the table — that is its
     only legitimate public use.
     """
@@ -47,15 +47,15 @@ class TypesRow(Base):
     )
 
 
-class Types(Store[UUID, TypesRow]):
+class Types(Store[UUID, TABLE_Types]):
     """Types access layer: rows by uuid, a name index, and the write ops."""
 
     def __init__(self) -> None:
-        super().__init__(TypesRow)
+        super().__init__(TABLE_Types)
 
     @databasemethod(commit=False)
-    def by_name(self, name: str) -> TypesRow | None:
-        return Database.session.scalar(sqla.select(TypesRow).where(TypesRow.name == name))
+    def by_name(self, name: str) -> TABLE_Types | None:
+        return Database.session.scalar(sqla.select(TABLE_Types).where(TABLE_Types.name == name))
 
     @databasemethod(commit=True)
     def create(
@@ -65,8 +65,8 @@ class Types(Store[UUID, TypesRow]):
         icon: str | None = None,
         kind: str | None = None,
         embedded: bool | None = None,
-    ) -> TypesRow:
-        row = TypesRow(name=name, plural_name=plural_name)
+    ) -> TABLE_Types:
+        row = TABLE_Types(name=name, plural_name=plural_name)
         if icon is not None:
             row.icon = icon
         if kind is not None:
@@ -86,7 +86,7 @@ class Types(Store[UUID, TypesRow]):
         icon: str,
         color: str,
     ) -> None:
-        row = Database.session.get(TypesRow, uuid)
+        row = Database.session.get(TABLE_Types, uuid)
         if row is None:
             raise KeyError(f"no type with uuid {uuid}")
         row.name = name
@@ -97,7 +97,7 @@ class Types(Store[UUID, TypesRow]):
 
     @databasemethod(commit=True)
     def delete(self, uuid: UUID) -> None:
-        row = Database.session.get(TypesRow, uuid)
+        row = Database.session.get(TABLE_Types, uuid)
         if row is not None:
             Database.session.delete(row)  # its props cascade
 

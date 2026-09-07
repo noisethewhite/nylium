@@ -6,7 +6,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from nylium.tables.base import Base
 
 
-class BooleanValues(Base):
+class TABLE_BooleanValues(Base):
     __tablename__: str = "boolean_values"
 
     inst_uuid: Mapped[UUID] = mapped_column(

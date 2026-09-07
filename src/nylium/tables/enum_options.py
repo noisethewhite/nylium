@@ -10,11 +10,11 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from nylium.database import Database, databasemethod
 from nylium.tables.base import Base
-from nylium.tables.string_values import StringValues
-from nylium.tables.props import Props
+from nylium.tables.string_values import TABLE_StringValues
+from nylium.tables.props import TABLE_Props
 
 
-class EnumOptions(Base):
+class TABLE_EnumOptions(Base):
     __tablename__: str = "enum_options"
     __table_args__: tuple[UniqueConstraint, ...] = (UniqueConstraint("type_uuid", "value"),)
 
@@ -27,7 +27,7 @@ class EnumOptions(Base):
 
     @classmethod
     @databasemethod(commit=False)
-    def list_for(cls, type_uuid: UUID) -> list["EnumOptions"]:
+    def list_for(cls, type_uuid: UUID) -> list["TABLE_EnumOptions"]:
         return list(
             Database.session.scalars(
                 sqla.select(cls)
@@ -54,9 +54,9 @@ class EnumOptions(Base):
         return int(
             Database.session.scalar(
                 sqla.select(sqla.func.count())
-                .select_from(StringValues)
-                .join(Props, StringValues.prop_uuid == Props.uuid)
-                .where(Props.value_type_uuid == type_uuid, StringValues.value == value)
+                .select_from(TABLE_StringValues)
+                .join(TABLE_Props, TABLE_StringValues.prop_uuid == TABLE_Props.uuid)
+                .where(TABLE_Props.value_type_uuid == type_uuid, TABLE_StringValues.value == value)
             ) or 0
         )
 
@@ -65,7 +65,7 @@ class EnumOptions(Base):
     def sync(
         cls, type_uuid: UUID, items: list[tuple[UUID | None, str]]
     ) -> None:
-        """Apply the editor's full option draft, mirroring Props.sync_schema:
+        """Apply the editor's full option draft, mirroring TABLE_Props.sync_schema:
         a matching uuid renames the option in place (the rename rewrites
         stored string_values), None creates, omitted options are deleted —
         but a delete refuses while the option is still in use."""
@@ -95,11 +95,11 @@ class EnumOptions(Base):
             row = existing[option_uuid]
             if row.value != value:
                 _ = Database.session.execute(
-                    sqla.update(StringValues)
+                    sqla.update(TABLE_StringValues)
                     .where(
-                        StringValues.value == row.value,
-                        StringValues.prop_uuid.in_(
-                            sqla.select(Props.uuid).where(Props.value_type_uuid == type_uuid)
+                        TABLE_StringValues.value == row.value,
+                        TABLE_StringValues.prop_uuid.in_(
+                            sqla.select(TABLE_Props.uuid).where(TABLE_Props.value_type_uuid == type_uuid)
                         ),
                     )
                     .values(value=value)

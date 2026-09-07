@@ -23,7 +23,7 @@ import sqlalchemy as sqla
 
 from nylium.database import Database, databasemethod
 
-from nylium.tables import Instances, InstanceValues, StringValues
+from nylium.tables import TABLE_Instances, TABLE_InstanceValues, TABLE_StringValues
 from nylium.objects.wprop import WProp
 from nylium.objects.wtype import WType
 from nylium.objects.wtypemeta import StoredValue, WTypeMeta
@@ -49,9 +49,9 @@ class WEmbedded:
         The draft maps prop key -> value, exactly like an object write.
         Caller-supplied `name` values are ignored — names are generated."""
         link = Database.session.scalar(
-            sqla.select(InstanceValues).where(
-                InstanceValues.inst_uuid == owner_uuid,
-                InstanceValues.prop_uuid == prop.uuid,
+            sqla.select(TABLE_InstanceValues).where(
+                TABLE_InstanceValues.inst_uuid == owner_uuid,
+                TABLE_InstanceValues.prop_uuid == prop.uuid,
             )
         )
         if draft is None:
@@ -86,8 +86,8 @@ class WEmbedded:
         instances orphan."""
         child_uuids = list(
             Database.session.scalars(
-                sqla.select(InstanceValues.uuid).where(
-                    InstanceValues.prop_uuid == prop_uuid
+                sqla.select(TABLE_InstanceValues.uuid).where(
+                    TABLE_InstanceValues.prop_uuid == prop_uuid
                 )
             ).all()
         )
@@ -101,7 +101,7 @@ class WEmbedded:
         then recurse — grandchild names embed the child name. The
         instance graph is a tree (children are always created fresh),
         so the recursion terminates."""
-        inst = Database.session.get(Instances, object_uuid)
+        inst = Database.session.get(TABLE_Instances, object_uuid)
         if inst is None:
             return
         owner = WType.by_uuid(inst.type_uuid)
@@ -111,9 +111,9 @@ class WEmbedded:
             if not prop.value_type().is_embedded:
                 continue
             link = Database.session.scalar(
-                sqla.select(InstanceValues).where(
-                    InstanceValues.inst_uuid == object_uuid,
-                    InstanceValues.prop_uuid == prop.uuid,
+                sqla.select(TABLE_InstanceValues).where(
+                    TABLE_InstanceValues.inst_uuid == object_uuid,
+                    TABLE_InstanceValues.prop_uuid == prop.uuid,
                 )
             )
             if link is None:
@@ -128,13 +128,13 @@ class WEmbedded:
         registry name (Type:shortuuid) while the parent's name prop is
         still unset — a later name write regenerates it."""
         base: str | None = None
-        inst = Database.session.get(Instances, owner_uuid)
+        inst = Database.session.get(TABLE_Instances, owner_uuid)
         if inst is not None:
             owner = WType.by_uuid(inst.type_uuid)
             if owner is not None:
                 name_prop = WProp.by_key(owner, NAME_PROP_KEY)
                 if name_prop is not None:
-                    row = Database.session.get(StringValues, (owner_uuid, name_prop.uuid))
+                    row = Database.session.get(TABLE_StringValues, (owner_uuid, name_prop.uuid))
                     base = None if row is None else cast(str | None, row.value)
             if not base:
                 base = inst.name
@@ -149,7 +149,7 @@ class WEmbedded:
     def _create_child(cls, owner_uuid: UUID, prop: WProp) -> UUID:
         child_type = prop.value_type()
         child_uuid = uuid4()
-        Instances.register(
+        TABLE_Instances.register(
             child_uuid,
             child_type.uuid,
             REGISTRY_NAME_FORMAT.format(
@@ -164,7 +164,7 @@ class WEmbedded:
         # FKs into instances
         Database.session.flush()
         Database.session.add(
-            InstanceValues(uuid=child_uuid, prop_uuid=prop.uuid, inst_uuid=owner_uuid)
+            TABLE_InstanceValues(uuid=child_uuid, prop_uuid=prop.uuid, inst_uuid=owner_uuid)
         )
         Database.session.flush()
         return child_uuid

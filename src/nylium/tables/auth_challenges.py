@@ -10,7 +10,7 @@ from nylium.database import Database, databasemethod
 from nylium.tables.base import Base
 
 
-class AuthChallenges(Base):
+class TABLE_AuthChallenges(Base):
     """One-shot WebAuthn challenges. Consumed on use, dead after TTL."""
     __tablename__: str = "auth_challenges"
 

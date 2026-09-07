@@ -1,6 +1,6 @@
 """TypeStore: the Mapping contract over the types table (ADR-0010).
 
-``types`` must behave like ``dict[UUID, TypesRow]`` (plus a name index):
+``types`` must behave like ``dict[UUID, TABLE_Types]`` (plus a name index):
 ``types[uuid]``, ``types.get``, ``uuid in types``, ``iter(types)``,
 ``len(types)``, ``types.all()`` and the ``by_name`` / ``update`` /
 ``delete`` write ops.

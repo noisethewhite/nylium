@@ -8,7 +8,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from nylium.tables.base import Base
 
 
-class InstanceValues(Base):
+class TABLE_InstanceValues(Base):
     __tablename__: str = "instance_values"
 
     uuid: Mapped[UUID] = mapped_column(

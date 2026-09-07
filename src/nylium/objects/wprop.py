@@ -13,17 +13,17 @@ from sqlalchemy.orm import Mapped
 
 from nylium.database import Database, databasemethod
 from nylium.tables import (
-    BooleanValues,
-    DatetimeValues,
-    DateValues,
-    InstanceValues,
-    IntegerValues,
-    MonthDayTimeValues,
-    MonthDayValues,
-    NumericValues,
-    Props,
-    StringValues,
-    TimeValues,
+    TABLE_BooleanValues,
+    TABLE_DatetimeValues,
+    TABLE_DateValues,
+    TABLE_InstanceValues,
+    TABLE_IntegerValues,
+    TABLE_MonthDayTimeValues,
+    TABLE_MonthDayValues,
+    TABLE_NumericValues,
+    TABLE_Props,
+    TABLE_StringValues,
+    TABLE_TimeValues,
 )
 
 if TYPE_CHECKING:
@@ -43,25 +43,25 @@ class _PropKeyedValues(Protocol):
 # Tables keyed by prop_uuid — a retype wipes the old values from all of
 # them so the new type starts clean (Null) on every instance.
 VALUE_TABLES: tuple[type[_PropKeyedValues], ...] = (
-    StringValues,
-    IntegerValues,
-    NumericValues,
-    BooleanValues,
-    DatetimeValues,
-    DateValues,
-    TimeValues,
-    MonthDayValues,
-    MonthDayTimeValues,
-    InstanceValues,
+    TABLE_StringValues,
+    TABLE_IntegerValues,
+    TABLE_NumericValues,
+    TABLE_BooleanValues,
+    TABLE_DatetimeValues,
+    TABLE_DateValues,
+    TABLE_TimeValues,
+    TABLE_MonthDayValues,
+    TABLE_MonthDayTimeValues,
+    TABLE_InstanceValues,
 )
 
 
 class WProp:
-    ROW: ClassVar[type[Props]] = Props
+    ROW: ClassVar[type[TABLE_Props]] = TABLE_Props
 
-    _row: Props
+    _row: TABLE_Props
 
-    def __init__(self, row: Props):
+    def __init__(self, row: TABLE_Props):
         # snapshot for reads (session-independent); _row is kept only for
         # the write path in ensure() and is guarded there
         self._row = row
@@ -87,7 +87,7 @@ class WProp:
     def function_uuid(self) -> UUID | None:
         return self._function_uuid
 
-    def _live_row(self) -> Props:
+    def _live_row(self) -> TABLE_Props:
         if sqla.inspect(self._row).detached:
             msg = f"prop {self._key!r} wraps a row whose session is gone — writes must run inside a sessionmethod chain"
             raise RuntimeError(msg)
@@ -97,8 +97,8 @@ class WProp:
     @databasemethod(commit=False)
     def by_key(cls, owner: "WType", key: str) -> "WProp | None":
         row = Database.session.scalar(
-            sqla.select(Props).where(
-                Props.owner_type_uuid == owner.uuid, Props.key == key
+            sqla.select(TABLE_Props).where(
+                TABLE_Props.owner_type_uuid == owner.uuid, TABLE_Props.key == key
             )
         )
         return None if row is None else cls(row)
@@ -107,9 +107,9 @@ class WProp:
     @databasemethod(commit=False)
     def all_for(cls, owner: "WType") -> "list[WProp]":
         rows = Database.session.scalars(
-            sqla.select(Props)
-            .where(Props.owner_type_uuid == owner.uuid)
-            .order_by(Props.position)
+            sqla.select(TABLE_Props)
+            .where(TABLE_Props.owner_type_uuid == owner.uuid)
+            .order_by(TABLE_Props.position)
         ).all()
         return [cls(row) for row in rows]
 
@@ -143,7 +143,7 @@ class WProp:
         existing = {
             row.uuid: row
             for row in Database.session.scalars(
-                sqla.select(Props).where(Props.owner_type_uuid == owner.uuid)
+                sqla.select(TABLE_Props).where(TABLE_Props.owner_type_uuid == owner.uuid)
             )
         }
         kept = {uuid for uuid, _, _, _ in items if uuid is not None}
@@ -154,7 +154,7 @@ class WProp:
         for position, (prop_uuid, key, value_type_uuid, formula) in enumerate(items):
             if prop_uuid is None or prop_uuid not in existing:
                 Database.session.add(
-                    Props(
+                    TABLE_Props(
                         uuid=uuid4(),
                         key=key,
                         owner_type_uuid=owner.uuid,
@@ -194,7 +194,7 @@ class WProp:
             live.position = position
             live.formula = formula
             return existing
-        row = Props(
+        row = TABLE_Props(
             uuid=uuid4(),
             key=key,
             owner_type_uuid=owner.uuid,

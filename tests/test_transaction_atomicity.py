@@ -9,8 +9,8 @@ from uuid import uuid4
 import sqlalchemy as sqla
 
 from nylium.database import Database, databasemethod
-from nylium.tables import Instances
-from nylium.tables.types import TypesRow
+from nylium.tables import TABLE_Instances
+from nylium.tables.types import TABLE_Types
 
 
 class _Boom(Exception):
@@ -23,7 +23,7 @@ def test_nested_write_rolls_back_on_outer_error():
     @databasemethod(commit=True)
     def make_type():
         Database.session.add(
-            TypesRow(uuid=tuuid, name="ProbeType", plural_name="P", icon="x", color="#000000")
+            TABLE_Types(uuid=tuuid, name="ProbeType", plural_name="P", icon="x", color="#000000")
         )
 
     make_type()
@@ -32,7 +32,7 @@ def test_nested_write_rolls_back_on_outer_error():
     def outer():
         @databasemethod(commit=True)
         def register():
-            Database.session.add(Instances(uuid=uuid4(), type_uuid=tuuid, name="n"))
+            Database.session.add(TABLE_Instances(uuid=uuid4(), type_uuid=tuuid, name="n"))
 
         register()
         raise _Boom()
@@ -45,7 +45,7 @@ def test_nested_write_rolls_back_on_outer_error():
     @databasemethod(commit=False)
     def count_instances():
         return Database.session.scalar(
-            sqla.select(sqla.func.count()).select_from(Instances)
+            sqla.select(sqla.func.count()).select_from(TABLE_Instances)
         ) or 0
 
     assert count_instances() == 0, "nested write leaked past the outer rollback"
@@ -57,7 +57,7 @@ def test_outer_commit_persists_nested_write():
     @databasemethod(commit=True)
     def make_type():
         Database.session.add(
-            TypesRow(uuid=tuuid, name="ProbeType2", plural_name="P2", icon="x", color="#000000")
+            TABLE_Types(uuid=tuuid, name="ProbeType2", plural_name="P2", icon="x", color="#000000")
         )
 
     make_type()
@@ -66,7 +66,7 @@ def test_outer_commit_persists_nested_write():
     def outer():
         @databasemethod(commit=True)
         def register():
-            Database.session.add(Instances(uuid=uuid4(), type_uuid=tuuid, name="n"))
+            Database.session.add(TABLE_Instances(uuid=uuid4(), type_uuid=tuuid, name="n"))
 
         register()
 
@@ -75,7 +75,7 @@ def test_outer_commit_persists_nested_write():
     @databasemethod(commit=False)
     def count_instances():
         return Database.session.scalar(
-            sqla.select(sqla.func.count()).select_from(Instances)
+            sqla.select(sqla.func.count()).select_from(TABLE_Instances)
         ) or 0
 
     assert count_instances() == 1, "outer commit did not persist the nested write"

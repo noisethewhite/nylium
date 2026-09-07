@@ -7,7 +7,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from nylium.tables.base import Base
 
 
-class NumericValues(Base):
+class TABLE_NumericValues(Base):
     __tablename__: str = "numeric_values"
 
     inst_uuid: Mapped[UUID] = mapped_column(

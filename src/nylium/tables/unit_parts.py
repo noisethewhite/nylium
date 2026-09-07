@@ -13,12 +13,12 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from nylium.database import Database, databasemethod
 from nylium.tables.base import Base
-from nylium.tables.numeric_values import NumericValues
-from nylium.tables.props import Props
+from nylium.tables.numeric_values import TABLE_NumericValues
+from nylium.tables.props import TABLE_Props
 from nylium.tables.types import types
 
 
-class UnitParts(Base):
+class TABLE_UnitParts(Base):
     __tablename__: str = "unit_parts"
     __table_args__: tuple[UniqueConstraint, ...] = (
         # Part names are unique within their unit — values reference them
@@ -42,7 +42,7 @@ class UnitParts(Base):
 
     @classmethod
     @databasemethod(commit=False)
-    def list_for(cls, type_uuid: UUID) -> list["UnitParts"]:
+    def list_for(cls, type_uuid: UUID) -> list["TABLE_UnitParts"]:
         return list(
             Database.session.scalars(
                 sqla.select(cls)
@@ -53,14 +53,14 @@ class UnitParts(Base):
 
     @classmethod
     @databasemethod(commit=False)
-    def by_name(cls, type_uuid: UUID, name: str) -> "UnitParts | None":
+    def by_name(cls, type_uuid: UUID, name: str) -> "TABLE_UnitParts | None":
         return Database.session.scalar(
             sqla.select(cls).where(cls.type_uuid == type_uuid, cls.name == name)
         )
 
     @classmethod
     @databasemethod(commit=False)
-    def base_of(cls, type_uuid: UUID) -> "UnitParts | None":
+    def base_of(cls, type_uuid: UUID) -> "TABLE_UnitParts | None":
         return Database.session.scalar(
             sqla.select(cls).where(cls.type_uuid == type_uuid, cls.is_base.is_(True))
         )
@@ -95,13 +95,13 @@ class UnitParts(Base):
         cls, parameterized_uuid: UUID, part_name: str | None
     ) -> int:
         conditions = [
-            Props.value_type_uuid == parameterized_uuid,
-            NumericValues.prop_uuid == Props.uuid,
+            TABLE_Props.value_type_uuid == parameterized_uuid,
+            TABLE_NumericValues.prop_uuid == TABLE_Props.uuid,
         ]
         if part_name is not None:
-            conditions.append(NumericValues.unit == part_name)
+            conditions.append(TABLE_NumericValues.unit == part_name)
         return int(
-            Database.session.scalar(sqla.select(sqla.func.count()).select_from(NumericValues).where(*conditions))
+            Database.session.scalar(sqla.select(sqla.func.count()).select_from(TABLE_NumericValues).where(*conditions))
             or 0
         )
 
@@ -153,14 +153,14 @@ class UnitParts(Base):
         if parameterized is None:
             return
         _ = Database.session.execute(
-            sqla.update(NumericValues)
+            sqla.update(TABLE_NumericValues)
             .where(
-                NumericValues.prop_uuid.in_(
-                    sqla.select(Props.uuid).where(
-                        Props.value_type_uuid == parameterized.uuid
+                TABLE_NumericValues.prop_uuid.in_(
+                    sqla.select(TABLE_Props.uuid).where(
+                        TABLE_Props.value_type_uuid == parameterized.uuid
                     )
                 ),
-                NumericValues.unit == old_name,
+                TABLE_NumericValues.unit == old_name,
             )
             .values(unit=new_name)
         )

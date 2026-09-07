@@ -10,7 +10,7 @@ from nylium.tables.base import Base
 from nylium.tables.types import types
 
 
-class Props(Base):
+class TABLE_Props(Base):
     __tablename__: str = "props"
     __table_args__: tuple[UniqueConstraint, ...] = (
         # One key can't be defined twice on the same owner type
@@ -41,7 +41,7 @@ class Props(Base):
     @classmethod
     @databasemethod(commit=False)
     def count_with_value_type(cls, value_type_uuid: UUID) -> int:
-        """Props whose value type is this row — the FK stops deletes,
+        """TABLE_Props whose value type is this row — the FK stops deletes,
         callers that want a friendly error check here first."""
         return int(
             Database.session.scalar(

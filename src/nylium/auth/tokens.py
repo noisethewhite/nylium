@@ -12,7 +12,7 @@ import secrets
 from typing import ClassVar
 from uuid import UUID
 
-from nylium.tables import ApiTokens
+from nylium.tables import TABLE_ApiTokens
 
 
 class tokens:
@@ -26,16 +26,16 @@ class tokens:
     def issue(cls, user_uuid: UUID, name: str, scope: str) -> tuple[UUID, str]:
         """Create a token, returning (uuid, raw) — raw is shown once."""
         raw = secrets.token_urlsafe(32)
-        row = ApiTokens.create(user_uuid, name, cls.hash_token(raw), scope)
+        row = TABLE_ApiTokens.create(user_uuid, name, cls.hash_token(raw), scope)
         return row.uuid, raw
 
     @classmethod
-    def resolve(cls, raw: str) -> "ApiTokens | None":
+    def resolve(cls, raw: str) -> "TABLE_ApiTokens | None":
         """Resolve a raw token to its live row (revoked -> None)."""
-        row = ApiTokens.by_hash(cls.hash_token(raw))
+        row = TABLE_ApiTokens.by_hash(cls.hash_token(raw))
         if row is None or row.revoked_at is not None:
             return None
-        ApiTokens.mark_used(row.uuid)
+        TABLE_ApiTokens.mark_used(row.uuid)
         return row
 
     @classmethod
