@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import ClassVar
 from uuid import UUID, uuid4
 
 import sqlalchemy as sqla
@@ -6,7 +7,7 @@ from sqlalchemy import DateTime, ForeignKey, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from nylium.database import Database, databasemethod
-from nylium.database.store import Store
+from nylium.database.tabledomain import TableDomain, TableMapping, tableproperty
 from nylium.tables.base import Base
 from nylium.tables.types import types
 
@@ -35,11 +36,23 @@ class TABLE_Instances(Base):
     )
 
 
-class Instances(Store[UUID, TABLE_Instances]):
-    """Instances access layer: rows by uuid, a type_uuid index, and write ops."""
+class Instance(TableDomain):
+    """One instance: a writable snapshot of a TABLE_Instances row."""
 
-    def __init__(self) -> None:
-        super().__init__(TABLE_Instances)
+    __table__: ClassVar[type[Base]] = TABLE_Instances
+
+    type_uuid: tableproperty[UUID] = tableproperty()
+    name: tableproperty[str] = tableproperty()
+    owner_object_uuid: tableproperty[UUID | None] = tableproperty()
+    owner_prop_uuid: tableproperty[UUID | None] = tableproperty()
+    created_at: tableproperty[datetime] = tableproperty()
+    modified_at: tableproperty[datetime] = tableproperty()
+
+
+class Instances(TableMapping[Instance]):
+    """The instances table as a Mapping of writable instances."""
+
+    __domain__: ClassVar[type[TableDomain]] = Instance
 
     @databasemethod(commit=False)
     def by_type(self, type_uuid: UUID) -> list[UUID]:

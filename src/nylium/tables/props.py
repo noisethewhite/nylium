@@ -1,4 +1,4 @@
-from typing import cast
+from typing import ClassVar, cast
 from uuid import UUID, uuid4
 
 import sqlalchemy as sqla
@@ -6,7 +6,7 @@ from sqlalchemy import ForeignKey, Integer, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from nylium.database import Database, databasemethod
-from nylium.database.store import Store
+from nylium.database.tabledomain import TableDomain, TableMapping, tableproperty
 from nylium.tables.base import Base
 from nylium.tables.types import types
 
@@ -40,11 +40,23 @@ class TABLE_Props(Base):
     function_uuid: Mapped[UUID | None] = mapped_column(nullable=True)
 
 
-class Props(Store[UUID, TABLE_Props]):
-    """Props access layer: rows by uuid plus the owner/value-type indexes."""
+class Prop(TableDomain):
+    """One prop: a writable snapshot of a TABLE_Props row."""
 
-    def __init__(self) -> None:
-        super().__init__(TABLE_Props)
+    __table__: ClassVar[type[Base]] = TABLE_Props
+
+    key: tableproperty[str] = tableproperty()
+    owner_type_uuid: tableproperty[UUID] = tableproperty()
+    value_type_uuid: tableproperty[UUID] = tableproperty()
+    position: tableproperty[int] = tableproperty()
+    formula: tableproperty[str | None] = tableproperty()
+    function_uuid: tableproperty[UUID | None] = tableproperty()
+
+
+class Props(TableMapping[Prop]):
+    """The props table as a Mapping of writable props."""
+
+    __domain__: ClassVar[type[TableDomain]] = Prop
 
     @databasemethod(commit=False)
     def count_with_value_type(self, value_type_uuid: UUID) -> int:

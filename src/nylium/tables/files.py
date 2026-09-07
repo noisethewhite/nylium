@@ -1,3 +1,5 @@
+from collections.abc import Generator
+from typing import ClassVar, cast
 from uuid import UUID, uuid4
 
 import sqlalchemy as sqla
@@ -5,7 +7,8 @@ from sqlalchemy import BigInteger, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from nylium.database import Database, databasemethod
-from nylium.database.store import Store
+from nylium.database.sessioncontext import SessionContext
+from nylium.database.tabledomain import TableDomain, TableMapping, tableproperty
 from nylium.tables.base import Base
 
 
@@ -23,11 +26,21 @@ class TABLE_Files(Base):
     size_bytes: Mapped[int] = mapped_column(BigInteger)
 
 
-class Files(Store[UUID, TABLE_Files]):
-    """Files access layer: rows by uuid (Mapping) plus name-ordered listing."""
+class File(TableDomain):
+    """One file: a writable snapshot of a TABLE_Files row."""
 
-    def __init__(self) -> None:
-        super().__init__(TABLE_Files)
+    __table__: ClassVar[type[Base]] = TABLE_Files
+
+    type_name: tableproperty[str] = tableproperty()
+    name: tableproperty[str] = tableproperty()
+    mime: tableproperty[str] = tableproperty()
+    size_bytes: tableproperty[int] = tableproperty()
+
+
+class Files(TableMapping[File]):
+    """The files table as a Mapping of writable files."""
+
+    __domain__: ClassVar[type[TableDomain]] = File
 
     @databasemethod(commit=True)
     def create(
@@ -49,13 +62,16 @@ class Files(Store[UUID, TABLE_Files]):
         )
         Database.session.flush()
 
-    @databasemethod(commit=False)
-    def list_all(self) -> list[TABLE_Files]:
-        return list(
-            Database.session.scalars(
-                sqla.select(TABLE_Files).order_by(TABLE_Files.name)
-            ).all()
-        )
+    def list_all(self) -> Generator[File, None, None]:
+        """Every file, name-ordered, lazily."""
+        with SessionContext():
+            all_files = [
+                cast(File, File.from_row(row))
+                for row in Database.session.scalars(
+                    sqla.select(TABLE_Files).order_by(TABLE_Files.name)
+                )
+            ]
+        yield from all_files
 
     @databasemethod(commit=True)
     def rename(self, uuid: UUID, name: str) -> None:

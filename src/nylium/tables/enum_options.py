@@ -2,6 +2,8 @@
 # with kind="enum"; its allowed values are these rows. Option values
 # are what enum-typed props store in string_values — renaming an option
 # rewrites those rows too.
+from collections.abc import Generator
+from typing import ClassVar, cast
 from uuid import UUID, uuid4
 
 import sqlalchemy as sqla
@@ -9,7 +11,8 @@ from sqlalchemy import ForeignKey, Integer, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from nylium.database import Database, databasemethod
-from nylium.database.store import Store
+from nylium.database.sessioncontext import SessionContext
+from nylium.database.tabledomain import TableDomain, TableMapping, tableproperty
 from nylium.tables.base import Base
 from nylium.tables.string_values import TABLE_StringValues
 from nylium.tables.props import TABLE_Props
@@ -29,21 +32,33 @@ class TABLE_EnumOptions(Base):
     position: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
 
-class EnumOptions(Store[UUID, TABLE_EnumOptions]):
-    """EnumOptions access layer: the options of a string-enum type."""
+class EnumOption(TableDomain):
+    """One enum option: a writable snapshot of a TABLE_EnumOptions row."""
 
-    def __init__(self) -> None:
-        super().__init__(TABLE_EnumOptions)
+    __table__: ClassVar[type[Base]] = TABLE_EnumOptions
 
-    @databasemethod(commit=False)
-    def list_for(self, type_uuid: UUID) -> list[TABLE_EnumOptions]:
-        return list(
-            Database.session.scalars(
-                sqla.select(TABLE_EnumOptions)
-                .where(TABLE_EnumOptions.type_uuid == type_uuid)
-                .order_by(TABLE_EnumOptions.position)
-            ).all()
-        )
+    type_uuid: tableproperty[UUID] = tableproperty()
+    value: tableproperty[str] = tableproperty()
+    position: tableproperty[int] = tableproperty()
+
+
+class EnumOptions(TableMapping[EnumOption]):
+    """The enum_options table as a Mapping of writable options."""
+
+    __domain__: ClassVar[type[TableDomain]] = EnumOption
+
+    def list_for(self, type_uuid: UUID) -> Generator[EnumOption, None, None]:
+        """The options of one enum type, in display order, lazily."""
+        with SessionContext():
+            options = [
+                cast(EnumOption, EnumOption.from_row(row))
+                for row in Database.session.scalars(
+                    sqla.select(TABLE_EnumOptions)
+                    .where(TABLE_EnumOptions.type_uuid == type_uuid)
+                    .order_by(TABLE_EnumOptions.position)
+                )
+            ]
+        yield from options
 
     @databasemethod(commit=False)
     def values_of(self, type_uuid: UUID) -> list[str]:
