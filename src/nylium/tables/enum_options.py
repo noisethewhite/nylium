@@ -37,12 +37,13 @@ class EnumOption(TableDomain):
 
     __table__: ClassVar[type[Base]] = TABLE_EnumOptions
 
+    uuid: tableproperty[UUID] = tableproperty()
     type_uuid: tableproperty[UUID] = tableproperty()
     value: tableproperty[str] = tableproperty()
     position: tableproperty[int] = tableproperty()
 
 
-class EnumOptions(TableMapping[EnumOption]):
+class EnumOptions(TableMapping[UUID, EnumOption]):
     """The enum_options table as a Mapping of writable options."""
 
     __domain__: ClassVar[type[TableDomain]] = EnumOption

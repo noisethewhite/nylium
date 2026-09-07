@@ -56,6 +56,7 @@ class UnitPart(TableDomain):
 
     __table__: ClassVar[type[Base]] = TABLE_UnitParts
 
+    uuid: tableproperty[UUID] = tableproperty()
     type_uuid: tableproperty[UUID] = tableproperty()
     name: tableproperty[str] = tableproperty()
     multiplier: tableproperty[Decimal] = tableproperty()
@@ -64,7 +65,7 @@ class UnitPart(TableDomain):
     position: tableproperty[int] = tableproperty()
 
 
-class UnitParts(TableMapping[UnitPart]):
+class UnitParts(TableMapping[UUID, UnitPart]):
     """The unit_parts table as a Mapping of writable parts."""
 
     __domain__: ClassVar[type[TableDomain]] = UnitPart

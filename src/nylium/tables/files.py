@@ -31,13 +31,14 @@ class File(TableDomain):
 
     __table__: ClassVar[type[Base]] = TABLE_Files
 
+    uuid: tableproperty[UUID] = tableproperty()
     type_name: tableproperty[str] = tableproperty()
     name: tableproperty[str] = tableproperty()
     mime: tableproperty[str] = tableproperty()
     size_bytes: tableproperty[int] = tableproperty()
 
 
-class Files(TableMapping[File]):
+class Files(TableMapping[UUID, File]):
     """The files table as a Mapping of writable files."""
 
     __domain__: ClassVar[type[TableDomain]] = File

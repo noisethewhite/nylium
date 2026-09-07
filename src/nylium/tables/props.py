@@ -45,6 +45,7 @@ class Prop(TableDomain):
 
     __table__: ClassVar[type[Base]] = TABLE_Props
 
+    uuid: tableproperty[UUID] = tableproperty()
     key: tableproperty[str] = tableproperty()
     owner_type_uuid: tableproperty[UUID] = tableproperty()
     value_type_uuid: tableproperty[UUID] = tableproperty()
@@ -53,7 +54,7 @@ class Prop(TableDomain):
     function_uuid: tableproperty[UUID | None] = tableproperty()
 
 
-class Props(TableMapping[Prop]):
+class Props(TableMapping[UUID, Prop]):
     """The props table as a Mapping of writable props."""
 
     __domain__: ClassVar[type[TableDomain]] = Prop

@@ -55,6 +55,7 @@ class Type(TableDomain):
 
     __table__: ClassVar[type[Base]] = TABLE_Types
 
+    uuid: tableproperty[UUID] = tableproperty()
     name: tableproperty[str] = tableproperty()
     plural_name: tableproperty[str | None] = tableproperty()
     icon: tableproperty[str] = tableproperty()
@@ -63,7 +64,7 @@ class Type(TableDomain):
     embedded: tableproperty[bool] = tableproperty()
 
 
-class Types(TableMapping[Type]):
+class Types(TableMapping[UUID, Type]):
     """The types table as a Mapping of writable types."""
 
     __domain__: ClassVar[type[TableDomain]] = Type

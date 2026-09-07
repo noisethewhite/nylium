@@ -41,6 +41,7 @@ class Instance(TableDomain):
 
     __table__: ClassVar[type[Base]] = TABLE_Instances
 
+    uuid: tableproperty[UUID] = tableproperty()
     type_uuid: tableproperty[UUID] = tableproperty()
     name: tableproperty[str] = tableproperty()
     owner_object_uuid: tableproperty[UUID | None] = tableproperty()
@@ -49,7 +50,7 @@ class Instance(TableDomain):
     modified_at: tableproperty[datetime] = tableproperty()
 
 
-class Instances(TableMapping[Instance]):
+class Instances(TableMapping[UUID, Instance]):
     """The instances table as a Mapping of writable instances."""
 
     __domain__: ClassVar[type[TableDomain]] = Instance
