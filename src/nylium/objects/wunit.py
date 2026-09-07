@@ -13,7 +13,8 @@ from decimal import Decimal
 from uuid import UUID
 
 from nylium.database import Database, databasemethod
-from nylium.tables import TABLE_NumericValues, unit_parts
+from nylium.tables.unit_parts import UnitPart
+from nylium.tables import TABLE_NumericValues
 from nylium.objects.quantity import Quantity
 from nylium.objects.wprop import WProp
 from nylium.objects.wtype import WType
@@ -44,7 +45,10 @@ class WUnit:
         owner = cls._unit_owner(type_name)
         if value.unit is None:
             return Quantity(value=value.value, unit=None)
-        part = unit_parts.by_name(owner.uuid, value.unit)
+        part = next(
+            (p for p in UnitPart.type_uuid.foreach(owner.uuid) if p.name == value.unit),
+            None,
+        )
         if part is None:
             raise ValidationError(
                 f"{value.unit!r} is not a part of unit {owner.name!r}"
@@ -67,7 +71,14 @@ class WUnit:
         if entered_unit is None:
             return Quantity(value=canonical, unit=None)
         owner = cls._unit_owner(type_name)
-        part = unit_parts.by_name(owner.uuid, entered_unit)
+        part = next(
+            (
+                p
+                for p in UnitPart.type_uuid.foreach(owner.uuid)
+                if p.name == entered_unit
+            ),
+            None,
+        )
         if part is None:
             # delete-in-use is refused and renames propagate, so a missing
             # part means corrupted data — fail loud, never silently re-scale

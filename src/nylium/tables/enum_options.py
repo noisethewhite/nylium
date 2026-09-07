@@ -2,8 +2,7 @@
 # with kind="enum"; its allowed values are these rows. Option values
 # are what enum-typed props store in string_values — renaming an option
 # rewrites those rows too.
-from collections.abc import Generator
-from typing import ClassVar, cast
+from typing import ClassVar
 from uuid import UUID, uuid4
 
 import sqlalchemy as sqla
@@ -11,7 +10,6 @@ from sqlalchemy import ForeignKey, Integer, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from nylium.database import Database, databasemethod
-from nylium.database.sessioncontext import SessionContext
 from nylium.database.tabledomain import TableDomain, TableMapping, tableproperty
 from nylium.tables.base import Base
 from nylium.tables.string_values import TABLE_StringValues
@@ -37,10 +35,10 @@ class EnumOption(TableDomain):
 
     __table__: ClassVar[type[Base]] = TABLE_EnumOptions
 
-    uuid: tableproperty[UUID] = tableproperty()
-    type_uuid: tableproperty[UUID] = tableproperty()
-    value: tableproperty[str] = tableproperty()
-    position: tableproperty[int] = tableproperty()
+    uuid: tableproperty[EnumOption, UUID] = tableproperty()
+    type_uuid: tableproperty[EnumOption, UUID] = tableproperty()
+    value: tableproperty[EnumOption, str] = tableproperty()
+    position: tableproperty[EnumOption, int] = tableproperty()
 
     def wire(self) -> dict[str, object]:
         """The JSON-safe wire shape (ADR-0011 §5), matching
@@ -52,29 +50,6 @@ class EnumOptions(TableMapping[UUID, EnumOption]):
     """The enum_options table as a Mapping of writable options."""
 
     __domain__: ClassVar[type[TableDomain]] = EnumOption
-
-    def list_for(self, type_uuid: UUID) -> Generator[EnumOption, None, None]:
-        """The options of one enum type, in display order, lazily."""
-        with SessionContext():
-            options = [
-                cast(EnumOption, EnumOption.from_row(row))
-                for row in Database.session.scalars(
-                    sqla.select(TABLE_EnumOptions)
-                    .where(TABLE_EnumOptions.type_uuid == type_uuid)
-                    .order_by(TABLE_EnumOptions.position)
-                )
-            ]
-        yield from options
-
-    @databasemethod(commit=False)
-    def values_of(self, type_uuid: UUID) -> list[str]:
-        return list(
-            Database.session.scalars(
-                sqla.select(TABLE_EnumOptions.value)
-                .where(TABLE_EnumOptions.type_uuid == type_uuid)
-                .order_by(TABLE_EnumOptions.position)
-            ).all()
-        )
 
     @databasemethod(commit=False)
     def count_usage(self, type_uuid: UUID, value: str) -> int:

@@ -69,13 +69,13 @@ class UnitPart(TableDomain):
 
     __table__: ClassVar[type[Base]] = TABLE_UnitParts
 
-    uuid: tableproperty[UUID] = tableproperty()
-    type_uuid: tableproperty[UUID] = tableproperty()
-    name: tableproperty[str] = tableproperty()
-    multiplier: tableproperty[Decimal] = tableproperty()
-    offset: tableproperty[Decimal] = tableproperty()
-    is_base: tableproperty[bool] = tableproperty()
-    position: tableproperty[int] = tableproperty()
+    uuid: tableproperty[UnitPart, UUID] = tableproperty()
+    type_uuid: tableproperty[UnitPart, UUID] = tableproperty()
+    name: tableproperty[UnitPart, str] = tableproperty()
+    multiplier: tableproperty[UnitPart, Decimal] = tableproperty()
+    offset: tableproperty[UnitPart, Decimal] = tableproperty()
+    is_base: tableproperty[UnitPart, bool] = tableproperty()
+    position: tableproperty[UnitPart, int] = tableproperty()
 
     def wire(self) -> dict[str, object]:
         """The JSON-safe wire shape (ADR-0011 §5): Decimals cross as
@@ -106,32 +106,6 @@ class UnitParts(TableMapping[UUID, UnitPart]):
                 )
             ]
         yield from parts
-
-    @databasemethod(commit=False)
-    def by_name(self, type_uuid: UUID, name: str) -> UnitPart | None:
-        row = Database.session.scalar(
-            sqla.select(TABLE_UnitParts).where(
-                TABLE_UnitParts.type_uuid == type_uuid, TABLE_UnitParts.name == name
-            )
-        )
-        if row is None:
-            return None
-        return cast(UnitPart, UnitPart.from_row(row))
-
-    @databasemethod(commit=False)
-    def base_of(self, type_uuid: UUID) -> UnitPart | None:
-        row = Database.session.scalar(
-            sqla.select(TABLE_UnitParts).where(
-                TABLE_UnitParts.type_uuid == type_uuid,
-                TABLE_UnitParts.is_base.is_(True),
-            )
-        )
-        if row is None:
-            return None
-        return cast(UnitPart, UnitPart.from_row(row))
-
-    def names_of(self, type_uuid: UUID) -> list[str]:
-        return [part.name for part in self.list_for(type_uuid)]
 
     @databasemethod(commit=False)
     def usage_count(self, unit_type_name: str, part_name: str) -> int:

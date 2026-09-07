@@ -32,12 +32,12 @@ from typing import (
     Generic,
     TypeVar,
     cast,
-    overload,
     override,
 )
 
 import sqlalchemy as sqla
 
+from nylium.basic.tableproperty import tableproperty as basetableproperty
 from nylium.database import Database
 from nylium.database.databasemethod import databasemethod
 from nylium.database.sessioncontext import SessionContext
@@ -48,6 +48,7 @@ if TYPE_CHECKING:
 _T = TypeVar("_T")
 _K = TypeVar("_K")
 _D = TypeVar("_D", bound="TableDomain")
+_O = TypeVar("_O", bound="TableDomain")
 
 
 def _column(table: type[Base], name: str) -> sqla.Column[object]:
@@ -55,14 +56,14 @@ def _column(table: type[Base], name: str) -> sqla.Column[object]:
     return cast(sqla.Column[object], getattr(table, name))
 
 
-def _tableproperties(cls: type[TableDomain]) -> dict[str, tableproperty[object]]:
+def _tableproperties(cls: type[TableDomain]) -> dict[str, tableproperty[TableDomain, object]]:
     """All tableproperty fields of a domain class, base classes first."""
-    found: dict[str, tableproperty[object]] = {}
+    found: dict[str, tableproperty[TableDomain, object]] = {}
     for klass in reversed(cls.__mro__):
         members = cast("Mapping[str, object]", vars(klass))
         for name, candidate in members.items():
             if isinstance(candidate, tableproperty):
-                found[name] = cast("tableproperty[object]", candidate)
+                found[name] = cast("tableproperty[TableDomain, object]", candidate)
     return found
 
 
@@ -124,62 +125,57 @@ class TableDomain:
         )
 
 
-class tableproperty(Generic[_T]):
+class tableproperty(basetableproperty[_O, _T]):
     """A domain field backed by one row column (ADR-0011).
 
     Instance access reads the object's snapshot; instance assignment writes
     the value into the snapshot and issues an ``UPDATE`` through the owner's
     ``persist``. Class access returns the descriptor itself so
-    ``Xxx.field.list_for(value)`` can run a reverse lookup on the column.
+    ``Xxx.field.foreach(value)`` can run a reverse lookup on the column
+    (inherited from ``nylium.basic.tableproperty``). The two type
+    parameters are the owning domain class and the column's value type:
+    ``name: tableproperty[UnitPart, str]`` — the owner parameter is what
+    types ``foreach``'s yield.
 
-    ``column``/``owner`` are bound by ``__set_name__`` at class-creation;
-    the class-level defaults only satisfy the strict-initializer lint and
-    are never observed.
+    ``column`` is bound by ``__set_name__`` at class-creation; the
+    class-level default only satisfies the strict-initializer lint and is
+    never observed.
     """
 
     column: str = ""
-    owner: type[TableDomain] = TableDomain
 
-    def __set_name__(self, owner: type[TableDomain], name: str) -> None:
-        self.owner = owner
+    def __init__(self) -> None:
+        super().__init__(fget=self._read, fset=self._write, fforeach=self._scan)
+
+    @override
+    def __set_name__(self, owner: type[_O], name: str) -> None:
+        super().__set_name__(owner, name)
         self.column = name
 
-    @overload
-    def __get__(self, obj: None, objtype: None = None) -> tableproperty[_T]: ...
-
-    @overload
-    def __get__(self, obj: TableDomain, objtype: type | None = None) -> _T: ...
-
-    def __get__(
-        self, obj: TableDomain | None, objtype: type | None = None
-    ) -> tableproperty[_T] | _T:
-        if obj is None:
-            return self
+    def _read(self, obj: _O) -> _T:
         return cast(_T, obj.snapshot[self.column])
 
-    def __set__(self, obj: TableDomain, value: _T) -> None:
+    def _write(self, obj: _O, value: _T) -> None:
         obj.snapshot[self.column] = value
         obj.persist(self.column, value)
 
-    def list_for(self, value: _T) -> Generator[TableDomain, None, None]:
+    def _scan(self, owner: type[_O], value: _T) -> Generator[_O, None, None]:
         """Every domain object whose column equals ``value``, lazily.
 
         The rows are materialised inside one SessionContext (closed before the
         first yield) so a caller that abandons iteration early never strands a
-        live connection. Yields the owner's concrete domain type
-        (``UnitPart`` etc.) — the declared base keeps the descriptor generic
-        over one TypeVar.
+        live connection.
         """
-        table = self.owner.__table__
+        table = owner.__table__
         column = _column(table, self.column)
         with SessionContext():
             domains = [
-                self.owner.from_row(row)
+                owner.from_row(row)
                 for row in Database.session.scalars(
                     sqla.select(table).where(column == value)
                 )
             ]
-        yield from domains
+        yield from cast("list[_O]", domains)
 
 
 class TableMapping(Generic[_K, _D], Mapping[_K, _D]):
@@ -187,8 +183,10 @@ class TableMapping(Generic[_K, _D], Mapping[_K, _D]):
 
     Subclasses set ``__domain__`` to their concrete domain type; the domain's
     ``__table__`` supplies the row class. ``get``/``__getitem__``/``__iter__``
-    /``__len__`` come from here — the table-specific query helpers (``by_name``,
-    ``list_for``, write ops) live on the concrete Mapping next to the row.
+    /``__len__`` come from here. Reverse lookups go through the domain's
+    descriptors — ``Domain.field.foreach(value)``; only write ops
+    (``create``/``update``/``sync``) and multi-step aggregates live on the
+    concrete Mapping next to the row.
     ``_K`` is the PK type: ``UUID`` for domain tables, ``str``/``bytes`` for
     the auth session/challenge tables.
     """

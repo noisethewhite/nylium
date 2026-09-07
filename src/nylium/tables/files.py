@@ -31,11 +31,11 @@ class File(TableDomain):
 
     __table__: ClassVar[type[Base]] = TABLE_Files
 
-    uuid: tableproperty[UUID] = tableproperty()
-    type_name: tableproperty[str] = tableproperty()
-    name: tableproperty[str] = tableproperty()
-    mime: tableproperty[str] = tableproperty()
-    size_bytes: tableproperty[int] = tableproperty()
+    uuid: tableproperty[File, UUID] = tableproperty()
+    type_name: tableproperty[File, str] = tableproperty()
+    name: tableproperty[File, str] = tableproperty()
+    mime: tableproperty[File, str] = tableproperty()
+    size_bytes: tableproperty[File, int] = tableproperty()
 
     def wire(self) -> dict[str, object]:
         """The JSON-safe wire shape (ADR-0011 §5), matching the file

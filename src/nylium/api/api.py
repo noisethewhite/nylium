@@ -21,6 +21,9 @@ from nylium.api.views import FunctionView, ObjectRef, ObjectView
 from nylium.database import databasemethod
 from nylium.tables.files import File
 from nylium.tables.types import Type, types
+from nylium.tables.instances import Instance
+from nylium.tables.props import Prop
+from nylium.tables.unit_parts import UnitPart
 from nylium.tables import (
     enum_options,
     files,
@@ -38,6 +41,19 @@ from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import WColor, WInteger, WNumeric, WScalar, WString
 from nylium.objects.wtype import WType
 from nylium.objects.wtypemeta import StoredValue, WTypeMeta
+
+
+def _prop_value_type_name(owner_type_uuid: UUID, key: str) -> str:
+    """The value-type name of one prop — what `_normalize_value` needs."""
+    prop = next(
+        (p for p in Prop.owner_type_uuid.foreach(owner_type_uuid) if p.key == key),
+        None,
+    )
+    if prop is None:
+        owner = types.get(owner_type_uuid)
+        owner_name = "<gone>" if owner is None else owner.name
+        raise KeyError(f"type {owner_name!r} has no prop {key!r}")
+    return prop.value_type
 
 
 def _is_builtin_type(owner: WType) -> bool:
@@ -81,13 +97,13 @@ class Api:
     @classmethod
     @databasemethod(commit=False)
     def get_type(cls, name: str) -> Type | None:
-        return types.by_name(name)
+        return next(Type.name.foreach(name), None)
 
     @classmethod
     def _type_result(cls, name: str) -> Type:
         """Re-read a type the caller just wrote, for the return value.
         The write path resolves the name first, so a miss means a bug."""
-        result = types.by_name(name)
+        result = next(Type.name.foreach(name), None)
         if result is None:
             raise RuntimeError(f"type {name!r} vanished after write")
         return result
@@ -252,7 +268,9 @@ class Api:
         if not owner.is_unit:
             raise ValidationError(f"type {name!r} is not a unit")
         cls._validate_unit_draft(items)
-        old_base = unit_parts.base_of(owner.uuid)
+        old_base = next(
+            (p for p in UnitPart.type_uuid.foreach(owner.uuid) if p.is_base), None
+        )
         new_base_uuid = next(uuid for uuid, _, _, _, is_base in items if is_base)
         if (
             old_base is not None
@@ -415,7 +433,7 @@ class Api:
         if embedded_renamed:
             # a renamed embedded prop key invalidates every generated
             # child name of every instance of this type
-            for instance_uuid in instances.by_type(owner.uuid):
+            for instance_uuid in [i.uuid for i in Instance.type_uuid.foreach(owner.uuid)]:
                 WEmbedded.regenerate_names(instance_uuid)
         return cls._type_result(type_name)
 
@@ -442,7 +460,7 @@ class Api:
         if not final_name:
             raise ValidationError("type name must not be empty")
         cls._check_reserved_name(final_name, "type name")
-        collision_row = types.by_name(final_name)
+        collision_row = next(Type.name.foreach(final_name), None)
         if collision_row is not None and collision_row.uuid != owner.uuid:
             raise ValueError(f"type {final_name!r} already exists")
         final_plural = owner.plural_name if plural_name is None else plural_name
@@ -456,7 +474,7 @@ class Api:
         if owner.is_unit and final_name != name:
             # the parameterized Numeric<Unit> row tags along — prop value
             # types reference it by uuid, only the display name changes
-            parameterized_row = types.by_name(WType.unit_numeric_name(name))
+            parameterized_row = next(Type.name.foreach(WType.unit_numeric_name(name)), None)
             if parameterized_row is not None:
                 parameterized = WType.by_uuid(parameterized_row.uuid)
                 if parameterized is not None:
@@ -481,7 +499,7 @@ class Api:
             return False
         if _is_builtin_type(owner):
             raise ValidationError(f"type {name!r} is builtin and cannot be deleted")
-        instance_count = instances.count_of_type(owner.uuid)
+        instance_count = sum(1 for _ in Instance.type_uuid.foreach(owner.uuid))
         if instance_count:
             raise ValueError(
                 f"type {name!r} still has {instance_count} instances"
@@ -489,9 +507,11 @@ class Api:
         if owner.is_unit:
             # refuse while any prop is parameterized on this unit, then
             # drop the orphaned parameterized row with the unit itself
-            parameterized_row = types.by_name(WType.unit_numeric_name(name))
+            parameterized_row = next(Type.name.foreach(WType.unit_numeric_name(name)), None)
             if parameterized_row is not None:
-                refs = props.count_with_value_type(parameterized_row.uuid)
+                refs = sum(
+                    1 for _ in Prop.value_type_uuid.foreach(parameterized_row.uuid)
+                )
                 if refs:
                     raise ValueError(
                         f"unit {name!r} still parameterizes {refs} props"
@@ -514,7 +534,7 @@ class Api:
             return []
         views = [
             ObjectView.from_uuid(uuid)
-            for uuid in instances.by_type(owner.uuid)
+            for uuid in [i.uuid for i in Instance.type_uuid.foreach(owner.uuid)]
         ]
         return [view for view in views if view is not None]
 
@@ -541,7 +561,10 @@ class Api:
         def ref_label(ref: ObjectRef) -> str:
             wrapper = WObject.wrap(ref.uuid)
             label = cast(str | None, getattr(wrapper, NAME_PROP_KEY))
-            return label or instances.name_of(ref.uuid)
+            if label:
+                return label
+            inst = instances.get(ref.uuid)
+            return "" if inst is None else inst.name
 
         return render_object_markdown(view, ref_label)
 
@@ -579,12 +602,12 @@ class Api:
     def update_object(cls, uuid: UUID, props: dict[str, PropInput]) -> ObjectView:
         from nylium.server.errors import ValidationError
 
-        if instances.owner_of(uuid) is not None:
+        if instances[uuid].owner_object_uuid is not None:
             raise ValidationError(
                 "embedded objects are edited through their owner — write the embedded prop on the parent instead"
             )
         wrapper = WObject.wrap(uuid)
-        type_name = instances.get_type_name(uuid)
+        type_name = instances[uuid].type_name
         normalized = cls._normalize_props(type_name, props)
         for key, value in normalized.items():
             setattr(wrapper, key, value)
@@ -641,7 +664,7 @@ class Api:
     @classmethod
     @databasemethod(commit=False)
     def list_files(cls) -> list[File]:
-        return list(files.list_all())
+        return list(files.values())
 
     @classmethod
     @databasemethod(commit=True)
@@ -678,9 +701,10 @@ class Api:
     def delete_object(cls, uuid: UUID) -> bool:
         from nylium.server.errors import ValidationError
 
-        if not instances.exists(uuid):
+        inst = instances.get(uuid)
+        if inst is None:
             return False
-        if instances.owner_of(uuid) is not None:
+        if inst.owner_object_uuid is not None:
             raise ValidationError(
                 "embedded objects are deleted with their owner or by clearing the prop that holds them"
             )
@@ -855,7 +879,7 @@ class Api:
         fails the whole sync — schemas never strand a stored formula.
         Returns (prop uuid, new formula) updates; the caller persists
         them after the local schema change lands."""
-        array_type_row = types.by_name(WType.array_name(type_name))
+        array_type_row = next(Type.name.foreach(WType.array_name(type_name)), None)
         if array_type_row is None:
             return []
 
@@ -865,7 +889,10 @@ class Api:
             return cls._member_props(element_name)
 
         updates: list[tuple[UUID, str]] = []
-        usages = props.usages_of_value_type(array_type_row.uuid)
+        usages = [
+            (p.owner_type_uuid, p.key)
+            for p in Prop.value_type_uuid.foreach(array_type_row.uuid)
+        ]
         by_owner: dict[UUID, list[str]] = {}
         for dependent_uuid, array_key in usages:
             if dependent_uuid == owner_uuid:
@@ -948,11 +975,12 @@ class Api:
     ) -> dict[str, StoredValue]:
         """Callers hand links over as UUID/ObjectRef (that's all they have);
         the object layer wants WObject wrappers. Resolve by prop type."""
-        owner_type_row = types.by_name(type_name)
+        owner_type_row = next(Type.name.foreach(type_name), None)
         if owner_type_row is None:
             raise KeyError(f"no type {type_name!r}")
-        formula_readonly = props.formula_keys(owner_type_row.uuid)
-        function_readonly = props.function_keys(owner_type_row.uuid)
+        owner_props = list(Prop.owner_type_uuid.foreach(owner_type_row.uuid))
+        formula_readonly = {p.key for p in owner_props if p.formula is not None}
+        function_readonly = {p.key for p in owner_props if p.function_uuid is not None}
         result: dict[str, StoredValue] = {}
         for key, value in prop_specs.items():
             if key in formula_readonly:
@@ -968,7 +996,7 @@ class Api:
                     f"prop {key!r} of {type_name!r} is computed by a function — it is read-only"
                 )
             normalized = cls._normalize_value(
-                value, props.get_type_name(owner_type_row.uuid, key)
+                value, _prop_value_type_name(owner_type_row.uuid, key)
             )
             if key == NAME_PROP_KEY and isinstance(normalized, str):
                 # → would make a user-typed name indistinguishable from a
@@ -1015,8 +1043,11 @@ class Api:
                 raise TypeError(
                     f"embedded prop of type {type_name!r} takes an inline props draft, got {type(value).__name__}"
                 )
-            formula_readonly = props.formula_keys(resolved.uuid)
-            function_readonly = props.function_keys(resolved.uuid)
+            resolved_props = list(Prop.owner_type_uuid.foreach(resolved.uuid))
+            formula_readonly = {p.key for p in resolved_props if p.formula is not None}
+            function_readonly = {
+                p.key for p in resolved_props if p.function_uuid is not None
+            }
             for child_key in value:
                 if child_key in formula_readonly:
                     from nylium.server.errors import ValidationError
@@ -1031,7 +1062,7 @@ class Api:
                         f"prop {child_key!r} of {type_name!r} is computed by a function — it is read-only"
                     )
             return {
-                key: cls._normalize_value(item, props.get_type_name(resolved.uuid, key))
+                key: cls._normalize_value(item, _prop_value_type_name(resolved.uuid, key))
                 for key, item in value.items()
             }
         if isinstance(value, ObjectRef):

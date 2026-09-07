@@ -15,6 +15,7 @@ from webauthn.helpers import base64url_to_bytes, options_to_json
 from webauthn.helpers.structs import PublicKeyCredentialDescriptor
 
 from nylium.tables import auth_challenges, auth_credentials, auth_users
+from nylium.tables.auth_users import AuthUser
 from nylium.system.environment import Environment
 
 from .sessions import sessions
@@ -129,7 +130,7 @@ class ceremonies:
             if not user_name:
                 raise TypeError("user name required for the first passkey")
             # Retry after an aborted ceremony reuses the orphaned user row.
-            existing = auth_users.by_name(user_name)
+            existing = next(AuthUser.name.foreach(user_name), None)
             if existing is not None:
                 return existing.uuid
             return auth_users.create(user_name).uuid

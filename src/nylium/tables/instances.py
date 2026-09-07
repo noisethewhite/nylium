@@ -2,7 +2,6 @@ from datetime import datetime
 from typing import ClassVar
 from uuid import UUID, uuid4
 
-import sqlalchemy as sqla
 from sqlalchemy import DateTime, ForeignKey, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -41,37 +40,25 @@ class Instance(TableDomain):
 
     __table__: ClassVar[type[Base]] = TABLE_Instances
 
-    uuid: tableproperty[UUID] = tableproperty()
-    type_uuid: tableproperty[UUID] = tableproperty()
-    name: tableproperty[str] = tableproperty()
-    owner_object_uuid: tableproperty[UUID | None] = tableproperty()
-    owner_prop_uuid: tableproperty[UUID | None] = tableproperty()
-    created_at: tableproperty[datetime] = tableproperty()
-    modified_at: tableproperty[datetime] = tableproperty()
+    uuid: tableproperty[Instance, UUID] = tableproperty()
+    type_uuid: tableproperty[Instance, UUID] = tableproperty()
+    name: tableproperty[Instance, str] = tableproperty()
+    owner_object_uuid: tableproperty[Instance, UUID | None] = tableproperty()
+    owner_prop_uuid: tableproperty[Instance, UUID | None] = tableproperty()
+    created_at: tableproperty[Instance, datetime] = tableproperty()
+    modified_at: tableproperty[Instance, datetime] = tableproperty()
+
+    @property
+    def type_name(self) -> str:
+        """The instance's type name; ``<dangling>`` if the type row is gone."""
+        t = types.get(self.type_uuid)
+        return "<dangling>" if t is None else t.name
 
 
 class Instances(TableMapping[UUID, Instance]):
     """The instances table as a Mapping of writable instances."""
 
     __domain__: ClassVar[type[TableDomain]] = Instance
-
-    @databasemethod(commit=False)
-    def by_type(self, type_uuid: UUID) -> list[UUID]:
-        return list(
-            Database.session.scalars(
-                sqla.select(TABLE_Instances.uuid).where(
-                    TABLE_Instances.type_uuid == type_uuid
-                )
-            ).all()
-        )
-
-    @databasemethod(commit=False)
-    def count_of_type(self, type_uuid: UUID) -> int:
-        return Database.session.scalar(
-            sqla.select(sqla.func.count())
-            .select_from(TABLE_Instances)
-            .where(TABLE_Instances.type_uuid == type_uuid)
-        ) or 0
 
     @databasemethod(commit=True)
     def create(
@@ -92,37 +79,6 @@ class Instances(TableMapping[UUID, Instance]):
             )
         )
         Database.session.flush()
-
-    @databasemethod(commit=False)
-    def exists(self, uuid: UUID) -> bool:
-        return self.get(uuid) is not None
-
-    @databasemethod(commit=False)
-    def get_type_name(self, uuid: UUID) -> str:
-        inst = self.get(uuid)
-        if inst is None:
-            return "<gone>"
-        t = types.get(inst.type_uuid)
-        return "<dangling>" if t is None else t.name
-
-    @databasemethod(commit=False)
-    def type_uuid_of(self, uuid: UUID) -> UUID | None:
-        inst = self.get(uuid)
-        return None if inst is None else inst.type_uuid
-
-    @databasemethod(commit=False)
-    def name_of(self, uuid: UUID) -> str:
-        """The registry name of an instance (fallback display title)."""
-        inst = self.get(uuid)
-        return "" if inst is None else inst.name
-
-    @databasemethod(commit=False)
-    def owner_of(self, uuid: UUID) -> tuple[UUID, UUID] | None:
-        """(owner object, owner prop) for an embedded instance, else None."""
-        inst = self.get(uuid)
-        if inst is None or inst.owner_object_uuid is None or inst.owner_prop_uuid is None:
-            return None
-        return (inst.owner_object_uuid, inst.owner_prop_uuid)
 
 
 instances = Instances()

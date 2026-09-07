@@ -30,9 +30,9 @@ class AuthSession(TableDomain):
 
     __table__: ClassVar[type[Base]] = TABLE_AuthSessions
 
-    token_hash: tableproperty[str] = tableproperty()
-    user_uuid: tableproperty[UUID] = tableproperty()
-    expires_at: tableproperty[datetime] = tableproperty()
+    token_hash: tableproperty[AuthSession, str] = tableproperty()
+    user_uuid: tableproperty[AuthSession, UUID] = tableproperty()
+    expires_at: tableproperty[AuthSession, datetime] = tableproperty()
 
 
 class AuthSessions(TableMapping[str, AuthSession]):

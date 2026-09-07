@@ -1,23 +1,22 @@
-"""Instances Store: Mapping contract + type index over the instances table (ADR-0010).
+"""Instances Store: Mapping contract over the instances table (ADR-0010).
 
-``instances`` behaves like ``dict[UUID, TABLE_Instances]`` plus a type index:
-``instances[uuid]``, ``instances.get``, ``uuid in instances``,
-``instances.by_type`` / ``count_of_type``, and the read helpers
-``name_of`` / ``get_type_name`` / ``exists`` / ``owner_of``.
+``instances`` behaves like ``dict[UUID, Instance]``: ``instances[uuid]``,
+``instances.get``, ``uuid in instances``. Reverse lookups live on the
+fields: ``Instance.type_uuid.foreach(t)``, ``Instance.type_name``.
 """
 from uuid import UUID, uuid4
 
 import pytest
 
 from nylium.api import Api
-from nylium.tables.instances import instances
-from nylium.tables.types import types
+from nylium.tables.instances import Instance, instances
+from nylium.tables.types import Type, types
 
 
 def _seed_type() -> UUID:
     """create_type seeds the builtins; return the type row uuid of "T"."""
     view = Api.create_type("T", {"name": "String"}, "Ts")
-    row = types.by_name(view.name)
+    row = next(Type.name.foreach(view.name), None)
     assert row is not None
     return row.uuid
 
@@ -38,19 +37,19 @@ def test_getitem_and_contains():
         _ = instances[uuid4()]
 
 
-def test_by_type_and_count():
+def test_foreach_by_type():
     t = _seed_type()
     u1 = _seed_instance(t)
     u2 = _seed_instance(t)
-    assert set(instances.by_type(t)) >= {u1, u2}
-    assert instances.count_of_type(t) >= 2
+    assert {i.uuid for i in Instance.type_uuid.foreach(t)} >= {u1, u2}
 
 
-def test_read_helpers():
+def test_domain_reads():
     t = _seed_type()
     u = _seed_instance(t)
-    assert instances.name_of(u) == "instance-1"
-    assert instances.get_type_name(u) == "T"
-    assert instances.exists(u)
-    assert not instances.exists(uuid4())
-    assert instances.owner_of(u) is None  # standalone, not embedded
+    assert instances[u].name == "instance-1"
+    assert instances[u].type_name == "T"
+    assert u in instances
+    assert uuid4() not in instances
+    assert instances.get(u) is not None
+    assert instances.get(uuid4()) is None

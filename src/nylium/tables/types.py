@@ -8,10 +8,10 @@ from nylium.database import Database, databasemethod
 from nylium.database.sessioncontext import SessionContext
 from nylium.database.tabledomain import TableDomain, TableMapping, tableproperty
 from nylium.tables.base import Base
-from nylium.tables.enum_options import EnumOption, enum_options
-from nylium.tables.props import Prop, props
+from nylium.tables.enum_options import EnumOption
+from nylium.tables.props import Prop
 from nylium.tables.typeref import TABLE_Types
-from nylium.tables.unit_parts import UnitPart, unit_parts
+from nylium.tables.unit_parts import UnitPart
 
 __all__ = ["TABLE_Types", "Type", "Types", "types"]
 
@@ -31,28 +31,34 @@ class Type(TableDomain):
 
     __table__: ClassVar[type[Base]] = TABLE_Types
 
-    uuid: tableproperty[UUID] = tableproperty()
-    name: tableproperty[str] = tableproperty()
-    plural_name: tableproperty[str | None] = tableproperty()
-    icon: tableproperty[str] = tableproperty()
-    color: tableproperty[str] = tableproperty()
-    kind: tableproperty[str] = tableproperty()
-    embedded: tableproperty[bool] = tableproperty()
+    uuid: tableproperty[Type, UUID] = tableproperty()
+    name: tableproperty[Type, str] = tableproperty()
+    plural_name: tableproperty[Type, str | None] = tableproperty()
+    icon: tableproperty[Type, str] = tableproperty()
+    color: tableproperty[Type, str] = tableproperty()
+    kind: tableproperty[Type, str] = tableproperty()
+    embedded: tableproperty[Type, bool] = tableproperty()
 
     @property
     def props(self) -> list[Prop]:
         """This type's props, in display order."""
-        return list(props.list_for(self.uuid))
+        return sorted(
+            Prop.owner_type_uuid.foreach(self.uuid), key=lambda prop: prop.position
+        )
 
     @property
     def enum_options(self) -> list[EnumOption]:
         """This enum's options, in display order (empty for non-enums)."""
-        return list(enum_options.list_for(self.uuid))
+        return sorted(
+            EnumOption.type_uuid.foreach(self.uuid), key=lambda option: option.position
+        )
 
     @property
     def unit_parts(self) -> list[UnitPart]:
         """This unit's parts, in display order (empty for non-units)."""
-        return list(unit_parts.list_for(self.uuid))
+        return sorted(
+            UnitPart.type_uuid.foreach(self.uuid), key=lambda part: part.position
+        )
 
     def wire(self) -> dict[str, object]:
         """The JSON-safe wire shape (ADR-0011 §5), matching
@@ -83,15 +89,6 @@ class Types(TableMapping[UUID, Type]):
                 for row in Database.session.scalars(sqla.select(TABLE_Types))
             ]
         yield from all_types
-
-    @databasemethod(commit=False)
-    def by_name(self, name: str) -> Type | None:
-        row = Database.session.scalar(
-            sqla.select(TABLE_Types).where(TABLE_Types.name == name)
-        )
-        if row is None:
-            return None
-        return cast(Type, Type.from_row(row))
 
     @databasemethod(commit=True)
     def create(

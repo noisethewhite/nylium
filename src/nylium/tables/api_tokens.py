@@ -41,14 +41,14 @@ class ApiToken(TableDomain):
 
     __table__: ClassVar[type[Base]] = TABLE_ApiTokens
 
-    uuid: tableproperty[UUID] = tableproperty()
-    user_uuid: tableproperty[UUID] = tableproperty()
-    name: tableproperty[str] = tableproperty()
-    token_hash: tableproperty[str] = tableproperty()
-    scope: tableproperty[str] = tableproperty()
-    created_at: tableproperty[datetime] = tableproperty()
-    last_used_at: tableproperty[datetime | None] = tableproperty()
-    revoked_at: tableproperty[datetime | None] = tableproperty()
+    uuid: tableproperty[ApiToken, UUID] = tableproperty()
+    user_uuid: tableproperty[ApiToken, UUID] = tableproperty()
+    name: tableproperty[ApiToken, str] = tableproperty()
+    token_hash: tableproperty[ApiToken, str] = tableproperty()
+    scope: tableproperty[ApiToken, str] = tableproperty()
+    created_at: tableproperty[ApiToken, datetime] = tableproperty()
+    last_used_at: tableproperty[ApiToken, datetime | None] = tableproperty()
+    revoked_at: tableproperty[ApiToken, datetime | None] = tableproperty()
 
 
 class ApiTokens(TableMapping[UUID, ApiToken]):

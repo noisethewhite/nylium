@@ -30,10 +30,10 @@ class AuthChallenge(TableDomain):
 
     __table__: ClassVar[type[Base]] = TABLE_AuthChallenges
 
-    challenge: tableproperty[bytes] = tableproperty()
-    kind: tableproperty[str] = tableproperty()
-    user_uuid: tableproperty[UUID | None] = tableproperty()
-    expires_at: tableproperty[datetime] = tableproperty()
+    challenge: tableproperty[AuthChallenge, bytes] = tableproperty()
+    kind: tableproperty[AuthChallenge, str] = tableproperty()
+    user_uuid: tableproperty[AuthChallenge, UUID | None] = tableproperty()
+    expires_at: tableproperty[AuthChallenge, datetime] = tableproperty()
 
 
 class AuthChallenges(TableMapping[bytes, AuthChallenge]):

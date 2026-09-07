@@ -37,14 +37,14 @@ class AuthCredential(TableDomain):
 
     __table__: ClassVar[type[Base]] = TABLE_AuthCredentials
 
-    uuid: tableproperty[UUID] = tableproperty()
-    user_uuid: tableproperty[UUID] = tableproperty()
-    credential_id: tableproperty[bytes] = tableproperty()
-    public_key: tableproperty[bytes] = tableproperty()
-    sign_count: tableproperty[int] = tableproperty()
-    transports: tableproperty[str] = tableproperty()
-    created_at: tableproperty[datetime] = tableproperty()
-    last_used_at: tableproperty[datetime | None] = tableproperty()
+    uuid: tableproperty[AuthCredential, UUID] = tableproperty()
+    user_uuid: tableproperty[AuthCredential, UUID] = tableproperty()
+    credential_id: tableproperty[AuthCredential, bytes] = tableproperty()
+    public_key: tableproperty[AuthCredential, bytes] = tableproperty()
+    sign_count: tableproperty[AuthCredential, int] = tableproperty()
+    transports: tableproperty[AuthCredential, str] = tableproperty()
+    created_at: tableproperty[AuthCredential, datetime] = tableproperty()
+    last_used_at: tableproperty[AuthCredential, datetime | None] = tableproperty()
 
 
 class AuthCredentials(TableMapping[UUID, AuthCredential]):

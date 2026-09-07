@@ -1,5 +1,4 @@
-from collections.abc import Generator
-from typing import ClassVar, cast
+from typing import ClassVar
 from uuid import UUID, uuid4
 
 import sqlalchemy as sqla
@@ -58,13 +57,13 @@ class Prop(TableDomain):
 
     __table__: ClassVar[type[Base]] = TABLE_Props
 
-    uuid: tableproperty[UUID] = tableproperty()
-    key: tableproperty[str] = tableproperty()
-    owner_type_uuid: tableproperty[UUID] = tableproperty()
-    value_type_uuid: tableproperty[UUID] = tableproperty()
-    position: tableproperty[int] = tableproperty()
-    formula: tableproperty[str | None] = tableproperty()
-    function_uuid: tableproperty[UUID | None] = tableproperty()
+    uuid: tableproperty[Prop, UUID] = tableproperty()
+    key: tableproperty[Prop, str] = tableproperty()
+    owner_type_uuid: tableproperty[Prop, UUID] = tableproperty()
+    value_type_uuid: tableproperty[Prop, UUID] = tableproperty()
+    position: tableproperty[Prop, int] = tableproperty()
+    formula: tableproperty[Prop, str | None] = tableproperty()
+    function_uuid: tableproperty[Prop, UUID | None] = tableproperty()
 
     @property
     def value_type(self) -> str:
@@ -94,88 +93,6 @@ class Props(TableMapping[UUID, Prop]):
     """The props table as a Mapping of writable props."""
 
     __domain__: ClassVar[type[TableDomain]] = Prop
-
-    def list_for(self, owner_type_uuid: UUID) -> Generator[Prop, None, None]:
-        """The props of one type, in display order, lazily."""
-        with SessionContext():
-            owner_props = [
-                cast(Prop, Prop.from_row(row))
-                for row in Database.session.scalars(
-                    sqla.select(TABLE_Props)
-                    .where(TABLE_Props.owner_type_uuid == owner_type_uuid)
-                    .order_by(TABLE_Props.position)
-                )
-            ]
-        yield from owner_props
-
-    @databasemethod(commit=False)
-    def count_with_value_type(self, value_type_uuid: UUID) -> int:
-        """Props whose value type is this row — the FK stops deletes,
-        callers that want a friendly error check here first."""
-        return int(
-            Database.session.scalar(
-                sqla.select(sqla.func.count())
-                .select_from(TABLE_Props)
-                .where(TABLE_Props.value_type_uuid == value_type_uuid)
-            )
-            or 0
-        )
-
-    @databasemethod(commit=False)
-    def get_type_name(self, owner_type_uuid: UUID, key: str) -> str:
-        row = Database.session.scalar(
-            sqla.select(TABLE_Props).where(
-                TABLE_Props.owner_type_uuid == owner_type_uuid, TABLE_Props.key == key
-            )
-        )
-        if row is None:
-            raise KeyError(
-                f"type {_type_name_by_uuid(owner_type_uuid)!r} has no prop {key!r}"
-            )
-        name = _type_name_by_uuid(row.value_type_uuid)
-        if name is None:
-            raise KeyError(f"Type with UUID {row.value_type_uuid} does not exist")
-        return name
-
-    @databasemethod(commit=False)
-    def formula_keys(self, owner_type_uuid: UUID) -> set[str]:
-        """Keys of the owner type's computed props (ADR-0005) — writes to
-        these are refused."""
-        rows = Database.session.scalars(
-            sqla.select(TABLE_Props.key).where(
-                TABLE_Props.owner_type_uuid == owner_type_uuid,
-                TABLE_Props.formula.is_not(None),
-            )
-        ).all()
-        return set(rows)
-
-    @databasemethod(commit=False)
-    def function_keys(self, owner_type_uuid: UUID) -> set[str]:
-        """Keys of the owner type's function-backed props (ADR-0007) —
-        writes to these are refused (they are computed by a Function)."""
-        rows = Database.session.scalars(
-            sqla.select(TABLE_Props.key).where(
-                TABLE_Props.owner_type_uuid == owner_type_uuid,
-                TABLE_Props.function_uuid.is_not(None),
-            )
-        ).all()
-        return set(rows)
-
-    @databasemethod(commit=False)
-    def usages_of_value_type(
-        self, value_type_uuid: UUID
-    ) -> list[tuple[UUID, str]]:
-        """(owner_type_uuid, key) of every prop typed with this row — the
-        dependency index for cross-type formula rewrites (ADR-0005)."""
-        rows = Database.session.execute(
-            sqla.select(TABLE_Props.owner_type_uuid, TABLE_Props.key).where(
-                TABLE_Props.value_type_uuid == value_type_uuid
-            )
-        ).all()
-        result: list[tuple[UUID, str]] = []
-        for row in rows:
-            result.append((cast(UUID, row.owner_type_uuid), cast(str, row.key)))
-        return result
 
     @databasemethod(commit=False)
     def update_formula(self, prop_uuid: UUID, formula: str) -> None:

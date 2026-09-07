@@ -141,7 +141,8 @@ class FunctionView:
     @classmethod
     @databasemethod(commit=False)
     def from_uuid(cls, uuid: UUID) -> Self | None:
-        type_uuid = instances.type_uuid_of(uuid)
+        inst = instances.get(uuid)
+        type_uuid = None if inst is None else inst.type_uuid
         if type_uuid is None:
             return None
         owner = WType.by_uuid(type_uuid)
@@ -152,7 +153,10 @@ class FunctionView:
             return None
         input_type, output_type = params
         wrapper = WObject.wrap(uuid)
-        name = cast(str | None, getattr(wrapper, NAME_PROP_KEY)) or instances.name_of(uuid)
+        name = cast(str | None, getattr(wrapper, NAME_PROP_KEY))
+        if not name:
+            inst = instances.get(uuid)
+            name = "" if inst is None else inst.name
         return cls(
             uuid=uuid,
             name=name,
@@ -211,7 +215,8 @@ class ObjectView:
     @classmethod
     @databasemethod(commit=False)
     def from_uuid(cls, uuid: UUID) -> Self | None:
-        type_uuid = instances.type_uuid_of(uuid)
+        inst = instances.get(uuid)
+        type_uuid = None if inst is None else inst.type_uuid
         if type_uuid is None:
             return None
         owner = WType.by_uuid(type_uuid)
@@ -406,5 +411,5 @@ class ObjectView:
         if not isinstance(value, WObject):
             raise TypeError(f"link prop rendered a {type(value).__name__}")
         return RefValue(
-            ref=ObjectRef(uuid=value.uuid, type_name=instances.get_type_name(value.uuid))
+            ref=ObjectRef(uuid=value.uuid, type_name=instances[value.uuid].type_name)
         )

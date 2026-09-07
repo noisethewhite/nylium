@@ -10,13 +10,13 @@ from uuid import UUID, uuid4
 import pytest
 
 from nylium.api import Api
-from nylium.tables.types import types
+from nylium.tables.types import Type, types
 
 
 def _seed() -> UUID:
     """create_type seeds the builtins; return the uuid of "T"."""
     view = Api.create_type("T", {"name": "String"}, "Ts")
-    row = types.by_name(view.name)
+    row = next(Type.name.foreach(view.name), None)
     assert row is not None
     return row.uuid
 
@@ -39,10 +39,10 @@ def test_get_and_contains():
 
 def test_by_name_second_index():
     uuid = _seed()
-    row = types.by_name("T")
+    row = next(Type.name.foreach("T"), None)
     assert row is not None
     assert row.uuid == uuid
-    assert types.by_name("no-such-type") is None
+    assert next(Type.name.foreach("no-such-type"), None) is None
 
 
 def test_iter_len_all():
@@ -64,4 +64,4 @@ def test_update_and_delete():
 
     types.delete(uuid)  # its props cascade via FK ondelete
     assert types.get(uuid) is None
-    assert types.by_name("T2") is None
+    assert next(Type.name.foreach("T2"), None) is None

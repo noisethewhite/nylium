@@ -5,7 +5,6 @@ from datetime import datetime
 from typing import ClassVar, cast
 from uuid import UUID, uuid4
 
-import sqlalchemy as sqla
 from sqlalchemy import DateTime, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -29,9 +28,9 @@ class AuthUser(TableDomain):
 
     __table__: ClassVar[type[Base]] = TABLE_AuthUsers
 
-    uuid: tableproperty[UUID] = tableproperty()
-    name: tableproperty[str] = tableproperty()
-    created_at: tableproperty[datetime] = tableproperty()
+    uuid: tableproperty[AuthUser, UUID] = tableproperty()
+    name: tableproperty[AuthUser, str] = tableproperty()
+    created_at: tableproperty[AuthUser, datetime] = tableproperty()
 
 
 class AuthUsers(TableMapping[UUID, AuthUser]):
@@ -47,13 +46,6 @@ class AuthUsers(TableMapping[UUID, AuthUser]):
         Database.session.add(row)
         Database.session.flush()  # populate uuid/created_at before the session ends
         return cast(AuthUser, AuthUser.from_row(row))
-
-    @databasemethod(commit=False)
-    def by_name(self, name: str) -> AuthUser | None:
-        row = Database.session.scalar(
-            sqla.select(TABLE_AuthUsers).where(TABLE_AuthUsers.name == name)
-        )
-        return None if row is None else cast(AuthUser, AuthUser.from_row(row))
 
 
 auth_users = AuthUsers()

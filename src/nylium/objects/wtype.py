@@ -137,7 +137,7 @@ class WType:
     @classmethod
     @databasemethod(commit=False)
     def by_name(cls, name: str) -> "WType | None":
-        row = types.by_name(name)
+        row = next(Type.name.foreach(name), None)
         return None if row is None else cls(row)
 
     @classmethod
