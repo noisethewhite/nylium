@@ -9,6 +9,7 @@ from sqlalchemy import ForeignKey, Integer, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from nylium.database import Database, databasemethod
+from nylium.database.store import Store
 from nylium.tables.base import Base
 from nylium.tables.string_values import TABLE_StringValues
 from nylium.tables.props import TABLE_Props
@@ -16,7 +17,9 @@ from nylium.tables.props import TABLE_Props
 
 class TABLE_EnumOptions(Base):
     __tablename__: str = "enum_options"
-    __table_args__: tuple[UniqueConstraint, ...] = (UniqueConstraint("type_uuid", "value"),)
+    __table_args__: tuple[UniqueConstraint, ...] = (
+        UniqueConstraint("type_uuid", "value"),
+    )
 
     uuid: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     type_uuid: Mapped[UUID] = mapped_column(
@@ -25,61 +28,68 @@ class TABLE_EnumOptions(Base):
     value: Mapped[str] = mapped_column(Text, nullable=False)
     position: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
-    @classmethod
+
+class EnumOptions(Store[UUID, TABLE_EnumOptions]):
+    """EnumOptions access layer: the options of a string-enum type."""
+
+    def __init__(self) -> None:
+        super().__init__(TABLE_EnumOptions)
+
     @databasemethod(commit=False)
-    def list_for(cls, type_uuid: UUID) -> list["TABLE_EnumOptions"]:
+    def list_for(self, type_uuid: UUID) -> list[TABLE_EnumOptions]:
         return list(
             Database.session.scalars(
-                sqla.select(cls)
-                .where(cls.type_uuid == type_uuid)
-                .order_by(cls.position)
+                sqla.select(TABLE_EnumOptions)
+                .where(TABLE_EnumOptions.type_uuid == type_uuid)
+                .order_by(TABLE_EnumOptions.position)
             ).all()
         )
 
-    @classmethod
     @databasemethod(commit=False)
-    def values_of(cls, type_uuid: UUID) -> list[str]:
+    def values_of(self, type_uuid: UUID) -> list[str]:
         return list(
             Database.session.scalars(
-                sqla.select(cls.value)
-                .where(cls.type_uuid == type_uuid)
-                .order_by(cls.position)
+                sqla.select(TABLE_EnumOptions.value)
+                .where(TABLE_EnumOptions.type_uuid == type_uuid)
+                .order_by(TABLE_EnumOptions.position)
             ).all()
         )
 
-    @classmethod
     @databasemethod(commit=False)
-    def count_usage(cls, type_uuid: UUID, value: str) -> int:
+    def count_usage(self, type_uuid: UUID, value: str) -> int:
         """How many stored prop values currently equal this option."""
         return int(
             Database.session.scalar(
                 sqla.select(sqla.func.count())
                 .select_from(TABLE_StringValues)
                 .join(TABLE_Props, TABLE_StringValues.prop_uuid == TABLE_Props.uuid)
-                .where(TABLE_Props.value_type_uuid == type_uuid, TABLE_StringValues.value == value)
-            ) or 0
+                .where(
+                    TABLE_Props.value_type_uuid == type_uuid,
+                    TABLE_StringValues.value == value,
+                )
+            )
+            or 0
         )
 
-    @classmethod
     @databasemethod(commit=True)
-    def sync(
-        cls, type_uuid: UUID, items: list[tuple[UUID | None, str]]
-    ) -> None:
-        """Apply the editor's full option draft, mirroring TABLE_Props.sync_schema:
+    def sync(self, type_uuid: UUID, items: list[tuple[UUID | None, str]]) -> None:
+        """Apply the editor's full option draft, mirroring Props.sync_schema:
         a matching uuid renames the option in place (the rename rewrites
         stored string_values), None creates, omitted options are deleted —
         but a delete refuses while the option is still in use."""
         existing = {
             row.uuid: row
             for row in Database.session.scalars(
-                sqla.select(cls).where(cls.type_uuid == type_uuid)
+                sqla.select(TABLE_EnumOptions).where(
+                    TABLE_EnumOptions.type_uuid == type_uuid
+                )
             )
         }
         kept = {uuid for uuid, _ in items if uuid is not None}
         for stale_uuid, stale_row in existing.items():
             if stale_uuid in kept:
                 continue
-            usage = cls.count_usage(type_uuid, stale_row.value)
+            usage = self.count_usage(type_uuid, stale_row.value)
             if usage:
                 raise ValueError(
                     f"option {stale_row.value!r} is still used by {usage} values"
@@ -89,7 +99,12 @@ class TABLE_EnumOptions(Base):
         for position, (option_uuid, value) in enumerate(items):
             if option_uuid is None or option_uuid not in existing:
                 Database.session.add(
-                    cls(uuid=uuid4(), type_uuid=type_uuid, value=value, position=position)
+                    TABLE_EnumOptions(
+                        uuid=uuid4(),
+                        type_uuid=type_uuid,
+                        value=value,
+                        position=position,
+                    )
                 )
                 continue
             row = existing[option_uuid]
@@ -99,7 +114,9 @@ class TABLE_EnumOptions(Base):
                     .where(
                         TABLE_StringValues.value == row.value,
                         TABLE_StringValues.prop_uuid.in_(
-                            sqla.select(TABLE_Props.uuid).where(TABLE_Props.value_type_uuid == type_uuid)
+                            sqla.select(TABLE_Props.uuid).where(
+                                TABLE_Props.value_type_uuid == type_uuid
+                            )
                         ),
                     )
                     .values(value=value)
@@ -107,3 +124,6 @@ class TABLE_EnumOptions(Base):
                 row.value = value
             row.position = position
         Database.session.flush()
+
+
+enum_options = EnumOptions()

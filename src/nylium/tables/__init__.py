@@ -15,7 +15,7 @@ from nylium.tables.date_values import TABLE_DateValues
 from nylium.tables.time_values import TABLE_TimeValues
 from nylium.tables.monthday_values import TABLE_MonthDayValues
 from nylium.tables.monthdaytime_values import TABLE_MonthDayTimeValues
-from nylium.tables.enum_options import TABLE_EnumOptions
+from nylium.tables.enum_options import TABLE_EnumOptions, enum_options
 from nylium.tables.unit_parts import TABLE_UnitParts
 from nylium.tables.instance_values import TABLE_InstanceValues
 from nylium.tables.array_values import TABLE_ArrayValues
@@ -24,7 +24,7 @@ from nylium.tables.auth_credentials import TABLE_AuthCredentials
 from nylium.tables.auth_challenges import TABLE_AuthChallenges
 from nylium.tables.auth_sessions import TABLE_AuthSessions
 from nylium.tables.api_tokens import TABLE_ApiTokens
-from nylium.tables.files import TABLE_Files
+from nylium.tables.files import TABLE_Files, files
 from nylium.tables.file_values import TABLE_FileValues
 from nylium.tables.function_nodes import TABLE_FunctionNodes
 from nylium.tables.function_edges import TABLE_FunctionEdges
@@ -35,6 +35,8 @@ __all__ = [
     "types",
     "instances",
     "props",
+    "files",
+    "enum_options",
     "TABLE_Props",
     "TABLE_Instances",
     "TABLE_StringValues",

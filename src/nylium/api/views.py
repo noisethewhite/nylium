@@ -22,12 +22,12 @@ from sqlalchemy.orm import aliased
 from nylium.database import Database, databasemethod
 from nylium.tables import (
     TABLE_ArrayValues,
-    TABLE_EnumOptions,
     TABLE_InstanceValues,
     TABLE_Instances,
     TABLE_Props,
     TABLE_StringValues,
     TABLE_UnitParts,
+    enum_options,
     instances,
 )
 from nylium.tables.types import TABLE_Types
@@ -108,7 +108,7 @@ class TypeView:
             embedded=owner.is_embedded,
             enum_options=[
                 EnumOptionView(uuid=option.uuid, value=option.value)
-                for option in TABLE_EnumOptions.list_for(owner.uuid)
+                for option in enum_options.list_for(owner.uuid)
             ],
             unit_parts=[
                 UnitPartView(

@@ -8,7 +8,7 @@ from typing import cast
 from uuid import UUID
 
 from nylium.database import Database, databasemethod
-from nylium.tables import TABLE_EnumOptions, TABLE_StringValues
+from nylium.tables import TABLE_StringValues, enum_options
 from nylium.objects.wprop import WProp
 from nylium.objects.wtype import WType
 from nylium.server.errors import ValidationError
@@ -32,7 +32,7 @@ class WEnum:
         owner = WType.by_name(type_name)
         if owner is None or not owner.is_enum:
             raise KeyError(f"no enum {type_name!r}")
-        if value not in TABLE_EnumOptions.values_of(owner.uuid):
+        if value not in enum_options.values_of(owner.uuid):
             raise ValidationError(f"{value!r} is not an option of enum {type_name}")
         return value
 

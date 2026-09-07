@@ -12,7 +12,7 @@ from typing import ClassVar
 from uuid import UUID
 
 from nylium.database import Database, databasemethod
-from nylium.tables import TABLE_Files
+from nylium.tables import TABLE_Files, files
 from nylium.tables.types import TABLE_Types
 
 
@@ -97,7 +97,7 @@ class WFile:
         deleted. Runs on boot; every survivor is logged."""
         import logging
 
-        live = {str(uuid) for uuid in TABLE_Files.all_uuids()}
+        live = {str(uuid) for uuid in files}
         for blob in cls.storage_dir().iterdir():
             if blob.is_file() and blob.name not in live:
                 logging.getLogger("nylium").warning(

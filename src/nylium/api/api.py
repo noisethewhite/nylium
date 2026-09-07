@@ -20,9 +20,9 @@ from nylium.api.views import FileView, FunctionView, ObjectRef, ObjectView, Type
 from nylium.database import databasemethod
 from nylium.tables.types import types
 from nylium.tables import (
-    TABLE_EnumOptions,
-    TABLE_Files,
     TABLE_UnitParts,
+    enum_options,
+    files,
     instances,
     props,
 )
@@ -162,7 +162,7 @@ class Api:
         cls._check_color(color)
         cls._check_icon(icon)
         owner = WType.ensure(final_name, kind=WType.KIND_ENUM)
-        TABLE_EnumOptions.sync(owner.uuid, [(None, v) for v in (options or [])])
+        enum_options.sync(owner.uuid, [(None, v) for v in (options or [])])
         types.update(owner.uuid, owner.name, None, icon, color)
         return TypeView.from_name(final_name)
 
@@ -186,7 +186,7 @@ class Api:
             raise ValidationError("enum options must not be empty")
         if len(set(values)) != len(values):
             raise ValidationError(f"duplicate enum options in {values!r}")
-        TABLE_EnumOptions.sync(owner.uuid, items)
+        enum_options.sync(owner.uuid, items)
         return TypeView.from_name(name)
 
     @classmethod
@@ -614,7 +614,7 @@ class Api:
                 f"{type_name} does not accept MIME {mime!r}"
             )
         file_uuid = uuid4()
-        TABLE_Files.create(file_uuid, type_name, filename, mime, len(data))
+        files.create(file_uuid, type_name, filename, mime, len(data))
         blob = WFile.blob_path(file_uuid)
         tmp = blob.with_suffix(".tmp")
         try:
@@ -630,7 +630,7 @@ class Api:
     @classmethod
     @databasemethod(commit=False)
     def get_file(cls, uuid: UUID) -> FileView | None:
-        row = TABLE_Files.by_uuid(uuid)
+        row = files.get(uuid)
         if row is None:
             return None
         return FileView(
@@ -646,7 +646,7 @@ class Api:
                 uuid=row.uuid, type_name=row.type_name, name=row.name,
                 mime=row.mime, size_bytes=row.size_bytes,
             )
-            for row in TABLE_Files.list_all()
+            for row in files.list_all()
         ]
 
     @classmethod
@@ -658,7 +658,7 @@ class Api:
 
         if not name.strip():
             raise ValidationError("filename must not be empty")
-        TABLE_Files.rename(uuid, name)
+        files.rename(uuid, name)
         view = cls.get_file(uuid)
         if view is None:
             raise KeyError(f"no file {uuid}")
@@ -669,13 +669,13 @@ class Api:
     def delete_file(cls, uuid: UUID) -> bool:
         """ADR-0008: drop the files row and the blob. An Image used as an
         icon resets every referencing type to the default glyph."""
-        row = TABLE_Files.by_uuid(uuid)
+        row = files.get(uuid)
         if row is None:
             return False
         if row.type_name == WFile.TYPE_IMAGE:
             WFile.reset_icons_referencing(uuid)
         WFile.clear_array_refs(uuid)
-        TABLE_Files.delete_by_uuid(uuid)
+        files.delete(uuid)
         WFile.delete_blob(uuid)
         return True
 

@@ -5,6 +5,7 @@ from sqlalchemy import BigInteger, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from nylium.database import Database, databasemethod
+from nylium.database.store import Store
 from nylium.tables.base import Base
 
 
@@ -21,10 +22,16 @@ class TABLE_Files(Base):
     mime: Mapped[str] = mapped_column(Text)
     size_bytes: Mapped[int] = mapped_column(BigInteger)
 
-    @classmethod
+
+class Files(Store[UUID, TABLE_Files]):
+    """Files access layer: rows by uuid (Mapping) plus name-ordered listing."""
+
+    def __init__(self) -> None:
+        super().__init__(TABLE_Files)
+
     @databasemethod(commit=True)
     def create(
-        cls,
+        self,
         uuid: UUID,
         type_name: str,
         name: str,
@@ -32,36 +39,36 @@ class TABLE_Files(Base):
         size_bytes: int,
     ) -> None:
         Database.session.add(
-            TABLE_Files(uuid=uuid, type_name=type_name, name=name, mime=mime, size_bytes=size_bytes)
+            TABLE_Files(
+                uuid=uuid,
+                type_name=type_name,
+                name=name,
+                mime=mime,
+                size_bytes=size_bytes,
+            )
         )
         Database.session.flush()
 
-    @classmethod
     @databasemethod(commit=False)
-    def by_uuid(cls, uuid: UUID) -> "TABLE_Files | None":
-        return Database.session.get(cls, uuid)
+    def list_all(self) -> list[TABLE_Files]:
+        return list(
+            Database.session.scalars(
+                sqla.select(TABLE_Files).order_by(TABLE_Files.name)
+            ).all()
+        )
 
-    @classmethod
-    @databasemethod(commit=False)
-    def all_uuids(cls,) -> list[UUID]:
-        return list(Database.session.scalars(sqla.select(cls.uuid)).all())
-
-    @classmethod
-    @databasemethod(commit=False)
-    def list_all(cls,) -> list["TABLE_Files"]:
-        return list(Database.session.scalars(sqla.select(cls).order_by(cls.name)).all())
-
-    @classmethod
     @databasemethod(commit=True)
-    def rename(cls, uuid: UUID, name: str) -> None:
-        row = Database.session.get(cls, uuid)
+    def rename(self, uuid: UUID, name: str) -> None:
+        row = Database.session.get(TABLE_Files, uuid)
         if row is None:
             raise KeyError(f"no file {uuid}")
         row.name = name
 
-    @classmethod
     @databasemethod(commit=True)
-    def delete_by_uuid(cls, uuid: UUID) -> None:
-        row = Database.session.get(cls, uuid)
+    def delete(self, uuid: UUID) -> None:
+        row = Database.session.get(TABLE_Files, uuid)
         if row is not None:
             Database.session.delete(row)
+
+
+files = Files()
