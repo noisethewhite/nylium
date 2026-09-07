@@ -20,11 +20,11 @@ from nylium.api.views import FileView, FunctionView, ObjectRef, ObjectView, Type
 from nylium.database import databasemethod
 from nylium.tables.types import types
 from nylium.tables import (
-    TABLE_UnitParts,
     enum_options,
     files,
     instances,
     props,
+    unit_parts,
 )
 from nylium.objects.wembedded import EMBEDDED_NAME_SEPARATOR, WEmbedded
 from nylium.objects.wenum import WEnum
@@ -220,7 +220,7 @@ class Api:
             *[(None, n, m, o, False) for n, m, o in (secondaries or [])],
         ]
         cls._validate_unit_draft(items)
-        TABLE_UnitParts.sync(owner.uuid, final_name, items)
+        unit_parts.sync(owner.uuid, final_name, items)
         types.update(owner.uuid, owner.name, None, icon, color)
         return TypeView.from_name(final_name)
 
@@ -243,17 +243,17 @@ class Api:
         if not owner.is_unit:
             raise ValidationError(f"type {name!r} is not a unit")
         cls._validate_unit_draft(items)
-        old_base = TABLE_UnitParts.base_of(owner.uuid)
+        old_base = unit_parts.base_of(owner.uuid)
         new_base_uuid = next(uuid for uuid, _, _, _, is_base in items if is_base)
         if (
             old_base is not None
             and new_base_uuid != old_base.uuid
-            and TABLE_UnitParts.usage_total(owner.name) > 0
+            and unit_parts.usage_total(owner.name) > 0
         ):
             raise ValidationError(
                 f"unit {name!r} still has values; its base part cannot change"
             )
-        TABLE_UnitParts.sync(owner.uuid, owner.name, items)
+        unit_parts.sync(owner.uuid, owner.name, items)
         return TypeView.from_name(name)
 
     @classmethod

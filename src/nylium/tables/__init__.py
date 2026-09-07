@@ -16,7 +16,7 @@ from nylium.tables.time_values import TABLE_TimeValues
 from nylium.tables.monthday_values import TABLE_MonthDayValues
 from nylium.tables.monthdaytime_values import TABLE_MonthDayTimeValues
 from nylium.tables.enum_options import TABLE_EnumOptions, enum_options
-from nylium.tables.unit_parts import TABLE_UnitParts
+from nylium.tables.unit_parts import TABLE_UnitParts, unit_parts
 from nylium.tables.instance_values import TABLE_InstanceValues
 from nylium.tables.array_values import TABLE_ArrayValues
 from nylium.tables.auth_users import TABLE_AuthUsers
@@ -37,6 +37,7 @@ __all__ = [
     "props",
     "files",
     "enum_options",
+    "unit_parts",
     "TABLE_Props",
     "TABLE_Instances",
     "TABLE_StringValues",

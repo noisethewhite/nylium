@@ -26,9 +26,9 @@ from nylium.tables import (
     TABLE_Instances,
     TABLE_Props,
     TABLE_StringValues,
-    TABLE_UnitParts,
     enum_options,
     instances,
+    unit_parts,
 )
 from nylium.tables.types import TABLE_Types
 from nylium.objects import WObject, WProp, WType
@@ -118,7 +118,7 @@ class TypeView:
                     offset=part.offset,
                     is_base=part.is_base,
                 )
-                for part in TABLE_UnitParts.list_for(owner.uuid)
+                for part in unit_parts.list_for(owner.uuid)
             ],
             props=[
                 PropView(

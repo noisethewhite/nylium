@@ -12,6 +12,7 @@ from sqlalchemy import Boolean, ForeignKey, Integer, Numeric, Text, UniqueConstr
 from sqlalchemy.orm import Mapped, mapped_column
 
 from nylium.database import Database, databasemethod
+from nylium.database.store import Store
 from nylium.tables.base import Base
 from nylium.tables.numeric_values import TABLE_NumericValues
 from nylium.tables.props import TABLE_Props
@@ -40,38 +41,45 @@ class TABLE_UnitParts(Base):
         Integer, nullable=False, default=0, server_default="0"
     )
 
-    @classmethod
+
+class UnitParts(Store[UUID, TABLE_UnitParts]):
+    """UnitParts access layer: the parts of a user-defined unit type."""
+
+    def __init__(self) -> None:
+        super().__init__(TABLE_UnitParts)
+
     @databasemethod(commit=False)
-    def list_for(cls, type_uuid: UUID) -> list["TABLE_UnitParts"]:
+    def list_for(self, type_uuid: UUID) -> list[TABLE_UnitParts]:
         return list(
             Database.session.scalars(
-                sqla.select(cls)
-                .where(cls.type_uuid == type_uuid)
-                .order_by(cls.position)
+                sqla.select(TABLE_UnitParts)
+                .where(TABLE_UnitParts.type_uuid == type_uuid)
+                .order_by(TABLE_UnitParts.position)
             ).all()
         )
 
-    @classmethod
     @databasemethod(commit=False)
-    def by_name(cls, type_uuid: UUID, name: str) -> "TABLE_UnitParts | None":
+    def by_name(self, type_uuid: UUID, name: str) -> TABLE_UnitParts | None:
         return Database.session.scalar(
-            sqla.select(cls).where(cls.type_uuid == type_uuid, cls.name == name)
+            sqla.select(TABLE_UnitParts).where(
+                TABLE_UnitParts.type_uuid == type_uuid, TABLE_UnitParts.name == name
+            )
         )
 
-    @classmethod
     @databasemethod(commit=False)
-    def base_of(cls, type_uuid: UUID) -> "TABLE_UnitParts | None":
+    def base_of(self, type_uuid: UUID) -> TABLE_UnitParts | None:
         return Database.session.scalar(
-            sqla.select(cls).where(cls.type_uuid == type_uuid, cls.is_base.is_(True))
+            sqla.select(TABLE_UnitParts).where(
+                TABLE_UnitParts.type_uuid == type_uuid,
+                TABLE_UnitParts.is_base.is_(True),
+            )
         )
 
-    @classmethod
-    def names_of(cls, type_uuid: UUID) -> list[str]:
-        return [part.name for part in cls.list_for(type_uuid)]
+    def names_of(self, type_uuid: UUID) -> list[str]:
+        return [part.name for part in self.list_for(type_uuid)]
 
-    @classmethod
     @databasemethod(commit=False)
-    def usage_count(cls, unit_type_name: str, part_name: str) -> int:
+    def usage_count(self, unit_type_name: str, part_name: str) -> int:
         """Numeric values stored under this part. Values reference a part
         through their prop's parameterized type row (`Numeric<unit>`);
         the name convention lives on WType.unit_numeric_name and is
@@ -79,20 +87,18 @@ class TABLE_UnitParts(Base):
         parameterized = types.by_name(f"Numeric<{unit_type_name}>")
         if parameterized is None:
             return 0
-        return cls._count_stored(parameterized.uuid, part_name)
+        return self._count_stored(parameterized.uuid, part_name)
 
-    @classmethod
     @databasemethod(commit=False)
-    def usage_total(cls, unit_type_name: str) -> int:
+    def usage_total(self, unit_type_name: str) -> int:
         """Every stored value of the unit, any part (or none)."""
         parameterized = types.by_name(f"Numeric<{unit_type_name}>")
         if parameterized is None:
             return 0
-        return cls._count_stored(parameterized.uuid, None)
+        return self._count_stored(parameterized.uuid, None)
 
-    @classmethod
     def _count_stored(
-        cls, parameterized_uuid: UUID, part_name: str | None
+        self, parameterized_uuid: UUID, part_name: str | None
     ) -> int:
         conditions = [
             TABLE_Props.value_type_uuid == parameterized_uuid,
@@ -101,14 +107,17 @@ class TABLE_UnitParts(Base):
         if part_name is not None:
             conditions.append(TABLE_NumericValues.unit == part_name)
         return int(
-            Database.session.scalar(sqla.select(sqla.func.count()).select_from(TABLE_NumericValues).where(*conditions))
+            Database.session.scalar(
+                sqla.select(sqla.func.count())
+                .select_from(TABLE_NumericValues)
+                .where(*conditions)
+            )
             or 0
         )
 
-    @classmethod
     @databasemethod(commit=True)
     def sync(
-        cls,
+        self,
         type_uuid: UUID,
         unit_type_name: str,
         items: list[tuple[UUID | None, str, Decimal, Decimal, bool]],
@@ -118,16 +127,16 @@ class TABLE_UnitParts(Base):
         are deleted unless still in use. Validation of the draft itself
         (exactly one base, unique names, nonzero multipliers) is the
         caller's job."""
-        existing = cls.list_for(type_uuid)
+        existing = self.list_for(type_uuid)
         by_uuid = {part.uuid: part for part in existing}
         seen: set[UUID] = set()
         for position, (uuid, name, multiplier, offset, is_base) in enumerate(items):
             part = by_uuid.get(uuid) if uuid is not None else None
             if part is None:
-                part = cls(uuid=uuid4(), type_uuid=type_uuid, name=name)
+                part = TABLE_UnitParts(uuid=uuid4(), type_uuid=type_uuid, name=name)
                 Database.session.add(part)
             elif part.name != name:
-                cls._propagate_rename(unit_type_name, part.name, name)
+                self._propagate_rename(unit_type_name, part.name, name)
                 part.name = name
             part.multiplier = multiplier
             part.offset = offset
@@ -137,7 +146,7 @@ class TABLE_UnitParts(Base):
         for part in existing:
             if part.uuid in seen:
                 continue
-            usage = cls.usage_count(unit_type_name, part.name)
+            usage = self.usage_count(unit_type_name, part.name)
             if usage:
                 raise ValueError(
                     f"unit part {part.name!r} still has {usage} values"
@@ -145,9 +154,8 @@ class TABLE_UnitParts(Base):
             Database.session.delete(part)
         Database.session.flush()
 
-    @classmethod
     def _propagate_rename(
-        cls, unit_type_name: str, old_name: str, new_name: str
+        self, unit_type_name: str, old_name: str, new_name: str
     ) -> None:
         parameterized = types.by_name(f"Numeric<{unit_type_name}>")
         if parameterized is None:
@@ -164,3 +172,6 @@ class TABLE_UnitParts(Base):
             )
             .values(unit=new_name)
         )
+
+
+unit_parts = UnitParts()
