@@ -15,9 +15,9 @@ def databasemethod(commit: bool) -> Callable[[Callable[_P, _R]], Callable[_P, _R
     def decorator(func: Callable[_P, _R]) -> Callable[_P, _R]:
         @wraps(func)
         def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
-            with SessionContext():
+            with SessionContext() as ctx:
                 value = func(*args, **kwargs)
-                if commit:
+                if commit and ctx.owns_session:
                     SessionContext.get_session().commit()
                 return value
         return wrapper
