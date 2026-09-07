@@ -1,7 +1,8 @@
-# One file per table; this package keeps the old flat import surface:
-# `from nylium.tables import Types` works exactly as before.
+# One file per table; this package keeps the flat import surface for the
+# row classes. The `types` store (ADR-0010) is the public entry point for
+# type access; `_Types` is imported explicitly where a SQL join needs it.
 from nylium.tables.base import Base
-from nylium.tables.types import Types
+from nylium.tables.types import types
 from nylium.tables.props import Props
 from nylium.tables.instances import Instances
 from nylium.tables.string_values import StringValues
@@ -30,7 +31,7 @@ from nylium.tables.function_deps import FunctionDeps
 
 __all__ = [
     "Base",
-    "Types",
+    "types",
     "Props",
     "Instances",
     "StringValues",

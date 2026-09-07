@@ -386,16 +386,17 @@ class WObject(metaclass=WTypeMeta):
 
     @databasemethod(commit=False)
     def _owned_array_uuids(self, ) -> list[UUID]:
-        from nylium.tables import Props, Types
+        from nylium.tables import Props
+        from nylium.tables.types import TypesRow
 
         return list(
             Database.session.scalars(
                 sqla.select(InstanceValues.uuid)
                 .join(Props, InstanceValues.prop_uuid == Props.uuid)
-                .join(Types, Props.value_type_uuid == Types.uuid)
+                .join(TypesRow, Props.value_type_uuid == TypesRow.uuid)
                 .where(
                     InstanceValues.inst_uuid == self._uuid,
-                    Types.name.like(WType.ARRAY_TYPE_PREFIX + "%"),
+                    TypesRow.name.like(WType.ARRAY_TYPE_PREFIX + "%"),
                 )
             ).all()
         )

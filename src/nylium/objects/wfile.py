@@ -12,7 +12,8 @@ from typing import ClassVar
 from uuid import UUID
 
 from nylium.database import Database, databasemethod
-from nylium.tables import Files, Types
+from nylium.tables import Files
+from nylium.tables.types import TypesRow
 
 
 class WFile:
@@ -121,7 +122,7 @@ class WFile:
 
         marker = f"{cls.ICON_IMAGE_PREFIX}{image_uuid}"
         for type_row in Database.session.scalars(
-            sqla.select(Types).where(Types.icon == marker)
+            sqla.select(TypesRow).where(TypesRow.icon == marker)
         ).all():
             type_row.icon = cls.DEFAULT_GLYPH
 

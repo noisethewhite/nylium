@@ -9,7 +9,8 @@ from uuid import uuid4
 import sqlalchemy as sqla
 
 from nylium.database import Database, databasemethod
-from nylium.tables import Instances, Types
+from nylium.tables import Instances
+from nylium.tables.types import TypesRow
 
 
 class _Boom(Exception):
@@ -22,7 +23,7 @@ def test_nested_write_rolls_back_on_outer_error():
     @databasemethod(commit=True)
     def make_type():
         Database.session.add(
-            Types(uuid=tuuid, name="ProbeType", plural_name="P", icon="x", color="#000000")
+            TypesRow(uuid=tuuid, name="ProbeType", plural_name="P", icon="x", color="#000000")
         )
 
     make_type()
@@ -56,7 +57,7 @@ def test_outer_commit_persists_nested_write():
     @databasemethod(commit=True)
     def make_type():
         Database.session.add(
-            Types(uuid=tuuid, name="ProbeType2", plural_name="P2", icon="x", color="#000000")
+            TypesRow(uuid=tuuid, name="ProbeType2", plural_name="P2", icon="x", color="#000000")
         )
 
     make_type()

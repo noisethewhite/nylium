@@ -10,12 +10,10 @@ objects package a DAG.
 from __future__ import annotations
 
 from typing import ClassVar
-from uuid import UUID, uuid4
+from uuid import UUID
 
-import sqlalchemy as sqla
-
-from nylium.database import Database, databasemethod
-from nylium.tables.types import Types, types
+from nylium.database import databasemethod
+from nylium.tables.types import TypesRow, types
 
 
 class WType:
@@ -28,7 +26,7 @@ class WType:
     KIND_FUNCTION: ClassVar[str] = "function"
     KIND_FILE: ClassVar[str] = "file"
 
-    def __init__(self, row: Types):
+    def __init__(self, row: TypesRow):
         # snapshot, not a live row: reads must not depend on the session
         # that fetched the row still being open
         self._uuid: UUID = row.uuid
@@ -139,13 +137,13 @@ class WType:
     @classmethod
     @databasemethod(commit=False)
     def by_name(cls, name: str) -> "WType | None":
-        row = Database.session.scalar(sqla.select(Types).where(Types.name == name))
+        row = types.by_name(name)
         return None if row is None else cls(row)
 
     @classmethod
     @databasemethod(commit=False)
     def by_uuid(cls, uuid: UUID) -> "WType | None":
-        row = Database.session.get(Types, uuid)
+        row = types.get(uuid)
         return None if row is None else cls(row)
 
     @classmethod
@@ -176,13 +174,5 @@ class WType:
                 types.update(existing.uuid, existing.name, existing.plural_name, icon, existing.color)
                 return cls.by_name(name) or existing
             return existing
-        row = Types(uuid=uuid4(), name=name, plural_name=plural_name)
-        if icon is not None:
-            row.icon = icon
-        if kind is not None:
-            row.kind = kind
-        if embedded is not None:
-            row.embedded = embedded
-        Database.session.add(row)
-        Database.session.flush()
+        row = types.create(name, plural_name, icon=icon, kind=kind, embedded=embedded)
         return cls(row)

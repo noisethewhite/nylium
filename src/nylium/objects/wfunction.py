@@ -31,8 +31,8 @@ from nylium.tables import (
     FunctionNodes,
     InstanceValues,
     Instances,
-    Types,
 )
+from nylium.tables.types import TypesRow
 from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import ScalarPayload, WInteger, WNumeric, WString, WScalar
 from nylium.objects.wtype import WType
@@ -650,8 +650,8 @@ class WFunction:
         return list(
             Database.session.scalars(
                 sqla.select(Instances.uuid)
-                .join(Types, Types.uuid == Instances.type_uuid)
-                .where(Types.kind == WType.KIND_FUNCTION)
+                .join(TypesRow, TypesRow.uuid == Instances.type_uuid)
+                .where(TypesRow.kind == WType.KIND_FUNCTION)
             ).all()
         )
 

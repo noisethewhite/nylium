@@ -27,9 +27,9 @@ from nylium.tables import (
     Instances,
     Props,
     StringValues,
-    Types,
     UnitParts,
 )
+from nylium.tables.types import TypesRow
 from nylium.objects import WObject, WProp, WType
 from nylium.objects.monthday import MonthDay, MonthDayTime
 from nylium.objects.quantity import Quantity
@@ -338,7 +338,7 @@ class ObjectView:
         becomes one tag ``<owner display name> → <prop key>``. One query,
         no N+1."""
         name_prop = aliased(Props)
-        owner_types = aliased(Types)
+        owner_types = aliased(TypesRow)
         rows = Database.session.execute(
             sqla.select(
                 InstanceValues.inst_uuid,  # owner object uuid
@@ -350,7 +350,7 @@ class ObjectView:
             .select_from(ArrayValues)
             .join(InstanceValues, InstanceValues.uuid == ArrayValues.inst_uuid)
             .join(Props, Props.uuid == InstanceValues.prop_uuid)
-            .join(Types, Types.uuid == Props.value_type_uuid)
+            .join(TypesRow, TypesRow.uuid == Props.value_type_uuid)
             .join(Instances, Instances.uuid == InstanceValues.inst_uuid)
             .join(owner_types, owner_types.uuid == Instances.type_uuid)
             .join(name_prop, name_prop.owner_type_uuid == Instances.type_uuid)
@@ -364,7 +364,7 @@ class ObjectView:
             )
             .where(
                 ArrayValues.value_uuid == uuid,
-                Types.name == WType.array_name(type_name),
+                TypesRow.name == WType.array_name(type_name),
                 name_prop.key == NAME_PROP_KEY,
             )
             .distinct()
