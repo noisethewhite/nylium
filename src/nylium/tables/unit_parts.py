@@ -4,7 +4,15 @@
 # Numeric props parameterize on the unit as `Numeric<Temperature>`;
 # stored values live in numeric_values — canonical magnitude in `value`,
 # the part name as entered in `unit`.
+#
+# ADR-0011: the table's abstraction is a Mapping over writable domain
+# objects. `UnitPart` snapshots one row; assigning a tableproperty writes
+# through to the table (`part.name = "kg"` issues an UPDATE). Read helpers
+# are lazy Generators; the reverse lookup lives on the descriptor itself
+# (`UnitPart.name.list_for("kg")`).
+from collections.abc import Generator, Iterator, Mapping
 from decimal import Decimal
+from typing import ClassVar, cast, override
 from uuid import UUID, uuid4
 
 import sqlalchemy as sqla
@@ -12,7 +20,8 @@ from sqlalchemy import Boolean, ForeignKey, Integer, Numeric, Text, UniqueConstr
 from sqlalchemy.orm import Mapped, mapped_column
 
 from nylium.database import Database, databasemethod
-from nylium.database.store import Store
+from nylium.database.sessioncontext import SessionContext
+from nylium.database.tabledomain import TableDomain, tableproperty
 from nylium.tables.base import Base
 from nylium.tables.numeric_values import TABLE_NumericValues
 from nylium.tables.props import TABLE_Props
@@ -42,38 +51,77 @@ class TABLE_UnitParts(Base):
     )
 
 
-class UnitParts(Store[UUID, TABLE_UnitParts]):
-    """UnitParts access layer: the parts of a user-defined unit type."""
+class UnitPart(TableDomain):
+    """One unit part: a writable snapshot of a TABLE_UnitParts row."""
 
-    def __init__(self) -> None:
-        super().__init__(TABLE_UnitParts)
+    __table__: ClassVar[type[Base]] = TABLE_UnitParts
+
+    type_uuid: tableproperty[UUID] = tableproperty()
+    name: tableproperty[str] = tableproperty()
+    multiplier: tableproperty[Decimal] = tableproperty()
+    offset: tableproperty[Decimal] = tableproperty()
+    is_base: tableproperty[bool] = tableproperty()
+    position: tableproperty[int] = tableproperty()
+
+
+class UnitParts(Mapping[UUID, UnitPart]):
+    """The unit_parts table as a Mapping of writable parts."""
 
     @databasemethod(commit=False)
-    def list_for(self, type_uuid: UUID) -> list[TABLE_UnitParts]:
-        return list(
-            Database.session.scalars(
+    def __getitem__(self, key: UUID) -> UnitPart:
+        row = Database.session.get(TABLE_UnitParts, key)
+        if row is None:
+            raise KeyError(key)
+        return cast(UnitPart, UnitPart.from_row(row))
+
+    @override
+    def __iter__(self) -> Iterator[UUID]:
+        with SessionContext():
+            yield from Database.session.scalars(sqla.select(TABLE_UnitParts.uuid))
+
+    @override
+    def __len__(self) -> int:
+        with SessionContext():
+            return int(
+                Database.session.scalar(
+                    sqla.select(sqla.func.count()).select_from(TABLE_UnitParts)
+                )
+                or 0
+            )
+
+    def list_for(self, type_uuid: UUID) -> Generator[UnitPart, None, None]:
+        """The parts of one unit, in display order, lazily."""
+        with SessionContext():
+            rows = Database.session.scalars(
                 sqla.select(TABLE_UnitParts)
                 .where(TABLE_UnitParts.type_uuid == type_uuid)
                 .order_by(TABLE_UnitParts.position)
-            ).all()
-        )
+            )
+            for row in rows:
+                yield cast(UnitPart, UnitPart.from_row(row))
 
     @databasemethod(commit=False)
-    def by_name(self, type_uuid: UUID, name: str) -> TABLE_UnitParts | None:
-        return Database.session.scalar(
+    def by_name(self, type_uuid: UUID, name: str) -> UnitPart | None:
+        row = Database.session.scalar(
             sqla.select(TABLE_UnitParts).where(
                 TABLE_UnitParts.type_uuid == type_uuid, TABLE_UnitParts.name == name
             )
         )
+        if row is None:
+            return None
+        return cast(UnitPart, UnitPart.from_row(row))
 
     @databasemethod(commit=False)
-    def base_of(self, type_uuid: UUID) -> TABLE_UnitParts | None:
-        return Database.session.scalar(
+    def base_of(self, type_uuid: UUID) -> UnitPart | None:
+        row = Database.session.scalar(
             sqla.select(TABLE_UnitParts).where(
                 TABLE_UnitParts.type_uuid == type_uuid,
                 TABLE_UnitParts.is_base.is_(True),
             )
         )
+        if row is None:
+            return None
+        return cast(UnitPart, UnitPart.from_row(row))
 
     def names_of(self, type_uuid: UUID) -> list[str]:
         return [part.name for part in self.list_for(type_uuid)]
@@ -127,21 +175,32 @@ class UnitParts(Store[UUID, TABLE_UnitParts]):
         are deleted unless still in use. Validation of the draft itself
         (exactly one base, unique names, nonzero multipliers) is the
         caller's job."""
-        existing = self.list_for(type_uuid)
+        existing = list(self.list_for(type_uuid))
         by_uuid = {part.uuid: part for part in existing}
         seen: set[UUID] = set()
         for position, (uuid, name, multiplier, offset, is_base) in enumerate(items):
             part = by_uuid.get(uuid) if uuid is not None else None
             if part is None:
-                part = TABLE_UnitParts(uuid=uuid4(), type_uuid=type_uuid, name=name)
-                Database.session.add(part)
-            elif part.name != name:
-                self._propagate_rename(unit_type_name, part.name, name)
-                part.name = name
-            part.multiplier = multiplier
-            part.offset = offset
-            part.is_base = is_base
-            part.position = position
+                row = TABLE_UnitParts(
+                    uuid=uuid4(),
+                    type_uuid=type_uuid,
+                    name=name,
+                    multiplier=multiplier,
+                    offset=offset,
+                    is_base=is_base,
+                    position=position,
+                )
+                Database.session.add(row)
+                Database.session.flush()
+                part = cast(UnitPart, UnitPart.from_row(row))
+            else:
+                if part.name != name:
+                    self._propagate_rename(unit_type_name, part.name, name)
+                    part.name = name
+                part.multiplier = multiplier
+                part.offset = offset
+                part.is_base = is_base
+                part.position = position
             seen.add(part.uuid)
         for part in existing:
             if part.uuid in seen:
@@ -151,8 +210,13 @@ class UnitParts(Store[UUID, TABLE_UnitParts]):
                 raise ValueError(
                     f"unit part {part.name!r} still has {usage} values"
                 )
-            Database.session.delete(part)
+            self._delete_row(part.uuid)
         Database.session.flush()
+
+    def _delete_row(self, uuid: UUID) -> None:
+        _ = Database.session.execute(
+            sqla.delete(TABLE_UnitParts).where(TABLE_UnitParts.uuid == uuid)
+        )
 
     def _propagate_rename(
         self, unit_type_name: str, old_name: str, new_name: str
