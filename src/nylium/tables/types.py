@@ -4,8 +4,8 @@ import sqlalchemy as sqla
 from sqlalchemy import Boolean, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from nylium.database import Database
-from nylium.database.databasemethod import databasemethod
+from nylium.database import Database, databasemethod
+from nylium.database.store import Store
 from nylium.tables.base import Base
 
 
@@ -38,38 +38,27 @@ class Types(Base):
         Boolean, nullable=False, default=False, server_default="false"
     )
 
-    @classmethod
-    @databasemethod(commit=False)
-    def name_by_uuid(cls, uuid: UUID) -> str | None:
-        row = Database.session.get(cls, uuid)
-        return None if row is None else row.name
 
-    @classmethod
-    @databasemethod(commit=False)
-    def uuid_by_name(cls, name: str) -> UUID | None:
-        row = Database.session.scalar(
-            sqla.select(cls).where(
-                cls.name == name
-            )
-        )
-        return None if row is None else row.uuid
+class TypeStore(Store[UUID, Types]):
+    """Type rows by uuid, with a name index and the two write ops."""
 
-    @classmethod
-    @databasemethod(commit=False)
-    def all_names(cls,) -> list[str]:
-        return list(Database.session.scalars(sqla.select(cls.name)).all())
+    def __init__(self) -> None:
+        super().__init__(Types)
 
-    @classmethod
+    @databasemethod(commit=False)
+    def by_name(self, name: str) -> Types | None:
+        return Database.session.scalar(sqla.select(Types).where(Types.name == name))
+
     @databasemethod(commit=True)
     def update(
-        cls,
+        self,
         uuid: UUID,
         name: str,
         plural_name: str | None,
         icon: str,
         color: str,
     ) -> None:
-        row = Database.session.get(cls, uuid)
+        row = Database.session.get(Types, uuid)
         if row is None:
             raise KeyError(f"no type with uuid {uuid}")
         row.name = name
@@ -78,9 +67,11 @@ class Types(Base):
         row.color = color
         Database.session.flush()
 
-    @classmethod
     @databasemethod(commit=True)
-    def delete_by_uuid(cls, uuid: UUID) -> None:
-        row = Database.session.get(cls, uuid)
+    def delete(self, uuid: UUID) -> None:
+        row = Database.session.get(Types, uuid)
         if row is not None:
             Database.session.delete(row)  # its props cascade
+
+
+types = TypeStore()

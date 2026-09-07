@@ -7,7 +7,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from nylium.database import Database, databasemethod
 from nylium.tables.base import Base
-from nylium.tables.types import Types
+from nylium.tables.types import types
 
 
 # Instances of types
@@ -39,8 +39,8 @@ class Instances(Base):
         inst = Database.session.get(cls, uuid)
         if inst is None:
             return "<gone>"
-        name = Types.name_by_uuid(inst.type_uuid)
-        return "<dangling>" if name is None else name
+        t = types.get(inst.type_uuid)
+        return "<dangling>" if t is None else t.name
 
     @classmethod
     @databasemethod(commit=False)

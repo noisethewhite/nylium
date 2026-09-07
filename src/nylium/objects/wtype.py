@@ -15,7 +15,7 @@ from uuid import UUID, uuid4
 import sqlalchemy as sqla
 
 from nylium.database import Database, databasemethod
-from nylium.tables import Types
+from nylium.tables.types import Types, types
 
 
 class WType:
@@ -173,7 +173,7 @@ class WType:
                 )
             # builtins re-ensure on every boot: keep their icon canonical
             if icon is not None and existing.icon != icon:
-                Types.update(existing.uuid, existing.name, existing.plural_name, icon, existing.color)
+                types.update(existing.uuid, existing.name, existing.plural_name, icon, existing.color)
                 return cls.by_name(name) or existing
             return existing
         row = Types(uuid=uuid4(), name=name, plural_name=plural_name)

@@ -15,7 +15,7 @@ from nylium.database import Database, databasemethod
 from nylium.tables.base import Base
 from nylium.tables.numeric_values import NumericValues
 from nylium.tables.props import Props
-from nylium.tables.types import Types
+from nylium.tables.types import types
 
 
 class UnitParts(Base):
@@ -76,19 +76,19 @@ class UnitParts(Base):
         through their prop's parameterized type row (`Numeric<unit>`);
         the name convention lives on WType.unit_numeric_name and is
         repeated here because tables must not import the object layer."""
-        parameterized_uuid = Types.uuid_by_name(f"Numeric<{unit_type_name}>")
-        if parameterized_uuid is None:
+        parameterized = types.by_name(f"Numeric<{unit_type_name}>")
+        if parameterized is None:
             return 0
-        return cls._count_stored(parameterized_uuid, part_name)
+        return cls._count_stored(parameterized.uuid, part_name)
 
     @classmethod
     @databasemethod(commit=False)
     def usage_total(cls, unit_type_name: str) -> int:
         """Every stored value of the unit, any part (or none)."""
-        parameterized_uuid = Types.uuid_by_name(f"Numeric<{unit_type_name}>")
-        if parameterized_uuid is None:
+        parameterized = types.by_name(f"Numeric<{unit_type_name}>")
+        if parameterized is None:
             return 0
-        return cls._count_stored(parameterized_uuid, None)
+        return cls._count_stored(parameterized.uuid, None)
 
     @classmethod
     def _count_stored(
@@ -149,15 +149,15 @@ class UnitParts(Base):
     def _propagate_rename(
         cls, unit_type_name: str, old_name: str, new_name: str
     ) -> None:
-        parameterized_uuid = Types.uuid_by_name(f"Numeric<{unit_type_name}>")
-        if parameterized_uuid is None:
+        parameterized = types.by_name(f"Numeric<{unit_type_name}>")
+        if parameterized is None:
             return
         _ = Database.session.execute(
             sqla.update(NumericValues)
             .where(
                 NumericValues.prop_uuid.in_(
                     sqla.select(Props.uuid).where(
-                        Props.value_type_uuid == parameterized_uuid
+                        Props.value_type_uuid == parameterized.uuid
                     )
                 ),
                 NumericValues.unit == old_name,

@@ -18,12 +18,12 @@ from uuid import UUID, uuid4
 
 from nylium.api.views import FileView, FunctionView, ObjectRef, ObjectView, TypeView
 from nylium.database import databasemethod
+from nylium.tables.types import types
 from nylium.tables import (
     EnumOptions,
     Files,
     Instances,
     Props,
-    Types,
     UnitParts,
 )
 from nylium.objects.wembedded import EMBEDDED_NAME_SEPARATOR, WEmbedded
@@ -74,7 +74,7 @@ class Api:
     @classmethod
     @databasemethod(commit=False)
     def list_types(cls) -> list[TypeView]:
-        return [TypeView.from_name(name) for name in Types.all_names()]
+        return [TypeView.from_name(t.name) for t in types.all()]
 
     @classmethod
     @databasemethod(commit=False)
@@ -138,7 +138,7 @@ class Api:
                 position,
                 formulas.get(key),
             )
-        Types.update(owner.uuid, owner.name, owner.plural_name, icon, color)
+        types.update(owner.uuid, owner.name, owner.plural_name, icon, color)
         return TypeView.from_name(name)
 
     @classmethod
@@ -163,7 +163,7 @@ class Api:
         cls._check_icon(icon)
         owner = WType.ensure(final_name, kind=WType.KIND_ENUM)
         EnumOptions.sync(owner.uuid, [(None, v) for v in (options or [])])
-        Types.update(owner.uuid, owner.name, None, icon, color)
+        types.update(owner.uuid, owner.name, None, icon, color)
         return TypeView.from_name(final_name)
 
     @classmethod
@@ -221,7 +221,7 @@ class Api:
         ]
         cls._validate_unit_draft(items)
         UnitParts.sync(owner.uuid, final_name, items)
-        Types.update(owner.uuid, owner.name, None, icon, color)
+        types.update(owner.uuid, owner.name, None, icon, color)
         return TypeView.from_name(final_name)
 
     @classmethod
@@ -433,8 +433,8 @@ class Api:
         if not final_name:
             raise ValidationError("type name must not be empty")
         cls._check_reserved_name(final_name, "type name")
-        collision = Types.uuid_by_name(final_name)
-        if collision is not None and collision != owner.uuid:
+        collision_row = types.by_name(final_name)
+        if collision_row is not None and collision_row.uuid != owner.uuid:
             raise ValueError(f"type {final_name!r} already exists")
         final_plural = owner.plural_name if plural_name is None else plural_name
         if icon is not None:
@@ -443,16 +443,16 @@ class Api:
         if color is not None:
             cls._check_color(color)
         final_color = owner.color if color is None else color
-        Types.update(owner.uuid, final_name, final_plural, final_icon, final_color)
+        types.update(owner.uuid, final_name, final_plural, final_icon, final_color)
         if owner.is_unit and final_name != name:
             # the parameterized Numeric<Unit> row tags along — prop value
             # types reference it by uuid, only the display name changes
-            parameterized_uuid = Types.uuid_by_name(WType.unit_numeric_name(name))
-            if parameterized_uuid is not None:
-                parameterized = WType.by_uuid(parameterized_uuid)
+            parameterized_row = types.by_name(WType.unit_numeric_name(name))
+            if parameterized_row is not None:
+                parameterized = WType.by_uuid(parameterized_row.uuid)
                 if parameterized is not None:
-                    Types.update(
-                        parameterized_uuid,
+                    types.update(
+                        parameterized_row.uuid,
                         WType.unit_numeric_name(final_name),
                         None,
                         parameterized.icon,
@@ -480,15 +480,15 @@ class Api:
         if owner.is_unit:
             # refuse while any prop is parameterized on this unit, then
             # drop the orphaned parameterized row with the unit itself
-            parameterized_uuid = Types.uuid_by_name(WType.unit_numeric_name(name))
-            if parameterized_uuid is not None:
-                refs = Props.count_with_value_type(parameterized_uuid)
+            parameterized_row = types.by_name(WType.unit_numeric_name(name))
+            if parameterized_row is not None:
+                refs = Props.count_with_value_type(parameterized_row.uuid)
                 if refs:
                     raise ValueError(
                         f"unit {name!r} still parameterizes {refs} props"
                     )
-                Types.delete_by_uuid(parameterized_uuid)
-        Types.delete_by_uuid(owner.uuid)
+                types.delete(parameterized_row.uuid)
+        types.delete(owner.uuid)
         return True
 
     # --- objects ---
@@ -861,8 +861,8 @@ class Api:
         fails the whole sync — schemas never strand a stored formula.
         Returns (prop uuid, new formula) updates; the caller persists
         them after the local schema change lands."""
-        array_type_uuid = Types.uuid_by_name(WType.array_name(type_name))
-        if array_type_uuid is None:
+        array_type_row = types.by_name(WType.array_name(type_name))
+        if array_type_row is None:
             return []
 
         def resolve_member_type(element_name: str) -> list[tuple[str, str]] | None:
@@ -871,7 +871,7 @@ class Api:
             return cls._member_props(element_name)
 
         updates: list[tuple[UUID, str]] = []
-        usages = Props.usages_of_value_type(array_type_uuid)
+        usages = Props.usages_of_value_type(array_type_row.uuid)
         by_owner: dict[UUID, list[str]] = {}
         for dependent_uuid, array_key in usages:
             if dependent_uuid == owner_uuid:
@@ -954,11 +954,11 @@ class Api:
     ) -> dict[str, StoredValue]:
         """Callers hand links over as UUID/ObjectRef (that's all they have);
         the object layer wants WObject wrappers. Resolve by prop type."""
-        owner_type_uuid = Types.uuid_by_name(type_name)
-        if owner_type_uuid is None:
+        owner_type_row = types.by_name(type_name)
+        if owner_type_row is None:
             raise KeyError(f"no type {type_name!r}")
-        formula_readonly = Props.formula_keys(owner_type_uuid)
-        function_readonly = Props.function_keys(owner_type_uuid)
+        formula_readonly = Props.formula_keys(owner_type_row.uuid)
+        function_readonly = Props.function_keys(owner_type_row.uuid)
         result: dict[str, StoredValue] = {}
         for key, value in props.items():
             if key in formula_readonly:
@@ -974,7 +974,7 @@ class Api:
                     f"prop {key!r} of {type_name!r} is computed by a function — it is read-only"
                 )
             normalized = cls._normalize_value(
-                value, Props.get_type_name(owner_type_uuid, key)
+                value, Props.get_type_name(owner_type_row.uuid, key)
             )
             if key == NAME_PROP_KEY and isinstance(normalized, str):
                 # → would make a user-typed name indistinguishable from a

@@ -7,7 +7,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from nylium.database import Database, databasemethod
 from nylium.tables.base import Base
-from nylium.tables.types import Types
+from nylium.tables.types import types
 
 
 class Props(Base):
@@ -61,11 +61,13 @@ class Props(Base):
             )
         )
         if row is None:
-            raise KeyError(f"type {Types.name_by_uuid(owner_type_uuid)!r} has no prop {key!r}")
-        value_type = Types.name_by_uuid(row.value_type_uuid)
+            owner = types.get(owner_type_uuid)
+            owner_name = None if owner is None else owner.name
+            raise KeyError(f"type {owner_name!r} has no prop {key!r}")
+        value_type = types.get(row.value_type_uuid)
         if value_type is None:
             raise KeyError(f"Type with UUID {row.value_type_uuid} does not exist")
-        return value_type
+        return value_type.name
 
     @classmethod
     @databasemethod(commit=False)
