@@ -10,9 +10,9 @@
 # through to the table (`part.name = "kg"` issues an UPDATE). Read helpers
 # are lazy Generators; the reverse lookup lives on the descriptor itself
 # (`UnitPart.name.list_for("kg")`).
-from collections.abc import Generator, Iterator, Mapping
+from collections.abc import Generator
 from decimal import Decimal
-from typing import ClassVar, cast, override
+from typing import ClassVar, cast
 from uuid import UUID, uuid4
 
 import sqlalchemy as sqla
@@ -21,7 +21,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from nylium.database import Database, databasemethod
 from nylium.database.sessioncontext import SessionContext
-from nylium.database.tabledomain import TableDomain, tableproperty
+from nylium.database.tabledomain import TableDomain, TableMapping, tableproperty
 from nylium.tables.base import Base
 from nylium.tables.numeric_values import TABLE_NumericValues
 from nylium.tables.props import TABLE_Props
@@ -64,41 +64,23 @@ class UnitPart(TableDomain):
     position: tableproperty[int] = tableproperty()
 
 
-class UnitParts(Mapping[UUID, UnitPart]):
+class UnitParts(TableMapping[UnitPart]):
     """The unit_parts table as a Mapping of writable parts."""
 
-    @databasemethod(commit=False)
-    def __getitem__(self, key: UUID) -> UnitPart:
-        row = Database.session.get(TABLE_UnitParts, key)
-        if row is None:
-            raise KeyError(key)
-        return cast(UnitPart, UnitPart.from_row(row))
-
-    @override
-    def __iter__(self) -> Iterator[UUID]:
-        with SessionContext():
-            yield from Database.session.scalars(sqla.select(TABLE_UnitParts.uuid))
-
-    @override
-    def __len__(self) -> int:
-        with SessionContext():
-            return int(
-                Database.session.scalar(
-                    sqla.select(sqla.func.count()).select_from(TABLE_UnitParts)
-                )
-                or 0
-            )
+    __domain__: ClassVar[type[TableDomain]] = UnitPart
 
     def list_for(self, type_uuid: UUID) -> Generator[UnitPart, None, None]:
         """The parts of one unit, in display order, lazily."""
         with SessionContext():
-            rows = Database.session.scalars(
-                sqla.select(TABLE_UnitParts)
-                .where(TABLE_UnitParts.type_uuid == type_uuid)
-                .order_by(TABLE_UnitParts.position)
-            )
-            for row in rows:
-                yield cast(UnitPart, UnitPart.from_row(row))
+            parts = [
+                cast(UnitPart, UnitPart.from_row(row))
+                for row in Database.session.scalars(
+                    sqla.select(TABLE_UnitParts)
+                    .where(TABLE_UnitParts.type_uuid == type_uuid)
+                    .order_by(TABLE_UnitParts.position)
+                )
+            ]
+        yield from parts
 
     @databasemethod(commit=False)
     def by_name(self, type_uuid: UUID, name: str) -> UnitPart | None:

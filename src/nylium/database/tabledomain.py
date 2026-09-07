@@ -20,8 +20,16 @@ drives, named in the SQLAlchemy framework-attribute style.
 """
 from __future__ import annotations
 
-from collections.abc import Generator, Mapping
-from typing import TYPE_CHECKING, ClassVar, Generic, TypeVar, cast, overload
+from collections.abc import Generator, Iterator, Mapping
+from typing import (
+    TYPE_CHECKING,
+    ClassVar,
+    Generic,
+    TypeVar,
+    cast,
+    overload,
+    override,
+)
 from uuid import UUID
 
 import sqlalchemy as sqla
@@ -34,6 +42,7 @@ if TYPE_CHECKING:
     from nylium.tables.base import Base
 
 _T = TypeVar("_T")
+_D = TypeVar("_D", bound="TableDomain")
 
 
 def _column(table: type[Base], name: str) -> sqla.Column[object]:
@@ -77,6 +86,12 @@ class TableDomain:
             for name, prop in _tableproperties(cls).items()
         }
         return cls(uuid=cast(UUID, getattr(row, "uuid")), snapshot=snapshot)
+
+    @classmethod
+    def primary_key(cls) -> sqla.Column[UUID]:
+        """The row's PK column, for the table Mappings' scans."""
+        pk = sqla.inspect(cls.__table__).primary_key
+        return cast(sqla.Column[UUID], pk[0])
 
     @databasemethod(commit=True)
     def persist(self, column: str, value: object) -> None:
@@ -132,15 +147,58 @@ class tableproperty(Generic[_T]):
     def list_for(self, value: _T) -> Generator[TableDomain, None, None]:
         """Every domain object whose column equals ``value``, lazily.
 
-        The generator owns its SessionContext for the duration of the
-        iteration and releases it on exhaustion or ``close()``; a caller that
-        abandons iteration early should close the generator. Yields the
-        owner's concrete domain type (``UnitPart`` etc.) — the declared base
-        keeps the descriptor generic over one TypeVar.
+        The rows are materialised inside one SessionContext (closed before the
+        first yield) so a caller that abandons iteration early never strands a
+        live connection. Yields the owner's concrete domain type
+        (``UnitPart`` etc.) — the declared base keeps the descriptor generic
+        over one TypeVar.
         """
         table = self.owner.__table__
         column = _column(table, self.column)
         with SessionContext():
-            rows = Database.session.scalars(sqla.select(table).where(column == value))
-            for row in rows:
-                yield self.owner.from_row(row)
+            domains = [
+                self.owner.from_row(row)
+                for row in Database.session.scalars(
+                    sqla.select(table).where(column == value)
+                )
+            ]
+        yield from domains
+
+
+class TableMapping(Generic[_D], Mapping[UUID, _D]):
+    """The ``Mapping[UUID, Domain]`` shape of a table (ADR-0011).
+
+    Subclasses set ``__domain__`` to their concrete domain type; the domain's
+    ``__table__`` supplies the row class. ``get``/``__getitem__``/``__iter__``
+    /``__len__`` come from here — the table-specific query helpers (``by_name``,
+    ``list_for``, write ops) live on the concrete Mapping next to the row.
+    """
+
+    __domain__: ClassVar[type[TableDomain]]
+
+    @databasemethod(commit=False)
+    @override
+    def __getitem__(self, key: UUID) -> _D:
+        row = Database.session.get(self.__domain__.__table__, key)
+        if row is None:
+            raise KeyError(key)
+        return cast(_D, self.__domain__.from_row(row))
+
+    @override
+    def __iter__(self) -> Iterator[UUID]:
+        pk = self.__domain__.primary_key()
+        with SessionContext():
+            uuids = list(Database.session.scalars(sqla.select(pk)))
+        yield from uuids
+
+    @override
+    def __len__(self) -> int:
+        with SessionContext():
+            return int(
+                Database.session.scalar(
+                    sqla.select(sqla.func.count()).select_from(
+                        self.__domain__.__table__
+                    )
+                )
+                or 0
+            )

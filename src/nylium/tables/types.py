@@ -1,3 +1,5 @@
+from collections.abc import Generator
+from typing import ClassVar, cast
 from uuid import UUID, uuid4
 
 import sqlalchemy as sqla
@@ -5,17 +7,18 @@ from sqlalchemy import Boolean, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from nylium.database import Database, databasemethod
-from nylium.database.store import Store
+from nylium.database.sessioncontext import SessionContext
+from nylium.database.tabledomain import TableDomain, TableMapping, tableproperty
 from nylium.tables.base import Base
 
 
 class TABLE_Types(Base):
-    """The raw `types` row — a plain mapped class, no behaviour (ADR-0010).
+    """The raw `types` row — a plain mapped class, no behaviour (ADR-0011).
 
-    Writers go through the ``Types`` store below (``create``/``update``/
-    ``delete``), never by constructing ``TABLE_Types`` directly. The mapped
-    class stays importable where a SQL join needs the table — that is its
-    only legitimate public use.
+    Writers go through the ``Type`` domain object or the ``Types`` mapping
+    below (``create``/``update``/``delete``), never by constructing
+    ``TABLE_Types`` directly. The mapped class stays importable where a SQL
+    join needs the table — that is its only legitimate public use.
     """
 
     __tablename__: str = "types"
@@ -47,15 +50,41 @@ class TABLE_Types(Base):
     )
 
 
-class Types(Store[UUID, TABLE_Types]):
-    """Types access layer: rows by uuid, a name index, and the write ops."""
+class Type(TableDomain):
+    """One type: a writable snapshot of a TABLE_Types row."""
 
-    def __init__(self) -> None:
-        super().__init__(TABLE_Types)
+    __table__: ClassVar[type[Base]] = TABLE_Types
+
+    name: tableproperty[str] = tableproperty()
+    plural_name: tableproperty[str | None] = tableproperty()
+    icon: tableproperty[str] = tableproperty()
+    color: tableproperty[str] = tableproperty()
+    kind: tableproperty[str] = tableproperty()
+    embedded: tableproperty[bool] = tableproperty()
+
+
+class Types(TableMapping[Type]):
+    """The types table as a Mapping of writable types."""
+
+    __domain__: ClassVar[type[TableDomain]] = Type
+
+    def all(self) -> Generator[Type, None, None]:
+        """Every type, lazily."""
+        with SessionContext():
+            all_types = [
+                cast(Type, Type.from_row(row))
+                for row in Database.session.scalars(sqla.select(TABLE_Types))
+            ]
+        yield from all_types
 
     @databasemethod(commit=False)
-    def by_name(self, name: str) -> TABLE_Types | None:
-        return Database.session.scalar(sqla.select(TABLE_Types).where(TABLE_Types.name == name))
+    def by_name(self, name: str) -> Type | None:
+        row = Database.session.scalar(
+            sqla.select(TABLE_Types).where(TABLE_Types.name == name)
+        )
+        if row is None:
+            return None
+        return cast(Type, Type.from_row(row))
 
     @databasemethod(commit=True)
     def create(
@@ -65,7 +94,7 @@ class Types(Store[UUID, TABLE_Types]):
         icon: str | None = None,
         kind: str | None = None,
         embedded: bool | None = None,
-    ) -> TABLE_Types:
+    ) -> Type:
         row = TABLE_Types(name=name, plural_name=plural_name)
         if icon is not None:
             row.icon = icon
@@ -75,7 +104,7 @@ class Types(Store[UUID, TABLE_Types]):
             row.embedded = embedded
         Database.session.add(row)
         Database.session.flush()
-        return row
+        return cast(Type, Type.from_row(row))
 
     @databasemethod(commit=True)
     def update(

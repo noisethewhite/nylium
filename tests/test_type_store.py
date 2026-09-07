@@ -47,7 +47,7 @@ def test_by_name_second_index():
 
 def test_iter_len_all():
     _seed()
-    all_rows = types.all()
+    all_rows = list(types.all())
     assert any(row.name == "T" for row in all_rows)
 
     assert len(types) == len(all_rows)

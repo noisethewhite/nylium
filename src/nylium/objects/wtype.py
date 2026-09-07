@@ -13,7 +13,7 @@ from typing import ClassVar
 from uuid import UUID
 
 from nylium.database import databasemethod
-from nylium.tables.types import TABLE_Types, types
+from nylium.tables.types import Type, types
 
 
 class WType:
@@ -26,7 +26,7 @@ class WType:
     KIND_FUNCTION: ClassVar[str] = "function"
     KIND_FILE: ClassVar[str] = "file"
 
-    def __init__(self, row: TABLE_Types):
+    def __init__(self, row: Type):
         # snapshot, not a live row: reads must not depend on the session
         # that fetched the row still being open
         self._uuid: UUID = row.uuid
