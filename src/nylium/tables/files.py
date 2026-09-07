@@ -37,6 +37,17 @@ class File(TableDomain):
     mime: tableproperty[str] = tableproperty()
     size_bytes: tableproperty[int] = tableproperty()
 
+    def wire(self) -> dict[str, object]:
+        """The JSON-safe wire shape (ADR-0011 §5), matching the file
+        contract the old FileView serialized."""
+        return {
+            "uuid": str(self.uuid),
+            "type_name": self.type_name,
+            "name": self.name,
+            "mime": self.mime,
+            "size_bytes": self.size_bytes,
+        }
+
 
 class Files(TableMapping[UUID, File]):
     """The files table as a Mapping of writable files."""
@@ -51,17 +62,17 @@ class Files(TableMapping[UUID, File]):
         name: str,
         mime: str,
         size_bytes: int,
-    ) -> None:
-        Database.session.add(
-            TABLE_Files(
-                uuid=uuid,
-                type_name=type_name,
-                name=name,
-                mime=mime,
-                size_bytes=size_bytes,
-            )
+    ) -> File:
+        row = TABLE_Files(
+            uuid=uuid,
+            type_name=type_name,
+            name=name,
+            mime=mime,
+            size_bytes=size_bytes,
         )
+        Database.session.add(row)
         Database.session.flush()
+        return cast(File, File.from_row(row))
 
     def list_all(self) -> Generator[File, None, None]:
         """Every file, name-ordered, lazily."""

@@ -5,22 +5,23 @@ from decimal import Decimal
 
 import pytest
 
-from nylium.api import Api, ScalarValue, TypeView
+from nylium.api import Api, ScalarValue
+from nylium.tables.types import Type
 from nylium.objects.quantity import Quantity
 from nylium.server.errors import ValidationError
 
 
-def temperature_unit() -> TypeView:
+def temperature_unit() -> Type:
     return Api.create_unit(
         "Temperature", "°C", [("°F", Decimal("1.8"), Decimal(32))]
     )
 
 
-def mass_unit() -> TypeView:
+def mass_unit() -> Type:
     return Api.create_unit("Mass", "g", [("kg", Decimal("1000"), Decimal(0))])
 
 
-def oven_type() -> TypeView:
+def oven_type() -> Type:
     return Api.create_type(
         "Oven",
         {"name": "String", "temp": "Numeric<Temperature>"},
@@ -28,7 +29,7 @@ def oven_type() -> TypeView:
     )
 
 
-def _part_uuids(view: TypeView) -> dict[str, object]:
+def _part_uuids(view: Type) -> dict[str, object]:
     return {part.name: part.uuid for part in view.unit_parts}
 
 

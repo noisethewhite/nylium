@@ -9,8 +9,8 @@ from nylium.api import (
     ObjectView,
     RefValue,
     ScalarValue,
-    TypeView,
 )
+from nylium.tables.types import Type
 from nylium.objects import WInteger, WObject, WString
 from nylium.server.errors import ValidationError
 
@@ -30,7 +30,7 @@ def test_type_listing():
     views = {view.name: view for view in Api.list_types()}
     assert "Person" in views
     person = views["Person"]
-    assert isinstance(person, TypeView)
+    assert isinstance(person, Type)
     props = {prop.key: prop.value_type for prop in person.props}
     assert props["name"] == "String"
     assert props["tags"] == "Array<String>"

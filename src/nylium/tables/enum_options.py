@@ -42,6 +42,11 @@ class EnumOption(TableDomain):
     value: tableproperty[str] = tableproperty()
     position: tableproperty[int] = tableproperty()
 
+    def wire(self) -> dict[str, object]:
+        """The JSON-safe wire shape (ADR-0011 §5), matching
+        web/src/contracts.ts EnumOptionView."""
+        return {"uuid": str(self.uuid), "value": self.value}
+
 
 class EnumOptions(TableMapping[UUID, EnumOption]):
     """The enum_options table as a Mapping of writable options."""

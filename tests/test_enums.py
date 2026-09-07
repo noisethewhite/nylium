@@ -3,11 +3,12 @@ membership validation on write. Api-level; HTTP shape lives in
 test_http.py."""
 import pytest
 
-from nylium.api import Api, ArrayValue, ScalarValue, TypeView
+from nylium.api import Api, ArrayValue, ScalarValue
+from nylium.tables.types import Type
 from nylium.server.errors import ValidationError
 
 
-def ticket_type() -> TypeView:
+def ticket_type() -> Type:
     return Api.create_type(
         "Ticket",
         {"name": "String", "status": "Status", "tags": "Array<Status>"},
@@ -15,7 +16,7 @@ def ticket_type() -> TypeView:
     )
 
 
-def status_enum() -> TypeView:
+def status_enum() -> Type:
     return Api.create_enum("Status", ["open", "closed"])
 
 
@@ -56,7 +57,7 @@ def test_enum_array_prop():
         Api.update_object(created.uuid, {"tags": ["open", "bogus"]})
 
 
-def _option_uuids(view: TypeView) -> dict[str, object]:
+def _option_uuids(view: Type) -> dict[str, object]:
     return {option.value: option.uuid for option in view.enum_options}
 
 

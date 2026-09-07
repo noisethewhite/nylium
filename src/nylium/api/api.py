@@ -1,10 +1,11 @@
 """Api: classmethod facade over the object layer — CRUD on types and
-objects, returning the dataclass views from views.py.
+objects, returning table-domain objects (ADR-0011) and the aggregate
+views from views.py.
 
 This is the seam a future HTTP app (FastAPI) mounts. It never leaks
 WObject wrappers or SQLAlchemy rows to callers: everything in and out
-is a view, a UUID, or a plain python value. Writes go through the
-WObject layer, so all type validation applies here too.
+is a domain object, a UUID, or a plain python value. Writes go through
+the WObject layer, so all type validation applies here too.
 
 Table access lives on the table classes themselves (Types/TABLE_Instances/
 TABLE_Props helpers); this file only orchestrates and adapts caller input.
@@ -16,9 +17,10 @@ from decimal import Decimal
 from typing import TypeAlias, cast
 from uuid import UUID, uuid4
 
-from nylium.api.views import FileView, FunctionView, ObjectRef, ObjectView, TypeView
+from nylium.api.views import FunctionView, ObjectRef, ObjectView
 from nylium.database import databasemethod
-from nylium.tables.types import types
+from nylium.tables.files import File
+from nylium.tables.types import Type, types
 from nylium.tables import (
     enum_options,
     files,
@@ -73,15 +75,22 @@ class Api:
 
     @classmethod
     @databasemethod(commit=False)
-    def list_types(cls) -> list[TypeView]:
-        return [TypeView.from_name(t.name) for t in types.all()]
+    def list_types(cls) -> list[Type]:
+        return list(types.all())
 
     @classmethod
     @databasemethod(commit=False)
-    def get_type(cls, name: str) -> TypeView | None:
-        if WType.by_name(name) is None:
-            return None
-        return TypeView.from_name(name)
+    def get_type(cls, name: str) -> Type | None:
+        return types.by_name(name)
+
+    @classmethod
+    def _type_result(cls, name: str) -> Type:
+        """Re-read a type the caller just wrote, for the return value.
+        The write path resolves the name first, so a miss means a bug."""
+        result = types.by_name(name)
+        if result is None:
+            raise RuntimeError(f"type {name!r} vanished after write")
+        return result
 
     @classmethod
     @databasemethod(commit=True)
@@ -94,7 +103,7 @@ class Api:
         color: str = WColor.DEFAULT,
         embedded: bool = False,
         formulas: dict[str, str] | None = None,
-    ) -> TypeView:
+    ) -> Type:
         """props maps key -> value type name. Missing value types are created.
         Dict order becomes the schema's display order (positions).
         The schema must open with the `name` prop (String) — see
@@ -139,7 +148,7 @@ class Api:
                 formulas.get(key),
             )
         types.update(owner.uuid, owner.name, owner.plural_name, icon, color)
-        return TypeView.from_name(name)
+        return cls._type_result(name)
 
     @classmethod
     @databasemethod(commit=True)
@@ -149,7 +158,7 @@ class Api:
         options: list[str] | None = None,
         icon: str = "lists",
         color: str = WColor.DEFAULT,
-    ) -> TypeView:
+    ) -> Type:
         """A string enum is a type with kind='enum': no props, values
         live in string_values, options live in enum_options. Options
         here seed the initial list in order."""
@@ -164,13 +173,13 @@ class Api:
         owner = WType.ensure(final_name, kind=WType.KIND_ENUM)
         enum_options.sync(owner.uuid, [(None, v) for v in (options or [])])
         types.update(owner.uuid, owner.name, None, icon, color)
-        return TypeView.from_name(final_name)
+        return cls._type_result(final_name)
 
     @classmethod
     @databasemethod(commit=True)
     def sync_enum_options(
         cls, name: str, items: list[tuple[UUID | None, str]]
-    ) -> TypeView:
+    ) -> Type:
         """Apply the enum editor's full option draft at once: matching
         uuid renames the option (propagating to stored values), None
         creates, absent options are deleted unless still in use."""
@@ -187,7 +196,7 @@ class Api:
         if len(set(values)) != len(values):
             raise ValidationError(f"duplicate enum options in {values!r}")
         enum_options.sync(owner.uuid, items)
-        return TypeView.from_name(name)
+        return cls._type_result(name)
 
     @classmethod
     @databasemethod(commit=True)
@@ -198,7 +207,7 @@ class Api:
         secondaries: list[tuple[str, Decimal, Decimal]] | None = None,
         icon: str = "straighten",
         color: str = WColor.DEFAULT,
-    ) -> TypeView:
+    ) -> Type:
         """A unit is a type with kind='unit': no props, parts live in
         unit_parts. The base part has identity conversion (multiplier 1,
         offset 0); secondaries are (name, multiplier, offset) with the
@@ -222,13 +231,13 @@ class Api:
         cls._validate_unit_draft(items)
         unit_parts.sync(owner.uuid, final_name, items)
         types.update(owner.uuid, owner.name, None, icon, color)
-        return TypeView.from_name(final_name)
+        return cls._type_result(final_name)
 
     @classmethod
     @databasemethod(commit=True)
     def sync_unit_parts(
         cls, name: str, items: list[tuple[UUID | None, str, Decimal, Decimal, bool]]
-    ) -> TypeView:
+    ) -> Type:
         """Apply the unit editor's full part draft at once: matching uuid
         edits in place (a rename propagates to stored values), None
         creates, absent parts are deleted unless still in use. Exactly
@@ -254,7 +263,7 @@ class Api:
                 f"unit {name!r} still has values; its base part cannot change"
             )
         unit_parts.sync(owner.uuid, owner.name, items)
-        return TypeView.from_name(name)
+        return cls._type_result(name)
 
     @classmethod
     def _validate_unit_draft(
@@ -282,7 +291,7 @@ class Api:
 
     @classmethod
     @databasemethod(commit=True)
-    def reorder_props(cls, type_name: str, keys: list[str]) -> TypeView:
+    def reorder_props(cls, type_name: str, keys: list[str]) -> Type:
         """Persist a new prop order; keys must cover the whole schema and
         keep the `name` prop first (see NAME_PROP_KEY)."""
         from nylium.server.errors import ValidationError
@@ -298,13 +307,13 @@ class Api:
         if NAME_PROP_KEY in existing and (not keys or keys[0] != NAME_PROP_KEY):
             raise ValidationError(f"the {NAME_PROP_KEY!r} prop must stay first")
         WProp.reorder(owner, keys)
-        return TypeView.from_name(type_name)
+        return cls._type_result(type_name)
 
     @classmethod
     @databasemethod(commit=True)
     def sync_props(
         cls, type_name: str, items: list[tuple[UUID | None, str, str, str | None]]
-    ) -> TypeView:
+    ) -> Type:
         """Apply the type editor's full prop draft at once. Each item is
         (uuid | None, key, value type name, formula | None): a matching
         uuid edits that prop in place (rename/retype — a retype purges
@@ -408,7 +417,7 @@ class Api:
             # child name of every instance of this type
             for instance_uuid in instances.by_type(owner.uuid):
                 WEmbedded.regenerate_names(instance_uuid)
-        return TypeView.from_name(type_name)
+        return cls._type_result(type_name)
 
     @classmethod
     @databasemethod(commit=True)
@@ -419,7 +428,7 @@ class Api:
         plural_name: str | None = None,
         icon: str | None = None,
         color: str | None = None,
-    ) -> TypeView:
+    ) -> Type:
         """Edit a user type's identity: name, plural form, icon, color.
         Builtins and array types (no plural form) are immutable."""  # noqa: E501
         from nylium.server.errors import ValidationError
@@ -458,7 +467,7 @@ class Api:
                         parameterized.icon,
                         parameterized.color,
                     )
-        return TypeView.from_name(final_name)
+        return cls._type_result(final_name)
 
     @classmethod
     @databasemethod(commit=True)
@@ -593,7 +602,7 @@ class Api:
     @databasemethod(commit=True)
     def create_file(
         cls, type_name: str, filename: str, mime: str, data: bytes
-    ) -> FileView:
+    ) -> File:
         """Atomic upload (ADR-0008): one transaction writes the `files` row,
         then the blob lands on disk last. If the disk write fails the
         transaction rolls back — no half-created pointer."""
@@ -614,7 +623,7 @@ class Api:
                 f"{type_name} does not accept MIME {mime!r}"
             )
         file_uuid = uuid4()
-        files.create(file_uuid, type_name, filename, mime, len(data))
+        created = files.create(file_uuid, type_name, filename, mime, len(data))
         blob = WFile.blob_path(file_uuid)
         tmp = blob.with_suffix(".tmp")
         try:
@@ -622,36 +631,21 @@ class Api:
             _ = tmp.replace(blob)  # rename is atomic on the same filesystem
         finally:
             tmp.unlink(missing_ok=True)
-        return FileView(
-            uuid=file_uuid, type_name=type_name, name=filename,
-            mime=mime, size_bytes=len(data),
-        )
+        return created
 
     @classmethod
     @databasemethod(commit=False)
-    def get_file(cls, uuid: UUID) -> FileView | None:
-        row = files.get(uuid)
-        if row is None:
-            return None
-        return FileView(
-            uuid=row.uuid, type_name=row.type_name, name=row.name,
-            mime=row.mime, size_bytes=row.size_bytes,
-        )
+    def get_file(cls, uuid: UUID) -> File | None:
+        return files.get(uuid)
 
     @classmethod
     @databasemethod(commit=False)
-    def list_files(cls) -> list[FileView]:
-        return [
-            FileView(
-                uuid=row.uuid, type_name=row.type_name, name=row.name,
-                mime=row.mime, size_bytes=row.size_bytes,
-            )
-            for row in files.list_all()
-        ]
+    def list_files(cls) -> list[File]:
+        return list(files.list_all())
 
     @classmethod
     @databasemethod(commit=True)
-    def rename_file(cls, uuid: UUID, name: str) -> FileView:
+    def rename_file(cls, uuid: UUID, name: str) -> File:
         """ADR-0008: rename is a display-name update — the uuid pointer is
         stable, so no reference ever breaks."""
         from nylium.server.errors import ValidationError
@@ -802,7 +796,7 @@ class Api:
     @databasemethod(commit=True)
     def set_prop_function(
         cls, type_name: str, prop_key: str, function_uuid: UUID | None
-    ) -> TypeView:
+    ) -> Type:
         """Bind a Function<T,R> instance to a prop (None unbinds). The
         function's output type must equal the prop's value type, and a
         formula-backed prop cannot become function-backed. Refuses a
@@ -832,7 +826,7 @@ class Api:
             )
         props.set_function(prop.uuid, function_uuid)
         WFunction.assert_no_dependency_cycle()
-        result = TypeView.from_name(type_name)
+        result = cls._type_result(type_name)
         return result
 
     # --- internals ---

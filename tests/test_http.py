@@ -685,7 +685,7 @@ def test_tags_over_http(auth_client: TestClient) -> None:
 
 def test_formulas_over_http(auth_client: TestClient) -> None:
     """ADR-0005 over the wire: formulas ride create_type/sync_props and
-    surface on TypeView; invalid formulas are 422."""
+    surface on Type; invalid formulas are 422."""
     dsl.create_type(auth_client, "Item", {"name": "String", "price": "Numeric"})
     created = auth_client.post(
         "/api/types",

@@ -1,57 +1,33 @@
 from collections.abc import Generator
 from typing import ClassVar, cast
-from uuid import UUID, uuid4
+from uuid import UUID
 
 import sqlalchemy as sqla
-from sqlalchemy import Boolean, Text
-from sqlalchemy.orm import Mapped, mapped_column
 
 from nylium.database import Database, databasemethod
 from nylium.database.sessioncontext import SessionContext
 from nylium.database.tabledomain import TableDomain, TableMapping, tableproperty
 from nylium.tables.base import Base
+from nylium.tables.enum_options import EnumOption, enum_options
+from nylium.tables.props import Prop, props
+from nylium.tables.typeref import TABLE_Types
+from nylium.tables.unit_parts import UnitPart, unit_parts
 
+__all__ = ["TABLE_Types", "Type", "Types", "types"]
 
-class TABLE_Types(Base):
-    """The raw `types` row — a plain mapped class, no behaviour (ADR-0011).
-
-    Writers go through the ``Type`` domain object or the ``Types`` mapping
-    below (``create``/``update``/``delete``), never by constructing
-    ``TABLE_Types`` directly. The mapped class stays importable where a SQL
-    join needs the table — that is its only legitimate public use.
-    """
-
-    __tablename__: str = "types"
-
-    uuid: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    name: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
-    # NULL for builtins and array types — only user types carry both forms
-    plural_name: Mapped[str | None] = mapped_column(Text, nullable=True)
-    # Material Symbols name, rendered monochrome by the UI;
-    # server defaults backfill existing rows on ALTER
-    icon: Mapped[str] = mapped_column(
-        Text, nullable=False, default="inventory_2", server_default="inventory_2"
-    )
-    # ADR-0005: stores #RRGGBB hex; the default must match WColor.DEFAULT
-    # (tables must not import objects — keep the literal in sync by hand)
-    color: Mapped[str] = mapped_column(
-        Text, nullable=False, default="#9e9e9e", server_default="#9e9e9e"
-    )
-    # "object" (regular, builtin or array) | "enum" (string enum — its
-    # values live in enum_options; instances never exist for enum types)
-    kind: Mapped[str] = mapped_column(
-        Text, nullable=False, default="object", server_default="object"
-    )
-    # Composition flag (ADR-0004): embedded types instantiate only as a
-    # prop value of an owner object, never standalone. Orthogonal to
-    # kind — an embedded type is still kind="object".
-    embedded: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=False, server_default="false"
-    )
+# TABLE_Types lives in typeref.py (see that module's docstring) and is
+# re-exported here: `from nylium.tables.types import TABLE_Types` keeps
+# working everywhere.
 
 
 class Type(TableDomain):
-    """One type: a writable snapshot of a TABLE_Types row."""
+    """One type: a writable snapshot of a TABLE_Types row.
+
+    ADR-0011 §5: the domain object carries the aggregate fields the old
+    TypeView carried — ``props``/``enum_options``/``unit_parts`` navigate
+    to the child tables. This module is the top of the tables import DAG:
+    the child modules lazy-import ``types`` where they need it, never at
+    module level."""
 
     __table__: ClassVar[type[Base]] = TABLE_Types
 
@@ -62,6 +38,36 @@ class Type(TableDomain):
     color: tableproperty[str] = tableproperty()
     kind: tableproperty[str] = tableproperty()
     embedded: tableproperty[bool] = tableproperty()
+
+    @property
+    def props(self) -> list[Prop]:
+        """This type's props, in display order."""
+        return list(props.list_for(self.uuid))
+
+    @property
+    def enum_options(self) -> list[EnumOption]:
+        """This enum's options, in display order (empty for non-enums)."""
+        return list(enum_options.list_for(self.uuid))
+
+    @property
+    def unit_parts(self) -> list[UnitPart]:
+        """This unit's parts, in display order (empty for non-units)."""
+        return list(unit_parts.list_for(self.uuid))
+
+    def wire(self) -> dict[str, object]:
+        """The JSON-safe wire shape (ADR-0011 §5), matching
+        web/src/contracts.ts TypeView."""
+        return {
+            "name": self.name,
+            "plural_name": self.plural_name,
+            "icon": self.icon,
+            "color": self.color,
+            "kind": self.kind,
+            "embedded": self.embedded,
+            "enum_options": [option.wire() for option in self.enum_options],
+            "unit_parts": [part.wire() for part in self.unit_parts],
+            "props": [prop.wire() for prop in self.props],
+        }
 
 
 class Types(TableMapping[UUID, Type]):

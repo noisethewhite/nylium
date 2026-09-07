@@ -25,7 +25,20 @@ from nylium.database.tabledomain import TableDomain, TableMapping, tableproperty
 from nylium.tables.base import Base
 from nylium.tables.numeric_values import TABLE_NumericValues
 from nylium.tables.props import TABLE_Props
-from nylium.tables.types import types
+from nylium.tables.typeref import TABLE_Types
+
+# TABLE_Types comes from typeref.py, not types.py: types.py imports this
+# module for Type.unit_parts, so importing the domain layer back would
+# cycle. Parameterized-type resolution is a plain SQL select.
+
+
+def _parameterized_uuid(unit_type_name: str) -> UUID | None:
+    """The `Numeric<unit>` type row's uuid, or None when it doesn't exist."""
+    return Database.session.scalar(
+        sqla.select(TABLE_Types.uuid).where(
+            TABLE_Types.name == f"Numeric<{unit_type_name}>"
+        )
+    )
 
 
 class TABLE_UnitParts(Base):
@@ -63,6 +76,17 @@ class UnitPart(TableDomain):
     offset: tableproperty[Decimal] = tableproperty()
     is_base: tableproperty[bool] = tableproperty()
     position: tableproperty[int] = tableproperty()
+
+    def wire(self) -> dict[str, object]:
+        """The JSON-safe wire shape (ADR-0011 §5): Decimals cross as
+        strings, matching web/src/contracts.ts UnitPartView."""
+        return {
+            "uuid": str(self.uuid),
+            "name": self.name,
+            "multiplier": str(self.multiplier),
+            "offset": str(self.offset),
+            "is_base": self.is_base,
+        }
 
 
 class UnitParts(TableMapping[UUID, UnitPart]):
@@ -115,18 +139,18 @@ class UnitParts(TableMapping[UUID, UnitPart]):
         through their prop's parameterized type row (`Numeric<unit>`);
         the name convention lives on WType.unit_numeric_name and is
         repeated here because tables must not import the object layer."""
-        parameterized = types.by_name(f"Numeric<{unit_type_name}>")
-        if parameterized is None:
+        parameterized_uuid = _parameterized_uuid(unit_type_name)
+        if parameterized_uuid is None:
             return 0
-        return self._count_stored(parameterized.uuid, part_name)
+        return self._count_stored(parameterized_uuid, part_name)
 
     @databasemethod(commit=False)
     def usage_total(self, unit_type_name: str) -> int:
         """Every stored value of the unit, any part (or none)."""
-        parameterized = types.by_name(f"Numeric<{unit_type_name}>")
-        if parameterized is None:
+        parameterized_uuid = _parameterized_uuid(unit_type_name)
+        if parameterized_uuid is None:
             return 0
-        return self._count_stored(parameterized.uuid, None)
+        return self._count_stored(parameterized_uuid, None)
 
     def _count_stored(
         self, parameterized_uuid: UUID, part_name: str | None
@@ -204,15 +228,15 @@ class UnitParts(TableMapping[UUID, UnitPart]):
     def _propagate_rename(
         self, unit_type_name: str, old_name: str, new_name: str
     ) -> None:
-        parameterized = types.by_name(f"Numeric<{unit_type_name}>")
-        if parameterized is None:
+        parameterized_uuid = _parameterized_uuid(unit_type_name)
+        if parameterized_uuid is None:
             return
         _ = Database.session.execute(
             sqla.update(TABLE_NumericValues)
             .where(
                 TABLE_NumericValues.prop_uuid.in_(
                     sqla.select(TABLE_Props.uuid).where(
-                        TABLE_Props.value_type_uuid == parameterized.uuid
+                        TABLE_Props.value_type_uuid == parameterized_uuid,
                     )
                 ),
                 TABLE_NumericValues.unit == old_name,

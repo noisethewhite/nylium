@@ -1,5 +1,7 @@
 """Display/CRUD facade over the object layer — the seam a future
-FastAPI app mounts. Views, UUIDs and plain values in and out."""
+FastAPI app mounts. Table-domain objects, UUIDs and plain values in
+and out; only the PropValue/ObjectView aggregates stay as DTOs
+(ADR-0011 §5)."""
 from nylium.api.api import Api
 from nylium.api.views import (
     ArrayValue,
@@ -7,11 +9,9 @@ from nylium.api.views import (
     ObjectRef,
     ObjectView,
     PropValue,
-    PropView,
     RefValue,
     ScalarValue,
     TagView,
-    TypeView,
 )
 from nylium.objects.wscalar import ScalarPayload
 
@@ -22,10 +22,8 @@ __all__ = [
     "ObjectRef",
     "ObjectView",
     "PropValue",
-    "PropView",
     "RefValue",
     "ScalarPayload",
     "ScalarValue",
     "TagView",
-    "TypeView",
 ]

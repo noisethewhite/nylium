@@ -11,7 +11,7 @@ from fastapi import UploadFile
 from fastapi.responses import FileResponse, Response
 
 from nylium.api.api import Api
-from nylium.api.views import FileView, FunctionView, ObjectView, TypeView
+from nylium.api.views import FunctionView, ObjectView
 from nylium.server.bodies import (
     CreateEnumBody,
     CreateFunctionBody,
@@ -38,19 +38,22 @@ class routes:
 
     # --- types ---
 
-    @classmethod
-    def list_types(cls) -> list[TypeView]:
-        return Api.list_types()
+    # Type routes serialize the domain object itself (ADR-0011 §5):
+    # the wire dict carries exactly the fields the old TypeView carried.
 
     @classmethod
-    def get_type(cls, name: str) -> TypeView:
+    def list_types(cls) -> list[dict[str, object]]:
+        return [t.wire() for t in Api.list_types()]
+
+    @classmethod
+    def get_type(cls, name: str) -> dict[str, object]:
         view = Api.get_type(name)
         if view is None:
             raise NotFoundError(f"no type {name!r}")
-        return view
+        return view.wire()
 
     @classmethod
-    def create_type(cls, body: CreateTypeBody) -> TypeView:
+    def create_type(cls, body: CreateTypeBody) -> dict[str, object]:
         return Api.create_type(
             body.name,
             body.props,
@@ -59,37 +62,37 @@ class routes:
             body.color,
             body.embedded,
             body.formulas,
-        )
+        ).wire()
 
     @classmethod
-    def create_enum(cls, body: CreateEnumBody) -> TypeView:
-        return Api.create_enum(body.name, body.options, body.icon, body.color)
+    def create_enum(cls, body: CreateEnumBody) -> dict[str, object]:
+        return Api.create_enum(body.name, body.options, body.icon, body.color).wire()
 
     @classmethod
-    def sync_enum_options(cls, name: str, body: SyncEnumOptionsBody) -> TypeView:
+    def sync_enum_options(cls, name: str, body: SyncEnumOptionsBody) -> dict[str, object]:
         return Api.sync_enum_options(
             name, [(item.uuid, item.value) for item in body.options]
-        )
+        ).wire()
 
     @classmethod
-    def create_unit(cls, body: CreateUnitBody) -> TypeView:
+    def create_unit(cls, body: CreateUnitBody) -> dict[str, object]:
         return Api.create_unit(
             body.name,
             body.base,
             [(item.name, item.multiplier, item.offset) for item in body.secondaries],
             body.icon,
             body.color,
-        )
+        ).wire()
 
     @classmethod
-    def sync_unit_parts(cls, name: str, body: SyncUnitPartsBody) -> TypeView:
+    def sync_unit_parts(cls, name: str, body: SyncUnitPartsBody) -> dict[str, object]:
         return Api.sync_unit_parts(
             name,
             [
                 (item.uuid, item.name, item.multiplier, item.offset, item.is_base)
                 for item in body.parts
             ],
-        )
+        ).wire()
 
     @classmethod
     def delete_type(cls, name: str) -> None:
@@ -97,19 +100,19 @@ class routes:
             raise NotFoundError(f"no type {name!r}")
 
     @classmethod
-    def reorder_props(cls, name: str, body: ReorderPropsBody) -> TypeView:
-        return Api.reorder_props(name, body.keys)
+    def reorder_props(cls, name: str, body: ReorderPropsBody) -> dict[str, object]:
+        return Api.reorder_props(name, body.keys).wire()
 
     @classmethod
-    def sync_props(cls, name: str, body: SyncPropsBody) -> TypeView:
+    def sync_props(cls, name: str, body: SyncPropsBody) -> dict[str, object]:
         return Api.sync_props(
             name,
             [(item.uuid, item.key, item.value_type, item.formula) for item in body.props],
-        )
+        ).wire()
 
     @classmethod
-    def update_type(cls, name: str, body: UpdateTypeBody) -> TypeView:
-        return Api.rename_type(name, body.name, body.plural_name, body.icon, body.color)
+    def update_type(cls, name: str, body: UpdateTypeBody) -> dict[str, object]:
+        return Api.rename_type(name, body.name, body.plural_name, body.icon, body.color).wire()
 
     # --- objects ---
 
@@ -157,29 +160,29 @@ class routes:
     # --- files (ADR-0008) ---
 
     @classmethod
-    def upload_file(cls, type_name: str, file: UploadFile) -> FileView:
+    def upload_file(cls, type_name: str, file: UploadFile) -> dict[str, object]:
         """Multipart upload; the declared MIME comes from the client and is
         validated against the target file type's policy in Api.create_file."""
         data = file.file.read()
-        return Api.create_file(type_name, file.filename or "", file.content_type or "application/octet-stream", data)
+        return Api.create_file(type_name, file.filename or "", file.content_type or "application/octet-stream", data).wire()
 
     @classmethod
-    def list_files(cls) -> list[FileView]:
-        return Api.list_files()
+    def list_files(cls) -> list[dict[str, object]]:
+        return [f.wire() for f in Api.list_files()]
 
     @classmethod
-    def get_file(cls, file_uuid: UUID) -> FileView:
+    def get_file(cls, file_uuid: UUID) -> dict[str, object]:
         view = Api.get_file(file_uuid)
         if view is None:
             raise NotFoundError(f"no file {file_uuid}")
-        return view
+        return view.wire()
 
     @classmethod
-    def rename_file(cls, file_uuid: UUID, body: RenameFileBody) -> FileView:
+    def rename_file(cls, file_uuid: UUID, body: RenameFileBody) -> dict[str, object]:
         view = Api.get_file(file_uuid)
         if view is None:
             raise NotFoundError(f"no file {file_uuid}")
-        return Api.rename_file(file_uuid, body.name)
+        return Api.rename_file(file_uuid, body.name).wire()
 
     @classmethod
     def delete_file(cls, file_uuid: UUID) -> None:
@@ -247,6 +250,6 @@ class routes:
     @classmethod
     def set_prop_function(
         cls, name: str, prop_key: str, body: SetPropFunctionBody
-    ) -> TypeView:
-        return Api.set_prop_function(name, prop_key, body.function_uuid)
+    ) -> dict[str, object]:
+        return Api.set_prop_function(name, prop_key, body.function_uuid).wire()
 

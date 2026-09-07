@@ -6,11 +6,12 @@ from uuid import UUID
 
 import pytest
 
-from nylium.api import Api, EmbeddedValue, ScalarValue, TypeView
+from nylium.api import Api, EmbeddedValue, ScalarValue
+from nylium.tables.types import Type
 from nylium.server.errors import ValidationError
 
 
-def contact_details_type() -> TypeView:
+def contact_details_type() -> Type:
     return Api.create_type(
         "ContactDetails",
         {"name": "String", "email": "String", "phone": "String"},
@@ -19,7 +20,7 @@ def contact_details_type() -> TypeView:
     )
 
 
-def person_type() -> TypeView:
+def person_type() -> Type:
     _ = contact_details_type()
     return Api.create_type(
         "Person",

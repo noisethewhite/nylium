@@ -1,3 +1,4 @@
+from collections.abc import Generator
 from typing import ClassVar, cast
 from uuid import UUID, uuid4
 
@@ -6,9 +7,21 @@ from sqlalchemy import ForeignKey, Integer, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from nylium.database import Database, databasemethod
+from nylium.database.sessioncontext import SessionContext
 from nylium.database.tabledomain import TableDomain, TableMapping, tableproperty
 from nylium.tables.base import Base
-from nylium.tables.types import types
+from nylium.tables.typeref import TABLE_Types
+
+# TABLE_Types comes from typeref.py, not types.py: types.py imports this
+# module for the Type.props navigation property, so importing the domain
+# layer back would cycle. Type-name resolution is a plain SQL select.
+
+
+def _type_name_by_uuid(uuid: UUID) -> str | None:
+    """A type row's name, or None when the uuid doesn't exist."""
+    return Database.session.scalar(
+        sqla.select(TABLE_Types.name).where(TABLE_Types.uuid == uuid)
+    )
 
 
 class TABLE_Props(Base):
@@ -53,11 +66,47 @@ class Prop(TableDomain):
     formula: tableproperty[str | None] = tableproperty()
     function_uuid: tableproperty[UUID | None] = tableproperty()
 
+    @property
+    def value_type(self) -> str:
+        """The value type's name — the wire-facing form of
+        ``value_type_uuid`` (the view the API used to build carried the
+        name, not the uuid)."""
+        with SessionContext():
+            name = _type_name_by_uuid(self.value_type_uuid)
+        if name is None:
+            raise KeyError(f"Type with UUID {self.value_type_uuid} does not exist")
+        return name
+
+    def wire(self) -> dict[str, object]:
+        """The JSON-safe wire shape (ADR-0011 §5): uuid/uuids as strings,
+        matching web/src/contracts.ts PropView."""
+        function_uuid = self.function_uuid
+        return {
+            "uuid": str(self.uuid),
+            "key": self.key,
+            "value_type": self.value_type,
+            "formula": self.formula,
+            "function_uuid": None if function_uuid is None else str(function_uuid),
+        }
+
 
 class Props(TableMapping[UUID, Prop]):
     """The props table as a Mapping of writable props."""
 
     __domain__: ClassVar[type[TableDomain]] = Prop
+
+    def list_for(self, owner_type_uuid: UUID) -> Generator[Prop, None, None]:
+        """The props of one type, in display order, lazily."""
+        with SessionContext():
+            owner_props = [
+                cast(Prop, Prop.from_row(row))
+                for row in Database.session.scalars(
+                    sqla.select(TABLE_Props)
+                    .where(TABLE_Props.owner_type_uuid == owner_type_uuid)
+                    .order_by(TABLE_Props.position)
+                )
+            ]
+        yield from owner_props
 
     @databasemethod(commit=False)
     def count_with_value_type(self, value_type_uuid: UUID) -> int:
@@ -80,13 +129,13 @@ class Props(TableMapping[UUID, Prop]):
             )
         )
         if row is None:
-            owner = types.get(owner_type_uuid)
-            owner_name = None if owner is None else owner.name
-            raise KeyError(f"type {owner_name!r} has no prop {key!r}")
-        value_type = types.get(row.value_type_uuid)
-        if value_type is None:
+            raise KeyError(
+                f"type {_type_name_by_uuid(owner_type_uuid)!r} has no prop {key!r}"
+            )
+        name = _type_name_by_uuid(row.value_type_uuid)
+        if name is None:
             raise KeyError(f"Type with UUID {row.value_type_uuid} does not exist")
-        return value_type.name
+        return name
 
     @databasemethod(commit=False)
     def formula_keys(self, owner_type_uuid: UUID) -> set[str]:

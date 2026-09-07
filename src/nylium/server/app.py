@@ -12,7 +12,7 @@ from sqlalchemy.engine import Connection
 from nylium.auth.guard import require_user
 from nylium.auth.routes import auth_routes
 from nylium.auth.token_routes import token_routes
-from nylium.api.views import FileView, FunctionView, ObjectView, TypeView
+from nylium.api.views import FunctionView, ObjectView
 from nylium.database import Database
 from nylium.tables import Base
 from nylium.objects.wfile import WFile
@@ -224,31 +224,31 @@ class NyliumApp:
         )
         app.add_api_route(
             f"{prefix}/types", routes.list_types, methods=["GET"],
-            response_model=list[TypeView], dependencies=guard,
+            dependencies=guard,
         )
         app.add_api_route(
             f"{prefix}/types", routes.create_type, methods=["POST"],
-            status_code=created, response_model=TypeView, dependencies=guard,
+            status_code=created, dependencies=guard,
         )
         app.add_api_route(
             f"{prefix}/enums", routes.create_enum, methods=["POST"],
-            status_code=created, response_model=TypeView, dependencies=guard,
+            status_code=created, dependencies=guard,
         )
         app.add_api_route(
             f"{prefix}/enums/{{name}}/options", routes.sync_enum_options,
-            methods=["PUT"], response_model=TypeView, dependencies=guard,
+            methods=["PUT"], dependencies=guard,
         )
         app.add_api_route(
             f"{prefix}/units", routes.create_unit, methods=["POST"],
-            status_code=created, response_model=TypeView, dependencies=guard,
+            status_code=created, dependencies=guard,
         )
         app.add_api_route(
             f"{prefix}/units/{{name}}/parts", routes.sync_unit_parts,
-            methods=["PUT"], response_model=TypeView, dependencies=guard,
+            methods=["PUT"], dependencies=guard,
         )
         app.add_api_route(
             f"{prefix}/types/{{name}}", routes.get_type, methods=["GET"],
-            response_model=TypeView, dependencies=guard,
+            dependencies=guard,
         )
         app.add_api_route(
             f"{prefix}/types/{{name}}", routes.delete_type, methods=["DELETE"],
@@ -256,15 +256,15 @@ class NyliumApp:
         )
         app.add_api_route(
             f"{prefix}/types/{{name}}/props-order", routes.reorder_props,
-            methods=["PATCH"], response_model=TypeView, dependencies=guard,
+            methods=["PATCH"], dependencies=guard,
         )
         app.add_api_route(
             f"{prefix}/types/{{name}}/props", routes.sync_props,
-            methods=["PUT"], response_model=TypeView, dependencies=guard,
+            methods=["PUT"], dependencies=guard,
         )
         app.add_api_route(
             f"{prefix}/types/{{name}}", routes.update_type, methods=["PATCH"],
-            response_model=TypeView, dependencies=guard,
+            dependencies=guard,
         )
         app.add_api_route(
             f"{prefix}/objects", routes.list_objects, methods=["GET"],
@@ -292,19 +292,19 @@ class NyliumApp:
         )
         app.add_api_route(
             f"{prefix}/files", routes.upload_file, methods=["POST"],
-            status_code=created, response_model=FileView, dependencies=guard,
+            status_code=created, dependencies=guard,
         )
         app.add_api_route(
             f"{prefix}/files", routes.list_files, methods=["GET"],
-            response_model=list[FileView], dependencies=guard,
+            dependencies=guard,
         )
         app.add_api_route(
             f"{prefix}/files/{{file_uuid}}", routes.get_file, methods=["GET"],
-            response_model=FileView, dependencies=guard,
+            dependencies=guard,
         )
         app.add_api_route(
             f"{prefix}/files/{{file_uuid}}", routes.rename_file, methods=["PATCH"],
-            response_model=FileView, dependencies=guard,
+            dependencies=guard,
         )
         app.add_api_route(
             f"{prefix}/files/{{file_uuid}}", routes.delete_file, methods=["DELETE"],
@@ -337,5 +337,5 @@ class NyliumApp:
         app.add_api_route(
             f"{prefix}/types/{{name}}/props/{{prop_key}}/function",
             routes.set_prop_function,
-            methods=["PUT"], response_model=TypeView, dependencies=guard,
+            methods=["PUT"], dependencies=guard,
         )

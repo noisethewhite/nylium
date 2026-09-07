@@ -1,4 +1,7 @@
-"""Display DTOs for the nylium API.
+"""Display DTOs for the nylium API — only the genuinely API-shaped
+aggregates (ADR-0011 §5): the PropValue union, ObjectRef, the
+tag/function projections and ObjectView. The per-table DTOs folded
+into the table-domain objects, which serialize themselves via wire().
 
 pydantic dataclasses with extra="ignore", the morebuttons convention:
 they validate on construction and serialize straight to JSON later,
@@ -26,12 +29,10 @@ from nylium.tables import (
     TABLE_Instances,
     TABLE_Props,
     TABLE_StringValues,
-    enum_options,
     instances,
-    unit_parts,
 )
 from nylium.tables.types import TABLE_Types
-from nylium.objects import WObject, WProp, WType
+from nylium.objects import WObject, WType
 from nylium.objects.monthday import MonthDay, MonthDayTime
 from nylium.objects.quantity import Quantity
 from nylium.objects.wembedded import EMBEDDED_NAME_SEPARATOR
@@ -39,6 +40,7 @@ from nylium.objects.wenum import WEnum
 from nylium.objects.wfile import WFile
 from nylium.objects.wformula import Formula
 from nylium.objects.wfunction import WFunction
+from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import ScalarPayload, WInteger, WScalar
 from nylium.objects.wtypemeta import StoredValue
 
@@ -47,90 +49,6 @@ _CONFIG = ConfigDict(extra="ignore")
 # The object title prop, pinned first on every object type (see
 # api.NAME_PROP_KEY). Tags derive the owner's display name from it.
 NAME_PROP_KEY = "name"
-
-
-# --- type schema views ---
-
-
-@dataclass(config=_CONFIG)
-class EnumOptionView:
-    uuid: UUID
-    value: str
-
-
-@dataclass(config=_CONFIG)
-class UnitPartView:
-    uuid: UUID
-    name: str
-    multiplier: Decimal
-    offset: Decimal
-    is_base: bool
-
-
-@dataclass(config=_CONFIG)
-class PropView:
-    uuid: UUID
-    key: str
-    value_type: str
-    # ADR-0005: a formula over the owner's Array<T> props, or None for a
-    # plain stored prop
-    formula: str | None = None
-    # ADR-0007: the Function<T,R> instance computing this prop, or None
-    function_uuid: UUID | None = None
-
-
-@dataclass(config=_CONFIG)
-class TypeView:
-    name: str
-    plural_name: str | None
-    icon: str
-    color: str
-    kind: str
-    # ADR-0004: composition types instantiate only as a prop value of an
-    # owner object — no standalone creation, hidden from lists/pickers
-    embedded: bool
-    enum_options: list[EnumOptionView]
-    unit_parts: list[UnitPartView]
-    props: list[PropView]
-
-    @classmethod
-    @databasemethod(commit=False)
-    def from_name(cls, name: str) -> Self:
-        owner = WType.by_name(name)
-        if owner is None:
-            raise KeyError(f"no type {name!r}")
-        return cls(
-            name=name,
-            plural_name=owner.plural_name,
-            icon=owner.icon,
-            color=owner.color,
-            kind=owner.kind,
-            embedded=owner.is_embedded,
-            enum_options=[
-                EnumOptionView(uuid=option.uuid, value=option.value)
-                for option in enum_options.list_for(owner.uuid)
-            ],
-            unit_parts=[
-                UnitPartView(
-                    uuid=part.uuid,
-                    name=part.name,
-                    multiplier=part.multiplier,
-                    offset=part.offset,
-                    is_base=part.is_base,
-                )
-                for part in unit_parts.list_for(owner.uuid)
-            ],
-            props=[
-                PropView(
-                    uuid=prop.uuid,
-                    key=prop.key,
-                    value_type=prop.value_type().name,
-                    formula=prop.formula,
-                    function_uuid=prop.function_uuid,
-                )
-                for prop in WProp.all_for(owner)
-            ],
-        )
 
 
 # --- object data views ---
@@ -182,20 +100,7 @@ class EmbeddedValue:
 PropValue = ScalarValue | RefValue | ArrayValue | EmbeddedValue
 
 
-# --- file views (ADR-0008) ---
-
-
-@dataclass(config=_CONFIG)
-class FileView:
-    """A file entity (ADR-0008): a self-contained row in `files`, the
-    bytes stream from disk separately. `uuid` is the stable pointer;
-    `name` the renameable display name; `type_name` File/Document/Image."""
-
-    uuid: UUID
-    type_name: str
-    name: str
-    mime: str
-    size_bytes: int
+# --- function views (ADR-0007) ---
 
 
 @dataclass(config=_CONFIG)
