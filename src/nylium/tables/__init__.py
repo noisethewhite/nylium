@@ -4,7 +4,7 @@
 # where a SQL join needs the mapped class.
 from nylium.tables.base import Base
 from nylium.tables.types import types
-from nylium.tables.props import TABLE_Props
+from nylium.tables.props import TABLE_Props, props
 from nylium.tables.instances import TABLE_Instances, instances
 from nylium.tables.string_values import TABLE_StringValues
 from nylium.tables.integer_values import TABLE_IntegerValues
@@ -34,6 +34,7 @@ __all__ = [
     "Base",
     "types",
     "instances",
+    "props",
     "TABLE_Props",
     "TABLE_Instances",
     "TABLE_StringValues",

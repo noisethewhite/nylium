@@ -22,9 +22,9 @@ from nylium.tables.types import types
 from nylium.tables import (
     TABLE_EnumOptions,
     TABLE_Files,
-    TABLE_Props,
     TABLE_UnitParts,
     instances,
+    props,
 )
 from nylium.objects.wembedded import EMBEDDED_NAME_SEPARATOR, WEmbedded
 from nylium.objects.wenum import WEnum
@@ -402,7 +402,7 @@ class Api:
                 embedded_renamed = True
         WProp.sync_schema(owner, resolved)
         for prop_uuid, rewritten in formula_updates:
-            TABLE_Props.update_formula(prop_uuid, rewritten)
+            props.update_formula(prop_uuid, rewritten)
         if embedded_renamed:
             # a renamed embedded prop key invalidates every generated
             # child name of every instance of this type
@@ -482,7 +482,7 @@ class Api:
             # drop the orphaned parameterized row with the unit itself
             parameterized_row = types.by_name(WType.unit_numeric_name(name))
             if parameterized_row is not None:
-                refs = TABLE_Props.count_with_value_type(parameterized_row.uuid)
+                refs = props.count_with_value_type(parameterized_row.uuid)
                 if refs:
                     raise ValueError(
                         f"unit {name!r} still parameterizes {refs} props"
@@ -795,7 +795,7 @@ class Api:
             return False
         # unbind every prop computed through it first, then drop the object
         # (graph + deps cascade on the FK)
-        TABLE_Props.clear_function_references(uuid)
+        props.clear_function_references(uuid)
         return cls.delete_object(uuid)
 
     @classmethod
@@ -830,7 +830,7 @@ class Api:
             raise ValidationError(
                 f"prop {prop_key!r} already has a formula — a prop cannot be both"
             )
-        TABLE_Props.set_function(prop.uuid, function_uuid)
+        props.set_function(prop.uuid, function_uuid)
         WFunction.assert_no_dependency_cycle()
         result = TypeView.from_name(type_name)
         return result
@@ -871,7 +871,7 @@ class Api:
             return cls._member_props(element_name)
 
         updates: list[tuple[UUID, str]] = []
-        usages = TABLE_Props.usages_of_value_type(array_type_row.uuid)
+        usages = props.usages_of_value_type(array_type_row.uuid)
         by_owner: dict[UUID, list[str]] = {}
         for dependent_uuid, array_key in usages:
             if dependent_uuid == owner_uuid:
@@ -950,17 +950,17 @@ class Api:
     @classmethod
     @databasemethod(commit=False)
     def _normalize_props(
-        cls, type_name: str, props: dict[str, PropInput]
+        cls, type_name: str, prop_specs: dict[str, PropInput]
     ) -> dict[str, StoredValue]:
         """Callers hand links over as UUID/ObjectRef (that's all they have);
         the object layer wants WObject wrappers. Resolve by prop type."""
         owner_type_row = types.by_name(type_name)
         if owner_type_row is None:
             raise KeyError(f"no type {type_name!r}")
-        formula_readonly = TABLE_Props.formula_keys(owner_type_row.uuid)
-        function_readonly = TABLE_Props.function_keys(owner_type_row.uuid)
+        formula_readonly = props.formula_keys(owner_type_row.uuid)
+        function_readonly = props.function_keys(owner_type_row.uuid)
         result: dict[str, StoredValue] = {}
-        for key, value in props.items():
+        for key, value in prop_specs.items():
             if key in formula_readonly:
                 from nylium.server.errors import ValidationError
 
@@ -974,7 +974,7 @@ class Api:
                     f"prop {key!r} of {type_name!r} is computed by a function — it is read-only"
                 )
             normalized = cls._normalize_value(
-                value, TABLE_Props.get_type_name(owner_type_row.uuid, key)
+                value, props.get_type_name(owner_type_row.uuid, key)
             )
             if key == NAME_PROP_KEY and isinstance(normalized, str):
                 # → would make a user-typed name indistinguishable from a
@@ -1021,8 +1021,8 @@ class Api:
                 raise TypeError(
                     f"embedded prop of type {type_name!r} takes an inline props draft, got {type(value).__name__}"
                 )
-            formula_readonly = TABLE_Props.formula_keys(resolved.uuid)
-            function_readonly = TABLE_Props.function_keys(resolved.uuid)
+            formula_readonly = props.formula_keys(resolved.uuid)
+            function_readonly = props.function_keys(resolved.uuid)
             for child_key in value:
                 if child_key in formula_readonly:
                     from nylium.server.errors import ValidationError
@@ -1037,7 +1037,7 @@ class Api:
                         f"prop {child_key!r} of {type_name!r} is computed by a function — it is read-only"
                     )
             return {
-                key: cls._normalize_value(item, TABLE_Props.get_type_name(resolved.uuid, key))
+                key: cls._normalize_value(item, props.get_type_name(resolved.uuid, key))
                 for key, item in value.items()
             }
         if isinstance(value, ObjectRef):
