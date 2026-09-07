@@ -31,6 +31,7 @@ from nylium.tables import (
     TABLE_FunctionNodes,
     TABLE_InstanceValues,
     TABLE_Instances,
+    instances,
 )
 from nylium.tables.types import TABLE_Types
 from nylium.objects.wprop import WProp
@@ -511,7 +512,7 @@ class WFunction:
         if input_uuid is None:
             return {}
         wrapper = WObject.wrap(input_uuid)
-        type_uuid = TABLE_Instances.type_uuid_of(input_uuid)
+        type_uuid = instances.type_uuid_of(input_uuid)
         if type_uuid is None:
             return {}
         owner = WType.by_uuid(type_uuid)
@@ -670,7 +671,7 @@ class WFunction:
             input_uuid = cls.input_object_uuid(function_uuid)
             if input_uuid is None:
                 continue
-            type_uuid = TABLE_Instances.type_uuid_of(input_uuid)
+            type_uuid = instances.type_uuid_of(input_uuid)
             if type_uuid is None:
                 continue
             owner = WType.by_uuid(type_uuid)

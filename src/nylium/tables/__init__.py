@@ -5,7 +5,7 @@
 from nylium.tables.base import Base
 from nylium.tables.types import types
 from nylium.tables.props import TABLE_Props
-from nylium.tables.instances import TABLE_Instances
+from nylium.tables.instances import TABLE_Instances, instances
 from nylium.tables.string_values import TABLE_StringValues
 from nylium.tables.integer_values import TABLE_IntegerValues
 from nylium.tables.numeric_values import TABLE_NumericValues
@@ -33,6 +33,7 @@ from nylium.tables.function_deps import TABLE_FunctionDeps
 __all__ = [
     "Base",
     "types",
+    "instances",
     "TABLE_Props",
     "TABLE_Instances",
     "TABLE_StringValues",

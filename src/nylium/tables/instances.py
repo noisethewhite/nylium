@@ -6,13 +6,14 @@ from sqlalchemy import DateTime, ForeignKey, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from nylium.database import Database, databasemethod
+from nylium.database.store import Store
 from nylium.tables.base import Base
 from nylium.tables.types import types
 
 
-# TABLE_Instances of types
-# (Both arrays and scalars are considered types, too)
 class TABLE_Instances(Base):
+    """Instances of types — arrays and scalars are types too."""
+
     __tablename__: str = "instances"
 
     uuid: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
@@ -33,55 +34,34 @@ class TABLE_Instances(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
-    @classmethod
-    @databasemethod(commit=False)
-    def get_type_name(cls, uuid: UUID) -> str:
-        inst = Database.session.get(cls, uuid)
-        if inst is None:
-            return "<gone>"
-        t = types.get(inst.type_uuid)
-        return "<dangling>" if t is None else t.name
 
-    @classmethod
-    @databasemethod(commit=False)
-    def exists(cls, uuid: UUID) -> bool:
-        return Database.session.get(cls, uuid) is not None
+class Instances(Store[UUID, TABLE_Instances]):
+    """Instances access layer: rows by uuid, a type_uuid index, and write ops."""
 
-    @classmethod
-    @databasemethod(commit=False)
-    def type_uuid_of(cls, uuid: UUID) -> UUID | None:
-        inst = Database.session.get(cls, uuid)
-        return None if inst is None else inst.type_uuid
+    def __init__(self) -> None:
+        super().__init__(TABLE_Instances)
 
-    @classmethod
     @databasemethod(commit=False)
-    def name_of(cls, uuid: UUID) -> str:
-        """The registry name of an instance (fallback display title)."""
-        inst = Database.session.get(cls, uuid)
-        return "" if inst is None else inst.name
-
-    @classmethod
-    @databasemethod(commit=False)
-    def uuids_of_type(cls, type_uuid: UUID) -> list[UUID]:
+    def by_type(self, type_uuid: UUID) -> list[UUID]:
         return list(
             Database.session.scalars(
-                sqla.select(cls.uuid).where(cls.type_uuid == type_uuid)
+                sqla.select(TABLE_Instances.uuid).where(
+                    TABLE_Instances.type_uuid == type_uuid
+                )
             ).all()
         )
 
-    @classmethod
     @databasemethod(commit=False)
-    def count_of_type(cls, type_uuid: UUID) -> int:
+    def count_of_type(self, type_uuid: UUID) -> int:
         return Database.session.scalar(
             sqla.select(sqla.func.count())
-            .select_from(cls)
-            .where(cls.type_uuid == type_uuid)
+            .select_from(TABLE_Instances)
+            .where(TABLE_Instances.type_uuid == type_uuid)
         ) or 0
 
-    @classmethod
     @databasemethod(commit=True)
-    def register(
-        cls,
+    def create(
+        self,
         uuid: UUID,
         type_uuid: UUID,
         name: str,
@@ -89,7 +69,7 @@ class TABLE_Instances(Base):
         owner_prop_uuid: UUID | None = None,
     ) -> None:
         Database.session.add(
-            cls(
+            TABLE_Instances(
                 uuid=uuid,
                 type_uuid=type_uuid,
                 name=name,
@@ -97,12 +77,38 @@ class TABLE_Instances(Base):
                 owner_prop_uuid=owner_prop_uuid,
             )
         )
+        Database.session.flush()
 
-    @classmethod
     @databasemethod(commit=False)
-    def owner_of(cls, uuid: UUID) -> "tuple[UUID, UUID] | None":
+    def exists(self, uuid: UUID) -> bool:
+        return self.get(uuid) is not None
+
+    @databasemethod(commit=False)
+    def get_type_name(self, uuid: UUID) -> str:
+        inst = self.get(uuid)
+        if inst is None:
+            return "<gone>"
+        t = types.get(inst.type_uuid)
+        return "<dangling>" if t is None else t.name
+
+    @databasemethod(commit=False)
+    def type_uuid_of(self, uuid: UUID) -> UUID | None:
+        inst = self.get(uuid)
+        return None if inst is None else inst.type_uuid
+
+    @databasemethod(commit=False)
+    def name_of(self, uuid: UUID) -> str:
+        """The registry name of an instance (fallback display title)."""
+        inst = self.get(uuid)
+        return "" if inst is None else inst.name
+
+    @databasemethod(commit=False)
+    def owner_of(self, uuid: UUID) -> tuple[UUID, UUID] | None:
         """(owner object, owner prop) for an embedded instance, else None."""
-        inst = Database.session.get(cls, uuid)
+        inst = self.get(uuid)
         if inst is None or inst.owner_object_uuid is None or inst.owner_prop_uuid is None:
             return None
         return (inst.owner_object_uuid, inst.owner_prop_uuid)
+
+
+instances = Instances()

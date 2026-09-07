@@ -25,7 +25,7 @@ from uuid import UUID, uuid4
 import sqlalchemy as sqla
 
 from nylium.database import Database, databasemethod
-from nylium.tables import TABLE_ArrayValues, TABLE_FileValues, TABLE_Instances, TABLE_InstanceValues
+from nylium.tables import TABLE_ArrayValues, TABLE_FileValues, TABLE_Instances, TABLE_InstanceValues, instances
 from nylium.objects.warray import WArray
 from nylium.objects.wembedded import WEmbedded
 from nylium.objects.wenum import WEnum
@@ -60,7 +60,7 @@ class WObject(metaclass=WTypeMeta):
     @databasemethod(commit=True)
     def _register(self) -> None:
         owner = WType.ensure(type(self).__name__)
-        TABLE_Instances.register(
+        instances.create(
             self._uuid,
             owner.uuid,
             INSTANCE_NAME_FORMAT.format(
@@ -78,7 +78,7 @@ class WObject(metaclass=WTypeMeta):
         if owner is None:
             raise KeyError(f"no type {type_name!r}")
         instance_uuid = uuid4()
-        TABLE_Instances.register(
+        instances.create(
             instance_uuid,
             owner.uuid,
             INSTANCE_NAME_FORMAT.format(

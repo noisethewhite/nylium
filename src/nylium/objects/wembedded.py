@@ -23,7 +23,7 @@ import sqlalchemy as sqla
 
 from nylium.database import Database, databasemethod
 
-from nylium.tables import TABLE_Instances, TABLE_InstanceValues, TABLE_StringValues
+from nylium.tables import TABLE_Instances, TABLE_InstanceValues, TABLE_StringValues, instances
 from nylium.objects.wprop import WProp
 from nylium.objects.wtype import WType
 from nylium.objects.wtypemeta import StoredValue, WTypeMeta
@@ -149,7 +149,7 @@ class WEmbedded:
     def _create_child(cls, owner_uuid: UUID, prop: WProp) -> UUID:
         child_type = prop.value_type()
         child_uuid = uuid4()
-        TABLE_Instances.register(
+        instances.create(
             child_uuid,
             child_type.uuid,
             REGISTRY_NAME_FORMAT.format(

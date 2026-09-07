@@ -22,9 +22,9 @@ from nylium.tables.types import types
 from nylium.tables import (
     TABLE_EnumOptions,
     TABLE_Files,
-    TABLE_Instances,
     TABLE_Props,
     TABLE_UnitParts,
+    instances,
 )
 from nylium.objects.wembedded import EMBEDDED_NAME_SEPARATOR, WEmbedded
 from nylium.objects.wenum import WEnum
@@ -406,7 +406,7 @@ class Api:
         if embedded_renamed:
             # a renamed embedded prop key invalidates every generated
             # child name of every instance of this type
-            for instance_uuid in TABLE_Instances.uuids_of_type(owner.uuid):
+            for instance_uuid in instances.by_type(owner.uuid):
                 WEmbedded.regenerate_names(instance_uuid)
         return TypeView.from_name(type_name)
 
@@ -472,7 +472,7 @@ class Api:
             return False
         if _is_builtin_type(owner):
             raise ValidationError(f"type {name!r} is builtin and cannot be deleted")
-        instance_count = TABLE_Instances.count_of_type(owner.uuid)
+        instance_count = instances.count_of_type(owner.uuid)
         if instance_count:
             raise ValueError(
                 f"type {name!r} still has {instance_count} instances"
@@ -505,7 +505,7 @@ class Api:
             return []
         views = [
             ObjectView.from_uuid(uuid)
-            for uuid in TABLE_Instances.uuids_of_type(owner.uuid)
+            for uuid in instances.by_type(owner.uuid)
         ]
         return [view for view in views if view is not None]
 
@@ -532,7 +532,7 @@ class Api:
         def ref_label(ref: ObjectRef) -> str:
             wrapper = WObject.wrap(ref.uuid)
             label = cast(str | None, getattr(wrapper, NAME_PROP_KEY))
-            return label or TABLE_Instances.name_of(ref.uuid)
+            return label or instances.name_of(ref.uuid)
 
         return render_object_markdown(view, ref_label)
 
@@ -570,12 +570,12 @@ class Api:
     def update_object(cls, uuid: UUID, props: dict[str, PropInput]) -> ObjectView:
         from nylium.server.errors import ValidationError
 
-        if TABLE_Instances.owner_of(uuid) is not None:
+        if instances.owner_of(uuid) is not None:
             raise ValidationError(
                 "embedded objects are edited through their owner — write the embedded prop on the parent instead"
             )
         wrapper = WObject.wrap(uuid)
-        type_name = TABLE_Instances.get_type_name(uuid)
+        type_name = instances.get_type_name(uuid)
         normalized = cls._normalize_props(type_name, props)
         for key, value in normalized.items():
             setattr(wrapper, key, value)
@@ -684,9 +684,9 @@ class Api:
     def delete_object(cls, uuid: UUID) -> bool:
         from nylium.server.errors import ValidationError
 
-        if not TABLE_Instances.exists(uuid):
+        if not instances.exists(uuid):
             return False
-        if TABLE_Instances.owner_of(uuid) is not None:
+        if instances.owner_of(uuid) is not None:
             raise ValidationError(
                 "embedded objects are deleted with their owner or by clearing the prop that holds them"
             )
