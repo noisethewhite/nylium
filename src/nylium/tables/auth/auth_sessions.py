@@ -1,3 +1,6 @@
+# pyright: reportUninitializedInstanceVariable=false
+# Row.__init__ copies every mapped column into the instance dynamically;
+# the bare annotations below are the schema, not a constructor signature.
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -9,9 +12,8 @@ from sqlalchemy import DateTime, ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from nylium.database import Database, databasemethod
-from nylium.database.tabledomain import TableDomain, TableMapping, tableproperty
+from nylium.database.table import Row, Table
 from nylium.tables.base import Base
-
 
 class TABLE_AuthSessions(Base):
     """Server-side sessions: the cookie carries a random token, the table
@@ -27,20 +29,20 @@ class TABLE_AuthSessions(Base):
     )
 
 
-class AuthSession(TableDomain):
+class AuthSession(Row):
     """One server-side session: a writable snapshot of an auth_sessions row."""
 
     __table__: ClassVar[type[Base]] = TABLE_AuthSessions
 
-    token_hash: tableproperty[AuthSession, str] = tableproperty()
-    user_uuid: tableproperty[AuthSession, UUID] = tableproperty()
-    expires_at: tableproperty[AuthSession, datetime] = tableproperty()
+    token_hash: str
+    user_uuid: UUID
+    expires_at: datetime
 
 
-class AuthSessions(TableMapping[str, AuthSession]):
+class AuthSessions(Table[str, AuthSession]):
     """The auth_sessions table as a Mapping keyed by token hash."""
 
-    __domain__: ClassVar[type[TableDomain]] = AuthSession
+    __row__: ClassVar[type[Row]] = AuthSession
 
     @databasemethod(commit=True)
     def create(self, user_uuid: UUID, token_hash: str, expires_at: datetime) -> None:
@@ -49,12 +51,6 @@ class AuthSessions(TableMapping[str, AuthSession]):
                 token_hash=token_hash, user_uuid=user_uuid, expires_at=expires_at
             )
         )
-
-    @databasemethod(commit=True)
-    def refresh(self, token_hash: str, expires_at: datetime) -> None:
-        session = self.get(token_hash)
-        if session is not None:
-            session.expires_at = expires_at
 
     @databasemethod(commit=True)
     def delete(self, token_hash: str) -> None:

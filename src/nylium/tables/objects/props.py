@@ -1,28 +1,23 @@
+# pyright: reportUninitializedInstanceVariable=false
+# Row.__init__ copies every mapped column into the instance dynamically;
+# the bare annotations below are the schema, not a constructor signature.
+# pyright: reportImportCycles=false
+# Row navigation is bidirectional by design (Type.props <-> Prop.value_type);
+# the back-edges are lazy function-level imports, so there is no runtime cycle.
 from __future__ import annotations
 
 from typing import ClassVar
 from uuid import UUID, uuid4
 
-import sqlalchemy as sqla
 from sqlalchemy import ForeignKey, Integer, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
-from nylium.database import Database, databasemethod
-from nylium.database.sessioncontext import SessionContext
-from nylium.database.tabledomain import TableDomain, TableMapping, tableproperty
+from nylium.database.table import Row, Table
 from nylium.tables.base import Base
-from nylium.tables.objects.typeref import TABLE_Types
 
-# TABLE_Types comes from typeref.py, not types.py: types.py imports this
-# module for the Type.props navigation property, so importing the domain
-# layer back would cycle. Type-name resolution is a plain SQL select.
-
-
-def _type_name_by_uuid(uuid: UUID) -> str | None:
-    """A type row's name, or None when the uuid doesn't exist."""
-    return Database.session.scalar(
-        sqla.select(TABLE_Types.name).where(TABLE_Types.uuid == uuid)
-    )
+# TABLE_Types is not imported here: types.py imports this module for the
+# Type.props navigation, so importing the domain layer back at module level
+# would cycle. Prop.value_type lazy-imports ``types``.
 
 
 class TABLE_Props(Base):
@@ -54,33 +49,33 @@ class TABLE_Props(Base):
     function_uuid: Mapped[UUID | None] = mapped_column(nullable=True)
 
 
-class Prop(TableDomain):
+class Prop(Row):
     """One prop: a writable snapshot of a TABLE_Props row."""
 
     __table__: ClassVar[type[Base]] = TABLE_Props
 
-    uuid: tableproperty[Prop, UUID] = tableproperty()
-    key: tableproperty[Prop, str] = tableproperty()
-    owner_type_uuid: tableproperty[Prop, UUID] = tableproperty()
-    value_type_uuid: tableproperty[Prop, UUID] = tableproperty()
-    position: tableproperty[Prop, int] = tableproperty()
-    formula: tableproperty[Prop, str | None] = tableproperty()
-    function_uuid: tableproperty[Prop, UUID | None] = tableproperty()
+    uuid: UUID
+    key: str
+    owner_type_uuid: UUID
+    value_type_uuid: UUID
+    position: int
+    formula: str | None
+    function_uuid: UUID | None
 
     @property
     def value_type(self) -> str:
         """The value type's name — the wire-facing form of
-        ``value_type_uuid`` (the view the API used to build carried the
-        name, not the uuid)."""
-        with SessionContext():
-            name = _type_name_by_uuid(self.value_type_uuid)
-        if name is None:
+        ``value_type_uuid``."""
+        from nylium.tables.objects.types import types
+
+        t = types.get(self.value_type_uuid)
+        if t is None:
             raise KeyError(f"Type with UUID {self.value_type_uuid} does not exist")
-        return name
+        return t.name
 
     def wire(self) -> dict[str, object]:
-        """The JSON-safe wire shape (ADR-0011 §5): uuid/uuids as strings,
-        matching web/src/contracts.ts PropView."""
+        """The JSON-safe wire shape: uuid/uuids as strings, matching
+        web/src/contracts.ts PropView."""
         function_uuid = self.function_uuid
         return {
             "uuid": str(self.uuid),
@@ -91,38 +86,10 @@ class Prop(TableDomain):
         }
 
 
-class Props(TableMapping[UUID, Prop]):
+class Props(Table[UUID, Prop]):
     """The props table as a Mapping of writable props."""
 
-    __domain__: ClassVar[type[TableDomain]] = Prop
-
-    @databasemethod(commit=False)
-    def update_formula(self, prop_uuid: UUID, formula: str) -> None:
-        """Persist a rewritten formula string (ADR-0005 rename-rewrite)."""
-        row = Database.session.get(TABLE_Props, prop_uuid)
-        if row is None:
-            raise KeyError(f"no prop {prop_uuid}")
-        row.formula = formula
-
-    @databasemethod(commit=False)
-    def set_function(self, prop_uuid: UUID, function_uuid: UUID | None) -> None:
-        """Bind (or unbind, with None) a Function<T,R> instance to a prop —
-        the prop becomes function-backed and is computed at read time
-        (ADR-0007). Mutually exclusive with `formula`; the caller validates."""
-        row = Database.session.get(TABLE_Props, prop_uuid)
-        if row is None:
-            raise KeyError(f"no prop {prop_uuid}")
-        row.function_uuid = function_uuid
-
-    @databasemethod(commit=False)
-    def clear_function_references(self, function_uuid: UUID) -> None:
-        """Unbind every prop computed through this function — called before
-        deleting the function instance so no prop strands a dangling uuid."""
-        rows = Database.session.scalars(
-            sqla.select(TABLE_Props).where(TABLE_Props.function_uuid == function_uuid)
-        ).all()
-        for row in rows:
-            row.function_uuid = None
+    __row__: ClassVar[type[Row]] = Prop
 
 
 props = Props()

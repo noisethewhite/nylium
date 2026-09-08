@@ -41,7 +41,7 @@ def auth_client() -> TestClient:
     """Client with a live session cookie: owner user + one credential +
     issued token, planted directly (passkey bytes can't be faked here)."""
     user = auth_users.create("owner")
-    auth_credentials.register(user.uuid, secrets.token_bytes(32), b"pk", 0, "")
+    auth_credentials.create(user.uuid, secrets.token_bytes(32), b"pk", 0, "")
     client = TestClient(NyliumApp.create())
     client.cookies.set(sessions.COOKIE_NAME, sessions.issue(user.uuid))
     return client

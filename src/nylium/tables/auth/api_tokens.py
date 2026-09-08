@@ -1,15 +1,17 @@
+# pyright: reportUninitializedInstanceVariable=false
+# Row.__init__ copies every mapped column into the instance dynamically;
+# the bare annotations below are the schema, not a constructor signature.
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import ClassVar, cast
+from datetime import datetime
+from typing import ClassVar
 from uuid import UUID, uuid4
 
-import sqlalchemy as sqla
 from sqlalchemy import DateTime, ForeignKey, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from nylium.database import Database, databasemethod
-from nylium.database.tabledomain import TableDomain, TableMapping, tableproperty
+from nylium.database.table import Row, Table
 from nylium.tables.base import Base
 
 
@@ -38,25 +40,25 @@ class TABLE_ApiTokens(Base):
     )
 
 
-class ApiToken(TableDomain):
+class ApiToken(Row):
     """One API token: a writable snapshot of an api_tokens row."""
 
     __table__: ClassVar[type[Base]] = TABLE_ApiTokens
 
-    uuid: tableproperty[ApiToken, UUID] = tableproperty()
-    user_uuid: tableproperty[ApiToken, UUID] = tableproperty()
-    name: tableproperty[ApiToken, str] = tableproperty()
-    token_hash: tableproperty[ApiToken, str] = tableproperty()
-    scope: tableproperty[ApiToken, str] = tableproperty()
-    created_at: tableproperty[ApiToken, datetime] = tableproperty()
-    last_used_at: tableproperty[ApiToken, datetime | None] = tableproperty()
-    revoked_at: tableproperty[ApiToken, datetime | None] = tableproperty()
+    uuid: UUID
+    user_uuid: UUID
+    name: str
+    token_hash: str
+    scope: str
+    created_at: datetime
+    last_used_at: datetime | None
+    revoked_at: datetime | None
 
 
-class ApiTokens(TableMapping[UUID, ApiToken]):
+class ApiTokens(Table[UUID, ApiToken]):
     """The api_tokens table as a Mapping of writable tokens."""
 
-    __domain__: ClassVar[type[TableDomain]] = ApiToken
+    __row__: ClassVar[type[Row]] = ApiToken
 
     @databasemethod(commit=True)
     def create(self, user_uuid: UUID, name: str, token_hash: str, scope: str) -> ApiToken:
@@ -65,41 +67,7 @@ class ApiTokens(TableMapping[UUID, ApiToken]):
         )
         Database.session.add(row)
         Database.session.flush()  # populate uuid/created_at before the session ends
-        return cast(ApiToken, ApiToken.from_row(row))
-
-    @databasemethod(commit=False)
-    def by_hash(self, token_hash: str) -> ApiToken | None:
-        row = Database.session.scalar(
-            sqla.select(TABLE_ApiTokens).where(
-                TABLE_ApiTokens.token_hash == token_hash
-            )
-        )
-        return None if row is None else cast(ApiToken, ApiToken.from_row(row))
-
-    @databasemethod(commit=False)
-    def for_user(self, user_uuid: UUID) -> list[ApiToken]:
-        rows = list(
-            Database.session.scalars(
-                sqla.select(TABLE_ApiTokens)
-                .where(TABLE_ApiTokens.user_uuid == user_uuid)
-                .order_by(TABLE_ApiTokens.created_at)
-            ).all()
-        )
-        return [cast(ApiToken, ApiToken.from_row(row)) for row in rows]
-
-    @databasemethod(commit=True)
-    def mark_used(self, uuid: UUID) -> None:
-        token = self.get(uuid)
-        if token is not None:
-            token.last_used_at = datetime.now(timezone.utc)
-
-    @databasemethod(commit=True)
-    def revoke(self, user_uuid: UUID, uuid: UUID) -> bool:
-        token = self.get(uuid)
-        if token is None or token.user_uuid != user_uuid:
-            return False
-        token.revoked_at = datetime.now(timezone.utc)
-        return True
+        return ApiToken(row)
 
 
 api_tokens = ApiTokens()

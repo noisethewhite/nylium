@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import secrets
+from datetime import datetime, timezone
 from typing import ClassVar
 from uuid import UUID
 
@@ -33,10 +34,10 @@ class tokens:
     @classmethod
     def resolve(cls, raw: str) -> "ApiToken | None":
         """Resolve a raw token to its live row (revoked -> None)."""
-        row = api_tokens.by_hash(cls.hash_token(raw))
+        row = next(api_tokens.where(token_hash=cls.hash_token(raw)), None)
         if row is None or row.revoked_at is not None:
             return None
-        api_tokens.mark_used(row.uuid)
+        row.last_used_at = datetime.now(timezone.utc)
         return row
 
     @classmethod

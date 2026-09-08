@@ -1,3 +1,6 @@
+# pyright: reportUninitializedInstanceVariable=false
+# Row.__init__ copies every mapped column into the instance dynamically;
+# the bare annotations below are the schema, not a constructor signature.
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
@@ -9,9 +12,8 @@ from sqlalchemy import DateTime, ForeignKey, LargeBinary, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from nylium.database import Database, databasemethod
-from nylium.database.tabledomain import TableDomain, TableMapping, tableproperty
+from nylium.database.table import Row, Table
 from nylium.tables.base import Base
-
 
 class TABLE_AuthChallenges(Base):
     """One-shot WebAuthn challenges. Consumed on use, dead after TTL."""
@@ -27,25 +29,25 @@ class TABLE_AuthChallenges(Base):
     )
 
 
-class AuthChallenge(TableDomain):
+class AuthChallenge(Row):
     """One WebAuthn challenge: a writable snapshot of an auth_challenges row."""
 
     __table__: ClassVar[type[Base]] = TABLE_AuthChallenges
 
-    challenge: tableproperty[AuthChallenge, bytes] = tableproperty()
-    kind: tableproperty[AuthChallenge, str] = tableproperty()
-    user_uuid: tableproperty[AuthChallenge, UUID | None] = tableproperty()
-    expires_at: tableproperty[AuthChallenge, datetime] = tableproperty()
+    challenge: bytes
+    kind: str
+    user_uuid: UUID | None
+    expires_at: datetime
 
 
-class AuthChallenges(TableMapping[bytes, AuthChallenge]):
+class AuthChallenges(Table[bytes, AuthChallenge]):
     """The auth_challenges table as a Mapping keyed by challenge bytes.
 
     Challenges are one-shot ceremony state: issued, consumed once, purged
     on TTL. The Mapping shape is for consistency with the other tables;
     iteration is never meaningful here."""
 
-    __domain__: ClassVar[type[TableDomain]] = AuthChallenge
+    __row__: ClassVar[type[Row]] = AuthChallenge
 
     REGISTER_KIND: ClassVar[str] = "register"
     LOGIN_KIND: ClassVar[str] = "login"

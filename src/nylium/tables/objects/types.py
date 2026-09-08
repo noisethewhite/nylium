@@ -1,19 +1,19 @@
+# pyright: reportUninitializedInstanceVariable=false
+# Row.__init__ copies every mapped column into the instance dynamically;
+# the bare annotations below are the schema, not a constructor signature.
 from __future__ import annotations
 
 from collections.abc import Generator
-from typing import ClassVar, cast
+from typing import ClassVar
 from uuid import UUID
 
-import sqlalchemy as sqla
-
 from nylium.database import Database, databasemethod
-from nylium.database.sessioncontext import SessionContext
-from nylium.database.tabledomain import TableDomain, TableMapping, tableproperty
+from nylium.database.table import Row, Table
 from nylium.tables.base import Base
-from nylium.tables.objects.enum_options import EnumOption
-from nylium.tables.objects.props import Prop
+from nylium.tables.objects.enum_options import EnumOption, enum_options
+from nylium.tables.objects.props import Prop, props
 from nylium.tables.objects.typeref import TABLE_Types
-from nylium.tables.objects.unit_parts import UnitPart
+from nylium.tables.objects.unit_parts import UnitPart, unit_parts
 
 __all__ = ["TABLE_Types", "Type", "Types", "types"]
 
@@ -22,49 +22,46 @@ __all__ = ["TABLE_Types", "Type", "Types", "types"]
 # working everywhere.
 
 
-class Type(TableDomain):
+class Type(Row):
     """One type: a writable snapshot of a TABLE_Types row.
 
-    ADR-0011 §5: the domain object carries the aggregate fields the old
-    TypeView carried — ``props``/``enum_options``/``unit_parts`` navigate
-    to the child tables. This module is the top of the tables import DAG:
-    the child modules lazy-import ``types`` where they need it, never at
-    module level."""
+    The row carries the aggregate navigations — ``props`` /
+    ``enum_options`` / ``unit_parts`` reach into the child tables. This
+    module is the top of the tables import DAG: the child modules
+    lazy-import ``types`` where they need it, never at module level.
+    """
 
     __table__: ClassVar[type[Base]] = TABLE_Types
 
-    uuid: tableproperty[Type, UUID] = tableproperty()
-    name: tableproperty[Type, str] = tableproperty()
-    plural_name: tableproperty[Type, str] = tableproperty()
-    icon: tableproperty[Type, str] = tableproperty()
-    color: tableproperty[Type, str] = tableproperty()
-    kind: tableproperty[Type, str] = tableproperty()
-    embedded: tableproperty[Type, bool] = tableproperty()
+    uuid: UUID
+    name: str
+    plural_name: str
+    icon: str
+    color: str
+    kind: str
+    embedded: bool
 
     @property
-    def props(self) -> list[Prop]:
+    def props(self) -> Generator[Prop, None, None]:
         """This type's props, in display order."""
-        return sorted(
-            Prop.owner_type_uuid.foreach(self.uuid), key=lambda prop: prop.position
-        )
+        yield from sorted(props.where(owner_type_uuid=self.uuid), key=lambda p: p.position)
 
     @property
-    def enum_options(self) -> list[EnumOption]:
+    def enum_options(self) -> Generator[EnumOption, None, None]:
         """This enum's options, in display order (empty for non-enums)."""
-        return sorted(
-            EnumOption.type_uuid.foreach(self.uuid), key=lambda option: option.position
+        yield from sorted(
+            enum_options.where(type_uuid=self.uuid), key=lambda o: o.position
         )
 
     @property
-    def unit_parts(self) -> list[UnitPart]:
+    def unit_parts(self) -> Generator[UnitPart, None, None]:
         """This unit's parts, in display order (empty for non-units)."""
-        return sorted(
-            UnitPart.type_uuid.foreach(self.uuid), key=lambda part: part.position
+        yield from sorted(
+            unit_parts.where(type_uuid=self.uuid), key=lambda p: p.position
         )
 
     def wire(self) -> dict[str, object]:
-        """The JSON-safe wire shape (ADR-0011 §5), matching
-        web/src/contracts.ts TypeView."""
+        """The JSON-safe wire shape, matching web/src/contracts.ts TypeView."""
         return {
             "name": self.name,
             "plural_name": self.plural_name,
@@ -78,19 +75,10 @@ class Type(TableDomain):
         }
 
 
-class Types(TableMapping[UUID, Type]):
+class Types(Table[UUID, Type]):
     """The types table as a Mapping of writable types."""
 
-    __domain__: ClassVar[type[TableDomain]] = Type
-
-    def all(self) -> Generator[Type, None, None]:
-        """Every type, lazily."""
-        with SessionContext():
-            all_types = [
-                cast(Type, Type.from_row(row))
-                for row in Database.session.scalars(sqla.select(TABLE_Types))
-            ]
-        yield from all_types
+    __row__: ClassVar[type[Row]] = Type
 
     @databasemethod(commit=True)
     def create(
@@ -110,25 +98,7 @@ class Types(TableMapping[UUID, Type]):
             row.embedded = embedded
         Database.session.add(row)
         Database.session.flush()
-        return cast(Type, Type.from_row(row))
-
-    @databasemethod(commit=True)
-    def update(
-        self,
-        uuid: UUID,
-        name: str,
-        plural_name: str,
-        icon: str,
-        color: str,
-    ) -> None:
-        row = Database.session.get(TABLE_Types, uuid)
-        if row is None:
-            raise KeyError(f"no type with uuid {uuid}")
-        row.name = name
-        row.plural_name = plural_name
-        row.icon = icon
-        row.color = color
-        Database.session.flush()
+        return Type(row)
 
     @databasemethod(commit=True)
     def delete(self, uuid: UUID) -> None:

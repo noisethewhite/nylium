@@ -1,22 +1,22 @@
 """TypeStore: the Mapping contract over the types table (ADR-0010).
 
-``types`` must behave like ``dict[UUID, TABLE_Types]`` (plus a name index):
+``types`` must behave like ``Mapping[UUID, Type]`` (plus a name index):
 ``types[uuid]``, ``types.get``, ``uuid in types``, ``iter(types)``,
-``len(types)``, ``types.all()`` and the ``by_name`` / ``update`` /
-``delete`` write ops.
+``len(types)``, ``types.all()`` / ``types.where(...)`` lookups, and
+auto-persisting row attribute writes / ``delete`` write ops.
 """
 from uuid import UUID, uuid4
 
 import pytest
 
 from nylium.api import Api
-from nylium.tables.objects.types import Type, types
+from nylium.tables.objects.types import types
 
 
 def _seed() -> UUID:
     """create_type seeds the builtins; return the uuid of "T"."""
     view = Api.create_type("T", {"name": "String"}, "Ts")
-    row = next(Type.name.foreach(view.name), None)
+    row = next(types.where(name=view.name), None)
     assert row is not None
     return row.uuid
 
@@ -37,12 +37,12 @@ def test_get_and_contains():
     assert uuid4() not in types
 
 
-def test_by_name_second_index():
+def test_where_second_index():
     uuid = _seed()
-    row = next(Type.name.foreach("T"), None)
+    row = next(types.where(name="T"), None)
     assert row is not None
     assert row.uuid == uuid
-    assert next(Type.name.foreach("no-such-type"), None) is None
+    assert next(types.where(name="no-such-type"), None) is None
 
 
 def test_iter_len_all():
@@ -57,11 +57,15 @@ def test_iter_len_all():
 
 def test_update_and_delete():
     uuid = _seed()
-    types.update(uuid, "T2", "T2s", "inventory_2", "#112233")
+    row = types[uuid]
+    row.name = "T2"
+    row.plural_name = "T2s"
+    row.icon = "inventory_2"
+    row.color = "#112233"
     assert types[uuid].name == "T2"
     assert types[uuid].plural_name == "T2s"
     assert types[uuid].color == "#112233"
 
     types.delete(uuid)  # its props cascade via FK ondelete
     assert types.get(uuid) is None
-    assert next(Type.name.foreach("T2"), None) is None
+    assert next(types.where(name="T2"), None) is None

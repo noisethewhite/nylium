@@ -13,7 +13,7 @@ from decimal import Decimal
 from uuid import UUID
 
 from nylium.database import Database, databasemethod
-from nylium.tables.objects.unit_parts import UnitPart
+from nylium.tables.objects.unit_parts import unit_parts
 from nylium.tables import TABLE_NumericValues
 from nylium.objects.quantity import Quantity
 from nylium.objects.wprop import WProp
@@ -46,7 +46,7 @@ class WUnit:
         if value.unit is None:
             return Quantity(value=value.value, unit=None)
         part = next(
-            (p for p in UnitPart.type_uuid.foreach(owner.uuid) if p.name == value.unit),
+            (p for p in unit_parts.where(type_uuid=owner.uuid) if p.name == value.unit),
             None,
         )
         if part is None:
@@ -74,7 +74,7 @@ class WUnit:
         part = next(
             (
                 p
-                for p in UnitPart.type_uuid.foreach(owner.uuid)
+                for p in unit_parts.where(type_uuid=owner.uuid)
                 if p.name == entered_unit
             ),
             None,

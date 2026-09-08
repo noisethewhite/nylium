@@ -1,16 +1,16 @@
+# pyright: reportUninitializedInstanceVariable=false
+# Row.__init__ copies every mapped column into the instance dynamically;
+# the bare annotations below are the schema, not a constructor signature.
 from __future__ import annotations
 
-from collections.abc import Generator
-from typing import ClassVar, cast
+from typing import ClassVar
 from uuid import UUID, uuid4
 
-import sqlalchemy as sqla
 from sqlalchemy import BigInteger, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from nylium.database import Database, databasemethod
-from nylium.database.sessioncontext import SessionContext
-from nylium.database.tabledomain import TableDomain, TableMapping, tableproperty
+from nylium.database.table import Row, Table
 from nylium.tables.base import Base
 
 
@@ -28,20 +28,19 @@ class TABLE_Files(Base):
     size_bytes: Mapped[int] = mapped_column(BigInteger)
 
 
-class File(TableDomain):
+class File(Row):
     """One file: a writable snapshot of a TABLE_Files row."""
 
     __table__: ClassVar[type[Base]] = TABLE_Files
 
-    uuid: tableproperty[File, UUID] = tableproperty()
-    type_name: tableproperty[File, str] = tableproperty()
-    name: tableproperty[File, str] = tableproperty()
-    mime: tableproperty[File, str] = tableproperty()
-    size_bytes: tableproperty[File, int] = tableproperty()
+    uuid: UUID
+    type_name: str
+    name: str
+    mime: str
+    size_bytes: int
 
     def wire(self) -> dict[str, object]:
-        """The JSON-safe wire shape (ADR-0011 §5), matching the file
-        contract the old FileView serialized."""
+        """The JSON-safe wire shape, matching web/src/contracts.ts FileView."""
         return {
             "uuid": str(self.uuid),
             "type_name": self.type_name,
@@ -51,10 +50,10 @@ class File(TableDomain):
         }
 
 
-class Files(TableMapping[UUID, File]):
+class Files(Table[UUID, File]):
     """The files table as a Mapping of writable files."""
 
-    __domain__: ClassVar[type[TableDomain]] = File
+    __row__: ClassVar[type[Row]] = File
 
     @databasemethod(commit=True)
     def create(
@@ -74,25 +73,7 @@ class Files(TableMapping[UUID, File]):
         )
         Database.session.add(row)
         Database.session.flush()
-        return cast(File, File.from_row(row))
-
-    def list_all(self) -> Generator[File, None, None]:
-        """Every file, name-ordered, lazily."""
-        with SessionContext():
-            all_files = [
-                cast(File, File.from_row(row))
-                for row in Database.session.scalars(
-                    sqla.select(TABLE_Files).order_by(TABLE_Files.name)
-                )
-            ]
-        yield from all_files
-
-    @databasemethod(commit=True)
-    def rename(self, uuid: UUID, name: str) -> None:
-        row = Database.session.get(TABLE_Files, uuid)
-        if row is None:
-            raise KeyError(f"no file {uuid}")
-        row.name = name
+        return File(row)
 
     @databasemethod(commit=True)
     def delete(self, uuid: UUID) -> None:

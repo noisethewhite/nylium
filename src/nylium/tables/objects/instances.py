@@ -1,3 +1,6 @@
+# pyright: reportUninitializedInstanceVariable=false
+# Row.__init__ copies every mapped column into the instance dynamically;
+# the bare annotations below are the schema, not a constructor signature.
 from __future__ import annotations
 
 from datetime import datetime
@@ -8,7 +11,7 @@ from sqlalchemy import DateTime, ForeignKey, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from nylium.database import Database, databasemethod
-from nylium.database.tabledomain import TableDomain, TableMapping, tableproperty
+from nylium.database.table import Row, Table
 from nylium.tables.base import Base
 from nylium.tables.objects.types import types
 
@@ -40,19 +43,19 @@ class TABLE_Instances(Base):
     )
 
 
-class Instance(TableDomain):
+class Instance(Row):
     """One instance: a writable snapshot of a TABLE_Instances row."""
 
     __table__: ClassVar[type[Base]] = TABLE_Instances
 
-    uuid: tableproperty[Instance, UUID] = tableproperty()
-    type_uuid: tableproperty[Instance, UUID] = tableproperty()
-    name: tableproperty[Instance, str] = tableproperty()
-    plural_name: tableproperty[Instance, str] = tableproperty()
-    owner_object_uuid: tableproperty[Instance, UUID | None] = tableproperty()
-    owner_prop_uuid: tableproperty[Instance, UUID | None] = tableproperty()
-    created_at: tableproperty[Instance, datetime] = tableproperty()
-    modified_at: tableproperty[Instance, datetime] = tableproperty()
+    uuid: UUID
+    type_uuid: UUID
+    name: str
+    plural_name: str
+    owner_object_uuid: UUID | None
+    owner_prop_uuid: UUID | None
+    created_at: datetime
+    modified_at: datetime
 
     @property
     def type_name(self) -> str:
@@ -79,10 +82,10 @@ def unique_plural_name(uuid: UUID, name: str, plural_name: str | None = None) ->
     return candidate
 
 
-class Instances(TableMapping[UUID, Instance]):
+class Instances(Table[UUID, Instance]):
     """The instances table as a Mapping of writable instances."""
 
-    __domain__: ClassVar[type[TableDomain]] = Instance
+    __row__: ClassVar[type[Row]] = Instance
 
     @databasemethod(commit=True)
     def create(

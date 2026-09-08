@@ -21,9 +21,6 @@ from nylium.api.views import FunctionView, ObjectRef, ObjectView
 from nylium.database import databasemethod
 from nylium.tables.files import File
 from nylium.tables.objects.types import Type, types
-from nylium.tables.objects.instances import Instance
-from nylium.tables.objects.props import Prop
-from nylium.tables.objects.unit_parts import UnitPart
 from nylium.tables import (
     enum_options,
     files,
@@ -46,7 +43,7 @@ from nylium.objects.wtypemeta import StoredValue, WTypeMeta
 def _prop_value_type_name(owner_type_uuid: UUID, key: str) -> str:
     """The value-type name of one prop — what `_normalize_value` needs."""
     prop = next(
-        (p for p in Prop.owner_type_uuid.foreach(owner_type_uuid) if p.key == key),
+        (p for p in props.where(owner_type_uuid=owner_type_uuid) if p.key == key),
         None,
     )
     if prop is None:
@@ -97,13 +94,13 @@ class Api:
     @classmethod
     @databasemethod(commit=False)
     def get_type(cls, name: str) -> Type | None:
-        return next(Type.name.foreach(name), None)
+        return next(types.where(name=name), None)
 
     @classmethod
     def _type_result(cls, name: str) -> Type:
         """Re-read a type the caller just wrote, for the return value.
         The write path resolves the name first, so a miss means a bug."""
-        result = next(Type.name.foreach(name), None)
+        result = next(types.where(name=name), None)
         if result is None:
             raise RuntimeError(f"type {name!r} vanished after write")
         return result
@@ -163,7 +160,9 @@ class Api:
                 position,
                 formulas.get(key),
             )
-        types.update(owner.uuid, owner.name, owner.plural_name, icon, color)
+        row = types[owner.uuid]
+        row.icon = icon
+        row.color = color
         return cls._type_result(name)
 
     @classmethod
@@ -188,7 +187,9 @@ class Api:
         cls._check_icon(icon)
         owner = WType.ensure(final_name, kind=WType.KIND_ENUM)
         enum_options.sync(owner.uuid, [(None, v) for v in (options or [])])
-        types.update(owner.uuid, owner.name, owner.plural_name, icon, color)
+        row = types[owner.uuid]
+        row.icon = icon
+        row.color = color
         return cls._type_result(final_name)
 
     @classmethod
@@ -246,7 +247,9 @@ class Api:
         ]
         cls._validate_unit_draft(items)
         unit_parts.sync(owner.uuid, final_name, items)
-        types.update(owner.uuid, owner.name, owner.plural_name, icon, color)
+        row = types[owner.uuid]
+        row.icon = icon
+        row.color = color
         return cls._type_result(final_name)
 
     @classmethod
@@ -269,13 +272,13 @@ class Api:
             raise ValidationError(f"type {name!r} is not a unit")
         cls._validate_unit_draft(items)
         old_base = next(
-            (p for p in UnitPart.type_uuid.foreach(owner.uuid) if p.is_base), None
+            (p for p in unit_parts.where(type_uuid=owner.uuid) if p.is_base), None
         )
         new_base_uuid = next(uuid for uuid, _, _, _, is_base in items if is_base)
         if (
             old_base is not None
             and new_base_uuid != old_base.uuid
-            and unit_parts.usage_total(owner.name) > 0
+            and unit_parts.usage_count(owner.name) > 0
         ):
             raise ValidationError(
                 f"unit {name!r} still has values; its base part cannot change"
@@ -429,11 +432,11 @@ class Api:
                 embedded_renamed = True
         WProp.sync_schema(owner, resolved)
         for prop_uuid, rewritten in formula_updates:
-            props.update_formula(prop_uuid, rewritten)
+            props[prop_uuid].formula = rewritten
         if embedded_renamed:
             # a renamed embedded prop key invalidates every generated
             # child name of every instance of this type
-            for instance_uuid in [i.uuid for i in Instance.type_uuid.foreach(owner.uuid)]:
+            for instance_uuid in [i.uuid for i in instances.where(type_uuid=owner.uuid)]:
                 WEmbedded.regenerate_names(instance_uuid)
         return cls._type_result(type_name)
 
@@ -460,7 +463,7 @@ class Api:
         if not final_name:
             raise ValidationError("type name must not be empty")
         cls._check_reserved_name(final_name, "type name")
-        collision_row = next(Type.name.foreach(final_name), None)
+        collision_row = next(types.where(name=final_name), None)
         if collision_row is not None and collision_row.uuid != owner.uuid:
             raise ValueError(f"type {final_name!r} already exists")
         final_plural = owner.plural_name if plural_name is None else plural_name
@@ -470,21 +473,20 @@ class Api:
         if color is not None:
             cls._check_color(color)
         final_color = owner.color if color is None else color
-        types.update(owner.uuid, final_name, final_plural, final_icon, final_color)
+        row = types[owner.uuid]
+        row.name = final_name
+        row.plural_name = final_plural
+        row.icon = final_icon
+        row.color = final_color
         if owner.is_unit and final_name != name:
             # the parameterized Numeric<Unit> row tags along — prop value
             # types reference it by uuid, only the display name changes
-            parameterized_row = next(Type.name.foreach(WType.unit_numeric_name(name)), None)
+            parameterized_row = next(
+                types.where(name=WType.unit_numeric_name(name)), None
+            )
             if parameterized_row is not None:
-                parameterized = WType.by_uuid(parameterized_row.uuid)
-                if parameterized is not None:
-                    types.update(
-                        parameterized_row.uuid,
-                        WType.unit_numeric_name(final_name),
-                        f"{WType.unit_numeric_name(final_name)}s",
-                        parameterized.icon,
-                        parameterized.color,
-                    )
+                parameterized_row.name = WType.unit_numeric_name(final_name)
+                parameterized_row.plural_name = f"{WType.unit_numeric_name(final_name)}s"
         return cls._type_result(final_name)
 
     @classmethod
@@ -499,7 +501,7 @@ class Api:
             return False
         if _is_builtin_type(owner):
             raise ValidationError(f"type {name!r} is builtin and cannot be deleted")
-        instance_count = sum(1 for _ in Instance.type_uuid.foreach(owner.uuid))
+        instance_count = sum(1 for _ in instances.where(type_uuid=owner.uuid))
         if instance_count:
             raise ValueError(
                 f"type {name!r} still has {instance_count} instances"
@@ -507,10 +509,12 @@ class Api:
         if owner.is_unit:
             # refuse while any prop is parameterized on this unit, then
             # drop the orphaned parameterized row with the unit itself
-            parameterized_row = next(Type.name.foreach(WType.unit_numeric_name(name)), None)
+            parameterized_row = next(
+                types.where(name=WType.unit_numeric_name(name)), None
+            )
             if parameterized_row is not None:
                 refs = sum(
-                    1 for _ in Prop.value_type_uuid.foreach(parameterized_row.uuid)
+                    1 for _ in props.where(value_type_uuid=parameterized_row.uuid)
                 )
                 if refs:
                     raise ValueError(
@@ -534,7 +538,7 @@ class Api:
             return []
         views = [
             ObjectView.from_uuid(uuid)
-            for uuid in [i.uuid for i in Instance.type_uuid.foreach(owner.uuid)]
+            for uuid in [i.uuid for i in instances.where(type_uuid=owner.uuid)]
         ]
         return [view for view in views if view is not None]
 
@@ -675,10 +679,10 @@ class Api:
 
         if not name.strip():
             raise ValidationError("filename must not be empty")
-        files.rename(uuid, name)
         view = cls.get_file(uuid)
         if view is None:
             raise KeyError(f"no file {uuid}")
+        view.name = name
         return view
 
     @classmethod
@@ -813,7 +817,8 @@ class Api:
             return False
         # unbind every prop computed through it first, then drop the object
         # (graph + deps cascade on the FK)
-        props.clear_function_references(uuid)
+        for prop in props.where(function_uuid=uuid):
+            prop.function_uuid = None
         return cls.delete_object(uuid)
 
     @classmethod
@@ -848,7 +853,7 @@ class Api:
             raise ValidationError(
                 f"prop {prop_key!r} already has a formula — a prop cannot be both"
             )
-        props.set_function(prop.uuid, function_uuid)
+        props[prop.uuid].function_uuid = function_uuid
         WFunction.assert_no_dependency_cycle()
         result = cls._type_result(type_name)
         return result
@@ -879,7 +884,7 @@ class Api:
         fails the whole sync — schemas never strand a stored formula.
         Returns (prop uuid, new formula) updates; the caller persists
         them after the local schema change lands."""
-        array_type_row = next(Type.name.foreach(WType.array_name(type_name)), None)
+        array_type_row = next(types.where(name=WType.array_name(type_name)), None)
         if array_type_row is None:
             return []
 
@@ -891,7 +896,7 @@ class Api:
         updates: list[tuple[UUID, str]] = []
         usages = [
             (p.owner_type_uuid, p.key)
-            for p in Prop.value_type_uuid.foreach(array_type_row.uuid)
+            for p in props.where(value_type_uuid=array_type_row.uuid)
         ]
         by_owner: dict[UUID, list[str]] = {}
         for dependent_uuid, array_key in usages:
@@ -975,10 +980,10 @@ class Api:
     ) -> dict[str, StoredValue]:
         """Callers hand links over as UUID/ObjectRef (that's all they have);
         the object layer wants WObject wrappers. Resolve by prop type."""
-        owner_type_row = next(Type.name.foreach(type_name), None)
+        owner_type_row = next(types.where(name=type_name), None)
         if owner_type_row is None:
             raise KeyError(f"no type {type_name!r}")
-        owner_props = list(Prop.owner_type_uuid.foreach(owner_type_row.uuid))
+        owner_props = list(props.where(owner_type_uuid=owner_type_row.uuid))
         formula_readonly = {p.key for p in owner_props if p.formula is not None}
         function_readonly = {p.key for p in owner_props if p.function_uuid is not None}
         result: dict[str, StoredValue] = {}
@@ -1043,7 +1048,7 @@ class Api:
                 raise TypeError(
                     f"embedded prop of type {type_name!r} takes an inline props draft, got {type(value).__name__}"
                 )
-            resolved_props = list(Prop.owner_type_uuid.foreach(resolved.uuid))
+            resolved_props = list(props.where(owner_type_uuid=resolved.uuid))
             formula_readonly = {p.key for p in resolved_props if p.formula is not None}
             function_readonly = {
                 p.key for p in resolved_props if p.function_uuid is not None

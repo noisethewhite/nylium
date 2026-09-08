@@ -37,7 +37,7 @@ class sessions:
         if row.expires_at <= datetime.now(timezone.utc):
             auth_sessions.delete(row.token_hash)
             return None
-        auth_sessions.refresh(row.token_hash, cls._deadline())
+        row.expires_at = cls._deadline()
         return row.user_uuid
 
     @classmethod

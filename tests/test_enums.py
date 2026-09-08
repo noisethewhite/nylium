@@ -24,7 +24,7 @@ def test_create_enum_view():
     view = status_enum()
     assert view.kind == "enum"
     assert [option.value for option in view.enum_options] == ["open", "closed"]
-    assert view.props == []
+    assert list(view.props) == []
 
 
 def test_enum_membership_validation():

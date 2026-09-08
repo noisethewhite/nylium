@@ -360,7 +360,7 @@ def test_unexpected_error_is_500_json(
     from nylium.server import NyliumApp
 
     user = auth_users.create("boom-owner")
-    auth_credentials.register(user.uuid, secrets.token_bytes(32), b"pk", 0, "")
+    auth_credentials.create(user.uuid, secrets.token_bytes(32), b"pk", 0, "")
     client = TestClient(NyliumApp.create(), raise_server_exceptions=False)
     client.cookies.set(sessions.COOKIE_NAME, sessions.issue(user.uuid))
     monkeypatch.setattr(Api, "get_type", boom)

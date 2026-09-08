@@ -1,15 +1,17 @@
+# pyright: reportUninitializedInstanceVariable=false
+# Row.__init__ copies every mapped column into the instance dynamically;
+# the bare annotations below are the schema, not a constructor signature.
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import ClassVar, cast
+from datetime import datetime
+from typing import ClassVar
 from uuid import UUID, uuid4
 
-import sqlalchemy as sqla
 from sqlalchemy import BigInteger, DateTime, ForeignKey, LargeBinary, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from nylium.database import Database, databasemethod
-from nylium.database.tabledomain import TableDomain, TableMapping, tableproperty
+from nylium.database.table import Row, Table
 from nylium.tables.base import Base
 
 
@@ -34,77 +36,45 @@ class TABLE_AuthCredentials(Base):
     )
 
 
-class AuthCredential(TableDomain):
+class AuthCredential(Row):
     """One passkey credential: a writable snapshot of an auth_credentials row."""
 
     __table__: ClassVar[type[Base]] = TABLE_AuthCredentials
 
-    uuid: tableproperty[AuthCredential, UUID] = tableproperty()
-    user_uuid: tableproperty[AuthCredential, UUID] = tableproperty()
-    credential_id: tableproperty[AuthCredential, bytes] = tableproperty()
-    public_key: tableproperty[AuthCredential, bytes] = tableproperty()
-    sign_count: tableproperty[AuthCredential, int] = tableproperty()
-    transports: tableproperty[AuthCredential, str] = tableproperty()
-    created_at: tableproperty[AuthCredential, datetime] = tableproperty()
-    last_used_at: tableproperty[AuthCredential, datetime | None] = tableproperty()
+    uuid: UUID
+    user_uuid: UUID
+    credential_id: bytes
+    public_key: bytes
+    sign_count: int
+    transports: str
+    created_at: datetime
+    last_used_at: datetime | None
 
 
-class AuthCredentials(TableMapping[UUID, AuthCredential]):
+class AuthCredentials(Table[UUID, AuthCredential]):
     """The auth_credentials table as a Mapping of writable credentials."""
 
-    __domain__: ClassVar[type[TableDomain]] = AuthCredential
-
-    @databasemethod(commit=False)
-    def count_all(self) -> int:
-        count = Database.session.scalar(
-            sqla.select(sqla.func.count()).select_from(TABLE_AuthCredentials)
-        )
-        return count or 0
-
-    @databasemethod(commit=False)
-    def by_credential_id(self, credential_id: bytes) -> AuthCredential | None:
-        row = Database.session.scalar(
-            sqla.select(TABLE_AuthCredentials).where(
-                TABLE_AuthCredentials.credential_id == credential_id
-            )
-        )
-        return None if row is None else cast(AuthCredential, AuthCredential.from_row(row))
-
-    @databasemethod(commit=False)
-    def credential_ids_for(self, user_uuid: UUID) -> list[bytes]:
-        return list(
-            Database.session.scalars(
-                sqla.select(TABLE_AuthCredentials.credential_id).where(
-                    TABLE_AuthCredentials.user_uuid == user_uuid
-                )
-            ).all()
-        )
+    __row__: ClassVar[type[Row]] = AuthCredential
 
     @databasemethod(commit=True)
-    def register(
+    def create(
         self,
         user_uuid: UUID,
         credential_id: bytes,
         public_key: bytes,
         sign_count: int,
         transports: str,
-    ) -> None:
-        Database.session.add(
-            TABLE_AuthCredentials(
-                user_uuid=user_uuid,
-                credential_id=credential_id,
-                public_key=public_key,
-                sign_count=sign_count,
-                transports=transports,
-            )
+    ) -> AuthCredential:
+        row = TABLE_AuthCredentials(
+            user_uuid=user_uuid,
+            credential_id=credential_id,
+            public_key=public_key,
+            sign_count=sign_count,
+            transports=transports,
         )
-
-    @databasemethod(commit=True)
-    def mark_used(self, uuid: UUID, sign_count: int) -> None:
-        credential = self.get(uuid)
-        if credential is not None:
-            credential.sign_count = sign_count
-            credential.last_used_at = datetime.now(timezone.utc)
+        Database.session.add(row)
+        Database.session.flush()
+        return AuthCredential(row)
 
 
 auth_credentials = AuthCredentials()

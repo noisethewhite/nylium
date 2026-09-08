@@ -8,6 +8,7 @@ bearer).
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from typing import Annotated, cast
 from uuid import UUID
 
@@ -63,14 +64,24 @@ class token_routes:
 
     @classmethod
     def list(cls, user: Annotated[AuthUser, Depends(require_cookie_user)]) -> JSONResponse:
-        return JSONResponse([_token_view(row) for row in api_tokens.for_user(user.uuid)])
+        return JSONResponse(
+            [
+                _token_view(row)
+                for row in sorted(
+                    api_tokens.where(user_uuid=user.uuid), key=lambda t: t.created_at
+                )
+            ]
+        )
 
     @classmethod
     def revoke(
         cls, token_uuid: UUID, user: Annotated[AuthUser, Depends(require_cookie_user)]
     ) -> JSONResponse:
-        if not api_tokens.revoke(user.uuid, token_uuid):
+        row = api_tokens.get(token_uuid)
+        if row is None or row.user_uuid != user.uuid:
             raise KeyError(f"no token {token_uuid}")
+        if row.revoked_at is None:
+            row.revoked_at = datetime.now(timezone.utc)
         return JSONResponse({"ok": True})
 
     # --- internals ---

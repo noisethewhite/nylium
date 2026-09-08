@@ -1,3 +1,9 @@
+# pyright: reportUninitializedInstanceVariable=false
+# Row.__init__ copies every mapped column into the instance dynamically;
+# the bare annotations below are the schema, not a constructor signature.
+# pyright: reportImportCycles=false
+# Row navigation is bidirectional by design (Type.props <-> Prop.value_type);
+# the back-edges are lazy function-level imports, so there is no runtime cycle.
 from __future__ import annotations
 
 # Options of a string-enum type. The enum type itself is a `types` row
@@ -12,7 +18,7 @@ from sqlalchemy import ForeignKey, Integer, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from nylium.database import Database, databasemethod
-from nylium.database.tabledomain import TableDomain, TableMapping, tableproperty
+from nylium.database.table import Row, Table
 from nylium.tables.base import Base
 from nylium.tables.values.string_values import TABLE_StringValues
 from nylium.tables.objects.props import TABLE_Props
@@ -32,26 +38,26 @@ class TABLE_EnumOptions(Base):
     position: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
 
-class EnumOption(TableDomain):
+class EnumOption(Row):
     """One enum option: a writable snapshot of a TABLE_EnumOptions row."""
 
     __table__: ClassVar[type[Base]] = TABLE_EnumOptions
 
-    uuid: tableproperty[EnumOption, UUID] = tableproperty()
-    type_uuid: tableproperty[EnumOption, UUID] = tableproperty()
-    value: tableproperty[EnumOption, str] = tableproperty()
-    position: tableproperty[EnumOption, int] = tableproperty()
+    uuid: UUID
+    type_uuid: UUID
+    value: str
+    position: int
 
     def wire(self) -> dict[str, object]:
-        """The JSON-safe wire shape (ADR-0011 §5), matching
-        web/src/contracts.ts EnumOptionView."""
+        """The JSON-safe wire shape, matching web/src/contracts.ts
+        EnumOptionView."""
         return {"uuid": str(self.uuid), "value": self.value}
 
 
-class EnumOptions(TableMapping[UUID, EnumOption]):
+class EnumOptions(Table[UUID, EnumOption]):
     """The enum_options table as a Mapping of writable options."""
 
-    __domain__: ClassVar[type[TableDomain]] = EnumOption
+    __row__: ClassVar[type[Row]] = EnumOption
 
     @databasemethod(commit=False)
     def count_usage(self, type_uuid: UUID, value: str) -> int:

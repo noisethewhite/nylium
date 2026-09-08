@@ -13,7 +13,6 @@ from fastapi.testclient import TestClient
 
 from nylium.auth.sessions import sessions
 from nylium.tables import auth_credentials, auth_users
-from nylium.tables.auth.auth_users import AuthUser
 from nylium.server import NyliumApp
 
 
@@ -23,8 +22,8 @@ def client() -> TestClient:
 
 
 def _plant_owner() -> str:
-    user = next(AuthUser.name.foreach("owner"), None) or auth_users.create("owner")
-    auth_credentials.register(user.uuid, secrets.token_bytes(32), b"pk", 0, "")
+    user = next(auth_users.where(name="owner"), None) or auth_users.create("owner")
+    auth_credentials.create(user.uuid, secrets.token_bytes(32), b"pk", 0, "")
     return sessions.issue(user.uuid)
 
 

@@ -137,7 +137,7 @@ class WType:
     @classmethod
     @databasemethod(commit=False)
     def by_name(cls, name: str) -> "WType | None":
-        row = next(Type.name.foreach(name), None)
+        row = next(types.where(name=name), None)
         return None if row is None else cls(row)
 
     @classmethod
@@ -171,8 +171,9 @@ class WType:
                 )
             # builtins re-ensure on every boot: keep their icon canonical
             if icon is not None and existing.icon != icon:
-                types.update(existing.uuid, existing.name, existing.plural_name, icon, existing.color)
-                return cls.by_name(name) or existing
+                row = types[existing.uuid]
+                row.icon = icon
+                return cls(row)
             return existing
         row = types.create(name, plural_name or f"{name}s", icon=icon, kind=kind, embedded=embedded)
         return cls(row)

@@ -1,3 +1,6 @@
+# pyright: reportUninitializedInstanceVariable=false
+# Row.__init__ copies every mapped column into the instance dynamically;
+# the bare annotations below are the schema, not a constructor signature.
 from __future__ import annotations
 
 # Parts of a user-defined unit type (`types.kind = 'unit'`): the base
@@ -6,15 +9,8 @@ from __future__ import annotations
 # Numeric props parameterize on the unit as `Numeric<Temperature>`;
 # stored values live in numeric_values — canonical magnitude in `value`,
 # the part name as entered in `unit`.
-#
-# ADR-0011: the table's abstraction is a Mapping over writable domain
-# objects. `UnitPart` snapshots one row; assigning a tableproperty writes
-# through to the table (`part.name = "kg"` issues an UPDATE). Read helpers
-# are lazy Generators; the reverse lookup lives on the descriptor itself
-# (`UnitPart.name.list_for("kg")`).
-from collections.abc import Generator
 from decimal import Decimal
-from typing import ClassVar, cast
+from typing import ClassVar
 from uuid import UUID, uuid4
 
 import sqlalchemy as sqla
@@ -22,8 +18,7 @@ from sqlalchemy import Boolean, ForeignKey, Integer, Numeric, Text, UniqueConstr
 from sqlalchemy.orm import Mapped, mapped_column
 
 from nylium.database import Database, databasemethod
-from nylium.database.sessioncontext import SessionContext
-from nylium.database.tabledomain import TableDomain, TableMapping, tableproperty
+from nylium.database.table import Row, Table
 from nylium.tables.base import Base
 from nylium.tables.values.numeric_values import TABLE_NumericValues
 from nylium.tables.objects.props import TABLE_Props
@@ -66,22 +61,22 @@ class TABLE_UnitParts(Base):
     )
 
 
-class UnitPart(TableDomain):
+class UnitPart(Row):
     """One unit part: a writable snapshot of a TABLE_UnitParts row."""
 
     __table__: ClassVar[type[Base]] = TABLE_UnitParts
 
-    uuid: tableproperty[UnitPart, UUID] = tableproperty()
-    type_uuid: tableproperty[UnitPart, UUID] = tableproperty()
-    name: tableproperty[UnitPart, str] = tableproperty()
-    multiplier: tableproperty[UnitPart, Decimal] = tableproperty()
-    offset: tableproperty[UnitPart, Decimal] = tableproperty()
-    is_base: tableproperty[UnitPart, bool] = tableproperty()
-    position: tableproperty[UnitPart, int] = tableproperty()
+    uuid: UUID
+    type_uuid: UUID
+    name: str
+    multiplier: Decimal
+    offset: Decimal
+    is_base: bool
+    position: int
 
     def wire(self) -> dict[str, object]:
-        """The JSON-safe wire shape (ADR-0011 §5): Decimals cross as
-        strings, matching web/src/contracts.ts UnitPartView."""
+        """The JSON-safe wire shape: Decimals cross as strings, matching
+        web/src/contracts.ts UnitPartView."""
         return {
             "uuid": str(self.uuid),
             "name": self.name,
@@ -91,46 +86,21 @@ class UnitPart(TableDomain):
         }
 
 
-class UnitParts(TableMapping[UUID, UnitPart]):
+class UnitParts(Table[UUID, UnitPart]):
     """The unit_parts table as a Mapping of writable parts."""
 
-    __domain__: ClassVar[type[TableDomain]] = UnitPart
-
-    def list_for(self, type_uuid: UUID) -> Generator[UnitPart, None, None]:
-        """The parts of one unit, in display order, lazily."""
-        with SessionContext():
-            parts = [
-                cast(UnitPart, UnitPart.from_row(row))
-                for row in Database.session.scalars(
-                    sqla.select(TABLE_UnitParts)
-                    .where(TABLE_UnitParts.type_uuid == type_uuid)
-                    .order_by(TABLE_UnitParts.position)
-                )
-            ]
-        yield from parts
+    __row__: ClassVar[type[Row]] = UnitPart
 
     @databasemethod(commit=False)
-    def usage_count(self, unit_type_name: str, part_name: str) -> int:
-        """Numeric values stored under this part. Values reference a part
-        through their prop's parameterized type row (`Numeric<unit>`);
-        the name convention lives on WType.unit_numeric_name and is
-        repeated here because tables must not import the object layer."""
+    def usage_count(self, unit_type_name: str, part_name: str | None = None) -> int:
+        """Numeric values stored under this part (or, with None, any part
+        of the unit). Values reference a part through their prop's
+        parameterized type row (`Numeric<unit>`); the name convention
+        lives on WType.unit_numeric_name and is repeated here because
+        tables must not import the object layer."""
         parameterized_uuid = _parameterized_uuid(unit_type_name)
         if parameterized_uuid is None:
             return 0
-        return self._count_stored(parameterized_uuid, part_name)
-
-    @databasemethod(commit=False)
-    def usage_total(self, unit_type_name: str) -> int:
-        """Every stored value of the unit, any part (or none)."""
-        parameterized_uuid = _parameterized_uuid(unit_type_name)
-        if parameterized_uuid is None:
-            return 0
-        return self._count_stored(parameterized_uuid, None)
-
-    def _count_stored(
-        self, parameterized_uuid: UUID, part_name: str | None
-    ) -> int:
         conditions = [
             TABLE_Props.value_type_uuid == parameterized_uuid,
             TABLE_NumericValues.prop_uuid == TABLE_Props.uuid,
@@ -158,7 +128,7 @@ class UnitParts(TableMapping[UUID, UnitPart]):
         are deleted unless still in use. Validation of the draft itself
         (exactly one base, unique names, nonzero multipliers) is the
         caller's job."""
-        existing = list(self.list_for(type_uuid))
+        existing = sorted(self.where(type_uuid=type_uuid), key=lambda p: p.position)
         by_uuid = {part.uuid: part for part in existing}
         seen: set[UUID] = set()
         for position, (uuid, name, multiplier, offset, is_base) in enumerate(items):
@@ -175,10 +145,24 @@ class UnitParts(TableMapping[UUID, UnitPart]):
                 )
                 Database.session.add(row)
                 Database.session.flush()
-                part = cast(UnitPart, UnitPart.from_row(row))
+                part = UnitPart(row)
             else:
                 if part.name != name:
-                    self._propagate_rename(unit_type_name, part.name, name)
+                    parameterized_uuid = _parameterized_uuid(unit_type_name)
+                    if parameterized_uuid is not None:
+                        _ = Database.session.execute(
+                            sqla.update(TABLE_NumericValues)
+                            .where(
+                                TABLE_NumericValues.prop_uuid.in_(
+                                    sqla.select(TABLE_Props.uuid).where(
+                                        TABLE_Props.value_type_uuid
+                                        == parameterized_uuid,
+                                    )
+                                ),
+                                TABLE_NumericValues.unit == part.name,
+                            )
+                            .values(unit=name)
+                        )
                     part.name = name
                 part.multiplier = multiplier
                 part.offset = offset
@@ -193,32 +177,10 @@ class UnitParts(TableMapping[UUID, UnitPart]):
                 raise ValueError(
                     f"unit part {part.name!r} still has {usage} values"
                 )
-            self._delete_row(part.uuid)
-        Database.session.flush()
-
-    def _delete_row(self, uuid: UUID) -> None:
-        _ = Database.session.execute(
-            sqla.delete(TABLE_UnitParts).where(TABLE_UnitParts.uuid == uuid)
-        )
-
-    def _propagate_rename(
-        self, unit_type_name: str, old_name: str, new_name: str
-    ) -> None:
-        parameterized_uuid = _parameterized_uuid(unit_type_name)
-        if parameterized_uuid is None:
-            return
-        _ = Database.session.execute(
-            sqla.update(TABLE_NumericValues)
-            .where(
-                TABLE_NumericValues.prop_uuid.in_(
-                    sqla.select(TABLE_Props.uuid).where(
-                        TABLE_Props.value_type_uuid == parameterized_uuid,
-                    )
-                ),
-                TABLE_NumericValues.unit == old_name,
+            _ = Database.session.execute(
+                sqla.delete(TABLE_UnitParts).where(TABLE_UnitParts.uuid == part.uuid)
             )
-            .values(unit=new_name)
-        )
+        Database.session.flush()
 
 
 unit_parts = UnitParts()

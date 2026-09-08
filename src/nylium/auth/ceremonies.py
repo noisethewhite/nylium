@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from typing import ClassVar, cast
 from uuid import UUID
 
@@ -15,7 +16,6 @@ from webauthn.helpers import base64url_to_bytes, options_to_json
 from webauthn.helpers.structs import PublicKeyCredentialDescriptor
 
 from nylium.tables import auth_challenges, auth_credentials, auth_users
-from nylium.tables.auth.auth_users import AuthUser
 from nylium.system.environment import Environment
 
 from .sessions import sessions
@@ -40,7 +40,7 @@ class ceremonies:
         user = auth_users.get(user_uuid)
         if user is None:
             raise PermissionError("registration requires a session")
-        known = auth_credentials.credential_ids_for(user_uuid)
+        known = [c.credential_id for c in auth_credentials.where(user_uuid=user_uuid)]
         options = generate_registration_options(
             rp_id=str(Environment.rp_id),
             rp_name=cls.RP_NAME,
@@ -76,7 +76,7 @@ class ceremonies:
             )
         except Exception as exc:
             raise PermissionError("passkey rejected") from exc
-        auth_credentials.register(
+        _ = auth_credentials.create(
             user_uuid,
             verification.credential_id,
             verification.credential_public_key,
@@ -99,7 +99,9 @@ class ceremonies:
     def login_finish(cls, body: str) -> str:
         payload = cls._payload(body)
         credential_id = base64url_to_bytes(cls._string(payload, "rawId"))
-        credential = auth_credentials.by_credential_id(credential_id)
+        credential = next(
+            auth_credentials.where(credential_id=credential_id), None
+        )
         if credential is None:
             raise PermissionError("unknown credential")
         challenge = cls._client_challenge(payload)
@@ -117,7 +119,8 @@ class ceremonies:
             )
         except Exception as exc:
             raise PermissionError("passkey rejected") from exc
-        auth_credentials.mark_used(credential.uuid, verification.new_sign_count)
+        credential.sign_count = verification.new_sign_count
+        credential.last_used_at = datetime.now(timezone.utc)
         return sessions.issue(credential.user_uuid)
 
     # --- internals ---
@@ -126,11 +129,11 @@ class ceremonies:
     def _register_subject(
         cls, user_name: str | None, current_user_uuid: UUID | None
     ) -> UUID:
-        if auth_credentials.count_all() == 0:
+        if len(auth_credentials) == 0:
             if not user_name:
                 raise TypeError("user name required for the first passkey")
             # Retry after an aborted ceremony reuses the orphaned user row.
-            existing = next(AuthUser.name.foreach(user_name), None)
+            existing = next(auth_users.where(name=user_name), None)
             if existing is not None:
                 return existing.uuid
             return auth_users.create(user_name).uuid

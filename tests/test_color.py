@@ -5,7 +5,7 @@ named palette is migrated away and rejected at the API boundary."""
 import pytest
 
 from nylium.api import Api, ScalarValue
-from nylium.tables.objects.types import Type, types
+from nylium.tables.objects.types import types
 from nylium.objects import WScalar
 from nylium.objects.wscalar import WColor
 from nylium.server import NyliumApp
@@ -70,10 +70,10 @@ def test_named_palette_rejected_at_api_boundary(create):
 
 def test_legacy_named_colors_migrate_to_hex():
     view = Api.create_type("Old", {"name": "String"}, "Olds", color="#123456")
-    row = next(Type.name.foreach(view.name), None)
+    row = next(types.where(name=view.name), None)
     assert row is not None
-    # tables layer has no validation — this plants a legacy pre-ADR-0005 row
-    types.update(row.uuid, view.name, view.plural_name, view.icon, "red")
+    # the row layer has no validation — this plants a legacy pre-ADR-0005 color
+    row.color = "red"
 
     NyliumApp._migrate_schema()
 

@@ -36,7 +36,7 @@ def _part_uuids(view: Type) -> dict[str, object]:
 def test_create_unit_view():
     view = temperature_unit()
     assert view.kind == "unit"
-    assert view.props == []
+    assert list(view.props) == []
     assert [(p.name, p.multiplier, p.offset, p.is_base) for p in view.unit_parts] == [
         ("°C", Decimal(1), Decimal(0), True),
         ("°F", Decimal("1.8"), Decimal(32), False),
