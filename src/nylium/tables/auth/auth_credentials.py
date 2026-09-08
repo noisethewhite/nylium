@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import datetime, timezone
 from typing import ClassVar, cast
 from uuid import UUID, uuid4

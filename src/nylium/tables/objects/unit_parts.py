@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 # Parts of a user-defined unit type (`types.kind = 'unit'`): the base
 # part plus secondary parts with an affine conversion factor
 # (`base = (entered - offset) / multiplier`, so 32°F at 1.8/32 is 0°C).

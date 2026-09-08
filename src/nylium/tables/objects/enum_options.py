@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 # Options of a string-enum type. The enum type itself is a `types` row
 # with kind="enum"; its allowed values are these rows. Option values
 # are what enum-typed props store in string_values — renaming an option

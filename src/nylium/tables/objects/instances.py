@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import datetime
 from typing import ClassVar
 from uuid import UUID, uuid4

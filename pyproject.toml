@@ -34,6 +34,9 @@ testpaths = ["tests"]
 # their gate.
 [tool.basedpyright]
 include = ["src"]
+# Analyze as the oldest supported interpreter (CI runs 3.12): local runs on
+# newer Pythons must not hide errors like eager class-body annotations.
+pythonVersion = "3.12"
 
 [dependency-groups]
 dev = [

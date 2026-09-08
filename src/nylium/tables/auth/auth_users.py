@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 # Passkey (WebAuthn) infrastructure. System tables like TABLE_Instances/Types,
 # deliberately NOT nylium objects: auth sits below the object layer, and
 # the type system has no blob scalar for public keys / credential IDs.
