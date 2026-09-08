@@ -6,7 +6,7 @@ SQL; if ``TABLE_Types`` lived in ``types.py`` those imports would cycle,
 because ``types.py`` imports the child tables for the ``Type`` navigation
 properties. Keeping the mapped class here — behaviour-free — makes
 ``typeref`` the shared bottom of the tables import DAG. The class is
-re-exported from ``nylium.tables.types`` so existing imports keep working.
+re-exported from ``nylium.tables.objects.types`` so existing imports keep working.
 """
 
 from uuid import UUID, uuid4
@@ -21,7 +21,7 @@ class TABLE_Types(Base):
     """The raw `types` row — a plain mapped class, no behaviour (ADR-0011).
 
     Writers go through the ``Type`` domain object or the ``Types`` mapping
-    in ``nylium.tables.types`` (``create``/``update``/``delete``), never by
+    in ``nylium.tables.objects.types`` (``create``/``update``/``delete``), never by
     constructing ``TABLE_Types`` directly. The mapped class stays
     importable where a SQL join needs the table — that is its only
     legitimate public use.

@@ -13,7 +13,7 @@ from typing import ClassVar
 from uuid import UUID
 
 from nylium.database import databasemethod
-from nylium.tables.types import Type, types
+from nylium.tables.objects.types import Type, types
 
 
 class WType:

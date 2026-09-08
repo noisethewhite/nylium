@@ -23,9 +23,9 @@ from nylium.database import Database, databasemethod
 from nylium.database.sessioncontext import SessionContext
 from nylium.database.tabledomain import TableDomain, TableMapping, tableproperty
 from nylium.tables.base import Base
-from nylium.tables.numeric_values import TABLE_NumericValues
-from nylium.tables.props import TABLE_Props
-from nylium.tables.typeref import TABLE_Types
+from nylium.tables.values.numeric_values import TABLE_NumericValues
+from nylium.tables.objects.props import TABLE_Props
+from nylium.tables.objects.typeref import TABLE_Types
 
 # TABLE_Types comes from typeref.py, not types.py: types.py imports this
 # module for Type.unit_parts, so importing the domain layer back would

@@ -12,8 +12,8 @@ from sqlalchemy.orm import Mapped, mapped_column
 from nylium.database import Database, databasemethod
 from nylium.database.tabledomain import TableDomain, TableMapping, tableproperty
 from nylium.tables.base import Base
-from nylium.tables.string_values import TABLE_StringValues
-from nylium.tables.props import TABLE_Props
+from nylium.tables.values.string_values import TABLE_StringValues
+from nylium.tables.objects.props import TABLE_Props
 
 
 class TABLE_EnumOptions(Base):

@@ -13,7 +13,7 @@ from typing import ClassVar
 from uuid import UUID
 
 from nylium.tables import api_tokens
-from nylium.tables.api_tokens import ApiToken
+from nylium.tables.auth.api_tokens import ApiToken
 
 
 class tokens:

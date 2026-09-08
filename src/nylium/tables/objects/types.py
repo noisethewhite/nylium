@@ -8,15 +8,15 @@ from nylium.database import Database, databasemethod
 from nylium.database.sessioncontext import SessionContext
 from nylium.database.tabledomain import TableDomain, TableMapping, tableproperty
 from nylium.tables.base import Base
-from nylium.tables.enum_options import EnumOption
-from nylium.tables.props import Prop
-from nylium.tables.typeref import TABLE_Types
-from nylium.tables.unit_parts import UnitPart
+from nylium.tables.objects.enum_options import EnumOption
+from nylium.tables.objects.props import Prop
+from nylium.tables.objects.typeref import TABLE_Types
+from nylium.tables.objects.unit_parts import UnitPart
 
 __all__ = ["TABLE_Types", "Type", "Types", "types"]
 
 # TABLE_Types lives in typeref.py (see that module's docstring) and is
-# re-exported here: `from nylium.tables.types import TABLE_Types` keeps
+# re-exported here: `from nylium.tables.objects.types import TABLE_Types` keeps
 # working everywhere.
 
 

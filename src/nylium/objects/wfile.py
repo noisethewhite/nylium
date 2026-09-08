@@ -13,7 +13,7 @@ from uuid import UUID
 
 from nylium.database import Database, databasemethod
 from nylium.tables import TABLE_Files, files
-from nylium.tables.types import TABLE_Types
+from nylium.tables.objects.types import TABLE_Types
 
 
 class WFile:

@@ -6,7 +6,7 @@ from decimal import Decimal
 import pytest
 
 from nylium.api import Api, ScalarValue
-from nylium.tables.types import Type
+from nylium.tables.objects.types import Type
 from nylium.objects.quantity import Quantity
 from nylium.server.errors import ValidationError
 

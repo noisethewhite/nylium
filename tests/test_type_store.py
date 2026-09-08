@@ -10,7 +10,7 @@ from uuid import UUID, uuid4
 import pytest
 
 from nylium.api import Api
-from nylium.tables.types import Type, types
+from nylium.tables.objects.types import Type, types
 
 
 def _seed() -> UUID:

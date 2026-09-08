@@ -9,7 +9,7 @@ from nylium.database import Database, databasemethod
 from nylium.database.sessioncontext import SessionContext
 from nylium.database.tabledomain import TableDomain, TableMapping, tableproperty
 from nylium.tables.base import Base
-from nylium.tables.typeref import TABLE_Types
+from nylium.tables.objects.typeref import TABLE_Types
 
 # TABLE_Types comes from typeref.py, not types.py: types.py imports this
 # module for the Type.props navigation property, so importing the domain

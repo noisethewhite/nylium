@@ -387,7 +387,7 @@ class WObject(metaclass=WTypeMeta):
     @databasemethod(commit=False)
     def _owned_array_uuids(self, ) -> list[UUID]:
         from nylium.tables import TABLE_Props
-        from nylium.tables.types import TABLE_Types
+        from nylium.tables.objects.types import TABLE_Types
 
         return list(
             Database.session.scalars(

@@ -7,7 +7,7 @@ from uuid import UUID
 import pytest
 
 from nylium.api import Api, EmbeddedValue, ScalarValue
-from nylium.tables.types import Type
+from nylium.tables.objects.types import Type
 from nylium.server.errors import ValidationError
 
 

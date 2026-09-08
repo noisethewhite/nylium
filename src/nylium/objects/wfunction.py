@@ -33,7 +33,7 @@ from nylium.tables import (
     TABLE_Instances,
     instances,
 )
-from nylium.tables.types import TABLE_Types
+from nylium.tables.objects.types import TABLE_Types
 from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import ScalarPayload, WInteger, WNumeric, WString, WScalar
 from nylium.objects.wtype import WType

@@ -8,7 +8,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from nylium.database import Database, databasemethod
 from nylium.database.tabledomain import TableDomain, TableMapping, tableproperty
 from nylium.tables.base import Base
-from nylium.tables.types import types
+from nylium.tables.objects.types import types
 
 
 class TABLE_Instances(Base):

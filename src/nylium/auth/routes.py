@@ -11,7 +11,7 @@ from fastapi.responses import JSONResponse
 from nylium.auth.ceremonies import ceremonies
 from nylium.auth.guard import require_user
 from nylium.auth.sessions import sessions
-from nylium.tables.auth_users import AuthUser
+from nylium.tables.auth.auth_users import AuthUser
 from nylium.system.environment import Environment
 
 

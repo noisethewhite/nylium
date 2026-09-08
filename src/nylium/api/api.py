@@ -20,10 +20,10 @@ from uuid import UUID, uuid4
 from nylium.api.views import FunctionView, ObjectRef, ObjectView
 from nylium.database import databasemethod
 from nylium.tables.files import File
-from nylium.tables.types import Type, types
-from nylium.tables.instances import Instance
-from nylium.tables.props import Prop
-from nylium.tables.unit_parts import UnitPart
+from nylium.tables.objects.types import Type, types
+from nylium.tables.objects.instances import Instance
+from nylium.tables.objects.props import Prop
+from nylium.tables.objects.unit_parts import UnitPart
 from nylium.tables import (
     enum_options,
     files,

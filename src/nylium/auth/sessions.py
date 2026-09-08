@@ -8,7 +8,7 @@ from typing import ClassVar
 from uuid import UUID
 
 from nylium.tables import auth_sessions, auth_users
-from nylium.tables.auth_users import AuthUser
+from nylium.tables.auth.auth_users import AuthUser
 
 
 class sessions:

@@ -4,7 +4,7 @@ test_http.py."""
 import pytest
 
 from nylium.api import Api, ArrayValue, ScalarValue
-from nylium.tables.types import Type
+from nylium.tables.objects.types import Type
 from nylium.server.errors import ValidationError
 
 

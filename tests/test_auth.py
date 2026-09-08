@@ -13,7 +13,7 @@ from fastapi.testclient import TestClient
 
 from nylium.auth.sessions import sessions
 from nylium.tables import auth_credentials, auth_users
-from nylium.tables.auth_users import AuthUser
+from nylium.tables.auth.auth_users import AuthUser
 from nylium.server import NyliumApp
 
 

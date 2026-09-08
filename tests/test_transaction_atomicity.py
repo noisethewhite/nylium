@@ -10,7 +10,7 @@ import sqlalchemy as sqla
 
 from nylium.database import Database, databasemethod
 from nylium.tables import TABLE_Instances
-from nylium.tables.types import TABLE_Types
+from nylium.tables.objects.types import TABLE_Types
 
 
 class _Boom(Exception):

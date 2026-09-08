@@ -13,7 +13,7 @@ from decimal import Decimal
 from uuid import UUID
 
 from nylium.database import Database, databasemethod
-from nylium.tables.unit_parts import UnitPart
+from nylium.tables.objects.unit_parts import UnitPart
 from nylium.tables import TABLE_NumericValues
 from nylium.objects.quantity import Quantity
 from nylium.objects.wprop import WProp

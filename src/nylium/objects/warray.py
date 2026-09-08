@@ -19,7 +19,7 @@ import sqlalchemy as sqla
 
 from nylium.database import Database, databasemethod
 from nylium.tables import TABLE_ArrayValues, TABLE_Files, TABLE_Instances, TABLE_InstanceValues
-from nylium.tables.instances import unique_plural_name
+from nylium.tables.objects.instances import unique_plural_name
 from nylium.objects.wenum import WEnum
 from nylium.objects.wfile import WFile
 from nylium.objects.wprop import WProp

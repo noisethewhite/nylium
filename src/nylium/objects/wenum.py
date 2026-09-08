@@ -9,7 +9,7 @@ from uuid import UUID
 
 from nylium.database import Database, databasemethod
 from nylium.tables import TABLE_StringValues
-from nylium.tables.enum_options import EnumOption
+from nylium.tables.objects.enum_options import EnumOption
 from nylium.objects.wprop import WProp
 from nylium.objects.wtype import WType
 from nylium.server.errors import ValidationError

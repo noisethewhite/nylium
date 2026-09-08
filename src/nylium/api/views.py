@@ -31,7 +31,7 @@ from nylium.tables import (
     TABLE_StringValues,
     instances,
 )
-from nylium.tables.types import TABLE_Types
+from nylium.tables.objects.types import TABLE_Types
 from nylium.objects import WObject, WType
 from nylium.objects.monthday import MonthDay, MonthDayTime
 from nylium.objects.quantity import Quantity

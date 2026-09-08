@@ -5,7 +5,7 @@ named palette is migrated away and rejected at the API boundary."""
 import pytest
 
 from nylium.api import Api, ScalarValue
-from nylium.tables.types import Type, types
+from nylium.tables.objects.types import Type, types
 from nylium.objects import WScalar
 from nylium.objects.wscalar import WColor
 from nylium.server import NyliumApp
