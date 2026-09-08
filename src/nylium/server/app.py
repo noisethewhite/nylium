@@ -68,6 +68,21 @@ class NyliumApp:
             "ALTER TABLE props ADD COLUMN IF NOT EXISTS function_uuid UUID",
             # ADR-0005: color stores hex now — align the pre-existing default
             "ALTER TABLE types ALTER COLUMN color SET DEFAULT '#9e9e9e'",
+            # ADR-0011 phase 8: plural_name is mandatory + unique everywhere.
+            # types.name is UNIQUE so name||'s' is injective — no dedup needed
+            "UPDATE types SET plural_name = name || 's' WHERE plural_name IS NULL",
+            "ALTER TABLE types ALTER COLUMN plural_name SET NOT NULL",
+            "CREATE UNIQUE INDEX IF NOT EXISTS uq_types_plural_name ON types (plural_name)",
+            "ALTER TABLE instances ADD COLUMN IF NOT EXISTS plural_name TEXT",
+            # instance names are not unique: first bearer of a name gets the
+            # plain "<name>s", later duplicates get a uuid-suffixed plural
+            "UPDATE instances i SET plural_name = i.name || 's' WHERE i.plural_name IS NULL"
+            + " AND NOT EXISTS (SELECT 1 FROM instances j WHERE j.name = i.name"
+            + " AND j.uuid::text < i.uuid::text)",
+            "UPDATE instances SET plural_name = name || 's-' || substr(uuid::text, 1, 8)"
+            + " WHERE plural_name IS NULL",
+            "ALTER TABLE instances ALTER COLUMN plural_name SET NOT NULL",
+            "CREATE UNIQUE INDEX IF NOT EXISTS uq_instances_plural_name ON instances (plural_name)",
         ]
         with Database.engine.begin() as connection:
             for statement in statements:

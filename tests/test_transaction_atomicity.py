@@ -32,7 +32,7 @@ def test_nested_write_rolls_back_on_outer_error():
     def outer():
         @databasemethod(commit=True)
         def register():
-            Database.session.add(TABLE_Instances(uuid=uuid4(), type_uuid=tuuid, name="n"))
+            Database.session.add(TABLE_Instances(uuid=uuid4(), type_uuid=tuuid, name="n", plural_name="ns"))
 
         register()
         raise _Boom()
@@ -66,7 +66,7 @@ def test_outer_commit_persists_nested_write():
     def outer():
         @databasemethod(commit=True)
         def register():
-            Database.session.add(TABLE_Instances(uuid=uuid4(), type_uuid=tuuid, name="n"))
+            Database.session.add(TABLE_Instances(uuid=uuid4(), type_uuid=tuuid, name="n", plural_name="ns"))
 
         register()
 

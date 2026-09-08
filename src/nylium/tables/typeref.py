@@ -31,8 +31,9 @@ class TABLE_Types(Base):
 
     uuid: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     name: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
-    # NULL for builtins and array types — only user types carry both forms
-    plural_name: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Every type carries both forms, builtins included (ADR-0011 phase 8);
+    # WType.ensure derives "<name>s" when the caller passes no plural
+    plural_name: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
     # Material Symbols name, rendered monochrome by the UI;
     # server defaults backfill existing rows on ALTER
     icon: Mapped[str] = mapped_column(

@@ -31,8 +31,8 @@ export interface UnitPartView {
 
 export interface TypeView {
   name: string;
-  /** null for builtins and array types — only user types carry both forms */
-  plural_name: string | null;
+  /** every type carries both forms, builtins included (ADR-0011 phase 8) */
+  plural_name: string;
   /** "object" (schema of props), "enum" (list of options), "unit" (parts) */
   kind: string;
   icon: string;

@@ -33,7 +33,7 @@ class Type(TableDomain):
 
     uuid: tableproperty[Type, UUID] = tableproperty()
     name: tableproperty[Type, str] = tableproperty()
-    plural_name: tableproperty[Type, str | None] = tableproperty()
+    plural_name: tableproperty[Type, str] = tableproperty()
     icon: tableproperty[Type, str] = tableproperty()
     color: tableproperty[Type, str] = tableproperty()
     kind: tableproperty[Type, str] = tableproperty()
@@ -94,7 +94,7 @@ class Types(TableMapping[UUID, Type]):
     def create(
         self,
         name: str,
-        plural_name: str | None = None,
+        plural_name: str,
         icon: str | None = None,
         kind: str | None = None,
         embedded: bool | None = None,
@@ -115,7 +115,7 @@ class Types(TableMapping[UUID, Type]):
         self,
         uuid: UUID,
         name: str,
-        plural_name: str | None,
+        plural_name: str,
         icon: str,
         color: str,
     ) -> None:

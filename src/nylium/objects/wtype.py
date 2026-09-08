@@ -31,7 +31,7 @@ class WType:
         # that fetched the row still being open
         self._uuid: UUID = row.uuid
         self._name: str = row.name
-        self._plural_name: str | None = row.plural_name
+        self._plural_name: str = row.plural_name
         self._icon: str = row.icon
         self._color: str = row.color
         self._kind: str = row.kind
@@ -46,7 +46,7 @@ class WType:
         return self._name
 
     @property
-    def plural_name(self) -> str | None:
+    def plural_name(self) -> str:
         return self._plural_name
 
     @property
@@ -174,5 +174,5 @@ class WType:
                 types.update(existing.uuid, existing.name, existing.plural_name, icon, existing.color)
                 return cls.by_name(name) or existing
             return existing
-        row = types.create(name, plural_name, icon=icon, kind=kind, embedded=embedded)
+        row = types.create(name, plural_name or f"{name}s", icon=icon, kind=kind, embedded=embedded)
         return cls(row)

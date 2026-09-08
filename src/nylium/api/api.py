@@ -188,7 +188,7 @@ class Api:
         cls._check_icon(icon)
         owner = WType.ensure(final_name, kind=WType.KIND_ENUM)
         enum_options.sync(owner.uuid, [(None, v) for v in (options or [])])
-        types.update(owner.uuid, owner.name, None, icon, color)
+        types.update(owner.uuid, owner.name, owner.plural_name, icon, color)
         return cls._type_result(final_name)
 
     @classmethod
@@ -246,7 +246,7 @@ class Api:
         ]
         cls._validate_unit_draft(items)
         unit_parts.sync(owner.uuid, final_name, items)
-        types.update(owner.uuid, owner.name, None, icon, color)
+        types.update(owner.uuid, owner.name, owner.plural_name, icon, color)
         return cls._type_result(final_name)
 
     @classmethod
@@ -481,7 +481,7 @@ class Api:
                     types.update(
                         parameterized_row.uuid,
                         WType.unit_numeric_name(final_name),
-                        None,
+                        f"{WType.unit_numeric_name(final_name)}s",
                         parameterized.icon,
                         parameterized.color,
                     )

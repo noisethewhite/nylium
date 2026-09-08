@@ -19,6 +19,7 @@ import sqlalchemy as sqla
 
 from nylium.database import Database, databasemethod
 from nylium.tables import TABLE_ArrayValues, TABLE_Files, TABLE_Instances, TABLE_InstanceValues
+from nylium.tables.instances import unique_plural_name
 from nylium.objects.wenum import WEnum
 from nylium.objects.wfile import WFile
 from nylium.objects.wprop import WProp
@@ -143,7 +144,7 @@ class WArray:
         array_uuid = uuid4()
         array_type = WType.ensure(array_type_name)
         Database.session.add(
-            TABLE_Instances(uuid=array_uuid, type_uuid=array_type.uuid, name=ARRAY_INSTANCE_NAME)
+            TABLE_Instances(uuid=array_uuid, type_uuid=array_type.uuid, name=ARRAY_INSTANCE_NAME, plural_name=unique_plural_name(array_uuid, ARRAY_INSTANCE_NAME))
         )
         Database.session.flush()
         return array_uuid
@@ -208,7 +209,7 @@ class WArray:
         WScalar.validate(scalar.TYPE_NAME, cast(ScalarPayload | None, value))
         box_uuid = uuid4()
         owner = WType.ensure(scalar.TYPE_NAME)
-        Database.session.add(TABLE_Instances(uuid=box_uuid, type_uuid=owner.uuid, name=str(value)))
+        Database.session.add(TABLE_Instances(uuid=box_uuid, type_uuid=owner.uuid, name=str(value), plural_name=unique_plural_name(box_uuid, str(value))))
         Database.session.flush()
         value_prop = WProp.by_key(owner, VALUE_PROP_KEY)
         if value_prop is None:
