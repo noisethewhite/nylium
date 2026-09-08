@@ -1,6 +1,6 @@
 # ADR-0011: Domain tables as mutable Mappings with auto-persist (`tableproperty`)
 
-- Status: accepted (2026-09-07)
+- Status: superseded by ADR-0012 (2026-09-08)
 - Date: 2026-09-07
 - Supersedes: the Store layer of ADR-0010 (sections 2 and the per-entity
   stores of section 5). The Row layer and the `TABLE_` naming of ADR-0010
