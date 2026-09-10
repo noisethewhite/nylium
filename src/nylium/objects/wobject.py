@@ -18,7 +18,7 @@ performance one.
 """
 from __future__ import annotations
 
-from collections.abc import ItemsView
+from collections.abc import Callable, ItemsView
 from typing import ClassVar, cast, override
 from uuid import UUID, uuid4
 
@@ -31,7 +31,7 @@ from nylium.objects.wembedded import WEmbedded
 from nylium.objects.wenum import WEnum
 from nylium.objects.wfile import WFile
 from nylium.objects.wprop import WProp
-from nylium.objects.wscalar import ScalarPayload, WScalar
+from nylium.objects.wscalar import ScalarPayload, ScalarTable, WScalar
 from nylium.objects.wtype import WType
 from nylium.objects.wtypemeta import StoredValue, WTypeMeta
 from nylium.objects.wunit import WUnit
@@ -324,7 +324,8 @@ class WObject(metaclass=WTypeMeta):
         stored = None if value is None else scalar.to_storage(value)
         row = Database.session.get(table, (self._uuid, prop.uuid))
         if row is None:
-            Database.session.add(table(inst_uuid=self._uuid, prop_uuid=prop.uuid, value=stored))
+            ctor = cast("Callable[..., ScalarTable]", table)
+            Database.session.add(ctor(inst_uuid=self._uuid, prop_uuid=prop.uuid, value=stored))
             return
         _ = Database.session.execute(
             sqla.update(table)

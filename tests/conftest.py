@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 
 from nylium.system import Environment
 from nylium.database import Database
-from nylium.tables import auth_credentials, auth_users, Base
+from nylium.tables import auth_credentials, auth_users, reg
 from nylium.auth.sessions import sessions
 from nylium.server import NyliumApp
 
@@ -30,10 +30,10 @@ def _fresh_schema():
     except RuntimeError:
         pytest.skip("DATABASE_URL not set — tests need a live Postgres")
     engine = Database.engine
-    Base.metadata.drop_all(engine)
-    Base.metadata.create_all(engine)
+    reg.metadata.drop_all(engine)
+    reg.metadata.create_all(engine)
     yield
-    Base.metadata.drop_all(engine)
+    reg.metadata.drop_all(engine)
 
 
 @pytest.fixture()

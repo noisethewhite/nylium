@@ -19,7 +19,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from nylium.database import Database, databasemethod
 from nylium.database.table import Row, Table
-from nylium.tables.base import Base
+from nylium.tables.base import reg
 from nylium.tables.values.numeric_values import TABLE_NumericValues
 from nylium.tables.objects.props import TABLE_Props
 from nylium.tables.objects.typeref import TABLE_Types
@@ -38,15 +38,16 @@ def _parameterized_uuid(unit_type_name: str) -> UUID | None:
     )
 
 
-class TABLE_UnitParts(Base):
-    __tablename__: str = "unit_parts"
-    __table_args__: tuple[UniqueConstraint, ...] = (
+@reg.mapped_as_dataclass
+class TABLE_UnitParts:
+    __tablename__: ClassVar[str] = "unit_parts"
+    __table_args__: ClassVar[tuple[object, ...]] = (
         # Part names are unique within their unit — values reference them
         # by (prop type, part name), so ambiguity would corrupt reads
         UniqueConstraint("type_uuid", "name"),
     )
 
-    uuid: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    uuid: Mapped[UUID] = mapped_column(primary_key=True, default_factory=uuid4, kw_only=True)
     type_uuid: Mapped[UUID] = mapped_column(
         ForeignKey("types.uuid", ondelete="CASCADE"), nullable=False
     )
@@ -64,7 +65,7 @@ class TABLE_UnitParts(Base):
 class UnitPart(Row):
     """One unit part: a writable snapshot of a TABLE_UnitParts row."""
 
-    __table__: ClassVar[type[Base]] = TABLE_UnitParts
+    __table__: ClassVar[type[object]] = TABLE_UnitParts
 
     uuid: UUID
     type_uuid: UUID

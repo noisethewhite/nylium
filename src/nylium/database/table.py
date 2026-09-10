@@ -16,24 +16,30 @@ and those.
 
 This module imports no ``nylium.tables`` code — importing a table's
 package triggers ``tables/__init__``, which reaches back for ``Row`` /
-``Table`` (an import cycle). ``Base`` is a TYPE_CHECKING-only reference.
+``Table`` (an import cycle).
 """
 from __future__ import annotations
 
 from collections.abc import Generator, Iterator, Mapping
-from typing import TYPE_CHECKING, ClassVar, Generic, TypeVar, cast, override
+from typing import ClassVar, Generic, TypeVar, cast, override
 
 import sqlalchemy as sqla
+from sqlalchemy.orm import Mapper
 
 from nylium.database import Database
 from nylium.database.databasemethod import databasemethod
 from nylium.database.sessioncontext import SessionContext
 
-if TYPE_CHECKING:
-    from nylium.tables.base import Base
-
 _K = TypeVar("_K")
 _R = TypeVar("_R", bound="Row")
+_M = TypeVar("_M")
+
+
+def _mapper(mapped: type[_M]) -> Mapper[_M]:
+    mapper = sqla.inspect(mapped)
+    if not isinstance(mapper, Mapper):
+        raise TypeError(f"{mapped!r} is not a mapped class")
+    return cast("Mapper[_M]", mapper)
 
 
 class Row:
@@ -44,10 +50,10 @@ class Row:
     instance attributes copied in by the constructor.
     """
 
-    __table__: ClassVar[type[Base]]
+    __table__: ClassVar[type[object]]
 
-    def __init__(self, row: Base) -> None:
-        columns = sqla.inspect(type(row)).columns
+    def __init__(self, row: object) -> None:
+        columns = _mapper(type(row)).columns
         for column in columns:
             object.__setattr__(self, column.name, getattr(row, column.name))
 
@@ -55,12 +61,12 @@ class Row:
     def pk_name(cls) -> str:
         """The PK column name (``uuid`` for most, ``token_hash`` /
         ``challenge`` in auth), read off the mapped class."""
-        return cast(str, sqla.inspect(cls.__table__).primary_key[0].name)
+        return cast(str, _mapper(cls.__table__).primary_key[0].name)
 
     @override
     def __setattr__(self, name: str, value: object) -> None:
         object.__setattr__(self, name, value)
-        columns = sqla.inspect(self.__table__).columns
+        columns = _mapper(self.__table__).columns
         if name in columns and name != self.pk_name():
             self.persist(name, value)
 
@@ -78,7 +84,7 @@ class Row:
         writes inside an outer databasemethod share its session and commit
         once at the boundary, so a multi-field edit stays atomic.
         """
-        columns = sqla.inspect(self.__table__).columns
+        columns = _mapper(self.__table__).columns
         pk = self.pk_name()
         pk_value = cast(object, getattr(self, pk))
         _ = Database.session.execute(
@@ -99,7 +105,7 @@ class Table(Generic[_K, _R], Mapping[_K, _R]):
     __row__: ClassVar[type[Row]]
 
     @property
-    def _mapped(self) -> type[Base]:
+    def _mapped(self) -> type[object]:
         return self.__row__.__table__
 
     @databasemethod(commit=False)
@@ -111,7 +117,7 @@ class Table(Generic[_K, _R], Mapping[_K, _R]):
 
     @override
     def __iter__(self) -> Iterator[_K]:
-        pk = sqla.inspect(self._mapped).columns[self.__row__.pk_name()]
+        pk = _mapper(self._mapped).columns[self.__row__.pk_name()]
         with SessionContext():
             keys = list(Database.session.scalars(sqla.select(pk)))
         yield from cast("list[_K]", keys)

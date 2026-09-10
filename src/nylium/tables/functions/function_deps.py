@@ -7,11 +7,13 @@ from uuid import UUID
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
 
-from nylium.tables.base import Base
+from nylium.tables.base import reg
+from typing import ClassVar
 
 
-class TABLE_FunctionDeps(Base):
-    __tablename__: str = "function_deps"
+@reg.mapped_as_dataclass
+class TABLE_FunctionDeps:
+    __tablename__: ClassVar[str] = "function_deps"
 
     function_uuid: Mapped[UUID] = mapped_column(
         ForeignKey("instances.uuid", ondelete="CASCADE"), primary_key=True

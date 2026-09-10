@@ -13,12 +13,13 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from nylium.database import Database, databasemethod
 from nylium.database.table import Row, Table
-from nylium.tables.base import Base
+from nylium.tables.base import reg
 
-class TABLE_AuthSessions(Base):
+@reg.mapped_as_dataclass
+class TABLE_AuthSessions:
     """Server-side sessions: the cookie carries a random token, the table
     stores only its sha256 — a leaked dump yields no usable tokens."""
-    __tablename__: str = "auth_sessions"
+    __tablename__: ClassVar[str] = "auth_sessions"
 
     token_hash: Mapped[str] = mapped_column(Text, primary_key=True)
     user_uuid: Mapped[UUID] = mapped_column(
@@ -32,7 +33,7 @@ class TABLE_AuthSessions(Base):
 class AuthSession(Row):
     """One server-side session: a writable snapshot of an auth_sessions row."""
 
-    __table__: ClassVar[type[Base]] = TABLE_AuthSessions
+    __table__: ClassVar[type[object]] = TABLE_AuthSessions
 
     token_hash: str
     user_uuid: UUID

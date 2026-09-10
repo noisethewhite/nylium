@@ -8,11 +8,13 @@ from uuid import UUID
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
 
-from nylium.tables.base import Base
+from nylium.tables.base import reg
+from typing import ClassVar
 
 
-class TABLE_FileValues(Base):
-    __tablename__: str = "file_values"
+@reg.mapped_as_dataclass
+class TABLE_FileValues:
+    __tablename__: ClassVar[str] = "file_values"
 
     file_uuid: Mapped[UUID] = mapped_column(
         ForeignKey("files.uuid", ondelete="CASCADE"), nullable=False

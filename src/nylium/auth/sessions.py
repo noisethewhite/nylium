@@ -4,11 +4,11 @@ from __future__ import annotations
 import hashlib
 import secrets
 from datetime import datetime, timedelta, timezone
-from typing import ClassVar
 from uuid import UUID
 
 from nylium.tables import auth_sessions, auth_users
 from nylium.tables.auth.auth_users import AuthUser
+from typing import ClassVar
 
 
 class sessions:

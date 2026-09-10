@@ -5,7 +5,7 @@
 # import surface for the mapped classes, named TABLE_<Name>. The `types`
 # store (ADR-0010) is the public entry point for type access; TABLE_Types is
 # imported explicitly where a SQL join needs the mapped class.
-from nylium.tables.base import Base
+from nylium.tables.base import reg
 from nylium.tables.objects.types import types
 from nylium.tables.objects.props import TABLE_Props, props
 from nylium.tables.objects.instances import TABLE_Instances, instances
@@ -34,7 +34,7 @@ from nylium.tables.functions.function_edges import TABLE_FunctionEdges
 from nylium.tables.functions.function_deps import TABLE_FunctionDeps
 
 __all__ = [
-    "Base",
+    "reg",
     "types",
     "instances",
     "props",

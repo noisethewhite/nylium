@@ -9,11 +9,13 @@ from uuid import UUID
 from sqlalchemy import ForeignKey, Integer
 from sqlalchemy.orm import Mapped, mapped_column
 
-from nylium.tables.base import Base
+from nylium.tables.base import reg
+from typing import ClassVar
 
 
-class TABLE_ArrayValues(Base):
-    __tablename__: str = "array_values"
+@reg.mapped_as_dataclass
+class TABLE_ArrayValues:
+    __tablename__: ClassVar[str] = "array_values"
 
     inst_uuid: Mapped[UUID] = mapped_column(
         ForeignKey("instances.uuid", ondelete="CASCADE"), primary_key=True

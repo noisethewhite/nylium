@@ -15,23 +15,24 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from nylium.database import Database, databasemethod
 from nylium.database.table import Row, Table
-from nylium.tables.base import Base
+from nylium.tables.base import reg
 
 
-class TABLE_AuthUsers(Base):
-    __tablename__: str = "auth_users"
+@reg.mapped_as_dataclass
+class TABLE_AuthUsers:
+    __tablename__: ClassVar[str] = "auth_users"
 
-    uuid: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    uuid: Mapped[UUID] = mapped_column(primary_key=True, default_factory=uuid4, kw_only=True)
     name: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
+        DateTime(timezone=True), server_default=func.now(), init=False, nullable=False
     )
 
 
 class AuthUser(Row):
     """One auth user: a writable snapshot of a TABLE_AuthUsers row."""
 
-    __table__: ClassVar[type[Base]] = TABLE_AuthUsers
+    __table__: ClassVar[type[object]] = TABLE_AuthUsers
 
     uuid: UUID
     name: str

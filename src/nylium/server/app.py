@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import ClassVar
 
 from fastapi import Depends, FastAPI, status
 from sqlalchemy import text
@@ -14,12 +13,13 @@ from nylium.auth.routes import auth_routes
 from nylium.auth.token_routes import token_routes
 from nylium.api.views import FunctionView, ObjectView
 from nylium.database import Database
-from nylium.tables import Base
+from nylium.tables import reg
 from nylium.objects.wfile import WFile
 from nylium.objects.wscalar import WScalar
 from nylium.server.errors import errors
 from nylium.server.routes import routes
 from nylium.server.static import StaticSpa
+from typing import ClassVar
 
 
 class NyliumApp:
@@ -49,7 +49,7 @@ class NyliumApp:
         """create_all is idempotent — the server is self-sufficient on
         a fresh database. Existing deployments get in-place ALTERs below
         for columns added after their first boot."""
-        Base.metadata.create_all(Database.engine)
+        reg.metadata.create_all(Database.engine)
         cls._migrate_schema()
 
     @classmethod

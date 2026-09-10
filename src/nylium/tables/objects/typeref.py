@@ -14,10 +14,12 @@ from uuid import UUID, uuid4
 from sqlalchemy import Boolean, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from nylium.tables.base import Base
+from nylium.tables.base import reg
+from typing import ClassVar
 
 
-class TABLE_Types(Base):
+@reg.mapped_as_dataclass
+class TABLE_Types:
     """The raw `types` row — a plain mapped class, no behaviour (ADR-0011).
 
     Writers go through the ``Type`` domain object or the ``Types`` mapping
@@ -27,9 +29,9 @@ class TABLE_Types(Base):
     legitimate public use.
     """
 
-    __tablename__: str = "types"
+    __tablename__: ClassVar[str] = "types"
 
-    uuid: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    uuid: Mapped[UUID] = mapped_column(primary_key=True, default_factory=uuid4, kw_only=True)
     name: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
     # Every type carries both forms, builtins included (ADR-0011 phase 8);
     # WType.ensure derives "<name>s" when the caller passes no plural

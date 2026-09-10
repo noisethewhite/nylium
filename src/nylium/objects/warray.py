@@ -12,6 +12,7 @@ keeps the objects package acyclic.
 """
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import cast
 from uuid import UUID, uuid4
 
@@ -23,7 +24,7 @@ from nylium.tables.objects.instances import unique_plural_name
 from nylium.objects.wenum import WEnum
 from nylium.objects.wfile import WFile
 from nylium.objects.wprop import WProp
-from nylium.objects.wscalar import VALUE_PROP_KEY, ScalarPayload, WScalar, WString
+from nylium.objects.wscalar import VALUE_PROP_KEY, ScalarPayload, ScalarTable, WScalar, WString
 from nylium.objects.wtype import WType
 from nylium.objects.wtypemeta import StoredValue, WObjectShape, WTypeMeta
 
@@ -214,7 +215,8 @@ class WArray:
         value_prop = WProp.by_key(owner, VALUE_PROP_KEY)
         if value_prop is None:
             raise RuntimeError(f"scalar type {type_name} lost its 'value' prop")
+        ctor = cast("Callable[..., ScalarTable]", scalar.TABLE)
         Database.session.add(
-            scalar.TABLE(inst_uuid=box_uuid, prop_uuid=value_prop.uuid, value=scalar.to_storage(cast(ScalarPayload, value)))
+            ctor(inst_uuid=box_uuid, prop_uuid=value_prop.uuid, value=scalar.to_storage(cast(ScalarPayload, value)))
         )
         return box_uuid

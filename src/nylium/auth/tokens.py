@@ -10,11 +10,11 @@ from __future__ import annotations
 import hashlib
 import secrets
 from datetime import datetime, timezone
-from typing import ClassVar
 from uuid import UUID
 
 from nylium.tables import api_tokens
 from nylium.tables.auth.api_tokens import ApiToken
+from typing import ClassVar
 
 
 class tokens:

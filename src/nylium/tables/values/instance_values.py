@@ -5,11 +5,13 @@ from uuid import UUID
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
 
-from nylium.tables.base import Base
+from nylium.tables.base import reg
+from typing import ClassVar
 
 
-class TABLE_InstanceValues(Base):
-    __tablename__: str = "instance_values"
+@reg.mapped_as_dataclass
+class TABLE_InstanceValues:
+    __tablename__: ClassVar[str] = "instance_values"
 
     uuid: Mapped[UUID] = mapped_column(
         ForeignKey("instances.uuid"), primary_key=True

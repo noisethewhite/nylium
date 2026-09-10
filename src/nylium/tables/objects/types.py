@@ -9,7 +9,6 @@ from uuid import UUID
 
 from nylium.database import Database, databasemethod
 from nylium.database.table import Row, Table
-from nylium.tables.base import Base
 from nylium.tables.objects.enum_options import EnumOption, enum_options
 from nylium.tables.objects.props import Prop, props
 from nylium.tables.objects.typeref import TABLE_Types
@@ -31,7 +30,7 @@ class Type(Row):
     lazy-import ``types`` where they need it, never at module level.
     """
 
-    __table__: ClassVar[type[Base]] = TABLE_Types
+    __table__: ClassVar[type[object]] = TABLE_Types
 
     uuid: UUID
     name: str

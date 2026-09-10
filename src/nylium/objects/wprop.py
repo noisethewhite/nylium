@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, ClassVar, Protocol, TypeAlias
 from uuid import UUID, uuid4
 
 import sqlalchemy as sqla
-from sqlalchemy.orm import Mapped
+from sqlalchemy.orm import InstanceState, Mapped
 
 from nylium.database import Database, databasemethod
 from nylium.tables import (
@@ -88,7 +88,9 @@ class WProp:
         return self._function_uuid
 
     def _live_row(self) -> TABLE_Props:
-        if sqla.inspect(self._row).detached:
+        state = sqla.inspect(self._row)
+        assert isinstance(state, InstanceState)
+        if state.detached:
             msg = f"prop {self._key!r} wraps a row whose session is gone — writes must run inside a sessionmethod chain"
             raise RuntimeError(msg)
         return self._row

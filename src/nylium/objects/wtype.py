@@ -9,11 +9,11 @@ objects package a DAG.
 """
 from __future__ import annotations
 
-from typing import ClassVar
 from uuid import UUID
 
 from nylium.database import databasemethod
 from nylium.tables.objects.types import Type, types
+from typing import ClassVar
 
 
 class WType:

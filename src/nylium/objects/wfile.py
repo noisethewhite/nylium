@@ -8,12 +8,12 @@ the stable pointer and never changes on rename.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import ClassVar
 from uuid import UUID
 
 from nylium.database import Database, databasemethod
 from nylium.tables import TABLE_Files, files
 from nylium.tables.objects.types import TABLE_Types
+from typing import ClassVar
 
 
 class WFile:

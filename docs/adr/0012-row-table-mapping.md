@@ -1,6 +1,7 @@
 # ADR-0012: Row/Table — SQLAlchemy lives only inside table abstractions
 
-- Status: accepted (2026-09-08)
+- Status: accepted (2026-09-08); amended 2026-09-09 (mapped dataclasses,
+  `reg` registry singleton)
 - Date: 2026-09-08
 - Supersedes: ADR-0011 entirely (`tableproperty`, `TableDomain`, the
   descriptor-based auto-persist). Keeps ADR-0010's Row layer and `TABLE_`
@@ -87,6 +88,38 @@ there is no runtime cycle — `reportImportCycles` is disabled per file with
 a comment explaining why. This is the deliberate trade: navigation stays
 on the rows (used by `wire()` and the codec), and the type checker is told
 about the one place it cannot see through.
+
+### 5. `TABLE_*` classes are mapped dataclasses on a `reg` singleton
+
+(Amendment 2026-09-09.) `TABLE_*` mapped classes no longer subclass a
+shared `DeclarativeBase`. `tables/base.py` holds a single
+`reg = registry()` (module-level singleton, same shape as
+`Database.engine`), and every mapped class is declared with
+`@reg.mapped_as_dataclass` — the officially fused form of
+`@reg.mapped @dataclass`. The split form is unusable: SQLAlchemy ignores
+dataclass arguments (`kw_only`, `init`, `default_factory`) in
+`mapped_column` unless the class is a native dataclass, and a plain
+stdlib `@dataclass` would treat the `MappedColumn` objects as field
+defaults.
+
+Consequences:
+
+- Column defaults live in `mapped_column` as real dataclass defaults:
+  `default=uuid4` became `default_factory=uuid4`, nullable columns carry
+  `default=None`, so call sites may omit them.
+- `__tablename__` / `__table_args__` are annotated `ClassVar` so the
+  dataclass transform ignores them.
+- `Row.__table__` and `Table._mapped` are typed `type[object]` — there is
+  no common mapped base to name anymore. The one runtime introspection
+  point is `_mapper()`, a `TypeVar`-generic wrapper around
+  `sqla.inspect` in `database/table.py`.
+- `reg.metadata` replaces `Base.metadata` (`server/app.py`,
+  `tests/conftest.py`).
+
+`wire()` methods are **not** removed by this change: they serialise rows
+into the JSON wire shape of `web/src/contracts.ts` (nested props, sorted
+unit_parts, relationship navigation) — a custom dict shape a dataclass
+does not produce. They stay on the rows.
 
 ## Consequences
 

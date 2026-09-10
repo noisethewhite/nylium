@@ -4,11 +4,13 @@ from uuid import UUID
 from sqlalchemy import Date, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
 
-from nylium.tables.base import Base
+from nylium.tables.base import reg
+from typing import ClassVar
 
 
-class TABLE_DateValues(Base):
-    __tablename__: str = "date_values"
+@reg.mapped_as_dataclass
+class TABLE_DateValues:
+    __tablename__: ClassVar[str] = "date_values"
 
     inst_uuid: Mapped[UUID] = mapped_column(
         ForeignKey("instances.uuid", ondelete="CASCADE"), primary_key=True

@@ -19,18 +19,19 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from nylium.database import Database, databasemethod
 from nylium.database.table import Row, Table
-from nylium.tables.base import Base
+from nylium.tables.base import reg
 from nylium.tables.values.string_values import TABLE_StringValues
 from nylium.tables.objects.props import TABLE_Props
 
 
-class TABLE_EnumOptions(Base):
-    __tablename__: str = "enum_options"
-    __table_args__: tuple[UniqueConstraint, ...] = (
+@reg.mapped_as_dataclass
+class TABLE_EnumOptions:
+    __tablename__: ClassVar[str] = "enum_options"
+    __table_args__: ClassVar[tuple[object, ...]] = (
         UniqueConstraint("type_uuid", "value"),
     )
 
-    uuid: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    uuid: Mapped[UUID] = mapped_column(primary_key=True, default_factory=uuid4, kw_only=True)
     type_uuid: Mapped[UUID] = mapped_column(
         ForeignKey("types.uuid", ondelete="CASCADE"), nullable=False
     )
@@ -41,7 +42,7 @@ class TABLE_EnumOptions(Base):
 class EnumOption(Row):
     """One enum option: a writable snapshot of a TABLE_EnumOptions row."""
 
-    __table__: ClassVar[type[Base]] = TABLE_EnumOptions
+    __table__: ClassVar[type[object]] = TABLE_EnumOptions
 
     uuid: UUID
     type_uuid: UUID

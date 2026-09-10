@@ -7,13 +7,15 @@ from uuid import UUID, uuid4
 from sqlalchemy import JSON, ForeignKey, Integer, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from nylium.tables.base import Base
+from nylium.tables.base import reg
+from typing import ClassVar
 
 
-class TABLE_FunctionNodes(Base):
-    __tablename__: str = "function_nodes"
+@reg.mapped_as_dataclass
+class TABLE_FunctionNodes:
+    __tablename__: ClassVar[str] = "function_nodes"
 
-    uuid: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    uuid: Mapped[UUID] = mapped_column(primary_key=True, default_factory=uuid4, kw_only=True)
     function_uuid: Mapped[UUID] = mapped_column(
         ForeignKey("instances.uuid", ondelete="CASCADE"), nullable=False
     )
@@ -21,4 +23,4 @@ class TABLE_FunctionNodes(Base):
     position: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0, server_default="0"
     )
-    config: Mapped[dict[str, object]] = mapped_column(JSON, nullable=False, default=dict)
+    config: Mapped[dict[str, object]] = mapped_column(JSON, nullable=False, default_factory=dict)

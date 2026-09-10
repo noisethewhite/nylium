@@ -12,16 +12,17 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from nylium.database import Database, databasemethod
 from nylium.database.table import Row, Table
-from nylium.tables.base import Base
+from nylium.tables.base import reg
 from nylium.tables.objects.types import types
 
 
-class TABLE_Instances(Base):
+@reg.mapped_as_dataclass
+class TABLE_Instances:
     """Instances of types — arrays and scalars are types too."""
 
-    __tablename__: str = "instances"
+    __tablename__: ClassVar[str] = "instances"
 
-    uuid: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    uuid: Mapped[UUID] = mapped_column(primary_key=True, default_factory=uuid4, kw_only=True)
     type_uuid: Mapped[UUID] = mapped_column(
         ForeignKey("types.uuid"), nullable=False
     )
@@ -33,20 +34,20 @@ class TABLE_Instances(Base):
     # instance_values ref is the source of truth, these two columns
     # answer "who owns this child" without a join. NULL on standalone
     # objects, scalar boxes and array instances.
-    owner_object_uuid: Mapped[UUID | None] = mapped_column(nullable=True)
-    owner_prop_uuid: Mapped[UUID | None] = mapped_column(nullable=True)
+    owner_object_uuid: Mapped[UUID | None] = mapped_column(nullable=True, default=None)
+    owner_prop_uuid: Mapped[UUID | None] = mapped_column(nullable=True, default=None)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
+        DateTime(timezone=True), server_default=func.now(), init=False
     )
     modified_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+        DateTime(timezone=True), server_default=func.now(), init=False, onupdate=func.now()
     )
 
 
 class Instance(Row):
     """One instance: a writable snapshot of a TABLE_Instances row."""
 
-    __table__: ClassVar[type[Base]] = TABLE_Instances
+    __table__: ClassVar[type[object]] = TABLE_Instances
 
     uuid: UUID
     type_uuid: UUID

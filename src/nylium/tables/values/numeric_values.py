@@ -4,11 +4,13 @@ from uuid import UUID
 from sqlalchemy import ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from nylium.tables.base import Base
+from nylium.tables.base import reg
+from typing import ClassVar
 
 
-class TABLE_NumericValues(Base):
-    __tablename__: str = "numeric_values"
+@reg.mapped_as_dataclass
+class TABLE_NumericValues:
+    __tablename__: ClassVar[str] = "numeric_values"
 
     inst_uuid: Mapped[UUID] = mapped_column(
         ForeignKey("instances.uuid", ondelete="CASCADE"), primary_key=True
@@ -19,4 +21,4 @@ class TABLE_NumericValues(Base):
     value: Mapped[Decimal] = mapped_column(nullable=False)
     # unit part name as entered (for `Numeric<Unit>` props); NULL means
     # the unit's base part or a plain unitless Numeric
-    unit: Mapped[str | None] = mapped_column(Text, nullable=True)
+    unit: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
