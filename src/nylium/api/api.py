@@ -701,6 +701,37 @@ class Api:
         return True
 
     @classmethod
+    def storage_stats(cls) -> dict[str, int]:
+        """Disk usage of the volume that holds the blob store, plus
+        nylium's own footprint (database + blobs). Read-only, no session
+        needed — the size query goes through the engine directly."""
+        import shutil
+
+        from sqlalchemy import text
+
+        from nylium.database import Database
+        from nylium.objects.wfile import WFile
+
+        storage = WFile.storage_dir()
+        usage = shutil.disk_usage(storage)
+        with Database.engine.connect() as connection:
+            db_bytes = cast(
+                int,
+                connection.execute(
+                    text("SELECT pg_database_size(current_database())")
+                ).scalar_one(),
+            )
+        blob_bytes = sum(
+            path.stat().st_size for path in storage.iterdir() if path.is_file()
+        )
+        return {
+            "total_bytes": usage.total,
+            "used_bytes": usage.used,
+            "free_bytes": usage.free,
+            "nylium_bytes": db_bytes + blob_bytes,
+        }
+
+    @classmethod
     @databasemethod(commit=True)
     def delete_object(cls, uuid: UUID) -> bool:
         from nylium.server.errors import ValidationError

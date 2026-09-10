@@ -306,6 +306,10 @@ class NyliumApp:
             methods=["GET"], dependencies=guard,
         )
         app.add_api_route(
+            f"{prefix}/storage", routes.storage_stats, methods=["GET"],
+            dependencies=guard,
+        )
+        app.add_api_route(
             f"{prefix}/files", routes.upload_file, methods=["POST"],
             status_code=created, dependencies=guard,
         )

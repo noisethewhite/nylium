@@ -7,6 +7,7 @@ import { WorkspaceStore } from "../state/workspace";
 import { FloatingMenu } from "./floating-menu";
 import { NameSearch } from "./name-search";
 import { ObjectLabels } from "./object-labels";
+import { StorageMenu } from "./storage-menu";
 import { TypeIcon } from "./type-icon";
 
 /** What the "+" popover is showing: the root menu or the pick-a-type
@@ -271,6 +272,7 @@ export function Sidebar(props: {
       </nav>
       <div className="sidebar-footer">
         <span className="sidebar-user">{authState.userName}</span>
+        <StorageMenu workspace={props.workspace} />
         <button
           className="icon-button"
           title="Sign out"

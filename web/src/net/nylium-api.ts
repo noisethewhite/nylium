@@ -5,6 +5,7 @@ import type {
   FunctionView,
   ObjectView,
   PropValue,
+  StorageView,
   TypeView,
 } from "../contracts";
 import type { ErrorReporter } from "./http-transport";
@@ -222,5 +223,9 @@ export class NyliumApi extends HttpTransport {
   /** Markdown export download — served from GET /api/objects/{uuid}/export. */
   static objectExportUrl(uuid: string): string {
     return `/api/objects/${encodeURIComponent(uuid)}/export`;
+  }
+
+  storageStats(): Promise<StorageView> {
+    return this.request("GET", "/storage");
   }
 }

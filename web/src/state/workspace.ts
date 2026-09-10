@@ -5,6 +5,7 @@ import type {
   FunctionView,
   ObjectView,
   PropValue,
+  StorageView,
   TypeView,
 } from "../contracts";
 import { TypeNames } from "../contracts";
@@ -71,6 +72,12 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
     super(INITIAL_STATE);
     this.api = api;
     this.onUnauthorized = onUnauthorized;
+  }
+
+  /** One-off read for the storage popover — not part of the snapshot,
+   * the popover fetches fresh on every open. */
+  storageStats(): Promise<StorageView> {
+    return this.api.storageStats();
   }
 
   async init(): Promise<void> {

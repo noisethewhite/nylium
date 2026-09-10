@@ -160,6 +160,10 @@ class routes:
     # --- files (ADR-0008) ---
 
     @classmethod
+    def storage_stats(cls) -> dict[str, int]:
+        return Api.storage_stats()
+
+    @classmethod
     def upload_file(cls, type_name: str, file: UploadFile) -> dict[str, object]:
         """Multipart upload; the declared MIME comes from the client and is
         validated against the target file type's policy in Api.create_file."""

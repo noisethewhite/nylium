@@ -58,6 +58,19 @@ class dsl:
         return str(book["uuid"])
 
 
+def test_storage_stats(auth_client: TestClient) -> None:
+    response = auth_client.get("/api/storage")
+    assert response.status_code == 200
+    stats = response.json()
+    assert stats["total_bytes"] > 0
+    assert stats["free_bytes"] > 0
+    assert stats["free_bytes"] <= stats["total_bytes"]
+    assert stats["used_bytes"] <= stats["total_bytes"]
+    # the database always weighs something; nylium_bytes = db + blobs
+    assert stats["nylium_bytes"] > 0
+    assert stats["nylium_bytes"] <= stats["used_bytes"]
+
+
 def test_types_roundtrip(auth_client: TestClient) -> None:
     created = dsl.create_type(
         auth_client, "Book", {"name": "String", "title": "String", "pages": "Integer"}

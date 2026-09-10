@@ -319,3 +319,12 @@ export const TypeLabels: Readonly<Record<string, string>> = {
   [TypeNames.MONTH_DAY]: "Date, no year",
   [TypeNames.MONTH_DAY_TIME]: "Date, no year & time",
 };
+
+/** Disk usage of the volume holding nylium's data (GET /api/storage). */
+export interface StorageView {
+  total_bytes: number;
+  used_bytes: number;
+  free_bytes: number;
+  /** database + blob store — nylium's own share of used_bytes */
+  nylium_bytes: number;
+}
