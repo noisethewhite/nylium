@@ -250,13 +250,16 @@ class ObjectView:
         no N+1."""
         name_prop = aliased(TABLE_Props)
         owner_types = aliased(TABLE_Types)
+        from nylium.tables.decor import TABLE_TypeDecor
+
+        owner_decor = aliased(TABLE_TypeDecor)
         rows = Database.session.execute(
             sqla.select(
                 TABLE_InstanceValues.inst_uuid,  # owner object uuid
                 TABLE_Props.key,  # array prop key
                 TABLE_Instances.name,  # owner registry name (fallback title)
                 TABLE_StringValues.value,  # owner's `name` prop value (display title)
-                owner_types.color,  # owner type's color paints the chip
+                owner_decor.color,  # owner type's decor color paints the chip
             )
             .select_from(TABLE_ArrayValues)
             .join(TABLE_InstanceValues, TABLE_InstanceValues.uuid == TABLE_ArrayValues.inst_uuid)
@@ -264,6 +267,7 @@ class ObjectView:
             .join(TABLE_Types, TABLE_Types.uuid == TABLE_Props.value_type_uuid)
             .join(TABLE_Instances, TABLE_Instances.uuid == TABLE_InstanceValues.inst_uuid)
             .join(owner_types, owner_types.uuid == TABLE_Instances.type_uuid)
+            .join(owner_decor, owner_decor.uuid == owner_types.uuid)
             .join(name_prop, name_prop.owner_type_uuid == TABLE_Instances.type_uuid)
             .join(
                 TABLE_StringValues,

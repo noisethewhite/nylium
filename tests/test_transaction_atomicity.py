@@ -23,7 +23,7 @@ def test_nested_write_rolls_back_on_outer_error():
     @databasemethod(commit=True)
     def make_type():
         Database.session.add(
-            TABLE_Types(uuid=tuuid, name="ProbeType", plural_name="P", icon="x", color="#000000")
+            TABLE_Types(uuid=tuuid, name="ProbeType")
         )
 
     make_type()
@@ -57,7 +57,7 @@ def test_outer_commit_persists_nested_write():
     @databasemethod(commit=True)
     def make_type():
         Database.session.add(
-            TABLE_Types(uuid=tuuid, name="ProbeType2", plural_name="P2", icon="x", color="#000000")
+            TABLE_Types(uuid=tuuid, name="ProbeType2")
         )
 
     make_type()

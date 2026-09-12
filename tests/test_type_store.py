@@ -56,16 +56,20 @@ def test_iter_len_all():
 
 
 def test_update_and_delete():
+    from nylium.tables.decor import type_decor
+
     uuid = _seed()
     row = types[uuid]
     row.name = "T2"
-    row.plural_name = "T2s"
-    row.icon = "inventory_2"
-    row.color = "#112233"
+    decor = type_decor[uuid]
+    decor.plural_name = "T2s"
+    decor.icon = "inventory_2"
+    decor.color = "#112233"
     assert types[uuid].name == "T2"
     assert types[uuid].plural_name == "T2s"
     assert types[uuid].color == "#112233"
 
-    types.delete(uuid)  # its props cascade via FK ondelete
+    types.delete(uuid)  # its props + decor cascade via FK ondelete
     assert types.get(uuid) is None
+    assert type_decor.get(uuid) is None
     assert next(types.where(name="T2"), None) is None

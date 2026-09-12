@@ -187,9 +187,9 @@ class WType:
                 )
             # builtins re-ensure on every boot: keep their icon canonical
             if icon is not None and existing.icon != icon:
-                row = types[existing.uuid]
-                row.icon = icon
-                return cls(row)
+                from nylium.tables.decor import type_decor
+
+                type_decor[existing.uuid].icon = icon
             return existing
         row = types.create(name, plural_name or f"{name}s", icon=icon, kind=kind, embedded=embedded)
         return cls(row)

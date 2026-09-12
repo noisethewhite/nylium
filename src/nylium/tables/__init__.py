@@ -36,6 +36,12 @@ from nylium.tables.auth.auth_challenges import AuthChallenge, auth_challenges
 from nylium.tables.auth.auth_sessions import AuthSession, auth_sessions
 from nylium.tables.auth.api_tokens import ApiToken, api_tokens
 from nylium.tables.files import TABLE_Files, files
+from nylium.tables.decor import (
+    TABLE_TraitDecor,
+    TABLE_TypeDecor,
+    trait_decor,
+    type_decor,
+)
 from nylium.tables.values.file_values import TABLE_FileValues
 from nylium.tables.functions.function_nodes import TABLE_FunctionNodes
 from nylium.tables.functions.function_edges import TABLE_FunctionEdges
@@ -82,6 +88,10 @@ __all__ = [
     "api_tokens",
     "TABLE_Files",
     "TABLE_FileValues",
+    "TABLE_TypeDecor",
+    "TABLE_TraitDecor",
+    "type_decor",
+    "trait_decor",
     "TABLE_FunctionNodes",
     "TABLE_FunctionEdges",
     "TABLE_FunctionDeps",

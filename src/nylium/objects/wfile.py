@@ -12,7 +12,6 @@ from uuid import UUID
 
 from nylium.database import Database, databasemethod
 from nylium.tables import TABLE_Files, files
-from nylium.tables.objects.types import TABLE_Types
 from typing import ClassVar
 
 
@@ -121,10 +120,12 @@ class WFile:
         import sqlalchemy as sqla
 
         marker = f"{cls.ICON_IMAGE_PREFIX}{image_uuid}"
-        for type_row in Database.session.scalars(
-            sqla.select(TABLE_Types).where(TABLE_Types.icon == marker)
+        from nylium.tables.decor import TABLE_TypeDecor
+
+        for decor_row in Database.session.scalars(
+            sqla.select(TABLE_TypeDecor).where(TABLE_TypeDecor.icon == marker)
         ).all():
-            type_row.icon = cls.DEFAULT_GLYPH
+            decor_row.icon = cls.DEFAULT_GLYPH
 
     @classmethod
     def parse_icon_image(cls, icon: str) -> UUID | None:

@@ -40,7 +40,8 @@ class TABLE_Traits:
         primary_key=True, default_factory=uuid4, kw_only=True
     )
     name: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
-    color: Mapped[str] = mapped_column(Text, nullable=False)
+    # ADR-0014: the trait's color lives in trait_decor (tables/decor),
+    # 1:1 by uuid.
 
 
 @reg.mapped_as_dataclass
@@ -68,7 +69,16 @@ class Trait(Row):
 
     uuid: UUID
     name: str
-    color: str
+
+    @property
+    def color(self) -> str:
+        """The trait's decor color (ADR-0014: 1:1 row in trait_decor)."""
+        from nylium.tables.decor import trait_decor
+
+        decor = trait_decor.get(self.uuid)
+        if decor is None:
+            raise KeyError(f"trait {self.uuid} has no decor row")
+        return decor.color
 
     @property
     def props(self) -> Generator[Prop, None, None]:
@@ -107,9 +117,12 @@ class Traits(Table[UUID, Trait]):
 
     @databasemethod(commit=True)
     def create(self, name: str, color: str) -> Trait:
-        row = TABLE_Traits(name=name, color=color)
+        from nylium.tables.decor import trait_decor
+
+        row = TABLE_Traits(name=name)
         Database.session.add(row)
         Database.session.flush()
+        _ = trait_decor.create(row.uuid, color)
         return Trait(row)
 
     @databasemethod(commit=True)

@@ -21,6 +21,7 @@ from nylium.api.views import FunctionView, ObjectRef, ObjectView
 from nylium.database import databasemethod
 from nylium.tables.files import File
 from nylium.tables.objects.types import Type, types
+from nylium.tables.decor import trait_decor, type_decor
 from nylium.tables import (
     Trait,
     enum_options,
@@ -164,9 +165,9 @@ class Api:
                 formulas.get(key),
                 value_trait_uuid=value_trait_uuid,
             )
-        row = types[owner.uuid]
-        row.icon = icon
-        row.color = color
+        decor = type_decor[owner.uuid]
+        decor.icon = icon
+        decor.color = color
         return cls._type_result(name)
 
     @classmethod
@@ -191,9 +192,9 @@ class Api:
         cls._check_icon(icon)
         owner = WType.ensure(final_name, kind=WType.KIND_ENUM)
         enum_options.sync(owner.uuid, [(None, v) for v in (options or [])])
-        row = types[owner.uuid]
-        row.icon = icon
-        row.color = color
+        decor = type_decor[owner.uuid]
+        decor.icon = icon
+        decor.color = color
         return cls._type_result(final_name)
 
     @classmethod
@@ -251,9 +252,9 @@ class Api:
         ]
         cls._validate_unit_draft(items)
         unit_parts.sync(owner.uuid, final_name, items)
-        row = types[owner.uuid]
-        row.icon = icon
-        row.color = color
+        decor = type_decor[owner.uuid]
+        decor.icon = icon
+        decor.color = color
         return cls._type_result(final_name)
 
     @classmethod
@@ -481,9 +482,10 @@ class Api:
         final_color = owner.color if color is None else color
         row = types[owner.uuid]
         row.name = final_name
-        row.plural_name = final_plural
-        row.icon = final_icon
-        row.color = final_color
+        decor = type_decor[owner.uuid]
+        decor.plural_name = final_plural
+        decor.icon = final_icon
+        decor.color = final_color
         if owner.is_unit and final_name != name:
             # the parameterized Numeric<Unit> row tags along — prop value
             # types reference it by uuid, only the display name changes
@@ -492,7 +494,9 @@ class Api:
             )
             if parameterized_row is not None:
                 parameterized_row.name = WType.unit_numeric_name(final_name)
-                parameterized_row.plural_name = f"{WType.unit_numeric_name(final_name)}s"
+                type_decor[
+                    parameterized_row.uuid
+                ].plural_name = f"{WType.unit_numeric_name(final_name)}s"
         return cls._type_result(final_name)
 
     @classmethod
@@ -647,7 +651,7 @@ class Api:
             ]
             WProp.sync_trait_schema(row.uuid, resolved)
         row.name = final_name
-        row.color = final_color
+        trait_decor[row.uuid].color = final_color
         return cls._trait_result(final_name)
 
     @classmethod

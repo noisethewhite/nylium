@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from collections.abc import Generator
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
 from uuid import UUID
 
 from nylium.database import Database, databasemethod
@@ -14,6 +14,9 @@ from nylium.tables.objects.props import Prop, props
 from nylium.tables.objects.traits import Trait, traits, type_traits
 from nylium.tables.objects.typeref import TABLE_Types
 from nylium.tables.objects.unit_parts import UnitPart, unit_parts
+
+if TYPE_CHECKING:
+    from nylium.tables.decor import TypeDecor
 
 __all__ = ["TABLE_Types", "Type", "Types", "types"]
 
@@ -35,11 +38,30 @@ class Type(Row):
 
     uuid: UUID
     name: str
-    plural_name: str
-    icon: str
-    color: str
     kind: str
     embedded: bool
+
+    @property
+    def _decor(self) -> TypeDecor:
+        """ADR-0014: the 1:1 decor row — plural_name/icon/color."""
+        from nylium.tables.decor import type_decor
+
+        decor = type_decor.get(self.uuid)
+        if decor is None:
+            raise KeyError(f"type {self.uuid} has no decor row")
+        return decor
+
+    @property
+    def plural_name(self) -> str:
+        return self._decor.plural_name
+
+    @property
+    def icon(self) -> str:
+        return self._decor.icon
+
+    @property
+    def color(self) -> str:
+        return self._decor.color
 
     @property
     def own_props(self) -> Generator[Prop, None, None]:
@@ -110,15 +132,17 @@ class Types(Table[UUID, Type]):
         kind: str | None = None,
         embedded: bool | None = None,
     ) -> Type:
-        row = TABLE_Types(name=name, plural_name=plural_name)
-        if icon is not None:
-            row.icon = icon
+        from nylium.tables.decor import type_decor
+
+        row = TABLE_Types(name=name)
         if kind is not None:
             row.kind = kind
         if embedded is not None:
             row.embedded = embedded
         Database.session.add(row)
         Database.session.flush()
+        # ADR-0014: decor column defaults apply where the caller passes none
+        _ = type_decor.create(row.uuid, plural_name, icon, None)
         return Type(row)
 
     @databasemethod(commit=True)

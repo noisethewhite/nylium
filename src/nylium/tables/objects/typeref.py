@@ -33,19 +33,8 @@ class TABLE_Types:
 
     uuid: Mapped[UUID] = mapped_column(primary_key=True, default_factory=uuid4, kw_only=True)
     name: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
-    # Every type carries both forms, builtins included (ADR-0011 phase 8);
-    # WType.ensure derives "<name>s" when the caller passes no plural
-    plural_name: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
-    # Material Symbols name, rendered monochrome by the UI;
-    # server defaults backfill existing rows on ALTER
-    icon: Mapped[str] = mapped_column(
-        Text, nullable=False, default="inventory_2", server_default="inventory_2"
-    )
-    # ADR-0005: stores #RRGGBB hex; the default must match WColor.DEFAULT
-    # (tables must not import objects — keep the literal in sync by hand)
-    color: Mapped[str] = mapped_column(
-        Text, nullable=False, default="#9e9e9e", server_default="#9e9e9e"
-    )
+    # ADR-0014: plural_name/icon/color live in type_decor (tables/decor),
+    # 1:1 by uuid. This row carries identity + semantics only.
     # "object" (regular, builtin or array) | "enum" (string enum — its
     # values live in enum_options; instances never exist for enum types)
     kind: Mapped[str] = mapped_column(

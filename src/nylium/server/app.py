@@ -56,8 +56,6 @@ class NyliumApp:
     def _migrate_schema(cls) -> None:
         """Idempotent column backfills; each clause is a no-op once applied."""
         statements = [
-            "ALTER TABLE types ADD COLUMN IF NOT EXISTS icon TEXT NOT NULL DEFAULT 'inventory_2'",
-            "ALTER TABLE types ADD COLUMN IF NOT EXISTS color TEXT NOT NULL DEFAULT '#9e9e9e'",
             "ALTER TABLE types ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'object'",
             "ALTER TABLE types ADD COLUMN IF NOT EXISTS embedded BOOLEAN NOT NULL DEFAULT FALSE",
             "ALTER TABLE numeric_values ADD COLUMN IF NOT EXISTS unit TEXT",
@@ -66,13 +64,7 @@ class NyliumApp:
             "ALTER TABLE instances ADD COLUMN IF NOT EXISTS owner_prop_uuid UUID",
             # ADR-0007: computed-scalar reference (mutually exclusive with formula)
             "ALTER TABLE props ADD COLUMN IF NOT EXISTS function_uuid UUID",
-            # ADR-0005: color stores hex now — align the pre-existing default
-            "ALTER TABLE types ALTER COLUMN color SET DEFAULT '#9e9e9e'",
-            # ADR-0011 phase 8: plural_name is mandatory + unique everywhere.
-            # types.name is UNIQUE so name||'s' is injective — no dedup needed
-            "UPDATE types SET plural_name = name || 's' WHERE plural_name IS NULL",
-            "ALTER TABLE types ALTER COLUMN plural_name SET NOT NULL",
-            "CREATE UNIQUE INDEX IF NOT EXISTS uq_types_plural_name ON types (plural_name)",
+            # ADR-0011 phase 8: instance plural_name is mandatory + unique.
             "ALTER TABLE instances ADD COLUMN IF NOT EXISTS plural_name TEXT",
             # instance names are not unique: first bearer of a name gets the
             # plain "<name>s", later duplicates get a uuid-suffixed plural
@@ -111,6 +103,36 @@ class NyliumApp:
             cls._migrate_type_colors(connection)
             cls._migrate_file_kinds(connection)
             cls._migrate_files_to_first_class(connection)
+            cls._migrate_decor(connection)
+
+    @classmethod
+    def _migrate_decor(cls, connection: Connection) -> None:
+        """ADR-0014: decor columns leave types/traits for the 1:1
+        type_decor/trait_decor tables (create_all made them). Backfill
+        from the old columns if still present, then drop them. Runs last
+        so _migrate_type_colors and the ADR-0005 color default have
+        already normalized types.color."""
+        decor_statements = [
+            # backfill only when the old columns still exist
+            "DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns"
+            + " WHERE table_name = 'types' AND column_name = 'icon') THEN"
+            + " INSERT INTO type_decor (uuid, plural_name, icon, color)"
+            + " SELECT uuid, plural_name, icon, color FROM types"
+            + " ON CONFLICT (uuid) DO NOTHING;"
+            + " ALTER TABLE types DROP COLUMN plural_name;"
+            + " ALTER TABLE types DROP COLUMN icon;"
+            + " ALTER TABLE types DROP COLUMN color;"
+            + " END IF; END $$",
+            "DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns"
+            + " WHERE table_name = 'traits' AND column_name = 'color') THEN"
+            + " INSERT INTO trait_decor (uuid, color)"
+            + " SELECT uuid, color FROM traits"
+            + " ON CONFLICT (uuid) DO NOTHING;"
+            + " ALTER TABLE traits DROP COLUMN color;"
+            + " END IF; END $$",
+        ]
+        for statement in decor_statements:
+            _ = connection.execute(text(statement))
 
     @classmethod
     def _migrate_file_kinds(cls, connection: Connection) -> None:
@@ -206,9 +228,19 @@ class NyliumApp:
     @classmethod
     def _migrate_type_colors(cls, connection: Connection) -> None:
         """ADR-0005: rewrite legacy named-palette type colors to their hex
-        values. Idempotent — hex values never match a palette key."""
+        values. Idempotent — hex values never match a palette key. Runs
+        before _migrate_decor so the decor backfill copies hex values;
+        a no-op once types.color has moved to type_decor (ADR-0014)."""
         from nylium.objects.wscalar import WColor
 
+        has_column = connection.execute(
+            text(
+                "SELECT 1 FROM information_schema.columns"
+                + " WHERE table_name = 'types' AND column_name = 'color'"
+            )
+        ).first()
+        if has_column is None:
+            return
         for name, hex_value in WColor.LEGACY_PALETTE.items():
             _ = connection.execute(
                 text("UPDATE types SET color = :hex WHERE color = :name"),

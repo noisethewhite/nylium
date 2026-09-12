@@ -5,7 +5,6 @@ named palette is migrated away and rejected at the API boundary."""
 import pytest
 
 from nylium.api import Api, ScalarValue
-from nylium.tables.objects.types import types
 from nylium.objects import WScalar
 from nylium.objects.wscalar import WColor
 from nylium.server import NyliumApp
@@ -69,11 +68,24 @@ def test_named_palette_rejected_at_api_boundary(create):
 
 
 def test_legacy_named_colors_migrate_to_hex():
-    view = Api.create_type("Old", {"name": "String"}, "Olds", color="#123456")
-    row = next(types.where(name=view.name), None)
-    assert row is not None
-    # the row layer has no validation — this plants a legacy pre-ADR-0005 color
-    row.color = "red"
+    from sqlalchemy import text
+
+    from nylium.database import Database
+
+    _ = Api.create_type("Old", {"name": "String"}, "Olds", color="#123456")
+    # simulate a pre-ADR-0014 database: decor row absent, legacy columns
+    # back on types with a named-palette color planted on "Old"
+    with Database.engine.begin() as connection:
+        _ = connection.execute(
+            text("DELETE FROM type_decor WHERE uuid IN (SELECT uuid FROM types WHERE name = 'Old')")
+        )
+        _ = connection.execute(text("ALTER TABLE types ADD COLUMN plural_name TEXT"))
+        _ = connection.execute(text("ALTER TABLE types ADD COLUMN icon TEXT"))
+        _ = connection.execute(text("ALTER TABLE types ADD COLUMN color TEXT"))
+        _ = connection.execute(
+            text("UPDATE types SET plural_name = name || 's', icon = 'inventory_2', color = '#9e9e9e'")
+        )
+        _ = connection.execute(text("UPDATE types SET color = 'red' WHERE name = 'Old'"))
 
     NyliumApp._migrate_schema()
 
