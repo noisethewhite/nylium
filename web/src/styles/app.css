@@ -807,9 +807,10 @@ select.input option {
 }
 
 .field-label {
-  flex: 0 0 150px;
+  flex: 0 0 200px;
   color: var(--fg-dim);
   font-size: 13px;
+  overflow-wrap: anywhere;
 }
 
 .field-body {
