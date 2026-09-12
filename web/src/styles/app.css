@@ -725,7 +725,16 @@ select.input option {
   padding: var(--space-6);
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: var(--space-4);
+  --editor-max-width: 760px;
+}
+
+/* one centered column: every direct child block shares the editor width,
+ * horizontally centered, wide enough to not look cramped */
+.object-editor > * {
+  width: 100%;
+  max-width: var(--editor-max-width);
 }
 
 .object-editor-empty {
@@ -746,7 +755,6 @@ select.input option {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  max-width: 640px;
 }
 
 /* ADR-0005/0007: read-only computed props — same MoreButtons split,
@@ -755,7 +763,6 @@ select.input option {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  max-width: 640px;
   margin-bottom: var(--space-4);
 }
 

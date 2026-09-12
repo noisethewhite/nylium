@@ -71,6 +71,15 @@ function ObjectEditorInner(props: {
               store.touch();
             }}
           />
+          <a
+            className="icon-button"
+            href={NyliumApi.objectExportUrl(props.object.uuid)}
+            title="Export .md"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
+              download
+            </span>
+          </a>
         </div>
       )}
       <TagChips editor={store} />
@@ -125,12 +134,6 @@ function ObjectEditorInner(props: {
         >
           {editorState.saving ? "Saving…" : "Save"}
         </button>
-        <a
-          className="button"
-          href={NyliumApi.objectExportUrl(props.object.uuid)}
-        >
-          Export .md
-        </a>
         <button
           className="button button-danger"
           onClick={() => void store.deleteObject()}

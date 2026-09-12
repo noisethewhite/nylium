@@ -96,7 +96,7 @@ export function Sidebar(props: {
                       >
                         ←
                       </button>
-                      <span className="dim type-menu-title">New object</span>
+                      <span className="dim type-menu-title">New Object</span>
                     </div>
                   }
                   onPick={(view) => {
@@ -126,7 +126,7 @@ export function Sidebar(props: {
                       >
                         ←
                       </button>
-                      <span className="dim type-menu-title">New file</span>
+                      <span className="dim type-menu-title">New File</span>
                     </div>
                   }
                   onPick={(view) => {
@@ -146,7 +146,13 @@ export function Sidebar(props: {
                     props.workspace.openCreateType();
                   }}
                 >
-                  New type
+                  <span
+                    className="material-symbols-outlined"
+                    style={{ fontSize: 15, color: "var(--fg-dim)" }}
+                  >
+                    inventory_2
+                  </span>
+                  New Type
                 </button>
                 <button
                   className="type-menu-row"
@@ -155,19 +161,37 @@ export function Sidebar(props: {
                     props.workspace.openCreateTrait();
                   }}
                 >
-                  New trait
+                  <span
+                    className="material-symbols-outlined"
+                    style={{ fontSize: 15, color: "var(--fg-dim)" }}
+                  >
+                    tag
+                  </span>
+                  New Trait
                 </button>
                 <button
                   className="type-menu-row"
                   onClick={() => setPlusMode("object")}
                 >
-                  New object
+                  <span
+                    className="material-symbols-outlined"
+                    style={{ fontSize: 15, color: "var(--fg-dim)" }}
+                  >
+                    note
+                  </span>
+                  New Object
                 </button>
                 <button
                   className="type-menu-row"
                   onClick={() => setPlusMode("file")}
                 >
-                  New file
+                  <span
+                    className="material-symbols-outlined"
+                    style={{ fontSize: 15, color: "var(--fg-dim)" }}
+                  >
+                    description
+                  </span>
+                  New File
                 </button>
                 <button
                   className="type-menu-row"
@@ -176,7 +200,13 @@ export function Sidebar(props: {
                     props.workspace.openCreateEnum();
                   }}
                 >
-                  New enum
+                  <span
+                    className="material-symbols-outlined"
+                    style={{ fontSize: 15, color: "var(--fg-dim)" }}
+                  >
+                    lists
+                  </span>
+                  New Enum
                 </button>
                 <button
                   className="type-menu-row"
@@ -185,7 +215,13 @@ export function Sidebar(props: {
                     props.workspace.openCreateUnit();
                   }}
                 >
-                  New unit
+                  <span
+                    className="material-symbols-outlined"
+                    style={{ fontSize: 15, color: "var(--fg-dim)" }}
+                  >
+                    straighten
+                  </span>
+                  New Unit
                 </button>
                 <button
                   className="type-menu-row"
@@ -194,7 +230,13 @@ export function Sidebar(props: {
                     props.workspace.openCreateFunction();
                   }}
                 >
-                  New function
+                  <span
+                    className="material-symbols-outlined"
+                    style={{ fontSize: 15, color: "var(--fg-dim)" }}
+                  >
+                    functions
+                  </span>
+                  New Function
                 </button>
               </div>
             );
