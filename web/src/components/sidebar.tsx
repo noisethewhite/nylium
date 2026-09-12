@@ -150,6 +150,15 @@ export function Sidebar(props: {
                 </button>
                 <button
                   className="type-menu-row"
+                  onClick={() => {
+                    dismiss();
+                    props.workspace.openCreateTrait();
+                  }}
+                >
+                  New trait
+                </button>
+                <button
+                  className="type-menu-row"
                   onClick={() => setPlusMode("object")}
                 >
                   New object
@@ -236,6 +245,25 @@ export function Sidebar(props: {
             >
               <TypeIcon icon={view.icon} color={view.color} />
               <span>{view.name}</span>
+            </button>
+          </div>
+        ))}
+        <div className="sidebar-section">Traits</div>
+        {state.traits.map((trait) => (
+          <div className="type-row" key={trait.name}>
+            <button
+              className="type-row-name"
+              onClick={() => props.workspace.openTrait(trait.name)}
+            >
+              <span className="trait-dot" style={{ background: trait.color }} />
+              <span>{trait.name}</span>
+            </button>
+            <button
+              className="icon-button type-row-delete"
+              title={`Delete trait ${trait.name}`}
+              onClick={() => void props.workspace.deleteTrait(trait.name)}
+            >
+              ×
             </button>
           </div>
         ))}

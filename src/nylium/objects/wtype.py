@@ -20,6 +20,7 @@ class WType:
     ARRAY_TYPE_PREFIX: ClassVar[str] = "Array<"
     UNIT_NUMERIC_PREFIX: ClassVar[str] = "Numeric<"
     FUNCTION_PREFIX: ClassVar[str] = "Function<"
+    ANY_PREFIX: ClassVar[str] = "Any<"
     KIND_OBJECT: ClassVar[str] = "object"
     KIND_ENUM: ClassVar[str] = "enum"
     KIND_UNIT: ClassVar[str] = "unit"
@@ -131,6 +132,21 @@ class WType:
         if not sep:
             return None
         return (input_name.strip(), output_name.strip())
+
+    @classmethod
+    def is_any_name(cls, name: str) -> bool:
+        """ADR-0013: the trait-bound form 'Any<TraitName>' — a prop value
+        spec, never an actual row in the types table."""
+        return name.startswith(cls.ANY_PREFIX) and name.endswith(">")
+
+    @classmethod
+    def any_trait_of(cls, type_name: str) -> str | None:
+        """Syntactic split only — 'Any<Actor>' -> 'Actor'. Whether the
+        parameter actually names a trait is the caller's semantic check;
+        v1 keeps Any<> top-level only (no Array<Any<…>>)."""
+        if cls.is_any_name(type_name):
+            return type_name[len(cls.ANY_PREFIX) : -1]
+        return None
 
     # --- row access ---
 

@@ -83,6 +83,27 @@ class NyliumApp:
             + " WHERE plural_name IS NULL",
             "ALTER TABLE instances ALTER COLUMN plural_name SET NOT NULL",
             "CREATE UNIQUE INDEX IF NOT EXISTS uq_instances_plural_name ON instances (plural_name)",
+            # ADR-0013: traits + trait-bound props. traits/type_traits tables
+            # come from create_all; existing props rows get the new columns
+            "ALTER TABLE props ADD COLUMN IF NOT EXISTS owner_trait_uuid UUID"
+            + " REFERENCES traits(uuid) ON DELETE CASCADE",
+            "ALTER TABLE props ADD COLUMN IF NOT EXISTS value_trait_uuid UUID"
+            + " REFERENCES traits(uuid) ON DELETE RESTRICT",
+            "ALTER TABLE props ALTER COLUMN owner_type_uuid DROP NOT NULL",
+            "ALTER TABLE props ALTER COLUMN value_type_uuid DROP NOT NULL",
+            # ADD CONSTRAINT has no IF NOT EXISTS — DO + pg_constraint instead
+            "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint"
+            + " WHERE conname = 'props_owner_exactly_one') THEN"
+            + " ALTER TABLE props ADD CONSTRAINT props_owner_exactly_one"
+            + " CHECK ((owner_type_uuid IS NULL) <> (owner_trait_uuid IS NULL));"
+            + " END IF; END $$",
+            "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint"
+            + " WHERE conname = 'props_value_exactly_one') THEN"
+            + " ALTER TABLE props ADD CONSTRAINT props_value_exactly_one"
+            + " CHECK ((value_type_uuid IS NULL) <> (value_trait_uuid IS NULL));"
+            + " END IF; END $$",
+            "CREATE UNIQUE INDEX IF NOT EXISTS uq_props_owner_trait_key"
+            + " ON props (owner_trait_uuid, key)",
         ]
         with Database.engine.begin() as connection:
             for statement in statements:
@@ -280,6 +301,35 @@ class NyliumApp:
         app.add_api_route(
             f"{prefix}/types/{{name}}", routes.update_type, methods=["PATCH"],
             dependencies=guard,
+        )
+        # --- traits (ADR-0013) ---
+        app.add_api_route(
+            f"{prefix}/traits", routes.list_traits, methods=["GET"],
+            dependencies=guard,
+        )
+        app.add_api_route(
+            f"{prefix}/traits", routes.create_trait, methods=["POST"],
+            status_code=created, dependencies=guard,
+        )
+        app.add_api_route(
+            f"{prefix}/traits/{{name}}", routes.get_trait, methods=["GET"],
+            dependencies=guard,
+        )
+        app.add_api_route(
+            f"{prefix}/traits/{{name}}", routes.sync_trait, methods=["PUT"],
+            dependencies=guard,
+        )
+        app.add_api_route(
+            f"{prefix}/traits/{{name}}", routes.delete_trait, methods=["DELETE"],
+            status_code=no_content, dependencies=guard,
+        )
+        app.add_api_route(
+            f"{prefix}/types/{{name}}/traits", routes.attach_trait,
+            methods=["POST"], dependencies=guard,
+        )
+        app.add_api_route(
+            f"{prefix}/types/{{name}}/traits/{{trait}}", routes.detach_trait,
+            methods=["DELETE"], dependencies=guard,
         )
         app.add_api_route(
             f"{prefix}/objects", routes.list_objects, methods=["GET"],

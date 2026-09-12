@@ -6,6 +6,7 @@ import type {
   ObjectView,
   PropValue,
   StorageView,
+  TraitView,
   TypeView,
 } from "../contracts";
 import type { ErrorReporter } from "./http-transport";
@@ -106,6 +107,50 @@ export class NyliumApi extends HttpTransport {
 
   deleteType(name: string): Promise<void> {
     return this.requestVoid("DELETE", `/types/${encodeURIComponent(name)}`);
+  }
+
+  /** ADR-0013: traits — reusable prop bundles attachable to types. */
+  listTraits(): Promise<TraitView[]> {
+    return this.request("GET", "/traits");
+  }
+
+  createTrait(
+    name: string,
+    color: string,
+    props: Record<string, string>,
+  ): Promise<TraitView> {
+    return this.request("POST", "/traits", { name, color, props });
+  }
+
+  /** Full draft: identity (rename via `name`, recolor via `color`) plus
+   * the prop rows — uuid renames/retypes, uuid null creates, absent
+   * uuids delete. Same semantics as syncProps. */
+  syncTrait(
+    name: string,
+    body: {
+      name?: string;
+      color?: string;
+      props?: { uuid: string | null; key: string; value_type: string }[];
+    },
+  ): Promise<TraitView> {
+    return this.request<TraitView>("PUT", `/traits/${encodeURIComponent(name)}`, body);
+  }
+
+  deleteTrait(name: string): Promise<void> {
+    return this.requestVoid("DELETE", `/traits/${encodeURIComponent(name)}`);
+  }
+
+  attachTrait(typeName: string, trait: string): Promise<TypeView> {
+    return this.request<TypeView>(
+      "POST", `/types/${encodeURIComponent(typeName)}/traits`, { trait },
+    );
+  }
+
+  detachTrait(typeName: string, trait: string): Promise<TypeView> {
+    return this.request<TypeView>(
+      "DELETE",
+      `/types/${encodeURIComponent(typeName)}/traits/${encodeURIComponent(trait)}`,
+    );
   }
 
   listObjects(typeName: string): Promise<ObjectView[]> {

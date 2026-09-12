@@ -1039,3 +1039,100 @@ def test_object_export_markdown(auth_client: TestClient) -> None:
         response.text
         == "# Org: Acme\n\n- **name**: Acme\n- **city**: Barcelona\n"
     )
+
+
+def test_traits_over_http(auth_client: TestClient) -> None:
+    """ADR-0013 over the wire: trait CRUD, attach/detach, effective props
+    in the type view, Any<Trait> write validation and the delete guards."""
+    created = auth_client.post(
+        "/api/traits",
+        json={
+            "name": "Stamped",
+            "color": "#3a7d5c",
+            "props": {"created_note": "String", "priority": "Integer"},
+        },
+    )
+    assert created.status_code == 201, created.text
+    body = created.json()
+    assert body["name"] == "Stamped"
+    assert body["attached"] == []
+    assert [p["key"] for p in body["props"]] == ["created_note", "priority"]
+
+    listed = auth_client.get("/api/traits")
+    assert listed.status_code == 200
+    assert [t["name"] for t in listed.json()] == ["Stamped"]
+
+    dsl.create_type(auth_client, "Task", {"name": "String", "title": "String"})
+    attached = auth_client.post(
+        "/api/types/Task/traits", json={"trait": "Stamped"}
+    )
+    assert attached.status_code == 200, attached.text
+    task_type = attached.json()
+    assert task_type["traits"] == ["Stamped"]
+    by_key = {p["key"]: p for p in task_type["props"]}
+    assert by_key["created_note"]["trait"] == "Stamped"
+    assert by_key["created_note"]["trait_color"] == "#3a7d5c"
+    assert by_key["title"]["trait"] is None
+
+    # attach is idempotent-hostile: second attach conflicts
+    again = auth_client.post("/api/types/Task/traits", json={"trait": "Stamped"})
+    assert again.status_code == 409
+
+    # trait props accept writes through the normal object codec
+    task = dsl.create_object(
+        auth_client,
+        "Task",
+        {"name": {"value": "t1"}, "created_note": {"value": "n"}, "priority": {"value": 7}},
+    )
+    assert task["props"]["priority"] == {"value": 7, "unit": None}
+
+    # Any<Stamped> bound: sync a prop, link a stamped object, refuse a plain one
+    name_uuid = next(p["uuid"] for p in task_type["props"] if p["key"] == "name")
+    synced = auth_client.put(
+        "/api/types/Task/props",
+        json={
+            "props": [
+                {"uuid": name_uuid, "key": "name", "value_type": "String"},
+                {"key": "related", "value_type": "Any<Stamped>"},
+            ]
+        },
+    )
+    assert synced.status_code == 200, synced.text
+    by_key = {p["key"]: p for p in synced.json()["props"]}
+    assert by_key["related"]["value_type"] == "Any<Stamped>"
+
+    ref = {"ref": {"uuid": task["uuid"], "type_name": "Task"}}
+    linked = auth_client.patch(
+        f"/api/objects/{task['uuid']}", json={"props": {"related": ref}}
+    )
+    assert linked.status_code == 200, linked.text
+
+    dsl.create_type(auth_client, "Plain", {"name": "String", "label": "String"})
+    plain = dsl.create_object(auth_client, "Plain", {"name": {"value": "p1"}})
+    bad_ref = {"ref": {"uuid": plain["uuid"], "type_name": "Plain"}}
+    refused = auth_client.patch(
+        f"/api/objects/{task['uuid']}", json={"props": {"related": bad_ref}}
+    )
+    assert refused.status_code == 422, refused.text
+
+    # delete guards: attached + bound -> conflict with the dependents named
+    deleted = auth_client.delete("/api/traits/Stamped")
+    assert deleted.status_code == 409
+    assert "Task" in deleted.json()["error"]["message"]
+
+    detached = auth_client.delete("/api/types/Task/traits/Stamped")
+    assert detached.status_code == 200, detached.text
+    # the earlier sync_props replaced the draft, so title is long gone
+    assert [p["key"] for p in detached.json()["props"]] == ["name", "related"]
+
+    # still bound by the Any<Stamped> prop — detach alone doesn't free it
+    still_bound = auth_client.delete("/api/traits/Stamped")
+    assert still_bound.status_code == 409
+
+    freed = auth_client.put(
+        "/api/types/Task/props",
+        json={"props": [{"uuid": name_uuid, "key": "name", "value_type": "String"}]},
+    )
+    assert freed.status_code == 200, freed.text
+    gone = auth_client.delete("/api/traits/Stamped")
+    assert gone.status_code == 204

@@ -11,6 +11,7 @@ from nylium.database import Database, databasemethod
 from nylium.database.table import Row, Table
 from nylium.tables.objects.enum_options import EnumOption, enum_options
 from nylium.tables.objects.props import Prop, props
+from nylium.tables.objects.traits import Trait, traits, type_traits
 from nylium.tables.objects.typeref import TABLE_Types
 from nylium.tables.objects.unit_parts import UnitPart, unit_parts
 
@@ -41,9 +42,29 @@ class Type(Row):
     embedded: bool
 
     @property
-    def props(self) -> Generator[Prop, None, None]:
-        """This type's props, in display order."""
+    def own_props(self) -> Generator[Prop, None, None]:
+        """The props this type owns directly, in display order (ADR-0013:
+        writes — sync_schema — always target own props only)."""
         yield from sorted(props.where(owner_type_uuid=self.uuid), key=lambda p: p.position)
+
+    @property
+    def traits(self) -> Generator[Trait, None, None]:
+        """Traits attached to this type, in attach order."""
+        links = sorted(
+            type_traits.where(type_uuid=self.uuid), key=lambda link: link.position
+        )
+        for link in links:
+            trait = traits.get(link.trait_uuid)
+            if trait is not None:
+                yield trait
+
+    @property
+    def props(self) -> Generator[Prop, None, None]:
+        """The *effective* schema (ADR-0013): own props, then each attached
+        trait's props in attach order."""
+        yield from self.own_props
+        for trait in self.traits:
+            yield from trait.props
 
     @property
     def enum_options(self) -> Generator[EnumOption, None, None]:
@@ -68,6 +89,7 @@ class Type(Row):
             "color": self.color,
             "kind": self.kind,
             "embedded": self.embedded,
+            "traits": [trait.name for trait in self.traits],
             "enum_options": [option.wire() for option in self.enum_options],
             "unit_parts": [part.wire() for part in self.unit_parts],
             "props": [prop.wire() for prop in self.props],

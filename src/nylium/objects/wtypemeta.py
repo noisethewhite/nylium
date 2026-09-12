@@ -17,8 +17,10 @@ from collections.abc import Callable
 from typing import ClassVar, Protocol, TypeAlias, cast, get_args, get_origin
 from uuid import UUID
 
+import sqlalchemy as sqla
+
 from nylium.database import Database, databasemethod
-from nylium.tables import TABLE_Instances
+from nylium.tables import TABLE_Instances, TABLE_Traits, TABLE_TypeTraits
 from nylium.objects.quantity import Quantity
 from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import ScalarPayload, WScalar
@@ -117,6 +119,41 @@ class WTypeMeta(type):
         if actual.is_embedded:
             raise TypeError(
                 f"{expected_name} is embedded (ADR-0004) — link it from its owner only, as an inline props draft"
+            )
+
+    @classmethod
+    @databasemethod(commit=False)
+    def check_trait_link(mcls, trait_name: str, value: object) -> None:
+        """ADR-0013: an Any<TraitName> prop accepts a link to any object
+        whose *type* carries the trait. Embedded targets are rejected just
+        like plain links."""
+        root = mcls.root()
+        if not isinstance(value, root):
+            raise TypeError(
+                f"Any<{trait_name}> prop takes a WObject, got {type(value).__name__}"
+            )
+        inst = Database.session.get(TABLE_Instances, value.uuid)
+        actual = None if inst is None else WType.by_uuid(inst.type_uuid)
+        if actual is None:
+            raise TypeError(
+                f"Any<{trait_name}> prop takes an object with trait {trait_name!r}, got <missing instance>"
+            )
+        if actual.is_embedded:
+            raise TypeError(
+                f"Any<{trait_name}> target {actual.name!r} is embedded (ADR-0004) — link it from its owner only"
+            )
+        trait_uuid = Database.session.scalar(
+            sqla.select(TABLE_Traits.uuid).where(TABLE_Traits.name == trait_name)
+        )
+        attached = Database.session.scalar(
+            sqla.select(TABLE_TypeTraits.type_uuid).where(
+                TABLE_TypeTraits.type_uuid == actual.uuid,
+                TABLE_TypeTraits.trait_uuid == trait_uuid,
+            )
+        )
+        if attached is None:
+            raise TypeError(
+                f"Any<{trait_name}> prop takes an object with trait {trait_name!r}, got {actual.name!r}"
             )
 
     @classmethod

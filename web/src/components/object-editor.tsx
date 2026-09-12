@@ -92,9 +92,27 @@ function ObjectEditorInner(props: {
         </div>
       )}
       <div className="object-editor-fields">
-        {gridFields.map((field) => (
-          <FieldEditor key={field.key} field={field} editor={store} />
-        ))}
+        {gridFields.map((field) => {
+          // ADR-0013: trait-owned fields carry a left border in the
+          // trait's color — you can see at a glance which props come
+          // from a trait vs the type itself
+          const traitProp = props.schema.props.find(
+            (prop) => prop.key === field.key && prop.trait !== null,
+          );
+          if (traitProp === undefined) {
+            return <FieldEditor key={field.key} field={field} editor={store} />;
+          }
+          return (
+            <div
+              key={field.key}
+              className="trait-tinted-field"
+              style={{ borderLeftColor: traitProp.trait_color ?? undefined }}
+              title={`From trait ${traitProp.trait ?? ""}`}
+            >
+              <FieldEditor field={field} editor={store} />
+            </div>
+          );
+        })}
       </div>
       {editorState.error !== null && (
         <div className="error-banner">{editorState.error}</div>

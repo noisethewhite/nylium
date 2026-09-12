@@ -263,7 +263,13 @@ export class ObjectEditorStore extends Observable<EditorState> {
 
   private async fillRefOptions(field: FieldModel): Promise<void> {
     if (field instanceof RefFieldModel) {
-      field.options = await this.workspace.listObjectsOfType(field.valueType);
+      const bound = TypeNames.anyTraitOf(field.valueType);
+      // ADR-0013: Any<Trait> lists objects of every type carrying the
+      // trait; a plain ref lists its concrete target type
+      field.options =
+        bound !== null
+          ? await this.workspace.listObjectsWithTrait(bound)
+          : await this.workspace.listObjectsOfType(field.valueType);
       this.setState({ ...this.getSnapshot() });
       return;
     }

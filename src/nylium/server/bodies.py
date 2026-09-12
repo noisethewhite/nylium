@@ -213,3 +213,40 @@ class SetPropFunctionBody:
 
     function_uuid: UUID | None = None
 
+
+@dataclass(config=_CONFIG)
+class CreateTraitBody:
+    """A trait (ADR-0013): name, color, and a prop bundle — the same
+    key -> value spec shape as CreateTypeBody.props."""
+
+    name: str
+    props: dict[str, str] = field(default_factory=dict)
+    color: str = WColor.DEFAULT
+
+
+@dataclass(config=_CONFIG)
+class SyncTraitPropItem:
+    """One row of the trait editor's draft: uuid None = new prop.
+    Traits v1 have no formulas — no formula field."""
+
+    key: str
+    value_type: str
+    uuid: UUID | None = None
+
+
+@dataclass(config=_CONFIG)
+class SyncTraitBody:
+    """PUT semantics: identity + the full prop draft (renames/retypes by
+    uuid, creates without, deletes whatever the draft omits)."""
+
+    name: str | None = None
+    color: str | None = None
+    props: list[SyncTraitPropItem] | None = None
+
+
+@dataclass(config=_CONFIG)
+class TraitAttachBody:
+    """Attach/detach a trait to/from a type."""
+
+    trait: str
+

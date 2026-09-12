@@ -13,6 +13,12 @@ export function TabBar(props: { workspace: WorkspaceStore }): ReactElement {
     if (tab.kind === "type") {
       return tab.name;
     }
+    if (tab.kind === "trait") {
+      return tab.name;
+    }
+    if (tab.kind === "create-trait") {
+      return "New Trait";
+    }
     if (tab.kind === "create-type") {
       return "New Type";
     }
@@ -65,6 +71,15 @@ export function TabBar(props: { workspace: WorkspaceStore }): ReactElement {
     if (tab.kind === "function") {
       return <span className="tab-function-icon">ƒ</span>;
     }
+    if (tab.kind === "trait") {
+      const view = state.traits.find((trait) => trait.name === tab.name);
+      return (
+        <span
+          className="trait-dot"
+          style={{ background: view?.color ?? "var(--fg-dim)" }}
+        />
+      );
+    }
     if (tab.kind === "calendar") {
       return <span className="material-symbols-outlined" style={{ fontSize: 14 }}>calendar_month</span>;
     }
@@ -109,6 +124,14 @@ export function TabBar(props: { workspace: WorkspaceStore }): ReactElement {
     }
     if (tab.kind === "create-function") {
       props.workspace.openCreateFunction();
+      return;
+    }
+    if (tab.kind === "trait") {
+      props.workspace.openTrait(tab.name);
+      return;
+    }
+    if (tab.kind === "create-trait") {
+      props.workspace.openCreateTrait();
       return;
     }
     props.workspace.openCreateType();

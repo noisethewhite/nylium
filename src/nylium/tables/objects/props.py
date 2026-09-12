@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import ClassVar
 from uuid import UUID, uuid4
 
-from sqlalchemy import ForeignKey, Integer, Text, UniqueConstraint
+from sqlalchemy import CheckConstraint, ForeignKey, Integer, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from nylium.database.table import Row, Table
@@ -26,15 +26,38 @@ class TABLE_Props:
     __table_args__: ClassVar[tuple[object, ...]] = (
         # One key can't be defined twice on the same owner type
         UniqueConstraint("owner_type_uuid", "key"),
+        # ...nor twice on the same owner trait (ADR-0013); NULL owners are
+        # distinct in Postgres, so each constraint guards its own kind
+        UniqueConstraint("owner_trait_uuid", "key"),
+        # a prop belongs to exactly one owner: one type XOR one trait
+        CheckConstraint(
+            "(owner_type_uuid IS NULL) <> (owner_trait_uuid IS NULL)",
+            name="props_owner_exactly_one",
+        ),
+        # ...and its value is exactly one concrete type XOR one trait bound
+        CheckConstraint(
+            "(value_type_uuid IS NULL) <> (value_trait_uuid IS NULL)",
+            name="props_value_exactly_one",
+        ),
     )
 
     uuid: Mapped[UUID] = mapped_column(primary_key=True, default_factory=uuid4, kw_only=True)
     key: Mapped[str] = mapped_column(Text, nullable=False)
-    owner_type_uuid: Mapped[UUID] = mapped_column(
-        ForeignKey("types.uuid", ondelete="CASCADE"), nullable=False
+    owner_type_uuid: Mapped[UUID | None] = mapped_column(
+        ForeignKey("types.uuid", ondelete="CASCADE"), nullable=True, default=None
     )
-    value_type_uuid: Mapped[UUID] = mapped_column(
-        ForeignKey("types.uuid"), nullable=False
+    # ADR-0013: the alternative owner — a trait
+    owner_trait_uuid: Mapped[UUID | None] = mapped_column(
+        ForeignKey("traits.uuid", ondelete="CASCADE"), nullable=True, default=None
+    )
+    value_type_uuid: Mapped[UUID | None] = mapped_column(
+        ForeignKey("types.uuid"), nullable=True, default=None
+    )
+    # ADR-0013: the alternative value typing — any object whose type has
+    # this trait (wire form "Any<TraitName>"). RESTRICT: a trait still
+    # used as a bound can't be deleted silently
+    value_trait_uuid: Mapped[UUID | None] = mapped_column(
+        ForeignKey("traits.uuid", ondelete="RESTRICT"), nullable=True, default=None
     )
     # the prop's slot in the owner type's display order — create order
     # unless a reorder overwrote it
@@ -57,16 +80,39 @@ class Prop(Row):
 
     uuid: UUID
     key: str
-    owner_type_uuid: UUID
-    value_type_uuid: UUID
+    owner_type_uuid: UUID | None
+    owner_trait_uuid: UUID | None
+    value_type_uuid: UUID | None
+    value_trait_uuid: UUID | None
     position: int
     formula: str | None
     function_uuid: UUID | None
 
     @property
+    def owner_trait(self) -> "tuple[str, str] | None":
+        """(name, color) of the owning trait, None for a type-owned prop."""
+        if self.owner_trait_uuid is None:
+            return None
+        from nylium.tables.objects.traits import traits
+
+        t = traits.get(self.owner_trait_uuid)
+        if t is None:
+            raise KeyError(f"Trait with UUID {self.owner_trait_uuid} does not exist")
+        return t.name, t.color
+
+    @property
     def value_type(self) -> str:
-        """The value type's name — the wire-facing form of
-        ``value_type_uuid``."""
+        """The wire-facing value spec: the concrete type's name, or
+        ``Any<TraitName>`` for a trait-bound prop (ADR-0013)."""
+        if self.value_trait_uuid is not None:
+            from nylium.tables.objects.traits import traits
+
+            t = traits.get(self.value_trait_uuid)
+            if t is None:
+                raise KeyError(f"Trait with UUID {self.value_trait_uuid} does not exist")
+            return f"Any<{t.name}>"
+        if self.value_type_uuid is None:
+            raise KeyError(f"Prop {self.key!r} has no value typing")
         from nylium.tables.objects.types import types
 
         t = types.get(self.value_type_uuid)
@@ -78,12 +124,15 @@ class Prop(Row):
         """The JSON-safe wire shape: uuid/uuids as strings, matching
         web/src/contracts.ts PropView."""
         function_uuid = self.function_uuid
+        owner_trait = self.owner_trait
         return {
             "uuid": str(self.uuid),
             "key": self.key,
             "value_type": self.value_type,
             "formula": self.formula,
             "function_uuid": None if function_uuid is None else str(function_uuid),
+            "trait": None if owner_trait is None else owner_trait[0],
+            "trait_color": None if owner_trait is None else owner_trait[1],
         }
 
 

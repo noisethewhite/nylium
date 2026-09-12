@@ -18,6 +18,7 @@ import { Sidebar } from "./sidebar";
 import { TabBar } from "./tab-bar";
 import { TypeCreateForm } from "./type-create-form";
 import { TypeViewPanel } from "./type-view";
+import { TraitCreateForm, TraitPanel } from "./trait-view";
 import { UnitCreateForm } from "./unit-create-form";
 import { UnitTypePanel } from "./unit-type-view";
 
@@ -79,6 +80,13 @@ export function App(props: {
         </div>
       );
     }
+    if (tab.kind === "create-trait") {
+      return (
+        <div className="tab-content create-type-page">
+          <TraitCreateForm workspace={props.workspace} />
+        </div>
+      );
+    }
     if (tab.kind === "create-enum") {
       return (
         <div className="tab-content create-type-page">
@@ -136,6 +144,13 @@ export function App(props: {
         return <ScalarTypePanel key={tab.name} schema={schema} />;
       }
       return <TypeViewPanel key={tab.name} workspace={props.workspace} schema={schema} />;
+    }
+    if (tab.kind === "trait") {
+      const trait = state.traits.find((view) => view.name === tab.name);
+      if (trait === undefined) {
+        return <div className="empty-state dim">Trait is gone.</div>;
+      }
+      return <TraitPanel key={tab.name} workspace={props.workspace} trait={trait} />;
     }
     const object = state.objects.find((view) => view.uuid === tab.uuid);
     if (object === undefined) {

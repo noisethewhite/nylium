@@ -230,9 +230,9 @@ class ObjectView:
             if prop.formula is not None
             else cls._render_prop(
                 cast(StoredValue, getattr(wrapper, prop.key)),
-                prop.value_type().name,
+                prop.value_spec_name(),
             )
-            for prop in WProp.all_for(owner)
+            for prop in WProp.effective_for(owner)
         }
         return cls(
             uuid=uuid,

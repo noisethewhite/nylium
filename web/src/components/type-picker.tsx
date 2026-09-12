@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 import { useState } from "react";
 import { TypeLabels, TypeNames } from "../contracts";
+import { useObservable } from "../state/use-observable";
 import { WorkspaceStore } from "../state/workspace";
 import { FloatingMenu } from "./floating-menu";
 import { NameSearch } from "./name-search";
@@ -21,11 +22,14 @@ export function TypePicker(props: {
   const [objectMode, setObjectMode] = useState<ObjectMode | null>(null);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [unitOpen, setUnitOpen] = useState(false);
+  const [anyOpen, setAnyOpen] = useState(false);
+  const state = useObservable(props.workspace);
 
   const reset = (): void => {
     setObjectMode(null);
     setCalendarOpen(false);
     setUnitOpen(false);
+    setAnyOpen(false);
   };
 
   const scalarIcon = (name: string): ReactElement => {
@@ -43,6 +47,17 @@ export function TypePicker(props: {
       const unit = props.workspace.typeView(param);
       return (
         <TypeIcon icon={unit?.icon ?? "straighten"} color={unit?.color ?? "gray"} size={15} />
+      );
+    }
+    // ADR-0013: Any<Trait> renders the trait's color dot
+    const bound = TypeNames.anyTraitOf(props.value);
+    if (bound !== null) {
+      const trait = state.traits.find((view) => view.name === bound);
+      return (
+        <span
+          className="trait-dot"
+          style={{ background: trait?.color ?? "var(--fg-dim)" }}
+        />
       );
     }
     return scalarIcon(props.value);
@@ -165,6 +180,34 @@ export function TypePicker(props: {
             </>
           );
         }
+        if (anyOpen) {
+          // ADR-0013: pick a trait to bind a polymorphic ref to
+          return (
+            <NameSearch
+              items={state.traits}
+              getKey={(view) => view.name}
+              getLabel={(view) => TypeNames.anyWithTrait(view.name)}
+              renderIcon={(view) => (
+                <span className="trait-dot" style={{ background: view.color }} />
+              )}
+              placeholder="Search traits…"
+              emptyLabel="No traits yet"
+              header={
+                <div className="type-menu-search">
+                  <button
+                    className="icon-button"
+                    title="Back"
+                    onClick={() => setAnyOpen(false)}
+                  >
+                    ←
+                  </button>
+                  <span className="dim type-menu-title">Any with trait</span>
+                </div>
+              }
+              onPick={(view) => pick(TypeNames.anyWithTrait(view.name))}
+            />
+          );
+        }
         return (
           <>
             <div className="type-menu-list">
@@ -185,6 +228,14 @@ export function TypePicker(props: {
               <button className="type-menu-row" onClick={() => setUnitOpen(true)}>
                 {scalarIcon(TypeNames.NUMERIC)}
                 <span>Numeric with unit →</span>
+              </button>
+              <button
+                className="type-menu-row"
+                title="Link to any object carrying a trait (ADR-0013)"
+                onClick={() => setAnyOpen(true)}
+              >
+                <span className="trait-dot trait-dot-hollow" />
+                <span>Any with trait →</span>
               </button>
             </div>
             <div className="type-menu-divider" />

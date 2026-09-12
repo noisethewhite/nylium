@@ -8,6 +8,14 @@
 from nylium.tables.base import reg
 from nylium.tables.objects.types import types
 from nylium.tables.objects.props import TABLE_Props, props
+from nylium.tables.objects.traits import (
+    TABLE_Traits,
+    TABLE_TypeTraits,
+    Trait,
+    Traits,
+    traits,
+    type_traits,
+)
 from nylium.tables.objects.instances import TABLE_Instances, instances
 from nylium.tables.values.string_values import TABLE_StringValues
 from nylium.tables.values.integer_values import TABLE_IntegerValues
@@ -38,6 +46,12 @@ __all__ = [
     "types",
     "instances",
     "props",
+    "traits",
+    "type_traits",
+    "Trait",
+    "Traits",
+    "TABLE_Traits",
+    "TABLE_TypeTraits",
     "files",
     "enum_options",
     "unit_parts",

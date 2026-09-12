@@ -28,7 +28,12 @@ export class RefFieldModel extends FieldModel {
     if (this.selectedUuid === null) {
       return { ref: null };
     }
-    return { ref: { uuid: this.selectedUuid, type_name: this.valueType } };
+    // the wire carries the selected object's concrete type name — for
+    // Any<Trait> refs valueType is the bound spec, not a real type
+    const selected = this.options.find((view) => view.uuid === this.selectedUuid);
+    return {
+      ref: { uuid: this.selectedUuid, type_name: selected?.type_name ?? this.valueType },
+    };
   }
 }
 

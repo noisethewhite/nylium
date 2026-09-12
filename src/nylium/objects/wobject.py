@@ -135,13 +135,15 @@ class WObject(metaclass=WTypeMeta):
     @classmethod
     @databasemethod(commit=False)
     def fields(cls) -> dict[str, str]:
-        """prop key -> value type name, e.g. {'tags': 'Array<String>'}"""
+        """prop key -> value spec name, e.g. {'tags': 'Array<String>'}.
+        ADR-0013: the effective schema — attached traits' props included,
+        trait-bound values render as 'Any<TraitName>'."""
         owner = WType.by_name(cls.__name__)
         if owner is None:
             return {}
         return {
-            prop.key: prop.value_type().name
-            for prop in WProp.all_for(owner)
+            prop.key: prop.value_spec_name()
+            for prop in WProp.effective_for(owner)
         }
 
     def to_dict(self) -> dict[str, StoredValue]:
@@ -181,10 +183,10 @@ class WObject(metaclass=WTypeMeta):
         owner = WType.by_uuid(inst.type_uuid)
         if owner is None:
             raise RuntimeError(f"instance {self._uuid} has dangling type")
-        prop = WProp.by_key(owner, key)
+        prop = WProp.effective_by_key(owner, key)
         if prop is None:
             raise AttributeError(f"{owner.name} has no prop {key!r}")
-        return prop, prop.value_type().name
+        return prop, prop.value_spec_name()
 
     @databasemethod(commit=False)
     def __getattr__(self, key: str) -> StoredValue:
@@ -229,6 +231,11 @@ class WObject(metaclass=WTypeMeta):
                 WType.element_name(value_type),
                 cast(list[StoredValue], value),
             )
+        elif prop.is_trait_bound:
+            # ADR-0013: Any<TraitName> — a plain object link whose type
+            # must carry the bound trait
+            WTypeMeta.check_trait_link(prop.value_trait_name(), value)
+            self._write_link(prop, cast("WObject", value))
         elif prop.value_type().is_embedded:
             # composition (ADR-0004): the value is an inline props draft,
             # the child is created lazily / updated / deleted on None
@@ -277,7 +284,7 @@ class WObject(metaclass=WTypeMeta):
             return
         if WType.is_array_name(value_type):
             WArray.destroy( link.uuid)
-        elif prop.value_type().is_embedded:
+        elif not prop.is_trait_bound and prop.value_type().is_embedded:
             WEmbedded.destroy(link.uuid)  # the child dies with the prop
         else:
             Database.session.delete(link)
@@ -321,8 +328,14 @@ class WObject(metaclass=WTypeMeta):
         value: ScalarPayload | None,
     ) -> None:
         table = scalar.TABLE
-        stored = None if value is None else scalar.to_storage(value)
         row = Database.session.get(table, (self._uuid, prop.uuid))
+        if value is None:
+            # clearing a scalar removes the row — a NULL row violates the
+            # table's NOT NULL constraint and reads back as None anyway
+            if row is not None:
+                Database.session.delete(row)
+            return
+        stored = scalar.to_storage(value)
         if row is None:
             ctor = cast("Callable[..., ScalarTable]", table)
             Database.session.add(ctor(inst_uuid=self._uuid, prop_uuid=prop.uuid, value=stored))

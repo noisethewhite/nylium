@@ -6,6 +6,7 @@ import type {
   ObjectView,
   PropValue,
   StorageView,
+  TraitView,
   TypeView,
 } from "../contracts";
 import { TypeNames } from "../contracts";
@@ -17,10 +18,12 @@ import { Observable } from "./observable";
  * transient create-type / create-enum / create-function forms. */
 export type Tab =
   | { readonly kind: "type"; readonly name: string; readonly preview: boolean }
+  | { readonly kind: "trait"; readonly name: string; readonly preview: boolean }
   | { readonly kind: "object"; readonly uuid: string; readonly preview: boolean }
   | { readonly kind: "function"; readonly uuid: string; readonly preview: boolean }
   | { readonly kind: "calendar"; readonly preview: boolean }
   | { readonly kind: "create-type"; readonly preview: boolean }
+  | { readonly kind: "create-trait"; readonly preview: boolean }
   | { readonly kind: "create-enum"; readonly preview: boolean }
   | { readonly kind: "create-unit"; readonly preview: boolean }
   | { readonly kind: "create-function"; readonly preview: boolean };
@@ -28,6 +31,7 @@ export type Tab =
 export interface WorkspaceState {
   readonly loading: boolean;
   readonly types: readonly TypeView[];
+  readonly traits: readonly TraitView[];
   readonly objects: readonly ObjectView[];
   readonly functions: readonly FunctionView[];
   readonly files: readonly FileView[];
@@ -38,6 +42,7 @@ export interface WorkspaceState {
 const INITIAL_STATE: WorkspaceState = {
   loading: true,
   types: [],
+  traits: [],
   objects: [],
   functions: [],
   files: [],
@@ -50,6 +55,9 @@ export function sameTab(a: Tab, b: Tab): boolean {
     return false;
   }
   if (a.kind === "type" && b.kind === "type") {
+    return a.name === b.name;
+  }
+  if (a.kind === "trait" && b.kind === "trait") {
     return a.name === b.name;
   }
   if (a.kind === "object" && b.kind === "object") {
@@ -83,9 +91,10 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
   async init(): Promise<void> {
     await this.guard(async () => {
       const types = await this.api.listTypes();
+      const traits = await this.api.listTraits();
       const functions = await this.api.listFunctions();
       const files = await this.api.listFiles();
-      this.setState({ ...this.getSnapshot(), types, functions, files });
+      this.setState({ ...this.getSnapshot(), types, traits, functions, files });
       for (const view of this.userTypes()) {
         await this.refreshObjectsOf(view.name);
       }
@@ -97,12 +106,20 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
     this.activate({ kind: "type", name, preview: true });
   }
 
+  openTrait(name: string): void {
+    this.activate({ kind: "trait", name, preview: true });
+  }
+
   openObject(uuid: string): void {
     this.activate({ kind: "object", uuid, preview: true });
   }
 
   openCreateType(): void {
     this.activate({ kind: "create-type", preview: false });
+  }
+
+  openCreateTrait(): void {
+    this.activate({ kind: "create-trait", preview: false });
   }
 
   openCreateEnum(): void {
@@ -334,6 +351,135 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
         activeTab,
       });
     });
+  }
+
+  /** ADR-0013 traits. One save path covers identity + prop draft —
+   * syncTrait is a single PUT, unlike the type editor's two calls.
+   * A prop retype/delete purges values of every attached type's
+   * instances server-side, so types and objects both get re-pulled. */
+  async createTrait(name: string, color: string): Promise<void> {
+    await this.guard(async () => {
+      const created = await this.api.createTrait(name, color, {});
+      const state = this.getSnapshot();
+      const tabs = state.tabs.filter((tab) => tab.kind !== "create-trait");
+      const tab: Tab = { kind: "trait", name: created.name, preview: false };
+      this.setState({
+        ...state,
+        traits: [...state.traits, created],
+        tabs: tabs.some((open) => sameTab(open, tab)) ? tabs : [...tabs, tab],
+        activeTab: tab,
+      });
+    });
+  }
+
+  async saveTraitEdits(
+    traitName: string,
+    patch: { name: string; color: string },
+    props: { uuid: string | null; key: string; value_type: string }[],
+  ): Promise<void> {
+    await this.guard(async () => {
+      const current = this.getSnapshot().traits.find((v) => v.name === traitName);
+      if (!current) {
+        return;
+      }
+      // exactOptionalPropertyTypes: omit untouched keys entirely
+      const body: { name?: string; color?: string; props: typeof props } = { props };
+      if (patch.name !== current.name) {
+        body.name = patch.name;
+      }
+      if (patch.color !== current.color) {
+        body.color = patch.color;
+      }
+      const saved = await this.api.syncTrait(traitName, body);
+      const state = this.getSnapshot();
+      const renamed = saved.name !== traitName;
+      const tabs = state.tabs.map((tab) =>
+        renamed && tab.kind === "trait" && tab.name === traitName
+          ? { ...tab, name: saved.name }
+          : tab,
+      );
+      const activeTab =
+        renamed && state.activeTab?.kind === "trait" && state.activeTab.name === traitName
+          ? { ...state.activeTab, name: saved.name }
+          : state.activeTab;
+      this.setState({
+        ...state,
+        traits: state.traits.map((view) => (view.name === traitName ? saved : view)),
+        tabs,
+        activeTab,
+      });
+      // trait props are projected into every attached type's schema and
+      // values may have been purged — reload both
+      await this.reloadTypesAndObjects();
+    });
+  }
+
+  async deleteTrait(name: string): Promise<void> {
+    await this.guard(async () => {
+      await this.api.deleteTrait(name);
+      const state = this.getSnapshot();
+      const tabs = state.tabs.filter((tab) => !(tab.kind === "trait" && tab.name === name));
+      const activeTab =
+        state.activeTab !== null && tabs.some((tab) => sameTab(tab, state.activeTab as Tab))
+          ? state.activeTab
+          : (tabs[tabs.length - 1] ?? null);
+      this.setState({
+        ...state,
+        traits: state.traits.filter((view) => view.name !== name),
+        tabs,
+        activeTab,
+      });
+    });
+  }
+
+  /** Attach/detach change the target type's effective props, so its
+   * objects need a re-pull — detach purges the trait's values. */
+  async attachTrait(typeName: string, trait: string): Promise<void> {
+    await this.guard(async () => {
+      const updated = await this.api.attachTrait(typeName, trait);
+      const state = this.getSnapshot();
+      this.setState({
+        ...state,
+        types: state.types.map((view) => (view.name === typeName ? updated : view)),
+        traits: state.traits.map((view) =>
+          view.name === trait
+            ? {
+                ...view,
+                attached: [...view.attached.filter((n) => n !== typeName), typeName],
+              }
+            : view,
+        ),
+      });
+      await this.refreshObjectsOf(typeName);
+    });
+  }
+
+  async detachTrait(typeName: string, trait: string): Promise<void> {
+    await this.guard(async () => {
+      const updated = await this.api.detachTrait(typeName, trait);
+      const state = this.getSnapshot();
+      this.setState({
+        ...state,
+        types: state.types.map((view) => (view.name === typeName ? updated : view)),
+        traits: state.traits.map((view) =>
+          view.name === trait
+            ? { ...view, attached: view.attached.filter((n) => n !== typeName) }
+            : view,
+        ),
+      });
+      await this.refreshObjectsOf(typeName);
+    });
+  }
+
+  /** Full type-list reload + object re-pull — the blunt instrument for
+   * edits whose blast radius spans types (trait sync). */
+  private async reloadTypesAndObjects(): Promise<void> {
+    const types = await this.api.listTypes();
+    const traits = await this.api.listTraits();
+    this.setState({ ...this.getSnapshot(), types, traits });
+    for (const view of this.userTypes()) {
+      await this.refreshObjectsOf(view.name);
+    }
   }
 
   /** Drag-and-drop reorder in the type view — the server answers with
@@ -633,6 +779,18 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
    * touch the transport directly. */
   listObjectsOfType(typeName: string): Promise<ObjectView[]> {
     return this.api.listObjects(typeName);
+  }
+
+  /** ADR-0013: candidates for an `Any<Trait>` ref picker — objects of
+   * every type the trait is attached to. */
+  async listObjectsWithTrait(trait: string): Promise<ObjectView[]> {
+    const holders = this.getSnapshot().types.filter(
+      (view) => view.kind === "object" && view.traits.includes(trait),
+    );
+    const batches = await Promise.all(
+      holders.map((view) => this.api.listObjects(view.name)),
+    );
+    return batches.flat();
   }
 
   /** Pin the active tab — the VS Code preview-tab rule: an italic tab is

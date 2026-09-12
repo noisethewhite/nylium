@@ -16,6 +16,7 @@ from nylium.server.bodies import (
     CreateEnumBody,
     CreateFunctionBody,
     CreateObjectBody,
+    CreateTraitBody,
     CreateTypeBody,
     CreateUnitBody,
     RenameFileBody,
@@ -23,7 +24,9 @@ from nylium.server.bodies import (
     SetPropFunctionBody,
     SyncEnumOptionsBody,
     SyncPropsBody,
+    SyncTraitBody,
     SyncUnitPartsBody,
+    TraitAttachBody,
     UpdateFunctionBody,
     UpdateObjectBody,
     UpdateTypeBody,
@@ -207,6 +210,45 @@ class routes:
         return FileResponse(path, media_type=view.mime, filename=view.name)
 
     # --- functions (ADR-0007) ---
+
+    # --- traits (ADR-0013) ---
+
+    @classmethod
+    def list_traits(cls) -> list[dict[str, object]]:
+        return [t.wire() for t in Api.list_traits()]
+
+    @classmethod
+    def get_trait(cls, name: str) -> dict[str, object]:
+        view = Api.get_trait(name)
+        if view is None:
+            raise NotFoundError(f"no trait {name!r}")
+        return view.wire()
+
+    @classmethod
+    def create_trait(cls, body: CreateTraitBody) -> dict[str, object]:
+        return Api.create_trait(body.name, body.color, body.props).wire()
+
+    @classmethod
+    def sync_trait(cls, name: str, body: SyncTraitBody) -> dict[str, object]:
+        items: list[tuple[UUID | None, str, str, str | None]] | None = (
+            None
+            if body.props is None
+            else [(item.uuid, item.key, item.value_type, None) for item in body.props]
+        )
+        return Api.sync_trait(name, body.name, body.color, items).wire()
+
+    @classmethod
+    def delete_trait(cls, name: str) -> None:
+        if not Api.delete_trait(name):
+            raise NotFoundError(f"no trait {name!r}")
+
+    @classmethod
+    def attach_trait(cls, name: str, body: TraitAttachBody) -> dict[str, object]:
+        return Api.attach_trait(name, body.trait).wire()
+
+    @classmethod
+    def detach_trait(cls, name: str, trait: str) -> dict[str, object]:
+        return Api.detach_trait(name, trait).wire()
 
     @classmethod
     def list_functions(cls) -> list[FunctionView]:

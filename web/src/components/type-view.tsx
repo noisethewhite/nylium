@@ -19,11 +19,15 @@ interface PropDraft {
 }
 
 function draftsOf(schema: TypeView): PropDraft[] {
-  return schema.props.map((prop) => ({
-    uuid: prop.uuid,
-    key: prop.key,
-    valueType: prop.value_type,
-  }));
+  // ADR-0013: trait-owned props are not editable here — they belong to
+  // the trait and render read-only below; the draft is own props only
+  return schema.props
+    .filter((prop) => prop.trait === null)
+    .map((prop) => ({
+      uuid: prop.uuid,
+      key: prop.key,
+      valueType: prop.value_type,
+    }));
 }
 
 /** Six-dot grip (2×3) — the affordance that a schema row is draggable. */
@@ -193,6 +197,67 @@ export function TypeViewPanel(props: {
           </div>
         </div>
       </div>
+      {/* ADR-0013: attached traits as color-coded chips; attach from the
+          remaining pool, detach only when the schema draft is pristine
+          (detach hits the wire immediately, schema edits don't) */}
+      <div className="type-traits-row">
+        {schema.traits.map((name) => {
+          const trait = state.traits.find((view) => view.name === name);
+          return (
+            <span className="trait-chip" key={name}>
+              <span
+                className="trait-dot"
+                style={{ background: trait?.color ?? "var(--fg-dim)" }}
+              />
+              <button
+                className="trait-chip-name"
+                title="Open trait"
+                onClick={() => workspace.openTrait(name)}
+              >
+                {name}
+              </button>
+              <button
+                className="icon-button trait-chip-remove"
+                title={`Detach ${name} — removes its props from every instance`}
+                onClick={() => void workspace.detachTrait(schema.name, name)}
+              >
+                ×
+              </button>
+            </span>
+          );
+        })}
+        <FloatingMenu
+          wrapperClassName="trait-attach"
+          triggerClassName="button trait-attach-trigger"
+          menuClassName="type-menu"
+          title="Attach trait"
+          trigger={<span>+ Trait</span>}
+        >
+          {(close) => (
+            <div className="type-menu-list">
+              {state.traits.filter((trait) => !schema.traits.includes(trait.name))
+                .length === 0 && (
+                <div className="type-menu-empty dim">No traits to attach</div>
+              )}
+              {state.traits
+                .filter((trait) => !schema.traits.includes(trait.name))
+                .map((trait) => (
+                  <button
+                    key={trait.name}
+                    className="type-menu-row"
+                    onClick={() => {
+                      void workspace.attachTrait(schema.name, trait.name);
+                      close();
+                    }}
+                  >
+                    <span className="trait-dot" style={{ background: trait.color }} />
+                    <span>{trait.name}</span>
+                  </button>
+                ))}
+            </div>
+          )}
+        </FloatingMenu>
+      </div>
       <div className="schema-props">
         {rows.map((row, index) => {
           // the schema's first row is the pinned `name` title — no grip,
@@ -290,6 +355,24 @@ export function TypeViewPanel(props: {
             </div>
           );
         })}
+        {/* ADR-0013: trait-owned props — read-only rows tinted with the
+            trait color; edit them on the trait page */}
+        {schema.props
+          .filter((prop) => prop.trait !== null)
+          .map((prop) => (
+            <div
+              key={prop.uuid}
+              className="prop-draft-row schema-prop-row schema-prop-row-trait"
+              style={{ borderLeftColor: prop.trait_color ?? undefined }}
+              title={`From trait ${prop.trait ?? ""} — edit on the trait page`}
+            >
+              <span className="prop-grip prop-grip-spacer" />
+              <span className="schema-prop-key">{prop.key}</span>
+              <span className="dim">
+                {prop.value_type} · {prop.trait}
+              </span>
+            </div>
+          ))}
       </div>
       <div className="type-create-actions">
         <button

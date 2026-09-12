@@ -22,10 +22,13 @@ from nylium.database import databasemethod
 from nylium.tables.files import File
 from nylium.tables.objects.types import Type, types
 from nylium.tables import (
+    Trait,
     enum_options,
     files,
     instances,
     props,
+    traits,
+    type_traits,
     unit_parts,
 )
 from nylium.objects.wembedded import EMBEDDED_NAME_SEPARATOR, WEmbedded
@@ -34,22 +37,21 @@ from nylium.objects.wfile import WFile
 from nylium.objects.wformula import Formula
 from nylium.objects.wfunction import INPUT_PROP_KEY, WFunction
 from nylium.objects.wobject import WObject
-from nylium.objects.wprop import WProp
+from nylium.objects.wprop import SchemaItem, WProp
 from nylium.objects.wscalar import WColor, WInteger, WNumeric, WScalar, WString
 from nylium.objects.wtype import WType
 from nylium.objects.wtypemeta import StoredValue, WTypeMeta
 
 
 def _prop_value_type_name(owner_type_uuid: UUID, key: str) -> str:
-    """The value-type name of one prop — what `_normalize_value` needs."""
-    prop = next(
-        (p for p in props.where(owner_type_uuid=owner_type_uuid) if p.key == key),
-        None,
-    )
+    """The value-spec name of one effective prop — what `_normalize_value`
+    needs. ADR-0013: the effective schema includes attached traits' props."""
+    owner = types.get(owner_type_uuid)
+    if owner is None:
+        raise KeyError(f"type <gone> has no prop {key!r}")
+    prop = next((p for p in owner.props if p.key == key), None)
     if prop is None:
-        owner = types.get(owner_type_uuid)
-        owner_name = "<gone>" if owner is None else owner.name
-        raise KeyError(f"type {owner_name!r} has no prop {key!r}")
+        raise KeyError(f"type {owner.name!r} has no prop {key!r}")
     return prop.value_type
 
 
@@ -153,12 +155,14 @@ class Api:
         WScalar.ensure_builtins()
         owner = WType.ensure(name, plural_name, embedded=embedded)
         for position, (key, value_type_name) in enumerate(props.items()):
+            value_type_uuid, value_trait_uuid = cls._resolve_value_spec(value_type_name)
             _ = WProp.ensure(
                 owner,
                 key,
-                cls._ensure_value_type(value_type_name),
+                None if value_type_uuid is None else WType.by_uuid(value_type_uuid),
                 position,
                 formulas.get(key),
+                value_trait_uuid=value_trait_uuid,
             )
         row = types[owner.uuid]
         row.icon = icon
@@ -406,8 +410,8 @@ class Api:
         owner_props = [(key, value_type_name) for _, key, value_type_name, _ in items]
         for _, _, value_type_name, formula in items:
             cls._check_formula_prop(formula, value_type_name, owner_props)
-        resolved: list[tuple[UUID | None, str, UUID, str | None]] = [
-            (uuid, key, cls._ensure_value_type(value_type_name).uuid, formula)
+        resolved = [
+            (uuid, key, *cls._resolve_value_spec(value_type_name), formula)
             for uuid, key, value_type_name, formula in items
         ]
         # cross-type pass: other types aggregate over Array<type_name>
@@ -419,9 +423,11 @@ class Api:
         # embedded children die with their prop: deleting or retyping an
         # embedded prop would cascade the link rows away and orphan the
         # child instances — destroy them while the prop still stands
-        kept = {uuid: (key, vt) for uuid, key, vt, _ in resolved if uuid is not None}
+        kept = {uuid: (key, vt) for uuid, key, vt, _, _ in resolved if uuid is not None}
         embedded_renamed = False
         for prop in existing:
+            if prop.is_trait_bound:
+                continue  # Any<…> has no concrete value type to compare
             old_value_type = prop.value_type()
             if not old_value_type.is_embedded:
                 continue
@@ -525,6 +531,216 @@ class Api:
         return True
 
     # --- objects ---
+
+    # --- traits (ADR-0013) ---
+
+    @classmethod
+    @databasemethod(commit=False)
+    def list_traits(cls) -> list[Trait]:
+        return list(traits.all())
+
+    @classmethod
+    @databasemethod(commit=False)
+    def get_trait(cls, name: str) -> Trait | None:
+        return next(traits.where(name=name), None)
+
+    @classmethod
+    def _trait_result(cls, name: str) -> Trait:
+        result = next(traits.where(name=name), None)
+        if result is None:
+            raise RuntimeError(f"trait {name!r} vanished after write")
+        return result
+
+    @classmethod
+    @databasemethod(commit=True)
+    def create_trait(
+        cls, name: str, color: str, props: dict[str, str] | None = None
+    ) -> Trait:
+        """props maps key -> value spec (a concrete type name or
+        Any<TraitName>). Dict order becomes the display order. Traits v1
+        have no name prop and no formulas — they're prop bundles, not
+        types."""
+        from nylium.server.errors import ValidationError
+
+        final_name = name.strip()
+        if not final_name:
+            raise ValidationError("trait name must not be empty")
+        cls._check_reserved_name(final_name, "trait name")
+        if WType.is_any_name(final_name):
+            raise ValidationError(
+                f"trait name {final_name!r} collides with the {WType.ANY_PREFIX}…> grammar"
+            )
+        if next(traits.where(name=final_name), None) is not None:
+            raise ValueError(f"trait {final_name!r} already exists")
+        cls._check_color(color)
+        specs = dict(props or {})
+        for key in specs:
+            if not key.strip():
+                raise ValidationError("prop keys must not be empty")
+            cls._check_reserved_name(key, "prop key")
+        WScalar.ensure_builtins()
+        resolved: list[SchemaItem] = [
+            (None, key, *cls._resolve_value_spec(spec), None)
+            for key, spec in specs.items()
+        ]
+        trait = traits.create(final_name, color)
+        WProp.sync_trait_schema(trait.uuid, resolved)
+        return cls._trait_result(final_name)
+
+    @classmethod
+    @databasemethod(commit=True)
+    def sync_trait(
+        cls,
+        name: str,
+        new_name: str | None = None,
+        color: str | None = None,
+        items: list[tuple[UUID | None, str, str, str | None]] | None = None,
+    ) -> Trait:
+        """Edit a trait's identity and/or prop draft. items is the same
+        (uuid | None, key, value spec, formula | None) shape as sync_props
+        — traits v1 have no formulas, so the fourth element must be None.
+        A retype/deleted prop purges values of every attached type's
+        instances (inside sync_trait_schema)."""
+        from nylium.server.errors import ValidationError
+
+        row = next(traits.where(name=name), None)
+        if row is None:
+            raise KeyError(f"no trait {name!r}")
+        final_name = name if new_name is None else new_name.strip()
+        if not final_name:
+            raise ValidationError("trait name must not be empty")
+        cls._check_reserved_name(final_name, "trait name")
+        if WType.is_any_name(final_name):
+            raise ValidationError(
+                f"trait name {final_name!r} collides with the {WType.ANY_PREFIX}…> grammar"
+            )
+        collision = next(traits.where(name=final_name), None)
+        if collision is not None and collision.uuid != row.uuid:
+            raise ValueError(f"trait {final_name!r} already exists")
+        final_color = row.color if color is None else color
+        if color is not None:
+            cls._check_color(color)
+        if items is not None:
+            if not items:
+                raise ValidationError(f"trait {name!r} must keep at least one prop")
+            existing = {p.uuid for p in props.where(owner_trait_uuid=row.uuid)}
+            keys = [key for _, key, _, _ in items]
+            if any(not key.strip() for key in keys):
+                raise ValidationError("prop keys must not be empty")
+            for key in keys:
+                cls._check_reserved_name(key, "prop key")
+            if len(set(keys)) != len(keys):
+                raise ValidationError(f"duplicate prop keys in {keys!r}")
+            if any(formula is not None for _, _, _, formula in items):
+                raise ValidationError("traits v1 have no formula props")
+            strangers = [
+                uuid for uuid, _, _, _ in items
+                if uuid is not None and uuid not in existing
+            ]
+            if strangers:
+                raise ValidationError(
+                    f"prop uuids {strangers!r} do not belong to trait {name!r}"
+                )
+            resolved: list[SchemaItem] = [
+                (uuid, key, *cls._resolve_value_spec(spec), None)
+                for uuid, key, spec, _ in items
+            ]
+            WProp.sync_trait_schema(row.uuid, resolved)
+        row.name = final_name
+        row.color = final_color
+        return cls._trait_result(final_name)
+
+    @classmethod
+    @databasemethod(commit=True)
+    def delete_trait(cls, name: str) -> bool:
+        """Refuses while the trait is attached to any type or used as an
+        Any<> bound — the error names the dependents."""
+        row = next(traits.where(name=name), None)
+        if row is None:
+            return False
+        attached: list[str] = []
+        for link in type_traits.where(trait_uuid=row.uuid):
+            owner = types.get(link.type_uuid)
+            attached.append("<gone>" if owner is None else owner.name)
+        bound_owners: list[str] = []
+        for p in props.where(value_trait_uuid=row.uuid):
+            if p.owner_trait_uuid is not None:
+                owner_trait = traits.get(p.owner_trait_uuid)
+                bound_owners.append(
+                    "<gone>" if owner_trait is None else f"trait {owner_trait.name}"
+                )
+            elif p.owner_type_uuid is not None:
+                owner_type = types.get(p.owner_type_uuid)
+                bound_owners.append(
+                    "<gone>" if owner_type is None else f"type {owner_type.name}"
+                )
+        if attached or bound_owners:
+            parts: list[str] = []
+            if attached:
+                parts.append(f"attached to {sorted(attached)!r}")
+            if bound_owners:
+                parts.append(
+                    f"used as {WType.ANY_PREFIX}{name}> bound on {sorted(bound_owners)!r}"
+                )
+            raise ValueError(f"trait {name!r} is still " + " and ".join(parts))
+        traits.delete(row.uuid)  # its props cascade
+        return True
+
+    @classmethod
+    @databasemethod(commit=True)
+    def attach_trait(cls, type_name: str, trait_name: str) -> Type:
+        """Attach a trait to a user type. Prop keys must not collide with
+        the type's current effective schema."""
+        from nylium.server.errors import ValidationError
+
+        owner = WType.by_name(type_name)
+        if owner is None:
+            raise KeyError(f"no type {type_name!r}")
+        if _is_builtin_type(owner):
+            raise ValidationError(f"type {type_name!r} is builtin and cannot be edited")
+        trait = next(traits.where(name=trait_name), None)
+        if trait is None:
+            raise KeyError(f"no trait {trait_name!r}")
+        links = list(type_traits.where(type_uuid=owner.uuid))
+        if any(link.trait_uuid == trait.uuid for link in links):
+            raise ValueError(f"trait {trait_name!r} is already attached to {type_name!r}")
+        taken = {p.key for p in WProp.effective_for(owner)}
+        collisions = sorted({p.key for p in trait.props} & taken)
+        if collisions:
+            raise ValidationError(
+                f"prop keys {collisions!r} of trait {trait_name!r} collide with {type_name!r}"
+            )
+        position = max((link.position for link in links), default=-1) + 1
+        _ = type_traits.attach(owner.uuid, trait.uuid, position)
+        return cls._type_result(type_name)
+
+    @classmethod
+    @databasemethod(commit=True)
+    def detach_trait(cls, type_name: str, trait_name: str) -> Type:
+        """Detach a trait; the trait prop values of this type's instances
+        are purged (the trait itself and its other types keep theirs)."""
+        owner = WType.by_name(type_name)
+        if owner is None:
+            raise KeyError(f"no type {type_name!r}")
+        trait = next(traits.where(name=trait_name), None)
+        if trait is None:
+            raise KeyError(f"no trait {trait_name!r}")
+        link = next(
+            (
+                edge
+                for edge in type_traits.where(type_uuid=owner.uuid)
+                if edge.trait_uuid == trait.uuid
+            ),
+            None,
+        )
+        if link is None:
+            raise KeyError(f"trait {trait_name!r} is not attached to {type_name!r}")
+        inst_uuids = [i.uuid for i in instances.where(type_uuid=owner.uuid)]
+        for p in props.where(owner_trait_uuid=trait.uuid):
+            WProp.purge_values_for_instances(p.uuid, inst_uuids)
+        type_traits.detach(owner.uuid, trait.uuid)
+        return cls._type_result(type_name)
+
 
     @classmethod
     @databasemethod(commit=False)
@@ -871,6 +1087,10 @@ class Api:
         prop = WProp.by_key(owner, prop_key)
         if prop is None:
             raise ValidationError(f"type {type_name!r} has no prop {prop_key!r}")
+        if prop.is_trait_bound:
+            raise ValidationError(
+                f"prop {prop_key!r} is {WType.ANY_PREFIX}…>-bound and cannot run a function"
+            )
         if function_uuid is not None:
             fn = FunctionView.from_uuid(function_uuid)
             if fn is None:
@@ -898,7 +1118,11 @@ class Api:
         element = WType.by_name(element_type_name)
         if element is None:
             return None
-        return [(prop.key, prop.value_type().name) for prop in WProp.all_for(element)]
+        # effective schema (ADR-0013); spec names keep Any<Trait> members
+        # inspectable for formula validation
+        return [
+            (prop.key, prop.value_spec_name()) for prop in WProp.effective_for(element)
+        ]
 
     @classmethod
     def _rewrite_dependent_formulas(
@@ -931,7 +1155,8 @@ class Api:
         ]
         by_owner: dict[UUID, list[str]] = {}
         for dependent_uuid, array_key in usages:
-            if dependent_uuid == owner_uuid:
+            # None: trait-owned array props carry no formulas to rewrite (v1)
+            if dependent_uuid is None or dependent_uuid == owner_uuid:
                 continue  # self-referencing arrays were rewritten locally
             by_owner.setdefault(dependent_uuid, []).append(array_key)
         for dependent_uuid, array_keys in by_owner.items():
@@ -939,8 +1164,9 @@ class Api:
             if dependent is None:
                 continue
             dependent_props = WProp.all_for(dependent)
+            # spec names: a trait-bound prop has no concrete value type
             dependent_schema = [
-                (prop.key, prop.value_type().name) for prop in dependent_props
+                (prop.key, prop.value_spec_name()) for prop in dependent_props
             ]
             member_renames = {key: renames for key in array_keys}
             for prop in dependent_props:
@@ -1005,6 +1231,26 @@ class Api:
         return resolved
 
     @classmethod
+    def _resolve_value_spec(cls, name: str) -> tuple[UUID | None, UUID | None]:
+        """ADR-0013: a prop's value spec is a concrete type name or
+        `Any<TraitName>`. Returns (value_type_uuid, value_trait_uuid) —
+        exactly one of the two. Any<> is a top-level form only in v1:
+        nested inside Array<…>/Numeric<…> it is refused."""
+        from nylium.server.errors import ValidationError
+
+        trait_name = WType.any_trait_of(name)
+        if trait_name is not None:
+            trait = next(traits.where(name=trait_name), None)
+            if trait is None:
+                raise ValidationError(f"no trait {trait_name!r}")
+            return None, trait.uuid
+        if WType.ANY_PREFIX in name:
+            raise ValidationError(
+                f"{name!r}: {WType.ANY_PREFIX}…> is only allowed as a top-level prop type"
+            )
+        return cls._ensure_value_type(name).uuid, None
+
+    @classmethod
     @databasemethod(commit=False)
     def _normalize_props(
         cls, type_name: str, prop_specs: dict[str, PropInput]
@@ -1014,7 +1260,9 @@ class Api:
         owner_type_row = next(types.where(name=type_name), None)
         if owner_type_row is None:
             raise KeyError(f"no type {type_name!r}")
-        owner_props = list(props.where(owner_type_uuid=owner_type_row.uuid))
+        # ADR-0013: the effective schema — attached traits' props are
+        # writable through the object editor like the type's own
+        owner_props = list(owner_type_row.props)
         formula_readonly = {p.key for p in owner_props if p.formula is not None}
         function_readonly = {p.key for p in owner_props if p.function_uuid is not None}
         result: dict[str, StoredValue] = {}
@@ -1062,6 +1310,18 @@ class Api:
             raise TypeError(
                 f"file prop of type {type_name!r} takes a files.uuid, got {type(value).__name__}"
             )
+        if WType.is_any_name(type_name):
+            # ADR-0013: a trait-bound prop is a link; the bound itself is
+            # enforced in setattr (WTypeMeta.check_trait_link)
+            if value is None:
+                return None
+            if isinstance(value, ObjectRef):
+                return WObject.wrap(value.uuid)
+            if isinstance(value, UUID):
+                return WObject.wrap(value)
+            raise TypeError(
+                f"trait-bound prop of type {type_name!r} takes an object reference, got {type(value).__name__}"
+            )
         if WType.is_array_name(type_name):
             if not isinstance(value, list):
                 raise TypeError(f"array prop takes list, got {type(value).__name__}")
@@ -1079,7 +1339,7 @@ class Api:
                 raise TypeError(
                     f"embedded prop of type {type_name!r} takes an inline props draft, got {type(value).__name__}"
                 )
-            resolved_props = list(props.where(owner_type_uuid=resolved.uuid))
+            resolved_props = list(WProp.effective_for(resolved))
             formula_readonly = {p.key for p in resolved_props if p.formula is not None}
             function_readonly = {
                 p.key for p in resolved_props if p.function_uuid is not None

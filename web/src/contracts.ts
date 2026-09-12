@@ -4,6 +4,12 @@ export interface PropView {
   uuid: string;
   key: string;
   value_type: string;
+  /** ADR-0013: name of the trait this prop comes from, or null for the
+   * type's own props. Trait-owned props are read-only in the type
+   * editor and tinted in the object editor. */
+  trait: string | null;
+  /** hex color of the owning trait (#RRGGBB), null for own props */
+  trait_color: string | null;
   /** ADR-0005: a formula over the owner's Array<T> props, or null for a
    * plain stored prop */
   formula: string | null;
@@ -45,6 +51,18 @@ export interface TypeView {
   /** ADR-0004: composition type — instances exist only as a prop value
    * of an owner object; no standalone creation, hidden from lists */
   embedded: boolean;
+  /** ADR-0013: names of attached traits, in attach order */
+  traits: string[];
+}
+
+/** ADR-0013: a reusable prop bundle attachable to types. */
+export interface TraitView {
+  name: string;
+  /** hex color (#RRGGBB) — tints trait-owned fields everywhere */
+  color: string;
+  props: PropView[];
+  /** names of types this trait is attached to */
+  attached: string[];
 }
 
 export interface ObjectRef {
@@ -226,6 +244,7 @@ export abstract class TypeNames {
   private static readonly ARRAY_PREFIX = "Array<";
   private static readonly UNIT_NUMERIC_PREFIX = "Numeric<";
   private static readonly FUNCTION_PREFIX = "Function<";
+  private static readonly ANY_PREFIX = "Any<";
 
   static isScalar(name: string): boolean {
     return TypeNames.SCALARS.includes(name);
@@ -296,6 +315,23 @@ export abstract class TypeNames {
     return `${TypeNames.UNIT_NUMERIC_PREFIX}${unit}>`;
   }
 
+  /** ADR-0013: a polymorphic ref parameterized by a trait —
+   * "Any<Stamped>" links to any object whose type carries the trait. */
+  static isAny(name: string): boolean {
+    return name.startsWith(TypeNames.ANY_PREFIX) && name.endsWith(">");
+  }
+
+  static anyTraitOf(name: string): string | null {
+    if (!TypeNames.isAny(name)) {
+      return null;
+    }
+    return name.slice(TypeNames.ANY_PREFIX.length, -1);
+  }
+
+  static anyWithTrait(trait: string): string {
+    return `${TypeNames.ANY_PREFIX}${trait}>`;
+  }
+
   /** Types a human edits in the sidebar — not builtins, not arrays,
    * not parameterized forms like Numeric<Unit>, not Function<T,R>,
    * not the file kinds (File/Document/Image). */
@@ -305,6 +341,7 @@ export abstract class TypeNames {
       !TypeNames.isArray(name) &&
       !TypeNames.isUnitNumeric(name) &&
       !TypeNames.isFunction(name) &&
+      !TypeNames.isAny(name) &&
       !TypeNames.isFileType(name)
     );
   }

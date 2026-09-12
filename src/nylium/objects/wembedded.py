@@ -107,8 +107,8 @@ class WEmbedded:
         owner = WType.by_uuid(inst.type_uuid)
         if owner is None:
             return
-        for prop in WProp.all_for(owner):
-            if not prop.value_type().is_embedded:
+        for prop in WProp.effective_for(owner):
+            if prop.is_trait_bound or not prop.value_type().is_embedded:
                 continue
             link = Database.session.scalar(
                 sqla.select(TABLE_InstanceValues).where(
