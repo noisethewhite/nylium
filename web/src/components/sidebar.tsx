@@ -266,7 +266,7 @@ export function Sidebar(props: {
               onClick={() => props.workspace.openType(view.name)}
             >
               <TypeIcon icon={view.icon} color={view.color} />
-              <span>{view.name}</span>
+              <span className="type-name-text" style={{ color: view.color }}>{view.name}</span>
               {view.embedded && <span className="embedded-badge">embedded</span>}
             </button>
             <button
@@ -286,7 +286,7 @@ export function Sidebar(props: {
               onClick={() => props.workspace.openType(view.name)}
             >
               <TypeIcon icon={view.icon} color={view.color} />
-              <span>{view.name}</span>
+              <span className="type-name-text" style={{ color: view.color }}>{view.name}</span>
             </button>
           </div>
         ))}

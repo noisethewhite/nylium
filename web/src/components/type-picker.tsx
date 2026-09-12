@@ -6,6 +6,7 @@ import { WorkspaceStore } from "../state/workspace";
 import { FloatingMenu } from "./floating-menu";
 import { NameSearch } from "./name-search";
 import { TypeIcon } from "./type-icon";
+import { TypeName } from "./type-name";
 
 /** Submenu the two bottom buttons open — same view, different wrapping. */
 type ObjectMode = "single" | "array";
@@ -74,7 +75,9 @@ export function TypePicker(props: {
             keyboard_arrow_down
           </span>
           {triggerIcon()}
-          <span className="type-picker-value">{props.value}</span>
+          <span className="type-picker-value">
+            <TypeName workspace={props.workspace} name={props.value} />
+          </span>
         </>
       }
     >
@@ -173,7 +176,7 @@ export function TypePicker(props: {
                 {TypeNames.CALENDAR.map((name) => (
                   <button key={name} className="type-menu-row" onClick={() => pick(name)}>
                     {scalarIcon(name)}
-                    <span>{TypeLabels[name] ?? name}</span>
+                    <TypeName workspace={props.workspace} name={name} label={TypeLabels[name] ?? name} />
                   </button>
                 ))}
               </div>
@@ -218,7 +221,7 @@ export function TypePicker(props: {
                   onClick={() => pick(scalar)}
                 >
                   {scalarIcon(scalar)}
-                  <span>{scalar}</span>
+                  <TypeName workspace={props.workspace} name={scalar} />
                 </button>
               ))}
               <button className="type-menu-row" onClick={() => setCalendarOpen(true)}>
@@ -247,7 +250,7 @@ export function TypePicker(props: {
                   onClick={() => pick(name)}
                 >
                   {scalarIcon(name)}
-                  <span>{name}</span>
+                  <TypeName workspace={props.workspace} name={name} />
                 </button>
               ))}
             </div>

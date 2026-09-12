@@ -695,7 +695,13 @@ select.input option {
 }
 
 .schema-prop-key {
-  flex: 1;
+  flex: 0 0 200px;
+}
+
+/* the key input shares the object editor's field-label column so the
+ * type picker triggers line up in one column across every row */
+.schema-prop-row > .input {
+  flex: 0 0 200px;
 }
 
 .prop-grip {
@@ -937,6 +943,30 @@ select.input option {
 
 .trait-chip-name:hover {
   text-decoration: underline;
+}
+
+/* the "+ Trait" attach button reads as another chip — dashed pill to
+ * signal "add", matching the trait chips' height and padding */
+.trait-attach {
+  display: inline-flex;
+  align-items: center;
+}
+
+.trait-attach-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px 8px;
+  border: 1px dashed var(--separator);
+  border-radius: 999px;
+  background: none;
+  color: var(--fg-dim);
+  font-size: 13px;
+}
+
+.trait-attach-trigger:hover {
+  background: var(--bg-hover);
+  color: var(--fg);
 }
 
 .schema-prop-row-trait {
@@ -1302,6 +1332,16 @@ select.input option {
 .scalar-name {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   color: var(--fg-dim);
+}
+
+/* a type name: always bold, colored like its icon; scalar names also
+ * render monospace so builtins are obvious at a glance */
+.type-name-text {
+  font-weight: 600;
+}
+
+.type-name-text.type-name-scalar {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 .file-block {

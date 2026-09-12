@@ -36,7 +36,9 @@ export interface TagCandidate {
  * is followed by touch() so React re-reads the snapshot. Server
  * traffic goes through the workspace, like everywhere else. */
 export class ObjectEditorStore extends Observable<EditorState> {
-  private readonly workspace: WorkspaceStore;
+  /** The workspace backing this editor — public read-only so components
+   * can do type color/icon lookups (TypeName) without touching the wire. */
+  readonly workspace: WorkspaceStore;
 
   private constructor(initial: EditorState, workspace: WorkspaceStore) {
     super(initial);

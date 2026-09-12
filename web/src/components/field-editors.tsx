@@ -25,6 +25,7 @@ import {
 import { ObjectEditorStore } from "../state/object-editor";
 import { ObjectLabels } from "./object-labels";
 import { TypeIcon } from "./type-icon";
+import { TypeName } from "./type-name";
 
 interface FieldProps {
   field: FieldModel;
@@ -464,7 +465,7 @@ function UnitInput(props: {
     <FieldShell
       label={
         <>
-          {field.key} <span className="dim">→ {field.valueType}</span>
+          {field.key} → <TypeName workspace={editor.workspace} name={field.valueType} />
         </>
       }
     >
@@ -517,7 +518,7 @@ function EnumInput({ field, editor }: { field: EnumFieldModel; editor: ObjectEdi
     <FieldShell
       label={
         <>
-          {field.key} <span className="dim">→ {field.valueType}</span>
+          {field.key} → <TypeName workspace={editor.workspace} name={field.valueType} />
         </>
       }
     >
@@ -571,7 +572,7 @@ function EmbeddedSection({ field, editor }: { field: EmbeddedFieldModel; editor:
   return (
     <div className="field field-array">
       <span className="field-label">
-        {field.key} <span className="dim">→ {field.valueType}</span>
+        {field.key} → <TypeName workspace={editor.workspace} name={field.valueType} />
       </span>
       <div className="field-body">
         <button
@@ -612,7 +613,7 @@ function FileInput({ field, editor }: { field: FileFieldModel; editor: ObjectEdi
     <FieldShell
       label={
         <>
-          {field.key} <span className="dim">→ {field.valueType}</span>
+          {field.key} → <TypeName workspace={editor.workspace} name={field.valueType} />
         </>
       }
     >
@@ -693,7 +694,7 @@ function RefInput({ field, editor }: { field: RefFieldModel; editor: ObjectEdito
     <FieldShell
       label={
         <>
-          {field.key} <span className="dim">→ {field.valueType}</span>
+          {field.key} → <TypeName workspace={editor.workspace} name={field.valueType} />
         </>
       }
     >
