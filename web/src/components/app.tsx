@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { TypeNames } from "../contracts";
 import { AuthStore } from "../state/auth";
 import { ErrorStore } from "../state/errors";
@@ -28,6 +28,9 @@ export function App(props: {
 }): ReactElement {
   const authState = useObservable(props.auth);
   const state = useObservable(props.workspace);
+  // Mobile-only drawer state; on desktop the class this drives is
+  // overridden by static layout, so the flag is inert there.
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     if (authState.status === "authenticated") {
@@ -146,9 +149,30 @@ export function App(props: {
   };
 
   return (
-    <div className="app">
-      <Sidebar workspace={props.workspace} auth={props.auth} />
+    <div className={sidebarOpen ? "app sidebar-open" : "app"}>
+      <Sidebar
+        workspace={props.workspace}
+        auth={props.auth}
+        onNavigate={() => setSidebarOpen(false)}
+      />
+      {sidebarOpen && (
+        <div
+          className="sidebar-backdrop"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
       <main className="main">
+        <div className="mobile-topbar">
+          <button
+            className="icon-button"
+            title="Menu"
+            aria-label="Open menu"
+            onClick={() => setSidebarOpen(true)}
+          >
+            <span className="material-symbols-outlined">menu</span>
+          </button>
+          <span className="brand">nylium</span>
+        </div>
         <TabBar workspace={props.workspace} />
         {renderContent()}
       </main>

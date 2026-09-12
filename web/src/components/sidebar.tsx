@@ -18,6 +18,9 @@ type PlusMenuMode = "root" | "object" | "file";
 export function Sidebar(props: {
   workspace: WorkspaceStore;
   auth: AuthStore;
+  /** Fired when the user picks a destination; the mobile drawer host
+   * uses it to close itself. Inert on desktop. */
+  onNavigate: () => void;
 }): ReactElement {
   const state = useObservable(props.workspace);
   const authState = useObservable(props.auth);
@@ -32,7 +35,21 @@ export function Sidebar(props: {
   const scalarTypes = state.types.filter((view) => TypeNames.isScalar(view.name));
 
   return (
-    <aside className="sidebar">
+    <aside
+      className="sidebar"
+      onClickCapture={(event) => {
+        // Any tap on a nav row is a navigation: tell the host so the
+        // mobile drawer can close. Capture phase so row-level handlers
+        // cannot swallow it.
+        const target = event.target;
+        if (
+          target instanceof Element &&
+          target.closest("nav.sidebar-scroll button") !== null
+        ) {
+          props.onNavigate();
+        }
+      }}
+    >
       <input
         ref={fileInput}
         type="file"
