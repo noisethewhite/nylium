@@ -1,5 +1,5 @@
 import type { ReactElement, ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 /** Every popover in the app: a trigger button plus a menu that floats
  * below it over a click-away backdrop. Owns open/close state; menu
@@ -15,6 +15,14 @@ export function FloatingMenu(props: {
 }): ReactElement {
   const [open, setOpen] = useState(false);
   const close = (): void => setOpen(false);
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === "Escape") close();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open]);
   return (
     <div className={`floating-menu ${props.wrapperClassName ?? ""}`}>
       <button
