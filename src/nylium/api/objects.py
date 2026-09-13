@@ -46,7 +46,7 @@ class ObjectsApi(ApiShared):
         expanded recursively (a graph is not a tree). Returns
         (filename, content) or None when the object does not exist.
         """
-        from nylium.api.markdown import render_object_markdown
+        from nylium.api.markdown import MarkdownRenderer
 
         view = ObjectView.from_uuid(uuid)
         if view is None:
@@ -60,7 +60,7 @@ class ObjectsApi(ApiShared):
             inst = instances.get(ref.uuid)
             return "" if inst is None else inst.name
 
-        return render_object_markdown(view, ref_label)
+        return MarkdownRenderer(ref_label).render(view)
 
     @classmethod
     @databasemethod(commit=True)
