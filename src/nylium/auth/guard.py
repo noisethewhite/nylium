@@ -60,7 +60,7 @@ def require_user(request: Request) -> AuthUser:
         raise HTTPException(
             status.HTTP_401_UNAUTHORIZED, detail="authentication required"
         )
-    if credential.scope == "read" and request.method not in ("GET", "HEAD"):
+    if credential.scope == tokens.READ and request.method not in ("GET", "HEAD"):
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="read-only token")
     return credential.user
 
