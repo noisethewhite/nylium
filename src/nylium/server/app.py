@@ -1,7 +1,6 @@
 """FastAPI application factory over the nylium Api facade."""
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, status
@@ -19,6 +18,7 @@ from nylium.objects.wscalar import WScalar
 from nylium.server.errors import errors
 from nylium.server.routes import routes
 from nylium.server.static import StaticSpa
+from nylium.system.environment import Environment
 from typing import ClassVar
 
 
@@ -27,8 +27,6 @@ class NyliumApp:
 
     TITLE: ClassVar[str] = "nylium"
     API_PREFIX: ClassVar[str] = "/api"
-    DIST_ENV: ClassVar[str] = "NYLIUM_WEB_DIST"
-    DEFAULT_DIST: ClassVar[Path] = Path("web") / "dist"
 
     @classmethod
     def create(cls) -> FastAPI:
@@ -249,7 +247,7 @@ class NyliumApp:
 
     @classmethod
     def _dist_dir(cls) -> Path:
-        return Path(os.environ.get(cls.DIST_ENV, str(cls.DEFAULT_DIST)))
+        return Path(str(Environment.web_dist))
 
     @classmethod
     def _mount_api(cls, app: FastAPI) -> None:
