@@ -260,16 +260,6 @@ export class NyliumApi extends HttpTransport {
     return this.requestVoid("DELETE", `/files/${encodeURIComponent(uuid)}`);
   }
 
-  /** Blob URL for previews/downloads — served from GET /api/files/{uuid}/download. */
-  static fileUrl(uuid: string): string {
-    return `/api/files/${encodeURIComponent(uuid)}/download`;
-  }
-
-  /** Markdown export download — served from GET /api/objects/{uuid}/export. */
-  static objectExportUrl(uuid: string): string {
-    return `/api/objects/${encodeURIComponent(uuid)}/export`;
-  }
-
   storageStats(): Promise<StorageView> {
     return this.request("GET", "/storage");
   }

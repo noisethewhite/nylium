@@ -365,3 +365,19 @@ export interface StorageView {
   /** database + blob store — nylium's own share of used_bytes */
   nylium_bytes: number;
 }
+
+/** Wire paths that double as browser-facing links (download/export).
+ * Components need these for href/src attributes, so they live in the
+ * contract layer — nobody should import the API client just to build
+ * a URL. */
+export abstract class WireUrls {
+  /** Blob download/preview — served from GET /api/files/{uuid}/download. */
+  static file(uuid: string): string {
+    return `/api/files/${encodeURIComponent(uuid)}/download`;
+  }
+
+  /** Markdown export download — served from GET /api/objects/{uuid}/export. */
+  static objectExport(uuid: string): string {
+    return `/api/objects/${encodeURIComponent(uuid)}/export`;
+  }
+}

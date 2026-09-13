@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { ReactElement } from "react";
 import type { FileView, TypeView } from "../contracts";
-import { NyliumApi } from "../net/nylium-api";
+import { WireUrls } from "../contracts";
 import { useObservable } from "../state/use-observable";
 import { WorkspaceStore } from "../state/workspace";
 import { TypeIcon } from "./type-icon";
@@ -106,7 +106,7 @@ function FileRow(props: {
     <div className="type-menu-row file-row">
       <a
         className="type-row-name"
-        href={NyliumApi.fileUrl(file.uuid)}
+        href={WireUrls.file(file.uuid)}
         target="_blank"
         rel="noreferrer"
         title="Download"

@@ -1,8 +1,7 @@
 import type { ReactElement } from "react";
 import { useMemo } from "react";
 import type { ObjectView, PropValue, TypeView } from "../contracts";
-import { PropValues, TypeNames } from "../contracts";
-import { NyliumApi } from "../net/nylium-api";
+import { PropValues, TypeNames, WireUrls } from "../contracts";
 import { ObjectEditorStore } from "../state/object-editor";
 import { useObservable } from "../state/use-observable";
 import { useSaveShortcut } from "../state/use-save-shortcut";
@@ -73,7 +72,7 @@ function ObjectEditorInner(props: {
           />
           <a
             className="icon-button"
-            href={NyliumApi.objectExportUrl(props.object.uuid)}
+            href={WireUrls.objectExport(props.object.uuid)}
             title="Export .md"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
@@ -161,7 +160,7 @@ function computedText(value: PropValue | undefined): string {
  * download affordance (documents/files). The blob URL is uuid-keyed, so
  * renames never break it. */
 function FileBlock(props: { object: ObjectView }): ReactElement {
-  const url = NyliumApi.fileUrl(props.object.uuid);
+  const url = WireUrls.file(props.object.uuid);
   const name = props.object.props["name"];
   const label =
     name !== undefined && "value" in name && typeof name.value === "string"
