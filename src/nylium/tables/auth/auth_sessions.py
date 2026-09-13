@@ -8,36 +8,11 @@ from typing import ClassVar
 from uuid import UUID
 
 import sqlalchemy as sqla
-from sqlalchemy import DateTime, ForeignKey, Text
-from sqlalchemy.orm import Mapped, mapped_column
 
 from nylium.database import Database, databasemethod
 from nylium.database.table import Row, Table
-from nylium.tables.base import reg
-
-@reg.mapped_as_dataclass
-class TABLE_AuthSessions:
-    """Server-side sessions: the cookie carries a random token, the table
-    stores only its sha256 — a leaked dump yields no usable tokens."""
-    __tablename__: ClassVar[str] = "auth_sessions"
-
-    token_hash: Mapped[str] = mapped_column(Text, primary_key=True)
-    user_uuid: Mapped[UUID] = mapped_column(
-        ForeignKey("auth_users.uuid", ondelete="CASCADE"), nullable=False
-    )
-    expires_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
-
-
-class AuthSession(Row):
-    """One server-side session: a writable snapshot of an auth_sessions row."""
-
-    __table__: ClassVar[type[object]] = TABLE_AuthSessions
-
-    token_hash: str
-    user_uuid: UUID
-    expires_at: datetime
+from nylium.tables.auth.auth_session import AuthSession as AuthSession
+from nylium.tables.auth.table_auth_sessions import TABLE_AuthSessions as TABLE_AuthSessions
 
 
 class AuthSessions(Table[str, AuthSession]):

@@ -1,68 +1,13 @@
-# pyright: reportUninitializedInstanceVariable=false
-# Row.__init__ copies every mapped column into the instance dynamically;
-# the bare annotations below are the schema, not a constructor signature.
+"""The instances table as a Mapping of writable instances (Table class + singleton)."""
 from __future__ import annotations
 
-from datetime import datetime
 from typing import ClassVar
-from uuid import UUID, uuid4
-
-from sqlalchemy import DateTime, ForeignKey, Text, func
-from sqlalchemy.orm import Mapped, mapped_column
+from uuid import UUID
 
 from nylium.database import Database, databasemethod
 from nylium.database.table import Row, Table
-from nylium.tables.base import reg
-from nylium.tables.objects.types import types
-
-
-@reg.mapped_as_dataclass
-class TABLE_Instances:
-    """Instances of types — arrays and scalars are types too."""
-
-    __tablename__: ClassVar[str] = "instances"
-
-    uuid: Mapped[UUID] = mapped_column(primary_key=True, default_factory=uuid4, kw_only=True)
-    type_uuid: Mapped[UUID] = mapped_column(
-        ForeignKey("types.uuid"), nullable=False
-    )
-    name: Mapped[str] = mapped_column(Text, nullable=False)
-    # Every instance carries both forms (ADR-0011 phase 8), same rule as
-    # types.plural_name; Instances.create derives "<name>s" by default
-    plural_name: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
-    # Ownership read-index for embedded instances (ADR-0004): the
-    # instance_values ref is the source of truth, these two columns
-    # answer "who owns this child" without a join. NULL on standalone
-    # objects, scalar boxes and array instances.
-    owner_object_uuid: Mapped[UUID | None] = mapped_column(nullable=True, default=None)
-    owner_prop_uuid: Mapped[UUID | None] = mapped_column(nullable=True, default=None)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), init=False
-    )
-    modified_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), init=False, onupdate=func.now()
-    )
-
-
-class Instance(Row):
-    """One instance: a writable snapshot of a TABLE_Instances row."""
-
-    __table__: ClassVar[type[object]] = TABLE_Instances
-
-    uuid: UUID
-    type_uuid: UUID
-    name: str
-    plural_name: str
-    owner_object_uuid: UUID | None
-    owner_prop_uuid: UUID | None
-    created_at: datetime
-    modified_at: datetime
-
-    @property
-    def type_name(self) -> str:
-        """The instance's type name; ``<dangling>`` if the type row is gone."""
-        t = types.get(self.type_uuid)
-        return "<dangling>" if t is None else t.name
+from nylium.tables.objects.instance import Instance as Instance
+from nylium.tables.objects.table_instances import TABLE_Instances as TABLE_Instances
 
 
 def unique_plural_name(uuid: UUID, name: str, plural_name: str | None = None) -> str:

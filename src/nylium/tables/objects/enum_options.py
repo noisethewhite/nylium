@@ -1,58 +1,20 @@
-# pyright: reportUninitializedInstanceVariable=false
-# Row.__init__ copies every mapped column into the instance dynamically;
-# the bare annotations below are the schema, not a constructor signature.
 # pyright: reportImportCycles=false
 # Row navigation is bidirectional by design (Type.props <-> Prop.value_type);
 # the back-edges are lazy function-level imports, so there is no runtime cycle.
+"""The enum_options table as a Mapping of writable options (Table class + singleton)."""
 from __future__ import annotations
 
-# Options of a string-enum type. The enum type itself is a `types` row
-# with kind="enum"; its allowed values are these rows. Option values
-# are what enum-typed props store in string_values — renaming an option
-# rewrites those rows too.
 from typing import ClassVar
 from uuid import UUID, uuid4
 
 import sqlalchemy as sqla
-from sqlalchemy import ForeignKey, Integer, Text, UniqueConstraint
-from sqlalchemy.orm import Mapped, mapped_column
 
 from nylium.database import Database, databasemethod
 from nylium.database.table import Row, Table
-from nylium.tables.base import reg
-from nylium.tables.values.string_values import TABLE_StringValues
-from nylium.tables.objects.props import TABLE_Props
-
-
-@reg.mapped_as_dataclass
-class TABLE_EnumOptions:
-    __tablename__: ClassVar[str] = "enum_options"
-    __table_args__: ClassVar[tuple[object, ...]] = (
-        UniqueConstraint("type_uuid", "value"),
-    )
-
-    uuid: Mapped[UUID] = mapped_column(primary_key=True, default_factory=uuid4, kw_only=True)
-    type_uuid: Mapped[UUID] = mapped_column(
-        ForeignKey("types.uuid", ondelete="CASCADE"), nullable=False
-    )
-    value: Mapped[str] = mapped_column(Text, nullable=False)
-    position: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-
-
-class EnumOption(Row):
-    """One enum option: a writable snapshot of a TABLE_EnumOptions row."""
-
-    __table__: ClassVar[type[object]] = TABLE_EnumOptions
-
-    uuid: UUID
-    type_uuid: UUID
-    value: str
-    position: int
-
-    def wire(self) -> dict[str, object]:
-        """The JSON-safe wire shape, matching web/src/contracts.ts
-        EnumOptionView."""
-        return {"uuid": str(self.uuid), "value": self.value}
+from nylium.tables.objects.enum_option import EnumOption as EnumOption
+from nylium.tables.objects.props import TABLE_Props as TABLE_Props
+from nylium.tables.objects.table_enum_options import TABLE_EnumOptions as TABLE_EnumOptions
+from nylium.tables.values.string_values import TABLE_StringValues as TABLE_StringValues
 
 
 class EnumOptions(Table[UUID, EnumOption]):

@@ -1,6 +1,6 @@
 # Domain-object tables: the type registry, instances and their props, plus
 # the parameter tables for enum and unit types (ADR-0011).
-from nylium.tables.objects.typeref import TABLE_Types
+from nylium.tables.objects.table_types import TABLE_Types
 from nylium.tables.objects.props import TABLE_Props, Prop, Props, props
 from nylium.tables.objects.traits import (
     TABLE_Traits,

@@ -5,9 +5,10 @@ reference it without importing the domain layer (ADR-0011).
 SQL; if ``TABLE_Types`` lived in ``types.py`` those imports would cycle,
 because ``types.py`` imports the child tables for the ``Type`` navigation
 properties. Keeping the mapped class here — behaviour-free — makes
-``typeref`` the shared bottom of the tables import DAG. The class is
+``table_types`` the shared bottom of the tables import DAG. The class is
 re-exported from ``nylium.tables.objects.types`` so existing imports keep working.
 """
+from __future__ import annotations
 
 from uuid import UUID, uuid4
 

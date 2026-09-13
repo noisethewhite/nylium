@@ -8,37 +8,11 @@ from typing import ClassVar
 from uuid import UUID
 
 import sqlalchemy as sqla
-from sqlalchemy import DateTime, ForeignKey, LargeBinary, Text
-from sqlalchemy.orm import Mapped, mapped_column
 
 from nylium.database import Database, databasemethod
 from nylium.database.table import Row, Table
-from nylium.tables.base import reg
-
-@reg.mapped_as_dataclass
-class TABLE_AuthChallenges:
-    """One-shot WebAuthn challenges. Consumed on use, dead after TTL."""
-    __tablename__: ClassVar[str] = "auth_challenges"
-
-    challenge: Mapped[bytes] = mapped_column(LargeBinary, primary_key=True)
-    kind: Mapped[str] = mapped_column(Text, nullable=False)
-    user_uuid: Mapped[UUID | None] = mapped_column(
-        ForeignKey("auth_users.uuid", ondelete="CASCADE"), nullable=True, default=None, kw_only=True
-    )
-    expires_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
-
-
-class AuthChallenge(Row):
-    """One WebAuthn challenge: a writable snapshot of an auth_challenges row."""
-
-    __table__: ClassVar[type[object]] = TABLE_AuthChallenges
-
-    challenge: bytes
-    kind: str
-    user_uuid: UUID | None
-    expires_at: datetime
+from nylium.tables.auth.auth_challenge import AuthChallenge as AuthChallenge
+from nylium.tables.auth.table_auth_challenges import TABLE_AuthChallenges as TABLE_AuthChallenges
 
 
 class AuthChallenges(Table[bytes, AuthChallenge]):
