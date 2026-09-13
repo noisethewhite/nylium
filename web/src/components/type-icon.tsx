@@ -31,8 +31,10 @@ export const ICON_NAMES: string[] = [
 ];
 
 /** Swatch palette the color picker offers — names are labels only; the
- * backend stores the hex itself (WColor, ADR-0005). */
-export const ICON_COLORS: Record<string, string> = {
+ * backend stores the hex itself (WColor, ADR-0005). `as const` keeps the
+ * entries literal-typed so lookups stay `string`, not `string | undefined`
+ * under noUncheckedIndexedAccess. */
+export const ICON_COLORS = {
   gray: "#9e9e9e",
   red: "#e5534b",
   orange: "#e0823d",
@@ -42,10 +44,12 @@ export const ICON_COLORS: Record<string, string> = {
   blue: "#539bf5",
   purple: "#b083f0",
   pink: "#e275ad",
-};
+} as const;
 
 export const DEFAULT_ICON = "inventory_2";
-export const DEFAULT_COLOR = "#9e9e9e";
+// Tracks WColor.DEFAULT on the backend (ADR-0005). Annotated `string` so
+// useState(DEFAULT_COLOR) widens instead of locking to the literal type.
+export const DEFAULT_COLOR: string = ICON_COLORS.gray;
 
 /** ADR-0006: a type icon may be `img:<uuid>` — the blob of a live Image
  * instance served from GET /api/files/{uuid}. Backend validates on write;
