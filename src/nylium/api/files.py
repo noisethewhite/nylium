@@ -94,7 +94,7 @@ class FilesApi(ApiShared):
         needed — the size query goes through the engine directly."""
         import shutil
 
-        from sqlalchemy import text
+        import sqlalchemy as sqla
 
         from nylium.database import Database
         from nylium.objects.wfile import WFile
@@ -105,7 +105,9 @@ class FilesApi(ApiShared):
             db_bytes = cast(
                 int,
                 connection.execute(
-                    text("SELECT pg_database_size(current_database())")
+                    sqla.select(
+                        sqla.func.pg_database_size(sqla.func.current_database())
+                    )
                 ).scalar_one(),
             )
         blob_bytes = sum(

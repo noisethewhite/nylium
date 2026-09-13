@@ -1,0 +1,1 @@
+ALTER TABLE props ALTER COLUMN value_type_uuid DROP NOT NULL;

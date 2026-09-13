@@ -1,0 +1,1 @@
+ALTER TABLE instances ALTER COLUMN plural_name SET NOT NULL;

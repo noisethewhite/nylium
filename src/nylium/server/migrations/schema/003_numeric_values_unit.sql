@@ -1,0 +1,1 @@
+ALTER TABLE numeric_values ADD COLUMN IF NOT EXISTS unit TEXT;

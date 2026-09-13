@@ -16,6 +16,7 @@ from nylium.tables import reg
 from nylium.objects.wfile import WFile
 from nylium.objects.wscalar import WScalar
 from nylium.server.errors import errors
+from nylium.server.migrations import migrations
 from nylium.server.routes import routes
 from nylium.server.static import StaticSpa
 from nylium.system.environment import Environment
@@ -52,51 +53,13 @@ class NyliumApp:
 
     @classmethod
     def _migrate_schema(cls) -> None:
-        """Idempotent column backfills; each clause is a no-op once applied."""
-        statements = [
-            "ALTER TABLE types ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'object'",
-            "ALTER TABLE types ADD COLUMN IF NOT EXISTS embedded BOOLEAN NOT NULL DEFAULT FALSE",
-            "ALTER TABLE numeric_values ADD COLUMN IF NOT EXISTS unit TEXT",
-            "ALTER TABLE props ADD COLUMN IF NOT EXISTS formula TEXT",
-            "ALTER TABLE instances ADD COLUMN IF NOT EXISTS owner_object_uuid UUID",
-            "ALTER TABLE instances ADD COLUMN IF NOT EXISTS owner_prop_uuid UUID",
-            # ADR-0007: computed-scalar reference (mutually exclusive with formula)
-            "ALTER TABLE props ADD COLUMN IF NOT EXISTS function_uuid UUID",
-            # ADR-0011 phase 8: instance plural_name is mandatory + unique.
-            "ALTER TABLE instances ADD COLUMN IF NOT EXISTS plural_name TEXT",
-            # instance names are not unique: first bearer of a name gets the
-            # plain "<name>s", later duplicates get a uuid-suffixed plural
-            "UPDATE instances i SET plural_name = i.name || 's' WHERE i.plural_name IS NULL"
-            + " AND NOT EXISTS (SELECT 1 FROM instances j WHERE j.name = i.name"
-            + " AND j.uuid::text < i.uuid::text)",
-            "UPDATE instances SET plural_name = name || 's-' || substr(uuid::text, 1, 8)"
-            + " WHERE plural_name IS NULL",
-            "ALTER TABLE instances ALTER COLUMN plural_name SET NOT NULL",
-            "CREATE UNIQUE INDEX IF NOT EXISTS uq_instances_plural_name ON instances (plural_name)",
-            # ADR-0013: traits + trait-bound props. traits/type_traits tables
-            # come from create_all; existing props rows get the new columns
-            "ALTER TABLE props ADD COLUMN IF NOT EXISTS owner_trait_uuid UUID"
-            + " REFERENCES traits(uuid) ON DELETE CASCADE",
-            "ALTER TABLE props ADD COLUMN IF NOT EXISTS value_trait_uuid UUID"
-            + " REFERENCES traits(uuid) ON DELETE RESTRICT",
-            "ALTER TABLE props ALTER COLUMN owner_type_uuid DROP NOT NULL",
-            "ALTER TABLE props ALTER COLUMN value_type_uuid DROP NOT NULL",
-            # ADD CONSTRAINT has no IF NOT EXISTS — DO + pg_constraint instead
-            "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint"
-            + " WHERE conname = 'props_owner_exactly_one') THEN"
-            + " ALTER TABLE props ADD CONSTRAINT props_owner_exactly_one"
-            + " CHECK ((owner_type_uuid IS NULL) <> (owner_trait_uuid IS NULL));"
-            + " END IF; END $$",
-            "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint"
-            + " WHERE conname = 'props_value_exactly_one') THEN"
-            + " ALTER TABLE props ADD CONSTRAINT props_value_exactly_one"
-            + " CHECK ((value_type_uuid IS NULL) <> (value_trait_uuid IS NULL));"
-            + " END IF; END $$",
-            "CREATE UNIQUE INDEX IF NOT EXISTS uq_props_owner_trait_key"
-            + " ON props (owner_trait_uuid, key)",
-        ]
+        """Idempotent column backfills; each clause is a no-op once applied.
+
+        SQL lives in the migrations resource package (ADR-0016); filename
+        order inside each group is the execution order.
+        """
         with Database.engine.begin() as connection:
-            for statement in statements:
+            for statement in migrations.group("schema"):
                 _ = connection.execute(text(statement))
             cls._migrate_type_colors(connection)
             cls._migrate_file_kinds(connection)
@@ -110,35 +73,14 @@ class NyliumApp:
         from the old columns if still present, then drop them. Runs last
         so _migrate_type_colors and the ADR-0005 color default have
         already normalized types.color."""
-        decor_statements = [
-            # backfill only when the old columns still exist
-            "DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns"
-            + " WHERE table_name = 'types' AND column_name = 'icon') THEN"
-            + " INSERT INTO type_decor (uuid, plural_name, icon, color)"
-            + " SELECT uuid, plural_name, icon, color FROM types"
-            + " ON CONFLICT (uuid) DO NOTHING;"
-            + " ALTER TABLE types DROP COLUMN plural_name;"
-            + " ALTER TABLE types DROP COLUMN icon;"
-            + " ALTER TABLE types DROP COLUMN color;"
-            + " END IF; END $$",
-            "DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns"
-            + " WHERE table_name = 'traits' AND column_name = 'color') THEN"
-            + " INSERT INTO trait_decor (uuid, color)"
-            + " SELECT uuid, color FROM traits"
-            + " ON CONFLICT (uuid) DO NOTHING;"
-            + " ALTER TABLE traits DROP COLUMN color;"
-            + " END IF; END $$",
-        ]
-        for statement in decor_statements:
+        for statement in migrations.group("decor"):
             _ = connection.execute(text(statement))
 
     @classmethod
     def _migrate_file_kinds(cls, connection: Connection) -> None:
         """ADR-0006 follow-up: File/Document/Image are a dedicated kind, not
         object. Idempotent — re-running re-sets the same value."""
-        _ = connection.execute(
-            text("UPDATE types SET kind='file' WHERE name IN ('File','Document','Image')"),
-        )
+        _ = connection.execute(text(migrations.statement("file_kinds.sql")))
 
     @classmethod
     def _migrate_files_to_first_class(cls, connection: Connection) -> None:
@@ -149,79 +91,10 @@ class NyliumApp:
         new columns/table, then sever the instance FKs, THEN drop the file
         instances. If the instance FK is still live when the instances go,
         files.uuid's ON DELETE CASCADE would wipe the rows we just migrated.
+        The numeric file prefixes encode exactly that order (ADR-0016).
         """
-        file_types = "('File','Document','Image')"
-        # 1. new columns (files.uuid stays the stable pointer)
-        _ = connection.execute(
-            text("ALTER TABLE files ADD COLUMN IF NOT EXISTS type_name TEXT")
-        )
-        _ = connection.execute(
-            text("ALTER TABLE files ADD COLUMN IF NOT EXISTS name TEXT")
-        )
-        # 2. backfill type_name/name from the (soon-to-die) instances
-        _ = connection.execute(
-            text(
-                "UPDATE files f SET type_name = t.name, name = COALESCE("
-                + "  (SELECT sv.value FROM string_values sv JOIN props p ON sv.prop_uuid = p.uuid "
-                + "   WHERE sv.inst_uuid = f.uuid AND p.key = 'name'), i.name) "
-                + "FROM instances i JOIN types t ON i.type_uuid = t.uuid "
-                + f"WHERE f.uuid = i.uuid AND t.name IN {file_types}"
-            )
-        )
-        # orphan files rows (no instance) get a sane fallback before NOT NULL
-        _ = connection.execute(
-            text("UPDATE files SET type_name = 'File' WHERE type_name IS NULL")
-        )
-        _ = connection.execute(text("UPDATE files SET name = '' WHERE name IS NULL"))
-        # 3. copy direct file references into file_values (keyed by
-        #    owner instance + prop, pointing at files.uuid)
-        _ = connection.execute(
-            text(
-                "INSERT INTO file_values (file_uuid, inst_uuid, prop_uuid) "
-                + "SELECT iv.uuid, iv.inst_uuid, iv.prop_uuid FROM instance_values iv "
-                + "JOIN instances i ON iv.uuid = i.uuid "
-                + "JOIN types t ON i.type_uuid = t.uuid "
-                + f"WHERE t.name IN {file_types} "
-                + "ON CONFLICT (inst_uuid, prop_uuid) DO NOTHING"
-            )
-        )
-        # 4. drop the old instance_values rows for file refs (now in
-        #    file_values; their uuid FK -> instances would block step 8)
-        _ = connection.execute(
-            text(
-                "DELETE FROM instance_values iv USING instances i, types t "
-                + "WHERE iv.uuid = i.uuid AND i.type_uuid = t.uuid "
-                + f"AND t.name IN {file_types}"
-            )
-        )
-        # 5. sever array_values.value_uuid FK so Array<File/Document/Image>
-        #    members (already holding the right files.uuid) survive step 8
-        _ = connection.execute(
-            text("ALTER TABLE array_values DROP CONSTRAINT IF EXISTS array_values_value_uuid_fkey")
-        )
-        # 6. sever files.uuid FK -> instances so file rows outlive instances
-        _ = connection.execute(
-            text("ALTER TABLE files DROP CONSTRAINT IF EXISTS files_uuid_fkey")
-        )
-        # 7. drop the redundant name prop on file types (cascades string_values)
-        _ = connection.execute(
-            text(
-                "DELETE FROM props p USING types t WHERE p.owner_type_uuid = t.uuid "
-                + f"AND t.name IN {file_types} AND p.key = 'name'"
-            )
-        )
-        # 8. drop the file instances themselves (name scalar cascades away)
-        _ = connection.execute(
-            text(
-                "DELETE FROM instances i USING types t WHERE i.type_uuid = t.uuid "
-                + f"AND t.name IN {file_types}"
-            )
-        )
-        # 9. lock the new columns
-        _ = connection.execute(
-            text("ALTER TABLE files ALTER COLUMN type_name SET NOT NULL")
-        )
-        _ = connection.execute(text("ALTER TABLE files ALTER COLUMN name SET NOT NULL"))
+        for statement in migrations.group("files_first_class"):
+            _ = connection.execute(text(statement))
 
     @classmethod
     def _migrate_type_colors(cls, connection: Connection) -> None:
@@ -232,18 +105,13 @@ class NyliumApp:
         from nylium.objects.wscalar import WColor
 
         has_column = connection.execute(
-            text(
-                "SELECT 1 FROM information_schema.columns"
-                + " WHERE table_name = 'types' AND column_name = 'color'"
-            )
+            text(migrations.statement("type_colors/001_has_column.sql"))
         ).first()
         if has_column is None:
             return
+        update = text(migrations.statement("type_colors/002_update_color.sql"))
         for name, hex_value in WColor.LEGACY_PALETTE.items():
-            _ = connection.execute(
-                text("UPDATE types SET color = :hex WHERE color = :name"),
-                {"hex": hex_value, "name": name},
-            )
+            _ = connection.execute(update, {"hex": hex_value, "name": name})
 
     @classmethod
     def _dist_dir(cls) -> Path:
