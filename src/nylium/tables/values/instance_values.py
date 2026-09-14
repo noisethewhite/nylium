@@ -31,7 +31,7 @@ class TABLE_InstanceValues:
 @databasemethod(commit=False)
 def link_for(inst_uuid: UUID, prop_uuid: UUID) -> TABLE_InstanceValues | None:
     """The link row held by (owner instance, prop), or None."""
-    return Database.session.scalar(
+    return Database.scalar(
         sqla.select(TABLE_InstanceValues).where(
             TABLE_InstanceValues.inst_uuid == inst_uuid,
             TABLE_InstanceValues.prop_uuid == prop_uuid,
@@ -42,7 +42,7 @@ def link_for(inst_uuid: UUID, prop_uuid: UUID) -> TABLE_InstanceValues | None:
 @databasemethod(commit=False)
 def merge_link(uuid: UUID, prop_uuid: UUID, inst_uuid: UUID) -> None:
     """Insert-or-replace the link row whose pk is the target uuid."""
-    _ = Database.session.merge(
+    _ = Database.merge(
         TABLE_InstanceValues(uuid=uuid, prop_uuid=prop_uuid, inst_uuid=inst_uuid)
     )
 
@@ -50,13 +50,13 @@ def merge_link(uuid: UUID, prop_uuid: UUID, inst_uuid: UUID) -> None:
 @databasemethod(commit=False)
 def delete_row(row: TABLE_InstanceValues) -> None:
     """Delete the given link row (already fetched by the caller)."""
-    Database.session.delete(row)
+    Database.delete(row)
 
 
 @databasemethod(commit=False)
 def delete_links_to(uuid: UUID) -> None:
     """Delete every link row whose target is the given instance uuid."""
-    _ = Database.session.execute(
+    _ = Database.execute(
         sqla.delete(TABLE_InstanceValues).where(TABLE_InstanceValues.uuid == uuid)
     )
 
@@ -66,7 +66,7 @@ def linked_uuids_of(prop_uuid: UUID) -> list[UUID]:
     """Uuids of every instance linked through the given prop, across all
     owners — the sweep list before an embedded prop is deleted or retyped."""
     return list(
-        Database.session.scalars(
+        Database.scalars(
             sqla.select(TABLE_InstanceValues.uuid).where(
                 TABLE_InstanceValues.prop_uuid == prop_uuid
             )
@@ -80,10 +80,10 @@ def add_link(uuid: UUID, prop_uuid: UUID, inst_uuid: UUID) -> None:
     uuid4, so this must stay a plain insert (merge would mask a uuid
     collision instead of failing on it). The flush pins insert order:
     instance_values.uuid FKs into instances."""
-    Database.session.add(
+    Database.add(
         TABLE_InstanceValues(uuid=uuid, prop_uuid=prop_uuid, inst_uuid=inst_uuid)
     )
-    Database.session.flush()
+    Database.flush()
 
 
 @databasemethod(commit=False)
@@ -103,4 +103,4 @@ def array_link_uuids_of(owner_inst_uuid: UUID) -> list[UUID]:
             TABLE_Types.name.like("Array<%"),
         )
     )
-    return list(Database.session.scalars(stmt).all())
+    return list(Database.scalars(stmt).all())

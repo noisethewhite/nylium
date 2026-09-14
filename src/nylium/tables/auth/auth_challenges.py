@@ -32,7 +32,7 @@ class AuthChallenges(Table[bytes, AuthChallenge]):
         self, challenge: bytes, kind: str, user_uuid: UUID | None, ttl_seconds: int
     ) -> None:
         self.purge_expired()
-        Database.session.add(
+        Database.add(
             TABLE_AuthChallenges(
                 challenge=challenge,
                 kind=kind,
@@ -47,12 +47,12 @@ class AuthChallenges(Table[bytes, AuthChallenge]):
         """Pop a challenge row: valid only if it exists, matches the
         ceremony kind and has not expired. One use, then gone.
         Returns (valid, user_uuid bound at issue time — None for login)."""
-        row = Database.session.get(TABLE_AuthChallenges, challenge)
+        row = Database.get(TABLE_AuthChallenges, challenge)
         if row is None:
             return False, None
         user_uuid = row.user_uuid
         alive = row.expires_at > datetime.now(timezone.utc)
-        _ = Database.session.execute(
+        _ = Database.execute(
             sqla.delete(TABLE_AuthChallenges).where(
                 TABLE_AuthChallenges.challenge == challenge
             )
@@ -63,7 +63,7 @@ class AuthChallenges(Table[bytes, AuthChallenge]):
 
     @databasemethod(commit=True)
     def purge_expired(self) -> None:
-        _ = Database.session.execute(
+        _ = Database.execute(
             sqla.delete(TABLE_AuthChallenges).where(
                 TABLE_AuthChallenges.expires_at <= datetime.now(timezone.utc)
             )

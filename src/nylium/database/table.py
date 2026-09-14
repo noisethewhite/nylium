@@ -87,7 +87,7 @@ class Row:
         columns = _mapper(self.__table__).columns
         pk = self.pk_name()
         pk_value = cast(object, getattr(self, pk))
-        _ = Database.session.execute(
+        _ = Database.execute(
             sqla.update(self.__table__)
             .where(columns[pk] == pk_value)
             .values({column: value})
@@ -110,7 +110,7 @@ class Table(Generic[_K, _R], Mapping[_K, _R]):
 
     @databasemethod(commit=False)
     def __getitem__(self, key: _K) -> _R:
-        row = Database.session.get(self._mapped, key)
+        row = Database.get(self._mapped, key)
         if row is None:
             raise KeyError(key)
         return cast(_R, self.__row__(row))
@@ -119,14 +119,14 @@ class Table(Generic[_K, _R], Mapping[_K, _R]):
     def __iter__(self) -> Iterator[_K]:
         pk = _mapper(self._mapped).columns[self.__row__.pk_name()]
         with SessionContext():
-            keys = list(Database.session.scalars(sqla.select(pk)))
+            keys = list(Database.scalars(sqla.select(pk)))
         yield from cast("list[_K]", keys)
 
     @override
     def __len__(self) -> int:
         with SessionContext():
             return int(
-                Database.session.scalar(
+                Database.scalar(
                     sqla.select(sqla.func.count()).select_from(self._mapped)
                 )
                 or 0
@@ -142,7 +142,7 @@ class Table(Generic[_K, _R], Mapping[_K, _R]):
         with SessionContext():
             rows = [
                 self.__row__(row)
-                for row in Database.session.scalars(
+                for row in Database.scalars(
                     sqla.select(self._mapped).filter_by(**eq)
                 )
             ]

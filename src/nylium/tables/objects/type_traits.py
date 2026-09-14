@@ -22,15 +22,15 @@ class TypeTraits(Table[tuple[UUID, UUID], TypeTrait]):
         row = TABLE_TypeTraits(
             type_uuid=type_uuid, trait_uuid=trait_uuid, position=position
         )
-        Database.session.add(row)
-        Database.session.flush()
+        Database.add(row)
+        Database.flush()
         return TypeTrait(row)
 
     @databasemethod(commit=True)
     def detach(self, type_uuid: UUID, trait_uuid: UUID) -> None:
-        row = Database.session.get(TABLE_TypeTraits, (type_uuid, trait_uuid))
+        row = Database.get(TABLE_TypeTraits, (type_uuid, trait_uuid))
         if row is not None:
-            Database.session.delete(row)
+            Database.delete(row)
 
 
 @databasemethod(commit=False)
@@ -38,7 +38,7 @@ def is_attached(type_uuid: UUID, trait_uuid: UUID | None) -> bool:
     """True when (type_uuid, trait_uuid) is an attach edge (ADR-0019)."""
     if trait_uuid is None:
         return False
-    attached = Database.session.scalar(
+    attached = Database.scalar(
         sqla.select(TABLE_TypeTraits.type_uuid).where(
             TABLE_TypeTraits.type_uuid == type_uuid,
             TABLE_TypeTraits.trait_uuid == trait_uuid,
@@ -51,7 +51,7 @@ def is_attached(type_uuid: UUID, trait_uuid: UUID | None) -> bool:
 def attached_trait_uuids(type_uuid: UUID) -> list[UUID]:
     """Traits attached to the type, in attach order (ADR-0013/0019)."""
     return list(
-        Database.session.scalars(
+        Database.scalars(
             sqla.select(TABLE_TypeTraits.trait_uuid)
             .where(TABLE_TypeTraits.type_uuid == type_uuid)
             .order_by(TABLE_TypeTraits.position)

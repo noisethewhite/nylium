@@ -41,7 +41,7 @@ def read(table: type[ScalarCellsTable], inst_uuid: UUID, prop_uuid: UUID) -> obj
     Converting storage <-> python is the caller's job (``WScalar``.
     ``from_storage`` / ``to_storage``).
     """
-    row = Database.session.get(table, (inst_uuid, prop_uuid))
+    row = Database.get(table, (inst_uuid, prop_uuid))
     return None if row is None else row.value
 
 
@@ -50,12 +50,12 @@ def write(
     table: type[ScalarCellsTable], inst_uuid: UUID, prop_uuid: UUID, value: object
 ) -> None:
     """Upsert one cell (insert or update in place)."""
-    row = Database.session.get(table, (inst_uuid, prop_uuid))
+    row = Database.get(table, (inst_uuid, prop_uuid))
     if row is None:
         ctor = cast("Callable[..., ScalarCellsTable]", table)
-        Database.session.add(ctor(inst_uuid=inst_uuid, prop_uuid=prop_uuid, value=value))
+        Database.add(ctor(inst_uuid=inst_uuid, prop_uuid=prop_uuid, value=value))
         return
-    _ = Database.session.execute(
+    _ = Database.execute(
         sqla.update(table)
         .where(table.inst_uuid == inst_uuid, table.prop_uuid == prop_uuid)
         .values(value=value)
@@ -69,8 +69,8 @@ def clear(table: type[ScalarCellsTable], inst_uuid: UUID, prop_uuid: UUID) -> bo
     Returns True when a row was actually deleted — the object layer bumps
     modified_at only on a real delete.
     """
-    row = Database.session.get(table, (inst_uuid, prop_uuid))
+    row = Database.get(table, (inst_uuid, prop_uuid))
     if row is None:
         return False
-    Database.session.delete(row)
+    Database.delete(row)
     return True

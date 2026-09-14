@@ -26,7 +26,7 @@ def unique_plural_name(uuid: UUID, name: str, plural_name: str | None = None) ->
     """
     candidate = plural_name or f"{name}s"
     taken = (
-        Database.session.query(TABLE_Instances.uuid)
+        Database.query(TABLE_Instances.uuid)
         .filter_by(plural_name=candidate)
         .first()
     )
@@ -50,7 +50,7 @@ class Instances(Table[UUID, Instance]):
         owner_object_uuid: UUID | None = None,
         owner_prop_uuid: UUID | None = None,
     ) -> None:
-        Database.session.add(
+        Database.add(
             TABLE_Instances(
                 uuid=uuid,
                 type_uuid=type_uuid,
@@ -60,7 +60,7 @@ class Instances(Table[UUID, Instance]):
                 owner_prop_uuid=owner_prop_uuid,
             )
         )
-        Database.session.flush()
+        Database.flush()
 
 
 instances = Instances()
@@ -69,22 +69,22 @@ instances = Instances()
 @databasemethod(commit=False)
 def get(uuid: UUID) -> Instance | None:
     """The instance row, or None when the uuid is unknown."""
-    row = Database.session.get(TABLE_Instances, uuid)
+    row = Database.get(TABLE_Instances, uuid)
     return Instance(row) if row is not None else None
 
 
 @databasemethod(commit=False)
 def delete_row(uuid: UUID) -> None:
     """Delete the instance row itself (caller handles value cleanup)."""
-    row = Database.session.get(TABLE_Instances, uuid)
+    row = Database.get(TABLE_Instances, uuid)
     if row is not None:
-        Database.session.delete(row)
+        Database.delete(row)
 
 
 @databasemethod(commit=False)
 def touch(uuid: UUID) -> None:
     """Bump modified_at after any prop write."""
-    _ = Database.session.execute(
+    _ = Database.execute(
         sqla.update(TABLE_Instances)
         .where(TABLE_Instances.uuid == uuid)
         .values(modified_at=sqla.func.now())
@@ -95,7 +95,7 @@ def touch(uuid: UUID) -> None:
 def owned_uuids(owner_object_uuid: UUID) -> list[UUID]:
     """Uuids of every embedded instance owned by the given object."""
     return list(
-        Database.session.scalars(
+        Database.scalars(
             sqla.select(TABLE_Instances.uuid).where(
                 TABLE_Instances.owner_object_uuid == owner_object_uuid
             )
@@ -109,7 +109,7 @@ def existing_uuids(uuids: list[UUID]) -> set[UUID]:
     if not uuids:
         return set()
     return set(
-        Database.session.scalars(
+        Database.scalars(
             sqla.select(TABLE_Instances.uuid).where(TABLE_Instances.uuid.in_(uuids))
         ).all()
     )
@@ -119,7 +119,7 @@ def existing_uuids(uuids: list[UUID]) -> set[UUID]:
 def uuids_of_kind(kind: str) -> list[UUID]:
     """Uuids of every instance whose type has the given kind (ADR-0019)."""
     return list(
-        Database.session.scalars(
+        Database.scalars(
             sqla.select(TABLE_Instances.uuid)
             .join(TABLE_Types, TABLE_Types.uuid == TABLE_Instances.type_uuid)
             .where(TABLE_Types.kind == kind)

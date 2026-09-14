@@ -28,8 +28,8 @@ class TypeDecors(Table[UUID, TypeDecor]):
             row.icon = icon
         if color is not None:
             row.color = color
-        Database.session.add(row)
-        Database.session.flush()
+        Database.add(row)
+        Database.flush()
         return TypeDecor(row)
 
 
@@ -37,7 +37,7 @@ class TypeDecors(Table[UUID, TypeDecor]):
 def reset_icons_referencing(icon_marker: str, default_glyph: str) -> None:
     """Every type whose icon equals ``icon_marker`` falls back to the default
     glyph (ADR-0006: an Image used as an icon may be deleted)."""
-    for decor_row in Database.session.scalars(
+    for decor_row in Database.scalars(
         sqla.select(TABLE_TypeDecor).where(TABLE_TypeDecor.icon == icon_marker)
     ).all():
         decor_row.icon = default_glyph

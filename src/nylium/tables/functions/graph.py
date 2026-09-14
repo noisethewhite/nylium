@@ -21,7 +21,7 @@ from nylium.tables.functions.function_nodes import TABLE_FunctionNodes
 def nodes_of(function_uuid: UUID) -> list[TABLE_FunctionNodes]:
     """The function's DAG nodes, in layout order."""
     return list(
-        Database.session.scalars(
+        Database.scalars(
             sqla.select(TABLE_FunctionNodes)
             .where(TABLE_FunctionNodes.function_uuid == function_uuid)
             .order_by(TABLE_FunctionNodes.position)
@@ -33,7 +33,7 @@ def nodes_of(function_uuid: UUID) -> list[TABLE_FunctionNodes]:
 def edges_of(function_uuid: UUID) -> list[TABLE_FunctionEdges]:
     """The function's dataflow edges."""
     return list(
-        Database.session.scalars(
+        Database.scalars(
             sqla.select(TABLE_FunctionEdges).where(
                 TABLE_FunctionEdges.function_uuid == function_uuid
             )
@@ -56,7 +56,7 @@ def sync_graph(
     kept: set[UUID] = set()
     for node_uuid, kind, position, config in nodes:
         if node_uuid is not None and node_uuid in existing_uuids:
-            row = Database.session.get(TABLE_FunctionNodes, node_uuid)
+            row = Database.get(TABLE_FunctionNodes, node_uuid)
             if row is not None:
                 row.kind = kind
                 row.position = position
@@ -70,19 +70,19 @@ def sync_graph(
                 position=position,
                 config=dict(config),
             )
-            Database.session.add(row)
+            Database.add(row)
             kept.add(row.uuid)
     for stale in existing_nodes:
         if stale.uuid not in kept:
-            Database.session.delete(stale)
-    Database.session.flush()
-    _ = Database.session.execute(
+            Database.delete(stale)
+    Database.flush()
+    _ = Database.execute(
         sqla.delete(TABLE_FunctionEdges).where(
             TABLE_FunctionEdges.function_uuid == function_uuid
         )
     )
     for from_uuid, from_port, to_uuid, to_port in edges:
-        Database.session.add(
+        Database.add(
             TABLE_FunctionEdges(
                 function_uuid=function_uuid,
                 from_node_uuid=from_uuid,
@@ -91,4 +91,4 @@ def sync_graph(
                 to_port=to_port,
             )
         )
-    Database.session.flush()
+    Database.flush()

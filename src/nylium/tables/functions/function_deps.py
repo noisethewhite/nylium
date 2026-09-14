@@ -29,13 +29,13 @@ class TABLE_FunctionDeps:
 def replace_dep(function_uuid: UUID, input_object_uuid: UUID | None) -> None:
     """Rebuild the function's dep row: drop the old one, insert when the
     input link is set (ADR-0019)."""
-    _ = Database.session.execute(
+    _ = Database.execute(
         sqla.delete(TABLE_FunctionDeps).where(
             TABLE_FunctionDeps.function_uuid == function_uuid
         )
     )
     if input_object_uuid is not None:
-        Database.session.add(
+        Database.add(
             TABLE_FunctionDeps(
                 function_uuid=function_uuid, input_object_uuid=input_object_uuid
             )

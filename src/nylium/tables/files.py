@@ -33,21 +33,21 @@ class Files(Table[UUID, File]):
             mime=mime,
             size_bytes=size_bytes,
         )
-        Database.session.add(row)
-        Database.session.flush()
+        Database.add(row)
+        Database.flush()
         return File(row)
 
     @databasemethod(commit=True)
     def delete(self, uuid: UUID) -> None:
-        row = Database.session.get(TABLE_Files, uuid)
+        row = Database.get(TABLE_Files, uuid)
         if row is not None:
-            Database.session.delete(row)
+            Database.delete(row)
 
 
 @databasemethod(commit=False)
 def type_name_of(uuid: UUID) -> str | None:
     """The stored type_name for a file uuid, or None (ADR-0019)."""
-    row = Database.session.get(TABLE_Files, uuid)
+    row = Database.get(TABLE_Files, uuid)
     return None if row is None else row.type_name
 
 

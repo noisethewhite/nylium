@@ -26,7 +26,7 @@ class EnumOptions(Table[UUID, EnumOption]):
     def count_usage(self, type_uuid: UUID, value: str) -> int:
         """How many stored prop values currently equal this option."""
         return int(
-            Database.session.scalar(
+            Database.scalar(
                 sqla.select(sqla.func.count())
                 .select_from(TABLE_StringValues)
                 .join(TABLE_Props, TABLE_StringValues.prop_uuid == TABLE_Props.uuid)
@@ -46,7 +46,7 @@ class EnumOptions(Table[UUID, EnumOption]):
         but a delete refuses while the option is still in use."""
         existing = {
             row.uuid: row
-            for row in Database.session.scalars(
+            for row in Database.scalars(
                 sqla.select(TABLE_EnumOptions).where(
                     TABLE_EnumOptions.type_uuid == type_uuid
                 )
@@ -61,11 +61,11 @@ class EnumOptions(Table[UUID, EnumOption]):
                 raise ValueError(
                     f"option {stale_row.value!r} is still used by {usage} values"
                 )
-            Database.session.delete(stale_row)
-        Database.session.flush()
+            Database.delete(stale_row)
+        Database.flush()
         for position, (option_uuid, value) in enumerate(items):
             if option_uuid is None or option_uuid not in existing:
-                Database.session.add(
+                Database.add(
                     TABLE_EnumOptions(
                         uuid=uuid4(),
                         type_uuid=type_uuid,
@@ -76,7 +76,7 @@ class EnumOptions(Table[UUID, EnumOption]):
                 continue
             row = existing[option_uuid]
             if row.value != value:
-                _ = Database.session.execute(
+                _ = Database.execute(
                     sqla.update(TABLE_StringValues)
                     .where(
                         TABLE_StringValues.value == row.value,
@@ -90,7 +90,7 @@ class EnumOptions(Table[UUID, EnumOption]):
                 )
                 row.value = value
             row.position = position
-        Database.session.flush()
+        Database.flush()
 
 
 enum_options = EnumOptions()

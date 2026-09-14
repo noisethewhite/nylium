@@ -22,8 +22,8 @@ class AuthUsers(Table[UUID, AuthUser]):
         """Insert a user, returning its row (uuid/created_at populated by
         the flush)."""
         row = TABLE_AuthUsers(name=name)
-        Database.session.add(row)
-        Database.session.flush()
+        Database.add(row)
+        Database.flush()
         return AuthUser(row)
 
 

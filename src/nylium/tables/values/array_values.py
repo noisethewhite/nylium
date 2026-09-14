@@ -30,7 +30,7 @@ class TABLE_ArrayValues:
 @databasemethod(commit=False)
 def delete_memberships(value_uuid: UUID) -> None:
     """Drop every array-membership row pointing at the given element uuid."""
-    _ = Database.session.execute(
+    _ = Database.execute(
         sqla.delete(TABLE_ArrayValues).where(TABLE_ArrayValues.value_uuid == value_uuid)
     )
 
@@ -40,7 +40,7 @@ def element_uuids_of(array_uuid: UUID) -> list[UUID]:
     """Element uuids of one array, in index order (WArray.read relies on
     the ordering; the destroy path just wants the snapshot)."""
     return list(
-        Database.session.scalars(
+        Database.scalars(
             sqla.select(TABLE_ArrayValues.value_uuid)
             .where(TABLE_ArrayValues.inst_uuid == array_uuid)
             .order_by(TABLE_ArrayValues.index)
@@ -51,7 +51,7 @@ def element_uuids_of(array_uuid: UUID) -> list[UUID]:
 @databasemethod(commit=False)
 def add_element(array_uuid: UUID, index: int, value_uuid: UUID) -> None:
     """Append one element row (plain insert — _fill rewrites from empty)."""
-    Database.session.add(
+    Database.add(
         TABLE_ArrayValues(inst_uuid=array_uuid, index=index, value_uuid=value_uuid)
     )
 
@@ -61,10 +61,10 @@ def delete_elements_of(array_uuid: UUID) -> None:
     """Detach every element row of the array and flush — the FK
     array_values.value_uuid -> instances forbids deleting a box that is
     still referenced, so the pointer rows go first."""
-    _ = Database.session.execute(
+    _ = Database.execute(
         sqla.delete(TABLE_ArrayValues).where(TABLE_ArrayValues.inst_uuid == array_uuid)
     )
-    Database.session.flush()
+    Database.flush()
 
 
 @databasemethod(commit=False)
@@ -91,7 +91,7 @@ def array_tag_rows(
     name_prop = aliased(TABLE_Props)
     owner_types = aliased(TABLE_Types)
     owner_decor = aliased(TABLE_TypeDecor)
-    rows = Database.session.execute(
+    rows = Database.execute(
         sqla.select(
             TABLE_InstanceValues.inst_uuid,
             TABLE_Props.key,

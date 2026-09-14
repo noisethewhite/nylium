@@ -37,17 +37,17 @@ class Types(Table[UUID, Type]):
             row.kind = kind
         if embedded is not None:
             row.embedded = embedded
-        Database.session.add(row)
-        Database.session.flush()
+        Database.add(row)
+        Database.flush()
         # ADR-0014: decor column defaults apply where the caller passes none
         _ = type_decor.create(row.uuid, plural_name, icon, None)
         return Type(row)
 
     @databasemethod(commit=True)
     def delete(self, uuid: UUID) -> None:
-        row = Database.session.get(TABLE_Types, uuid)
+        row = Database.get(TABLE_Types, uuid)
         if row is not None:
-            Database.session.delete(row)  # its props cascade
+            Database.delete(row)  # its props cascade
 
 
 types = Types()

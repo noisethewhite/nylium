@@ -22,8 +22,8 @@ class ApiTokens(Table[UUID, ApiToken]):
         row = TABLE_ApiTokens(
             user_uuid=user_uuid, name=name, token_hash=token_hash, scope=scope
         )
-        Database.session.add(row)
-        Database.session.flush()  # populate uuid/created_at before the session ends
+        Database.add(row)
+        Database.flush()  # populate uuid/created_at before the session ends
         return ApiToken(row)
 
 

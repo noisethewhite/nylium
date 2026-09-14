@@ -30,7 +30,7 @@ class TABLE_NumericValues:
 @databasemethod(commit=False)
 def read_with_unit(inst_uuid: UUID, prop_uuid: UUID) -> tuple[Decimal, str | None] | None:
     """Stored (canonical magnitude, entered unit part name) pair, or None."""
-    row = Database.session.get(TABLE_NumericValues, (inst_uuid, prop_uuid))
+    row = Database.get(TABLE_NumericValues, (inst_uuid, prop_uuid))
     if row is None:
         return None
     return row.value, row.unit
@@ -41,9 +41,9 @@ def write_with_unit(
     inst_uuid: UUID, prop_uuid: UUID, value: Decimal, unit: str | None
 ) -> None:
     """Upsert one numeric cell including the entered unit part name."""
-    row = Database.session.get(TABLE_NumericValues, (inst_uuid, prop_uuid))
+    row = Database.get(TABLE_NumericValues, (inst_uuid, prop_uuid))
     if row is None:
-        Database.session.add(
+        Database.add(
             TABLE_NumericValues(
                 inst_uuid=inst_uuid, prop_uuid=prop_uuid, value=value, unit=unit
             )

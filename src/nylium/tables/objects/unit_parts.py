@@ -22,7 +22,7 @@ from nylium.tables.values.numeric_values import TABLE_NumericValues as TABLE_Num
 
 def _parameterized_uuid(unit_type_name: str) -> UUID | None:
     """The `Numeric<unit>` type row's uuid, or None when it doesn't exist."""
-    return Database.session.scalar(
+    return Database.scalar(
         sqla.select(TABLE_Types.uuid).where(
             TABLE_Types.name == f"Numeric<{unit_type_name}>"
         )
@@ -51,7 +51,7 @@ class UnitParts(Table[UUID, UnitPart]):
         if part_name is not None:
             conditions.append(TABLE_NumericValues.unit == part_name)
         return int(
-            Database.session.scalar(
+            Database.scalar(
                 sqla.select(sqla.func.count())
                 .select_from(TABLE_NumericValues)
                 .where(*conditions)
@@ -86,14 +86,14 @@ class UnitParts(Table[UUID, UnitPart]):
                     is_base=is_base,
                     position=position,
                 )
-                Database.session.add(row)
-                Database.session.flush()
+                Database.add(row)
+                Database.flush()
                 part = UnitPart(row)
             else:
                 if part.name != name:
                     parameterized_uuid = _parameterized_uuid(unit_type_name)
                     if parameterized_uuid is not None:
-                        _ = Database.session.execute(
+                        _ = Database.execute(
                             sqla.update(TABLE_NumericValues)
                             .where(
                                 TABLE_NumericValues.prop_uuid.in_(
@@ -120,10 +120,10 @@ class UnitParts(Table[UUID, UnitPart]):
                 raise ValueError(
                     f"unit part {part.name!r} still has {usage} values"
                 )
-            _ = Database.session.execute(
+            _ = Database.execute(
                 sqla.delete(TABLE_UnitParts).where(TABLE_UnitParts.uuid == part.uuid)
             )
-        Database.session.flush()
+        Database.flush()
 
 
 unit_parts = UnitParts()

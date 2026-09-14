@@ -33,8 +33,8 @@ class AuthCredentials(Table[UUID, AuthCredential]):
             sign_count=sign_count,
             transports=transports,
         )
-        Database.session.add(row)
-        Database.session.flush()
+        Database.add(row)
+        Database.flush()
         return AuthCredential(row)
 
 

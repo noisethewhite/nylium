@@ -68,7 +68,7 @@ props = Props()
 @databasemethod(commit=False)
 def by_type_key(owner_uuid: UUID, key: str) -> TABLE_Props | None:
     """One type-owned prop row by key (live ORM row — callers may write)."""
-    return Database.session.scalar(
+    return Database.scalar(
         sqla.select(TABLE_Props).where(
             TABLE_Props.owner_type_uuid == owner_uuid, TABLE_Props.key == key
         )
@@ -78,7 +78,7 @@ def by_type_key(owner_uuid: UUID, key: str) -> TABLE_Props | None:
 @databasemethod(commit=False)
 def by_trait_key(trait_uuid: UUID, key: str) -> TABLE_Props | None:
     """One trait-owned prop row by key (live ORM row — callers may write)."""
-    return Database.session.scalar(
+    return Database.scalar(
         sqla.select(TABLE_Props).where(
             TABLE_Props.owner_trait_uuid == trait_uuid, TABLE_Props.key == key
         )
@@ -89,7 +89,7 @@ def by_trait_key(trait_uuid: UUID, key: str) -> TABLE_Props | None:
 def rows_of_type(owner_uuid: UUID) -> list[TABLE_Props]:
     """All props owned by the type, in schema order."""
     return list(
-        Database.session.scalars(
+        Database.scalars(
             sqla.select(TABLE_Props)
             .where(TABLE_Props.owner_type_uuid == owner_uuid)
             .order_by(TABLE_Props.position)
@@ -101,7 +101,7 @@ def rows_of_type(owner_uuid: UUID) -> list[TABLE_Props]:
 def rows_of_trait(trait_uuid: UUID) -> list[TABLE_Props]:
     """All props owned by the trait, in schema order."""
     return list(
-        Database.session.scalars(
+        Database.scalars(
             sqla.select(TABLE_Props)
             .where(TABLE_Props.owner_trait_uuid == trait_uuid)
             .order_by(TABLE_Props.position)
@@ -116,7 +116,7 @@ def apply_positions(owner_uuid: UUID, keys: list[str]) -> None:
     rows = {row.key: row for row in rows_of_type(owner_uuid)}
     for position, key in enumerate(keys):
         rows[key].position = position
-    Database.session.flush()
+    Database.flush()
 
 
 @databasemethod(commit=False)
@@ -146,8 +146,8 @@ def ensure_row(
         position=position,
         formula=formula,
     )
-    Database.session.add(row)
-    Database.session.flush()
+    Database.add(row)
+    Database.flush()
     return row
 
 
@@ -167,15 +167,15 @@ def sync_owned(
     the same sync."""
     existing = {
         row.uuid: row
-        for row in Database.session.scalars(
+        for row in Database.scalars(
             sqla.select(TABLE_Props).where(owner_column == owner_uuid)
         )
     }
     kept = {uuid for uuid, _, _, _, _ in items if uuid is not None}
     for stale_uuid, stale_row in existing.items():
         if stale_uuid not in kept:
-            Database.session.delete(stale_row)
-    Database.session.flush()
+            Database.delete(stale_row)
+    Database.flush()
     for position, (prop_uuid, key, value_type_uuid, value_trait_uuid, formula) in enumerate(
         items
     ):
@@ -189,7 +189,7 @@ def sync_owned(
                 formula=formula,
             )
             setattr(row, owner_column_name, owner_uuid)
-            Database.session.add(row)
+            Database.add(row)
             continue
         row = existing[prop_uuid]
         if (
@@ -202,17 +202,17 @@ def sync_owned(
         row.key = key
         row.position = position
         row.formula = formula
-    Database.session.flush()
+    Database.flush()
 
 
 @databasemethod(commit=False)
 def purge_values(prop_uuid: UUID) -> None:
     """Wipe the prop's values from every prop-keyed table (retype)."""
     for table in VALUE_TABLES:
-        _ = Database.session.execute(
+        _ = Database.execute(
             sqla.delete(table).where(table.prop_uuid == prop_uuid)
         )
-    Database.session.flush()
+    Database.flush()
 
 
 @databasemethod(commit=False)
@@ -222,10 +222,10 @@ def purge_values_for_instances(prop_uuid: UUID, inst_uuids: list[UUID]) -> None:
     if not inst_uuids:
         return
     for table in VALUE_TABLES:
-        _ = Database.session.execute(
+        _ = Database.execute(
             sqla.delete(table).where(
                 table.prop_uuid == prop_uuid,
                 table.inst_uuid.in_(inst_uuids),
             )
         )
-    Database.session.flush()
+    Database.flush()

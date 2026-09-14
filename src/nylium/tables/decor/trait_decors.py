@@ -18,8 +18,8 @@ class TraitDecors(Table[UUID, TraitDecor]):
     @databasemethod(commit=True)
     def create(self, uuid: UUID, color: str) -> TraitDecor:
         row = TABLE_TraitDecor(uuid=uuid, color=color)
-        Database.session.add(row)
-        Database.session.flush()
+        Database.add(row)
+        Database.flush()
         return TraitDecor(row)
 
 

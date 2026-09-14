@@ -36,22 +36,22 @@ class Traits(Table[UUID, Trait]):
         from nylium.tables.decor import trait_decor
 
         row = TABLE_Traits(name=name)
-        Database.session.add(row)
-        Database.session.flush()
+        Database.add(row)
+        Database.flush()
         _ = trait_decor.create(row.uuid, color)
         return Trait(row)
 
     @databasemethod(commit=True)
     def delete(self, uuid: UUID) -> None:
-        row = Database.session.get(TABLE_Traits, uuid)
+        row = Database.get(TABLE_Traits, uuid)
         if row is not None:
-            Database.session.delete(row)  # its props cascade
+            Database.delete(row)  # its props cascade
 
 
 @databasemethod(commit=False)
 def uuid_by_name(name: str) -> UUID | None:
     """The trait uuid for a name, or None (ADR-0019: trait lookup)."""
-    return Database.session.scalar(
+    return Database.scalar(
         sqla.select(TABLE_Traits.uuid).where(TABLE_Traits.name == name)
     )
 
@@ -59,7 +59,7 @@ def uuid_by_name(name: str) -> UUID | None:
 @databasemethod(commit=False)
 def name_of(uuid: UUID) -> str | None:
     """The trait's name by uuid, or None when the trait is gone (ADR-0019)."""
-    row = Database.session.get(TABLE_Traits, uuid)
+    row = Database.get(TABLE_Traits, uuid)
     return None if row is None else str(row.name)
 
 

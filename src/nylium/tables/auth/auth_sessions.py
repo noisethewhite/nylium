@@ -22,7 +22,7 @@ class AuthSessions(Table[str, AuthSession]):
 
     @databasemethod(commit=True)
     def create(self, user_uuid: UUID, token_hash: str, expires_at: datetime) -> None:
-        Database.session.add(
+        Database.add(
             TABLE_AuthSessions(
                 token_hash=token_hash, user_uuid=user_uuid, expires_at=expires_at
             )
@@ -30,13 +30,13 @@ class AuthSessions(Table[str, AuthSession]):
 
     @databasemethod(commit=True)
     def delete(self, token_hash: str) -> None:
-        row = Database.session.get(TABLE_AuthSessions, token_hash)
+        row = Database.get(TABLE_AuthSessions, token_hash)
         if row is not None:
-            Database.session.delete(row)
+            Database.delete(row)
 
     @databasemethod(commit=True)
     def purge_expired(self) -> None:
-        _ = Database.session.execute(
+        _ = Database.execute(
             sqla.delete(TABLE_AuthSessions).where(
                 TABLE_AuthSessions.expires_at <= datetime.now(timezone.utc)
             )

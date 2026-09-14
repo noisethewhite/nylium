@@ -33,7 +33,7 @@ class TABLE_FileValues:
 @databasemethod(commit=False)
 def file_ref_for(inst_uuid: UUID, prop_uuid: UUID) -> UUID | None:
     """The file uuid referenced by (owner instance, prop), or None."""
-    return Database.session.scalar(
+    return Database.scalar(
         sqla.select(TABLE_FileValues.file_uuid).where(
             TABLE_FileValues.inst_uuid == inst_uuid,
             TABLE_FileValues.prop_uuid == prop_uuid,
@@ -45,16 +45,16 @@ def file_ref_for(inst_uuid: UUID, prop_uuid: UUID) -> UUID | None:
 def write_ref(inst_uuid: UUID, prop_uuid: UUID, file_uuid: UUID | None) -> None:
     """Set/clear the file reference of (owner instance, prop)."""
     if file_uuid is None:
-        _ = Database.session.execute(
+        _ = Database.execute(
             sqla.delete(TABLE_FileValues).where(
                 TABLE_FileValues.inst_uuid == inst_uuid,
                 TABLE_FileValues.prop_uuid == prop_uuid,
             )
         )
         return
-    row = Database.session.get(TABLE_FileValues, (inst_uuid, prop_uuid))
+    row = Database.get(TABLE_FileValues, (inst_uuid, prop_uuid))
     if row is None:
-        Database.session.add(
+        Database.add(
             TABLE_FileValues(inst_uuid=inst_uuid, prop_uuid=prop_uuid, file_uuid=file_uuid)
         )
         return
