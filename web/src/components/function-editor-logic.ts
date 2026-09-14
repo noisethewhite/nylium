@@ -158,10 +158,10 @@ export abstract class FunctionEditorLogic {
     return undefined;
   }
 
-  /** Wire boundary: narrow a `FunctionNodeView` (config: Record<string,
-   * unknown>) into an editable `NodeDraft` (config: Record<string, string |
-   * number>). Config entries that aren't string | number are dropped, never
-   * silently retyped; a node whose kind this editor doesn't know yields
+  /** Wire boundary: adapt a `FunctionNodeView` into an editable `NodeDraft`
+   * (both type config as Record<string, string | number>). The scalar
+   * filter below is a defensive no-op against a backend that ever sends a
+   * non-scalar entry; a node whose kind this editor doesn't know yields
    * null so the caller filters it out. */
   static fromWireNode(node: FunctionNodeView): NodeDraft | null {
     if (!isNodeKind(node.kind)) {

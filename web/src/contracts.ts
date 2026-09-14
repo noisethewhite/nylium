@@ -35,12 +35,17 @@ export interface UnitPartView {
   is_base: boolean;
 }
 
+/** The closed set of type kinds — mirror of WType.KIND_* constants
+ * (nylium/objects/wtype.py). */
+export type TypeKind = "object" | "enum" | "unit" | "function" | "file";
+
 export interface TypeView {
   name: string;
   /** every type carries both forms, builtins included (ADR-0011 phase 8) */
   plural_name: string;
-  /** "object" (schema of props), "enum" (list of options), "unit" (parts) */
-  kind: string;
+  /** "object" (schema of props), "enum" (list of options), "unit" (parts),
+   * "function" (Function<T,R> instances), "file" (File/Document/Image). */
+  kind: TypeKind;
   icon: string;
   color: string;
   props: PropView[];
@@ -133,7 +138,10 @@ export interface FunctionNodeView {
   uuid: string;
   kind: string;
   position: number;
-  config: Record<string, unknown>;
+  /** Node config carries only scalars — key/name/target strings and
+   * `const` numbers. Mirrors WFunction's config validators (ADR-0007),
+   * which reject bool/null/nested values. */
+  config: Record<string, string | number>;
 }
 
 /** ADR-0007: one dataflow edge between two function nodes. */
@@ -174,22 +182,43 @@ export interface FunctionEdgeInput {
   to_port: number;
 }
 
-/** Static helpers on the wire shapes — namespace-only, never instantiated. */
+/** Static helpers on the wire shapes — namespace-only, never instantiated.
+ *
+ * The PropValue union has no explicit tag on the wire — it is a mirror of
+ * nylium.api.views' structural union, where each variant owns exactly one
+ * marker key (`value`, `ref`, `items`, `type_name`). We derive the variant
+ * in exactly one place, `kind()`, and every guard delegates to it, so the
+ * guards can't drift from one another. The exhaustive `never` at the end of
+ * `kind()` turns "added a variant without teaching `kind` about it" into a
+ * compile error instead of a silent mis-classification. */
 export abstract class PropValues {
+  static kind(value: PropValue): "scalar" | "ref" | "array" | "embedded" {
+    if ("value" in value) return "scalar";
+    if ("ref" in value) return "ref";
+    if ("items" in value) return "array";
+    if ("type_name" in value) return "embedded";
+    // Exhaustive: PropValue is a closed union, so after the four markers
+    // above this is unreachable — unless a new variant is added without
+    // extending these checks, in which case `value` is no longer `never`
+    // and this line stops type-checking.
+    const unreachable: never = value;
+    return unreachable;
+  }
+
   static isScalar(value: PropValue): value is ScalarValue {
-    return "value" in value;
+    return PropValues.kind(value) === "scalar";
   }
 
   static isArray(value: PropValue): value is ArrayValue {
-    return "items" in value;
+    return PropValues.kind(value) === "array";
   }
 
   static isRef(value: PropValue): value is RefValue {
-    return "ref" in value;
+    return PropValues.kind(value) === "ref";
   }
 
   static isEmbedded(value: PropValue): value is EmbeddedValue {
-    return "type_name" in value;
+    return PropValues.kind(value) === "embedded";
   }
 }
 
