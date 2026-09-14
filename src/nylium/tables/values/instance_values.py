@@ -62,6 +62,31 @@ def delete_links_to(uuid: UUID) -> None:
 
 
 @databasemethod(commit=False)
+def linked_uuids_of(prop_uuid: UUID) -> list[UUID]:
+    """Uuids of every instance linked through the given prop, across all
+    owners — the sweep list before an embedded prop is deleted or retyped."""
+    return list(
+        Database.session.scalars(
+            sqla.select(TABLE_InstanceValues.uuid).where(
+                TABLE_InstanceValues.prop_uuid == prop_uuid
+            )
+        ).all()
+    )
+
+
+@databasemethod(commit=False)
+def add_link(uuid: UUID, prop_uuid: UUID, inst_uuid: UUID) -> None:
+    """Insert a brand-new link row and flush — the embedded child is a fresh
+    uuid4, so this must stay a plain insert (merge would mask a uuid
+    collision instead of failing on it). The flush pins insert order:
+    instance_values.uuid FKs into instances."""
+    Database.session.add(
+        TABLE_InstanceValues(uuid=uuid, prop_uuid=prop_uuid, inst_uuid=inst_uuid)
+    )
+    Database.session.flush()
+
+
+@databasemethod(commit=False)
 def array_link_uuids_of(owner_inst_uuid: UUID) -> list[UUID]:
     """Uuids of array-instance links held by the given owner."""
     from nylium.tables.objects.table_props import TABLE_Props

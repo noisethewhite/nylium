@@ -19,12 +19,14 @@ from __future__ import annotations
 from typing import cast
 from uuid import UUID, uuid4
 
-import sqlalchemy as sqla
+from nylium.database import databasemethod
 
-from nylium.database import Database, databasemethod
-
-from nylium.tables import TABLE_Instances, TABLE_InstanceValues, TABLE_StringValues, instances
+from nylium.tables import instances
+from nylium.tables.objects.instances import get as instance_get
+from nylium.tables.values import cells
+from nylium.tables.values.instance_values import add_link, link_for, linked_uuids_of
 from nylium.objects.wprop import WProp
+from nylium.objects.wscalar import WString
 from nylium.objects.wtype import WType
 from nylium.objects.wtypemeta import StoredValue, WTypeMeta
 
@@ -48,12 +50,7 @@ class WEmbedded:
         """Create-or-update the child from a props draft; None deletes it.
         The draft maps prop key -> value, exactly like an object write.
         Caller-supplied `name` values are ignored — names are generated."""
-        link = Database.session.scalar(
-            sqla.select(TABLE_InstanceValues).where(
-                TABLE_InstanceValues.inst_uuid == owner_uuid,
-                TABLE_InstanceValues.prop_uuid == prop.uuid,
-            )
-        )
+        link = link_for(owner_uuid, prop.uuid)
         if draft is None:
             if link is not None:
                 cls._destroy_child(link.uuid)
@@ -84,13 +81,7 @@ class WEmbedded:
         Called from Api.sync_props before an embedded prop is deleted or
         retyped — otherwise the link rows cascade away and the child
         instances orphan."""
-        child_uuids = list(
-            Database.session.scalars(
-                sqla.select(TABLE_InstanceValues.uuid).where(
-                    TABLE_InstanceValues.prop_uuid == prop_uuid
-                )
-            ).all()
-        )
+        child_uuids = linked_uuids_of(prop_uuid)
         for child_uuid in child_uuids:
             cls._destroy_child(child_uuid)
 
@@ -101,7 +92,7 @@ class WEmbedded:
         then recurse — grandchild names embed the child name. The
         instance graph is a tree (children are always created fresh),
         so the recursion terminates."""
-        inst = Database.session.get(TABLE_Instances, object_uuid)
+        inst = instance_get(object_uuid)
         if inst is None:
             return
         owner = WType.by_uuid(inst.type_uuid)
@@ -110,12 +101,7 @@ class WEmbedded:
         for prop in WProp.effective_for(owner):
             if prop.is_trait_bound or not prop.value_type().is_embedded:
                 continue
-            link = Database.session.scalar(
-                sqla.select(TABLE_InstanceValues).where(
-                    TABLE_InstanceValues.inst_uuid == object_uuid,
-                    TABLE_InstanceValues.prop_uuid == prop.uuid,
-                )
-            )
+            link = link_for(object_uuid, prop.uuid)
             if link is None:
                 continue
             cls._write_generated_name(link.uuid, cls.generated_name(object_uuid, prop))
@@ -128,14 +114,15 @@ class WEmbedded:
         registry name (Type:shortuuid) while the parent's name prop is
         still unset — a later name write regenerates it."""
         base: str | None = None
-        inst = Database.session.get(TABLE_Instances, owner_uuid)
+        inst = instance_get(owner_uuid)
         if inst is not None:
             owner = WType.by_uuid(inst.type_uuid)
             if owner is not None:
                 name_prop = WProp.by_key(owner, NAME_PROP_KEY)
                 if name_prop is not None:
-                    row = Database.session.get(TABLE_StringValues, (owner_uuid, name_prop.uuid))
-                    base = None if row is None else cast(str | None, row.value)
+                    base = cast(
+                        str | None, cells.read(WString.TABLE, owner_uuid, name_prop.uuid)
+                    )
             if not base:
                 base = inst.name
         if not base:
@@ -159,14 +146,7 @@ class WEmbedded:
             owner_object_uuid=owner_uuid,
             owner_prop_uuid=prop.uuid,
         )
-        # flush before the link row: without ORM relationships the
-        # pending-insert order is arbitrary, and instance_values.uuid
-        # FKs into instances
-        Database.session.flush()
-        Database.session.add(
-            TABLE_InstanceValues(uuid=child_uuid, prop_uuid=prop.uuid, inst_uuid=owner_uuid)
-        )
-        Database.session.flush()
+        add_link(child_uuid, prop.uuid, owner_uuid)
         return child_uuid
 
     @classmethod

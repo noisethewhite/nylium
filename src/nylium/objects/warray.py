@@ -12,19 +12,24 @@ keeps the objects package acyclic.
 """
 from __future__ import annotations
 
-from collections.abc import Callable
 from typing import cast
 from uuid import UUID, uuid4
 
-import sqlalchemy as sqla
-
-from nylium.database import Database, databasemethod
-from nylium.tables import TABLE_ArrayValues, TABLE_Files, TABLE_Instances, TABLE_InstanceValues
-from nylium.tables.objects.instances import unique_plural_name
+from nylium.database import databasemethod
+from nylium.tables import instances
+from nylium.tables.files import type_name_of as file_type_name_of
+from nylium.tables.objects.instances import delete_row as delete_instance_row, get as instance_get
+from nylium.tables.values import cells
+from nylium.tables.values.array_values import (
+    add_element,
+    delete_elements_of,
+    element_uuids_of,
+)
+from nylium.tables.values.instance_values import add_link, delete_links_to, link_for
 from nylium.objects.wenum import WEnum
 from nylium.objects.wfile import WFile
 from nylium.objects.wprop import WProp
-from nylium.objects.wscalar import VALUE_PROP_KEY, ScalarPayload, ScalarTable, WScalar, WString
+from nylium.objects.wscalar import VALUE_PROP_KEY, ScalarPayload, WScalar, WString
 from nylium.objects.wtype import WType
 from nylium.objects.wtypemeta import StoredValue, WObjectShape, WTypeMeta
 
@@ -35,12 +40,7 @@ class WArray:
     @classmethod
     @databasemethod(commit=False)
     def read(cls, array_uuid: UUID, elem_type: str) -> list[StoredValue]:
-        rows = Database.session.scalars(
-            sqla.select(TABLE_ArrayValues)
-            .where(TABLE_ArrayValues.inst_uuid == array_uuid)
-            .order_by(TABLE_ArrayValues.index)
-        ).all()
-        return [cls._unwrap(row.value_uuid, elem_type) for row in rows]
+        return [cls._unwrap(uuid, elem_type) for uuid in element_uuids_of(array_uuid)]
 
     @classmethod
     @databasemethod(commit=True)
@@ -59,12 +59,8 @@ class WArray:
     def destroy(cls, array_uuid: UUID) -> None:
         """Delete the array instance and every box it owns, recursively."""
         cls._destroy_boxes(array_uuid)
-        _ = Database.session.execute(
-            sqla.delete(TABLE_InstanceValues).where(TABLE_InstanceValues.uuid == array_uuid)
-        )
-        instance = Database.session.get(TABLE_Instances, array_uuid)
-        if instance is not None:
-            Database.session.delete(instance)
+        delete_links_to(array_uuid)
+        delete_instance_row(array_uuid)
 
     # --- internals ---
 
@@ -75,44 +71,29 @@ class WArray:
     ) -> None:
         cls._destroy_boxes(array_uuid)
         for index, item in enumerate(values):
-            Database.session.add(
-                TABLE_ArrayValues(
-                    inst_uuid=array_uuid,
-                    index=index,
-                    value_uuid=cls._box(elem_type, item),
-                )
-            )
+            add_element(array_uuid, index, cls._box(elem_type, item))
 
     @classmethod
     @databasemethod(commit=True)
     def _destroy_boxes(cls, array_uuid: UUID) -> None:
-        box_uuids = list(
-            Database.session.scalars(
-                sqla.select(TABLE_ArrayValues.value_uuid).where(
-                    TABLE_ArrayValues.inst_uuid == array_uuid
-                )
-            ).all()
-        )
+        box_uuids = element_uuids_of(array_uuid)
         # detach pointer rows first: FK array_values.value_uuid -> instances
         # forbids deleting a box that is still referenced
-        _ = Database.session.execute(
-            sqla.delete(TABLE_ArrayValues).where(TABLE_ArrayValues.inst_uuid == array_uuid)
-        )
-        Database.session.flush()
+        delete_elements_of(array_uuid)
         for box_uuid in box_uuids:
             cls._destroy_box(box_uuid)
 
     @classmethod
     @databasemethod(commit=True)
     def _destroy_box(cls, box_uuid: UUID) -> None:
-        inst = Database.session.get(TABLE_Instances, box_uuid)
+        inst = instance_get(box_uuid)
         if inst is None:
             return
         owner = WType.by_uuid(inst.type_uuid)
         if owner is None:
             raise RuntimeError(f"instance {box_uuid} has dangling type")
         if WScalar.is_scalar(owner.name):
-            Database.session.delete(inst)  # its scalar values cascade on inst_uuid
+            delete_instance_row(box_uuid)  # its scalar values cascade on inst_uuid
             return
         if WType.is_array_name(owner.name):
             cls.destroy(box_uuid)
@@ -124,19 +105,11 @@ class WArray:
     def _ensure_array_instance(
         cls, owner_uuid: UUID, prop: WProp, elem_type: str
     ) -> UUID:
-        link = Database.session.scalar(
-            sqla.select(TABLE_InstanceValues).where(
-                TABLE_InstanceValues.inst_uuid == owner_uuid,
-                TABLE_InstanceValues.prop_uuid == prop.uuid,
-            )
-        )
+        link = link_for(owner_uuid, prop.uuid)
         if link is not None:
             return link.uuid
         array_uuid = cls._create_array_instance(WType.array_name(elem_type))
-        Database.session.add(
-            TABLE_InstanceValues(uuid=array_uuid, prop_uuid=prop.uuid, inst_uuid=owner_uuid)
-        )
-        Database.session.flush()
+        add_link(array_uuid, prop.uuid, owner_uuid)
         return array_uuid
 
     @classmethod
@@ -144,10 +117,7 @@ class WArray:
     def _create_array_instance(cls, array_type_name: str) -> UUID:
         array_uuid = uuid4()
         array_type = WType.ensure(array_type_name)
-        Database.session.add(
-            TABLE_Instances(uuid=array_uuid, type_uuid=array_type.uuid, name=ARRAY_INSTANCE_NAME, plural_name=unique_plural_name(array_uuid, ARRAY_INSTANCE_NAME))
-        )
-        Database.session.flush()
+        instances.create(array_uuid, array_type.uuid, ARRAY_INSTANCE_NAME)
         return array_uuid
 
     @classmethod
@@ -164,7 +134,7 @@ class WArray:
             scalar = WString
         if scalar is None:
             return WTypeMeta.root().wrap(uuid)
-        inst = Database.session.get(TABLE_Instances, uuid)
+        inst = instance_get(uuid)
         if inst is None:
             raise KeyError(f"no instance {uuid}")
         owner = WType.by_uuid(inst.type_uuid)
@@ -173,8 +143,8 @@ class WArray:
         value_prop = WProp.by_key(owner, VALUE_PROP_KEY)
         if value_prop is None:
             raise RuntimeError(f"scalar type {type_name} lost its 'value' prop")
-        row = Database.session.get(scalar.TABLE, (uuid, value_prop.uuid))
-        return None if row is None else scalar.from_storage(row.value)
+        stored = cells.read(scalar.TABLE, uuid, value_prop.uuid)
+        return None if stored is None else scalar.from_storage(stored)
 
     @classmethod
     @databasemethod(commit=True)
@@ -197,7 +167,7 @@ class WArray:
                     raise TypeError(
                         f"{type_name} element takes a files.uuid, got {type(value).__name__}"
                     )
-                if Database.session.get(TABLE_Files, value) is None:
+                if file_type_name_of(value) is None:
                     raise TypeError(f"{type_name} element references missing file {value}")
                 return value
             if WEnum.is_enum(type_name):
@@ -210,13 +180,14 @@ class WArray:
         WScalar.validate(scalar.TYPE_NAME, cast(ScalarPayload | None, value))
         box_uuid = uuid4()
         owner = WType.ensure(scalar.TYPE_NAME)
-        Database.session.add(TABLE_Instances(uuid=box_uuid, type_uuid=owner.uuid, name=str(value), plural_name=unique_plural_name(box_uuid, str(value))))
-        Database.session.flush()
+        instances.create(box_uuid, owner.uuid, str(value))
         value_prop = WProp.by_key(owner, VALUE_PROP_KEY)
         if value_prop is None:
             raise RuntimeError(f"scalar type {type_name} lost its 'value' prop")
-        ctor = cast("Callable[..., ScalarTable]", scalar.TABLE)
-        Database.session.add(
-            ctor(inst_uuid=box_uuid, prop_uuid=value_prop.uuid, value=scalar.to_storage(cast(ScalarPayload, value)))
+        cells.write(
+            scalar.TABLE,
+            box_uuid,
+            value_prop.uuid,
+            scalar.to_storage(cast(ScalarPayload, value)),
         )
         return box_uuid

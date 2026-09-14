@@ -36,6 +36,38 @@ def delete_memberships(value_uuid: UUID) -> None:
 
 
 @databasemethod(commit=False)
+def element_uuids_of(array_uuid: UUID) -> list[UUID]:
+    """Element uuids of one array, in index order (WArray.read relies on
+    the ordering; the destroy path just wants the snapshot)."""
+    return list(
+        Database.session.scalars(
+            sqla.select(TABLE_ArrayValues.value_uuid)
+            .where(TABLE_ArrayValues.inst_uuid == array_uuid)
+            .order_by(TABLE_ArrayValues.index)
+        ).all()
+    )
+
+
+@databasemethod(commit=False)
+def add_element(array_uuid: UUID, index: int, value_uuid: UUID) -> None:
+    """Append one element row (plain insert — _fill rewrites from empty)."""
+    Database.session.add(
+        TABLE_ArrayValues(inst_uuid=array_uuid, index=index, value_uuid=value_uuid)
+    )
+
+
+@databasemethod(commit=False)
+def delete_elements_of(array_uuid: UUID) -> None:
+    """Detach every element row of the array and flush — the FK
+    array_values.value_uuid -> instances forbids deleting a box that is
+    still referenced, so the pointer rows go first."""
+    _ = Database.session.execute(
+        sqla.delete(TABLE_ArrayValues).where(TABLE_ArrayValues.inst_uuid == array_uuid)
+    )
+    Database.session.flush()
+
+
+@databasemethod(commit=False)
 def array_tag_rows(
     element_uuid: UUID, array_type_name: str, name_prop_key: str
 ) -> list[tuple[UUID, str, str, str | None, str]]:

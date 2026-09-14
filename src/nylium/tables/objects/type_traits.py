@@ -47,4 +47,16 @@ def is_attached(type_uuid: UUID, trait_uuid: UUID | None) -> bool:
     return attached is not None
 
 
+@databasemethod(commit=False)
+def attached_trait_uuids(type_uuid: UUID) -> list[UUID]:
+    """Traits attached to the type, in attach order (ADR-0013/0019)."""
+    return list(
+        Database.session.scalars(
+            sqla.select(TABLE_TypeTraits.trait_uuid)
+            .where(TABLE_TypeTraits.type_uuid == type_uuid)
+            .order_by(TABLE_TypeTraits.position)
+        ).all()
+    )
+
+
 type_traits = TypeTraits()

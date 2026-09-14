@@ -14,6 +14,7 @@ from nylium.database import Database, databasemethod
 from nylium.database.table import Row, Table
 from nylium.tables.objects.instance import Instance as Instance
 from nylium.tables.objects.table_instances import TABLE_Instances as TABLE_Instances
+from nylium.tables.objects.table_types import TABLE_Types
 
 
 def unique_plural_name(uuid: UUID, name: str, plural_name: str | None = None) -> str:
@@ -110,5 +111,17 @@ def existing_uuids(uuids: list[UUID]) -> set[UUID]:
     return set(
         Database.session.scalars(
             sqla.select(TABLE_Instances.uuid).where(TABLE_Instances.uuid.in_(uuids))
+        ).all()
+    )
+
+
+@databasemethod(commit=False)
+def uuids_of_kind(kind: str) -> list[UUID]:
+    """Uuids of every instance whose type has the given kind (ADR-0019)."""
+    return list(
+        Database.session.scalars(
+            sqla.select(TABLE_Instances.uuid)
+            .join(TABLE_Types, TABLE_Types.uuid == TABLE_Instances.type_uuid)
+            .where(TABLE_Types.kind == kind)
         ).all()
     )

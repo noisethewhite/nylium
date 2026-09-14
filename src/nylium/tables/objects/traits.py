@@ -56,4 +56,11 @@ def uuid_by_name(name: str) -> UUID | None:
     )
 
 
+@databasemethod(commit=False)
+def name_of(uuid: UUID) -> str | None:
+    """The trait's name by uuid, or None when the trait is gone (ADR-0019)."""
+    row = Database.session.get(TABLE_Traits, uuid)
+    return None if row is None else str(row.name)
+
+
 traits = Traits()
