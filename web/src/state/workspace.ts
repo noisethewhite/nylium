@@ -50,6 +50,10 @@ const INITIAL_STATE: WorkspaceState = {
   activeTab: null,
 };
 
+/** Placeholder name for a freshly created object — the user renames it
+ * in the editor; matches nothing server-side, purely a draft default. */
+const DEFAULT_OBJECT_NAME = "New Object";
+
 export function sameTab(a: Tab, b: Tab): boolean {
   if (a.kind !== b.kind) {
     return false;
@@ -75,6 +79,9 @@ export function sameTab(a: Tab, b: Tab): boolean {
 export class WorkspaceStore extends Observable<WorkspaceState> {
   private readonly api: NyliumApi;
   private readonly onUnauthorized: () => void;
+  /** Per-type generation counter: a refresh only applies its result if
+   * no newer refresh of the same type started while it was in flight. */
+  private readonly refreshGeneration = new Map<string, number>();
 
   constructor(api: NyliumApi, onUnauthorized: () => void) {
     super(INITIAL_STATE);
@@ -162,14 +169,9 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
   ): Promise<void> {
     await this.guard(async () => {
       const created = await this.api.createType(name, pluralName, props, icon, color, embedded);
-      const state = this.getSnapshot();
-      const tabs = state.tabs.filter((tab) => tab.kind !== "create-type");
       const tab: Tab = { kind: "type", name: created.name, preview: false };
-      this.setState({
-        ...state,
-        types: [...state.types, created],
-        tabs: tabs.some((open) => sameTab(open, tab)) ? tabs : [...tabs, tab],
-        activeTab: tab,
+      this.openCreatedTab("create-type", tab, {
+        types: [...this.getSnapshot().types, created],
       });
     });
   }
@@ -177,14 +179,9 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
   async createEnum(name: string, options: string[]): Promise<void> {
     await this.guard(async () => {
       const created = await this.api.createEnum(name, options);
-      const state = this.getSnapshot();
-      const tabs = state.tabs.filter((tab) => tab.kind !== "create-enum");
       const tab: Tab = { kind: "type", name: created.name, preview: false };
-      this.setState({
-        ...state,
-        types: [...state.types, created],
-        tabs: tabs.some((open) => sameTab(open, tab)) ? tabs : [...tabs, tab],
-        activeTab: tab,
+      this.openCreatedTab("create-enum", tab, {
+        types: [...this.getSnapshot().types, created],
       });
     });
   }
@@ -196,14 +193,9 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
   ): Promise<void> {
     await this.guard(async () => {
       const created = await this.api.createUnit(name, base, secondaries);
-      const state = this.getSnapshot();
-      const tabs = state.tabs.filter((tab) => tab.kind !== "create-unit");
       const tab: Tab = { kind: "type", name: created.name, preview: false };
-      this.setState({
-        ...state,
-        types: [...state.types, created],
-        tabs: tabs.some((open) => sameTab(open, tab)) ? tabs : [...tabs, tab],
-        activeTab: tab,
+      this.openCreatedTab("create-unit", tab, {
+        types: [...this.getSnapshot().types, created],
       });
     });
   }
@@ -228,36 +220,15 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
       if (!current) {
         return;
       }
-      let schema = current;
-      const metaChanged =
-        patch.name !== current.name ||
-        patch.icon !== current.icon ||
-        patch.color !== current.color;
-      if (metaChanged) {
-        const rename: { name?: string; icon?: string; color?: string } = {};
-        if (patch.name !== current.name) {
-          rename.name = patch.name;
-        }
-        if (patch.icon !== current.icon) {
-          rename.icon = patch.icon;
-        }
-        if (patch.color !== current.color) {
-          rename.color = patch.color;
-        }
-        schema = await this.api.updateType(typeName, rename);
-      }
+      let schema = await this.patchTypeMeta(typeName, patch, current);
       schema = await this.api.syncUnitParts(schema.name, parts);
       const state = this.getSnapshot();
-      const renamed = schema.name !== typeName;
-      const tabs = state.tabs.map((tab) =>
-        renamed && tab.kind === "type" && tab.name === typeName
-          ? { ...tab, name: schema.name }
-          : tab,
+      const { tabs, activeTab } = WorkspaceStore.renameNamedTab(
+        state,
+        "type",
+        typeName,
+        schema.name,
       );
-      const activeTab =
-        renamed && state.activeTab?.kind === "type" && state.activeTab.name === typeName
-          ? { ...state.activeTab, name: schema.name }
-          : state.activeTab;
       this.setState({
         ...state,
         types: state.types.map((view) => (view.name === typeName ? schema : view)),
@@ -284,36 +255,15 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
       if (!current) {
         return;
       }
-      let schema = current;
-      const metaChanged =
-        patch.name !== current.name ||
-        patch.icon !== current.icon ||
-        patch.color !== current.color;
-      if (metaChanged) {
-        const rename: { name?: string; icon?: string; color?: string } = {};
-        if (patch.name !== current.name) {
-          rename.name = patch.name;
-        }
-        if (patch.icon !== current.icon) {
-          rename.icon = patch.icon;
-        }
-        if (patch.color !== current.color) {
-          rename.color = patch.color;
-        }
-        schema = await this.api.updateType(typeName, rename);
-      }
+      let schema = await this.patchTypeMeta(typeName, patch, current);
       schema = await this.api.syncEnumOptions(schema.name, options);
       const state = this.getSnapshot();
-      const renamed = schema.name !== typeName;
-      const tabs = state.tabs.map((tab) =>
-        renamed && tab.kind === "type" && tab.name === typeName
-          ? { ...tab, name: schema.name }
-          : tab,
+      const { tabs, activeTab } = WorkspaceStore.renameNamedTab(
+        state,
+        "type",
+        typeName,
+        schema.name,
       );
-      const activeTab =
-        renamed && state.activeTab?.kind === "type" && state.activeTab.name === typeName
-          ? { ...state.activeTab, name: schema.name }
-          : state.activeTab;
       this.setState({
         ...state,
         types: state.types.map((view) => (view.name === typeName ? schema : view)),
@@ -339,10 +289,7 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
           !(tab.kind === "type" && tab.name === name) &&
           !(tab.kind === "object" && doomed.has(tab.uuid)),
       );
-      const activeTab =
-        state.activeTab !== null && tabs.some((tab) => sameTab(tab, state.activeTab as Tab))
-          ? state.activeTab
-          : (tabs[tabs.length - 1] ?? null);
+      const activeTab = WorkspaceStore.keepActiveTab(state, tabs);
       this.setState({
         ...state,
         types: state.types.filter((view) => view.name !== name),
@@ -360,14 +307,9 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
   async createTrait(name: string, color: string): Promise<void> {
     await this.guard(async () => {
       const created = await this.api.createTrait(name, color, {});
-      const state = this.getSnapshot();
-      const tabs = state.tabs.filter((tab) => tab.kind !== "create-trait");
       const tab: Tab = { kind: "trait", name: created.name, preview: false };
-      this.setState({
-        ...state,
-        traits: [...state.traits, created],
-        tabs: tabs.some((open) => sameTab(open, tab)) ? tabs : [...tabs, tab],
-        activeTab: tab,
+      this.openCreatedTab("create-trait", tab, {
+        traits: [...this.getSnapshot().traits, created],
       });
     });
   }
@@ -392,16 +334,12 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
       }
       const saved = await this.api.syncTrait(traitName, body);
       const state = this.getSnapshot();
-      const renamed = saved.name !== traitName;
-      const tabs = state.tabs.map((tab) =>
-        renamed && tab.kind === "trait" && tab.name === traitName
-          ? { ...tab, name: saved.name }
-          : tab,
+      const { tabs, activeTab } = WorkspaceStore.renameNamedTab(
+        state,
+        "trait",
+        traitName,
+        saved.name,
       );
-      const activeTab =
-        renamed && state.activeTab?.kind === "trait" && state.activeTab.name === traitName
-          ? { ...state.activeTab, name: saved.name }
-          : state.activeTab;
       this.setState({
         ...state,
         traits: state.traits.map((view) => (view.name === traitName ? saved : view)),
@@ -419,10 +357,7 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
       await this.api.deleteTrait(name);
       const state = this.getSnapshot();
       const tabs = state.tabs.filter((tab) => !(tab.kind === "trait" && tab.name === name));
-      const activeTab =
-        state.activeTab !== null && tabs.some((tab) => sameTab(tab, state.activeTab as Tab))
-          ? state.activeTab
-          : (tabs[tabs.length - 1] ?? null);
+      const activeTab = WorkspaceStore.keepActiveTab(state, tabs);
       this.setState({
         ...state,
         traits: state.traits.filter((view) => view.name !== name),
@@ -509,40 +444,16 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
       if (!current) {
         return;
       }
-      let schema = current;
-      const metaChanged =
-        patch.name !== current.name ||
-        patch.plural_name !== current.plural_name ||
-        patch.icon !== current.icon ||
-        patch.color !== current.color;
-      if (metaChanged) {
-        const rename: { name?: string; plural_name?: string; icon?: string; color?: string } = {};
-        if (patch.name !== current.name) {
-          rename.name = patch.name;
-        }
-        if (patch.plural_name !== current.plural_name) {
-          rename.plural_name = patch.plural_name;
-        }
-        if (patch.icon !== current.icon) {
-          rename.icon = patch.icon;
-        }
-        if (patch.color !== current.color) {
-          rename.color = patch.color;
-        }
-        schema = await this.api.updateType(typeName, rename);
-      }
+      let schema = await this.patchTypeMeta(typeName, patch, current);
       schema = await this.api.syncProps(schema.name, props);
       const state = this.getSnapshot();
       const renamed = schema.name !== typeName;
-      const tabs = state.tabs.map((tab) =>
-        renamed && tab.kind === "type" && tab.name === typeName
-          ? { ...tab, name: schema.name }
-          : tab,
+      const { tabs, activeTab } = WorkspaceStore.renameNamedTab(
+        state,
+        "type",
+        typeName,
+        schema.name,
       );
-      const activeTab =
-        renamed && state.activeTab?.kind === "type" && state.activeTab.name === typeName
-          ? { ...state.activeTab, name: schema.name }
-          : state.activeTab;
       this.setState({
         ...state,
         types: state.types.map((view) => (view.name === typeName ? schema : view)),
@@ -565,7 +476,7 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
   async createObject(typeName: string): Promise<void> {
     await this.guard(async () => {
       const created = await this.api.createObject(typeName, {
-        name: { value: "New Object", unit: null },
+        name: { value: DEFAULT_OBJECT_NAME, unit: null },
       });
       const state = this.getSnapshot();
       const tab: Tab = { kind: "object", uuid: created.uuid, preview: false };
@@ -684,14 +595,9 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
         nodes,
         edges,
       );
-      const state = this.getSnapshot();
-      const tabs = state.tabs.filter((tab) => tab.kind !== "create-function");
       const tab: Tab = { kind: "function", uuid: created.uuid, preview: false };
-      this.setState({
-        ...state,
-        functions: [...state.functions, created],
-        tabs: tabs.some((open) => sameTab(open, tab)) ? tabs : [...tabs, tab],
-        activeTab: tab,
+      this.openCreatedTab("create-function", tab, {
+        functions: [...this.getSnapshot().functions, created],
       });
     });
   }
@@ -728,10 +634,7 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
       const types = await this.api.listTypes();
       const state = this.getSnapshot();
       const tabs = state.tabs.filter((tab) => !(tab.kind === "function" && tab.uuid === uuid));
-      const activeTab =
-        state.activeTab !== null && tabs.some((tab) => sameTab(tab, state.activeTab as Tab))
-          ? state.activeTab
-          : (tabs[tabs.length - 1] ?? null);
+      const activeTab = WorkspaceStore.keepActiveTab(state, tabs);
       this.setState({
         ...state,
         functions: state.functions.filter((f) => f.uuid !== uuid),
@@ -826,22 +729,111 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
   }
 
   private async refreshObjectsOf(typeName: string): Promise<void> {
+    const generation = (this.refreshGeneration.get(typeName) ?? 0) + 1;
+    this.refreshGeneration.set(typeName, generation);
     const fresh = await this.api.listObjects(typeName);
+    if (this.refreshGeneration.get(typeName) !== generation) {
+      // a newer refresh of this type started while we awaited — its
+      // result wins; ours is stale
+      return;
+    }
     const rest = this.getSnapshot().objects.filter((o) => o.type_name !== typeName);
     this.setState({ ...this.getSnapshot(), objects: [...rest, ...fresh] });
   }
 
-  private async guard(action: () => Promise<void>): Promise<void> {
+  /** Shared tail of the schema save paths: apply a name/icon/color (+
+   * plural_name where the form has it) patch only where values changed.
+   * Returns the up-to-date schema — `current` when nothing changed. */
+  private async patchTypeMeta(
+    typeName: string,
+    patch: { name: string; plural_name?: string; icon: string; color: string },
+    current: TypeView,
+  ): Promise<TypeView> {
+    const rename: { name?: string; plural_name?: string; icon?: string; color?: string } = {};
+    if (patch.name !== current.name) {
+      rename.name = patch.name;
+    }
+    if (patch.plural_name !== undefined && patch.plural_name !== current.plural_name) {
+      rename.plural_name = patch.plural_name;
+    }
+    if (patch.icon !== current.icon) {
+      rename.icon = patch.icon;
+    }
+    if (patch.color !== current.color) {
+      rename.color = patch.color;
+    }
+    if (Object.keys(rename).length === 0) {
+      return current;
+    }
+    return this.api.updateType(typeName, rename);
+  }
+
+  /** Rename a type/trait inside open tabs after a schema rename — tabs
+   * addressing the old name would go dead otherwise. */
+  private static renameNamedTab(
+    state: WorkspaceState,
+    kind: "type" | "trait",
+    oldName: string,
+    newName: string,
+  ): { tabs: readonly Tab[]; activeTab: Tab | null } {
+    if (oldName === newName) {
+      return { tabs: state.tabs, activeTab: state.activeTab };
+    }
+    const tabs = state.tabs.map((tab) =>
+      tab.kind === kind && tab.name === oldName ? { ...tab, name: newName } : tab,
+    );
+    const activeTab =
+      state.activeTab?.kind === kind && state.activeTab.name === oldName
+        ? { ...state.activeTab, name: newName }
+        : state.activeTab;
+    return { tabs, activeTab };
+  }
+
+  /** Shared tail of the create-* paths: close the create form, open the
+   * fresh entity's tab (deduped), merge the entity list patch. */
+  private openCreatedTab(
+    createKind: Tab["kind"],
+    tab: Tab,
+    patch: Partial<WorkspaceState>,
+  ): void {
+    const state = this.getSnapshot();
+    const tabs = state.tabs.filter((open) => open.kind !== createKind);
+    this.setState({
+      ...state,
+      ...patch,
+      tabs: tabs.some((open) => sameTab(open, tab)) ? tabs : [...tabs, tab],
+      activeTab: tab,
+    });
+  }
+
+  /** After a delete shrinks the tab list: keep the active tab if it
+   * survived, otherwise fall back to the last remaining tab. */
+  private static keepActiveTab(
+    state: WorkspaceState,
+    tabs: readonly Tab[],
+  ): Tab | null {
+    const active = state.activeTab;
+    if (active !== null && tabs.some((tab) => sameTab(tab, active))) {
+      return active;
+    }
+    return tabs[tabs.length - 1] ?? null;
+  }
+
+  /** Run a mutating action, translating failures into a success flag:
+   * 401 flips the auth screen; anything else was already reported to
+   * the error log by the transport. `false` lets a caller tell "saved"
+   * from "failed" instead of awaiting a promise that always resolves. */
+  private async guard(action: () => Promise<void>): Promise<boolean> {
     try {
       await action();
+      return true;
     } catch (caught: unknown) {
       if (caught instanceof HttpError && caught.status === 401) {
         // session expired mid-flight — the auth store flips the screen
         this.onUnauthorized();
-        return;
       }
-      // transport already reported the failure to the error log —
-      // the workspace only stops the action here
+      // non-401: transport already reported the failure to the error log
+      return false;
     }
   }
 }
