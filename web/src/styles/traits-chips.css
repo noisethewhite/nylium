@@ -1,0 +1,170 @@
+/* --- traits (ADR-0013) and chip/token editors --- */
+
+.trait-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.trait-dot-hollow {
+  background: transparent;
+  border: 1.5px solid var(--fg-dim);
+}
+
+.type-traits-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-2) 0 var(--space-1);
+}
+
+.trait-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px 4px 2px 8px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--separator);
+  font-size: 13px;
+}
+
+.trait-chip-name {
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+  cursor: pointer;
+  font-size: inherit;
+}
+
+.trait-chip-name:hover {
+  text-decoration: underline;
+}
+
+/* the "+ Trait" attach button reads as another chip — dashed pill to
+ * signal "add", matching the trait chips' height and padding */
+.trait-attach {
+  display: inline-flex;
+  align-items: center;
+}
+
+.trait-attach-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px 8px;
+  border: 1px dashed var(--separator);
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--fg-dim);
+  font-size: 13px;
+}
+
+.trait-attach-trigger:hover {
+  background: var(--bg-hover);
+  color: var(--fg);
+}
+
+.schema-prop-row-trait {
+  border-left: 3px solid var(--separator);
+  padding-left: var(--space-2);
+  opacity: 0.85;
+}
+
+.trait-tinted-field {
+  border-left: 3px solid var(--separator);
+  padding-left: var(--space-2);
+}
+
+.trait-create-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.trait-color-trigger {
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+}
+
+/* --- chip (token) array editor: refs/enums as email-recipient ovals --- */
+
+.chip-field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.chip,
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--bg-raised);
+  border: 1px solid var(--separator);
+}
+
+.chip {
+  font-size: 13px;
+}
+
+.chip-remove,
+.tag-chip-remove {
+  background: none;
+  border: none;
+  color: var(--fg-dim);
+  font: inherit;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.chip-remove:hover,
+.tag-chip-remove:hover {
+  color: var(--fg);
+}
+
+.chip-add-trigger,
+.tag-chip-add {
+  cursor: pointer;
+  color: var(--fg-dim);
+}
+
+.chip-add-trigger:hover,
+.tag-chip-add:hover {
+  color: var(--fg);
+  border-color: var(--fg-faint);
+}
+
+/* --- derived tag chips (ADR-0005): owner-colored dots under the name --- */
+
+.tag-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.tag-chip {
+  font-size: 12px;
+}
+
+.tag-chip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.tag-chip-add {
+  font-size: 12px;
+}

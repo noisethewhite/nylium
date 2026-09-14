@@ -1,0 +1,101 @@
+/* --- controls: buttons and borderless inputs --- */
+
+.button {
+  background: var(--bg-hover);
+  border: none;
+  color: var(--fg);
+  font: inherit;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-small);
+  cursor: pointer;
+}
+
+.button:hover {
+  background: var(--bg-active);
+}
+
+.button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.button-primary {
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+
+.button-primary:hover {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.button-danger {
+  color: var(--danger);
+}
+
+.icon-button {
+  background: none;
+  border: none;
+  color: var(--fg-dim);
+  font: inherit;
+  font-size: 16px;
+  cursor: pointer;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-small);
+}
+
+.icon-button:hover {
+  background: var(--bg-hover);
+  color: var(--fg);
+}
+
+/* Borderless inputs — a field reads as its grey placeholder until you
+ * type; no boxes anywhere in the app chrome. */
+.input {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  color: var(--fg);
+  font: inherit;
+  padding: var(--space-1) 0;
+  width: 100%;
+}
+
+.input::placeholder {
+  color: var(--fg-faint);
+}
+
+.input:focus {
+  outline: none;
+}
+
+/* keyboard users keep a visible focus ring; mouse clicks don't flash it */
+.input:focus-visible {
+  outline: 1px solid var(--accent);
+}
+
+select.input option {
+  /* the dropdown list itself still needs a surface */
+  background: var(--bg-raised);
+  color: var(--fg);
+}
+
+/* the create-form title IS a field */
+.type-name-input {
+  font-size: 20px;
+  font-weight: 600;
+  padding: 0 0 var(--space-2);
+}
+
+/* the object's name prop IS its page heading — same borderless trick */
+.object-name-input {
+  font-size: 24px;
+  font-weight: 600;
+  padding: 0 0 var(--space-3);
+  width: 100%;
+}
+
+.prop-grip-spacer {
+  cursor: default;
+  width: 11px;
+}

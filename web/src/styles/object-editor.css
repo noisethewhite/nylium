@@ -1,0 +1,184 @@
+/* --- object editor: fields, computed props, embedded sections --- */
+
+.object-editor {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  --editor-max-width: 760px;
+}
+
+/* one centered column: every direct child block shares the editor width,
+ * horizontally centered, wide enough to not look cramped */
+.object-editor > * {
+  width: 100%;
+  max-width: var(--editor-max-width);
+}
+
+.object-editor-empty {
+  padding: 0;
+}
+
+.object-name-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.object-name-row .object-name-input {
+  flex: 1;
+}
+
+.object-editor-fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* ADR-0005/0007: read-only computed props — same MoreButtons split,
+ * dimmed, with a kind badge. */
+.object-editor-computed {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.computed-header {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.computed-row {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+
+.computed-label {
+  flex: 0 0 150px;
+  color: var(--fg-dim);
+  font-size: 13px;
+}
+
+.computed-value {
+  flex: 1;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.computed-badge {
+  font-size: 11px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 1px 8px;
+}
+
+/* MoreButtons layout: grey label pinned left, value on the right */
+.field {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+
+.field-label {
+  flex: 0 0 200px;
+  color: var(--fg-dim);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.field-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* red plaque under a field whose draft broke its regex */
+.field-error {
+  background: var(--danger-dim);
+  color: var(--danger);
+  font-size: 12px;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-small);
+}
+
+/* month/day/time controls of the year-less date editors in one row */
+.field-row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.field-row .input {
+  flex: 1;
+  min-width: 0;
+}
+
+.field-array-head {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.field-array-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.field-array-item-editor {
+  flex: 1;
+}
+
+/* --- embedded (composition) section, ADR-0004 --- */
+
+.embedded-toggle {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.embedded-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  padding-left: var(--space-4);
+  border-left: 2px solid var(--separator);
+  background: var(--bg-raised);
+  border-radius: var(--radius-small);
+}
+
+.embedded-badge {
+  font-size: 11px;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--separator);
+  color: var(--fg-dim);
+  margin-left: var(--space-2);
+  vertical-align: middle;
+}
+
+.embedded-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 13px;
+  color: var(--fg-dim);
+  cursor: pointer;
+}
+
+.object-editor-actions {
+  display: flex;
+  gap: var(--space-3);
+}

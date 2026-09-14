@@ -1,24 +1,44 @@
 :root {
+  /* surfaces */
   --bg: #191919;
   --bg-raised: #212120;
   --bg-hover: #2b2b2a;
   --bg-active: #323231;
+  /* text */
   --fg: #e8e6e1;
   --fg-dim: #9c9a94;
   --fg-faint: #63625d;
+  /* accent */
   --accent: #4cb782;
   --accent-hover: #5fc996;
   --accent-dim: rgba(76, 183, 130, 0.14);
+  /* danger */
   --danger: #e06c5b;
+  --danger-dim: rgba(224, 108, 91, 0.12);
+  /* hairlines */
   --separator: rgba(255, 255, 255, 0.07);
   --border: rgba(255, 255, 255, 0.08);
+  /* overlays */
+  --backdrop: rgba(0, 0, 0, 0.5);
+  --shadow-popover: 0 8px 24px rgba(0, 0, 0, 0.4);
+  /* radii */
   --radius: 8px;
   --radius-small: 6px;
+  --radius-xs: 4px;
+  --radius-pill: 999px;
+  /* spacing scale (4px step) */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
   --space-4: 16px;
+  --space-5: 20px;
   --space-6: 24px;
+  /* stacking layers */
+  --z-backdrop: 10;
+  --z-menu: 11;
+  --z-drawer-backdrop: 30;
+  --z-drawer: 40;
+  --z-toast: 100;
   --font: "Helvetica Neue", Helvetica, Arial, "Liberation Sans", sans-serif;
   color-scheme: dark;
 }

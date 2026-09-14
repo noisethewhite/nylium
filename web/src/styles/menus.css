@@ -1,0 +1,128 @@
+/* --- menus: floating popovers and the type picker --- */
+
+.floating-menu {
+  position: relative;
+  display: inline-flex;
+}
+
+/* input-style triggers (ref/enum fields) stretch to fill the field shell */
+.floating-menu-grow {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+}
+
+.floating-menu-grow .type-picker-trigger {
+  width: 100%;
+}
+
+.floating-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-backdrop);
+}
+
+.type-picker {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.type-picker-trigger {
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.type-picker-value {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.type-picker-chevron {
+  font-size: 16px;
+  color: var(--fg-faint);
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.type-picker-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-backdrop);
+}
+
+.type-menu {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  left: 0;
+  right: 0;
+  /* narrow triggers (chip "+", icon buttons) must not squeeze the menu */
+  min-width: 220px;
+  z-index: var(--z-menu);
+  background: var(--bg-raised);
+  border: 1px solid var(--separator);
+  border-radius: var(--radius-small);
+  padding: var(--space-1);
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-popover);
+}
+
+.type-menu-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.type-menu-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: none;
+  border: none;
+  color: var(--fg);
+  font: inherit;
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-small);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.type-menu-row:hover {
+  background: var(--bg-hover);
+}
+
+.type-menu-divider {
+  border-top: 1px solid var(--separator);
+  margin: var(--space-1) 0;
+}
+
+.type-menu-footer {
+  display: flex;
+  flex-direction: column;
+}
+
+.type-menu-search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding-bottom: var(--space-1);
+}
+
+.type-menu-empty {
+  padding: var(--space-2) var(--space-3);
+}
+
+.type-menu-title {
+  align-self: center;
+  font-size: 13px;
+}

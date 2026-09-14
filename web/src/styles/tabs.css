@@ -1,0 +1,67 @@
+/* --- tab bar --- */
+
+.tab-bar {
+  display: flex;
+  align-items: stretch;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--separator);
+  flex-shrink: 0;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0 var(--space-2) 0 var(--space-4);
+  border-right: 1px solid var(--separator);
+  color: var(--fg-dim);
+  white-space: nowrap;
+}
+
+.tab-active {
+  color: var(--fg);
+  background: var(--bg-raised);
+  box-shadow: inset 0 2px 0 var(--accent);
+}
+
+.tab-label {
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  padding: var(--space-2) 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* VS Code preview-tab: an unpinned (transient) tab renders italic. */
+.tab-label-preview {
+  font-style: italic;
+}
+
+.tab-close {
+  visibility: hidden;
+}
+
+.tab:hover .tab-close,
+.tab-active .tab-close {
+  visibility: visible;
+}
+
+.tab-content {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  /* flex column so .object-editor's flex:1 actually stretches it to
+     full height — otherwise its height collapses to content and
+     overflow-y:auto clips popover menus opening past the last row */
+  display: flex;
+  flex-direction: column;
+}
+
+.create-type-page {
+  max-width: 560px;
+  padding: var(--space-6);
+}

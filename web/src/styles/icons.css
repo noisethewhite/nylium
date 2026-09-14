@@ -1,0 +1,82 @@
+/* --- icons: Material Symbols, type icons, file object rendering --- */
+
+.material-symbols-outlined {
+  font-family: "Material Symbols Outlined";
+  font-weight: normal;
+  font-style: normal;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  font-feature-settings: "liga";
+  -webkit-font-feature-settings: "liga";
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.type-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  user-select: none;
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+}
+
+/* ADR-0006: file objects (uploaded blobs) */
+.type-icon-image {
+  object-fit: cover;
+  border-radius: 3px;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* Built-in scalar types: muted, monospace "code" styling so language
+   primitives read as system-defined, distinct from user-authored types. */
+.type-icon-scalar {
+  filter: grayscale(1) opacity(0.72);
+}
+
+.scalar-name {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--fg-dim);
+}
+
+/* a type name: always bold, colored like its icon; scalar names also
+ * render monospace so builtins are obvious at a glance */
+.type-name-text {
+  font-weight: 600;
+}
+
+.type-name-text.type-name-scalar {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* --- file blocks: uploaded blob rendering inside the object editor --- */
+
+.file-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) 0;
+}
+
+.file-block-image {
+  max-width: 100%;
+  max-height: 480px;
+  object-fit: contain;
+  border-radius: var(--radius-xs);
+  align-self: flex-start;
+}
+
+.file-block-link {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.file-block-link:hover {
+  text-decoration: underline;
+}

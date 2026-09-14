@@ -1,0 +1,159 @@
+/* --- sidebar: type navigation, sections, footer, storage popover --- */
+
+.sidebar {
+  width: 260px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--separator);
+  background: var(--bg-raised);
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4);
+}
+
+.brand {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* anchors the "+" popover menu to the header button */
+.sidebar-plus {
+  position: relative;
+}
+
+.sidebar-plus .type-menu {
+  left: auto;
+  right: 0;
+  min-width: 180px;
+}
+
+.type-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 var(--space-2) var(--space-4);
+}
+
+.type-row {
+  display: flex;
+  align-items: center;
+  border-radius: var(--radius-small);
+}
+
+.type-row:hover {
+  background: var(--bg-hover);
+}
+
+.type-row-selected {
+  background: var(--accent-dim);
+}
+
+.type-row-name {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--fg);
+  font: inherit;
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  border-radius: var(--radius-small);
+}
+
+.type-row-delete {
+  visibility: hidden;
+}
+
+.type-row:hover .type-row-delete {
+  visibility: visible;
+}
+
+/* --- sidebar sections --- */
+
+.sidebar-scroll {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.sidebar-section {
+  padding: var(--space-3) var(--space-4) var(--space-1);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+
+.object-entry {
+  width: 100%;
+  text-align: left;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  background: none;
+  border: none;
+  color: var(--fg);
+  font: inherit;
+  cursor: pointer;
+}
+
+/* position: relative anchors the storage popover to the footer,
+ * not to the tiny trigger button */
+.sidebar-footer {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--separator);
+}
+
+.sidebar-user {
+  color: var(--fg-dim);
+  font-size: 13px;
+}
+
+.type-plural {
+  font-size: 0.6em;
+  font-weight: normal;
+  margin-left: var(--space-2);
+}
+
+/* --- storage popover (sidebar footer, opens upward) --- */
+
+.storage-menu-wrap {
+  position: static;
+}
+
+.storage-menu-wrap .type-menu {
+  top: auto;
+  bottom: calc(100% + var(--space-1));
+  left: var(--space-3);
+  right: var(--space-3);
+  min-width: 0;
+  overflow-wrap: normal;
+}
+
+.storage-menu-body {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-1) 0;
+}
+
+.storage-menu-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-1) var(--space-3);
+  font-size: 13px;
+  white-space: nowrap;
+}
