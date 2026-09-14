@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./components/app";
 import { AuthApi } from "./net/auth-api";
+import { HttpError } from "./net/http-transport";
 import { NyliumApi } from "./net/nylium-api";
 import { AuthStore } from "./state/auth";
 import { ErrorStore } from "./state/errors";
@@ -16,7 +17,9 @@ if (container === null) {
   throw new Error("root element missing");
 }
 const errors = new ErrorStore();
-const reportApiError = (error: Error): void => errors.report(error.message);
+// HttpError carries status/code — forward them, don't flatten to a string
+const reportApiError = (error: HttpError): void =>
+  errors.report(error.message, { status: error.status, code: error.code });
 const auth = new AuthStore(new AuthApi(reportApiError));
 const workspace = new WorkspaceStore(new NyliumApi(reportApiError), () =>
   auth.expire(),

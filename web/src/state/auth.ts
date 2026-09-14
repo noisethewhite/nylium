@@ -31,7 +31,9 @@ export class AuthStore extends Observable<AuthState> {
     this.api = api;
   }
 
-  /** Boot probe: a live session cookie restores the session silently. */
+  /** Boot probe: a live session cookie restores the session silently.
+   * A 401 is simply "no session"; anything else (network down, 5xx) is
+   * a diagnosis the login screen must show, not swallow. */
   async init(): Promise<void> {
     try {
       const user = await this.api.me();
@@ -40,8 +42,13 @@ export class AuthStore extends Observable<AuthState> {
         status: "authenticated",
         userName: user.name,
       });
-    } catch {
-      this.setState({ ...this.getSnapshot(), status: "anonymous" });
+    } catch (caught: unknown) {
+      if (caught instanceof HttpError && caught.status === 401) {
+        this.setState({ ...this.getSnapshot(), status: "anonymous" });
+        return;
+      }
+      const message = caught instanceof Error ? caught.message : String(caught);
+      this.setState({ ...this.getSnapshot(), status: "anonymous", error: message });
     }
   }
 
@@ -61,6 +68,9 @@ export class AuthStore extends Observable<AuthState> {
     });
   }
 
+  /** Local session drop always wins; a failed server call is already
+   * toasted by the transport's error reporter, so we don't swallow it
+   * silently — we just don't let it block the sign-out. */
   async logout(): Promise<void> {
     await this.api.logout().catch(() => undefined);
     this.expire();

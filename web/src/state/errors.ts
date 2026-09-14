@@ -3,6 +3,11 @@ import { Observable } from "./observable";
 export interface ErrorEntry {
   readonly id: number;
   readonly message: string;
+  /** HTTP status of the originating failure, when it came from the
+   * transport (0 = network-level, server unreachable). */
+  readonly status?: number;
+  /** Machine code from the backend's {"error": {"code": …}} envelope. */
+  readonly code?: string;
   readonly at: Date;
 }
 
@@ -29,8 +34,10 @@ export class ErrorStore extends Observable<ErrorCenterState> {
     super(INITIAL_STATE);
   }
 
-  report(message: string): void {
-    const entry: ErrorEntry = { id: this.nextId, message, at: new Date() };
+  /** Structured detail keeps the transport's status/code instead of
+   * flattening every failure to a bare message. */
+  report(message: string, detail?: { status?: number; code?: string }): void {
+    const entry: ErrorEntry = { id: this.nextId, message, ...detail, at: new Date() };
     this.nextId += 1;
     const state = this.getSnapshot();
     this.setState({

@@ -5,6 +5,19 @@ import { useObservable } from "../state/use-observable";
 
 const TOAST_TTL_MS = 5000;
 
+/** Status/code suffix for entries that came from the transport — the
+ * diagnosis survives past the bare message. */
+function detailSuffix(entry: ErrorEntry): string {
+  const parts: string[] = [];
+  if (entry.status !== undefined) {
+    parts.push(entry.status === 0 ? "network" : `HTTP ${entry.status}`);
+  }
+  if (entry.code !== undefined && entry.code !== "") {
+    parts.push(entry.code);
+  }
+  return parts.length > 0 ? ` [${parts.join(" · ")}]` : "";
+}
+
 /** One floating error: semi-transparent, fades away after a few
  * seconds. Hovering freezes it — opaque, framed — and moving the
  * mouse away dismisses it into the log. */
@@ -30,6 +43,7 @@ function ErrorToast(props: {
       onMouseLeave={() => errors.dismissToast(entry.id)}
     >
       {entry.message}
+      <span className="dim">{detailSuffix(entry)}</span>
     </div>
   );
 }
@@ -76,7 +90,10 @@ export function ErrorCenter(props: { errors: ErrorStore }): ReactElement {
               <span className="error-log-time">
                 {entry.at.toLocaleTimeString()}
               </span>
-              <span>{entry.message}</span>
+              <span>
+                {entry.message}
+                <span className="dim">{detailSuffix(entry)}</span>
+              </span>
             </div>
           ))}
         </div>
