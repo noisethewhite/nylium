@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TypeAlias, cast
 from uuid import UUID
 
-from nylium.api.views import ObjectRef
+from nylium.api.display import ObjectRef
 from nylium.database import databasemethod
 from nylium.tables import Trait, traits
 from nylium.tables.objects.types import Type, types

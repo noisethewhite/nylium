@@ -6,7 +6,7 @@ from typing import cast
 from uuid import UUID
 
 from nylium.api.shared import ApiShared, NAME_PROP_KEY, PropInput
-from nylium.api.views import ObjectRef, ObjectView
+from nylium.api.display import ObjectRef, ObjectView
 from nylium.database import databasemethod
 from nylium.tables import instances
 from nylium.objects.wembedded import WEmbedded

@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 from collections.abc import Callable
 
-from nylium.api.views import (
+from nylium.api.display import (
     ArrayValue,
     EmbeddedValue,
     ObjectRef,

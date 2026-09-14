@@ -11,7 +11,7 @@ from decimal import Decimal, InvalidOperation
 from typing import cast
 
 from nylium.api.api import Api, PropInput
-from nylium.api.views import (
+from nylium.api.display import (
     ArrayValue,
     EmbeddedValue,
     PropValue,

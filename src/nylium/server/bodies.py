@@ -35,7 +35,7 @@ from pydantic import ConfigDict
 from pydantic.dataclasses import dataclass
 
 from nylium.api.api import Api
-from nylium.api.views import FunctionView, ObjectView, PropValue
+from nylium.api.display import FunctionView, ObjectView, PropValue
 from nylium.objects.wscalar import WColor
 from nylium.server.codec import PropCodec
 from nylium.server.errors import NotFoundError

@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from nylium.api.objects import ObjectsApi as _FunctionsBase
 else:
     _FunctionsBase = ApiShared
-from nylium.api.views import FunctionView
+from nylium.api.display import FunctionView
 from nylium.database import databasemethod
 from nylium.tables import props, types
 from nylium.tables.objects.types import Type

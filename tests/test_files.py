@@ -140,7 +140,7 @@ def test_sweep_orphans_removes_untracked_blobs():
 def test_file_prop_on_object_roundtrip():
     """ADR-0008: a user type holds a File/Image prop; the value is a
     files.uuid reference — stable across rename, cleared on delete."""
-    from nylium.api.views import ObjectRef, RefValue
+    from nylium.api.display import ObjectRef, RefValue
 
     _ = Api.create_type("Artwork", {"name": "String", "cover": "Image"}, "Artworks")
     cover = upload("Image", "cover.png", "image/png", PNG)
@@ -173,7 +173,7 @@ def test_file_prop_writes_plain_uuid():
     _ = Api.create_type("Artwork", {"name": "String", "cover": "Image"}, "Artworks")
     cover = upload("Image", "cover.png", "image/png", PNG)
     obj = Api.create_object("Artwork", {"name": "Mona", "cover": cover.uuid})
-    from nylium.api.views import ObjectRef, RefValue
+    from nylium.api.display import ObjectRef, RefValue
 
     assert obj.props["cover"] == RefValue(
         ref=ObjectRef(uuid=cover.uuid, type_name="Image")
@@ -183,7 +183,7 @@ def test_file_prop_writes_plain_uuid():
 def test_array_of_image_stores_file_uuids():
     """ADR-0008: Array<Image> members are files.uuid, not box instances —
     the array stores the file pointer directly."""
-    from nylium.api.views import ArrayValue, ObjectRef, RefValue
+    from nylium.api.display import ArrayValue, ObjectRef, RefValue
 
     _ = Api.create_type(
         "Gallery", {"name": "String", "shots": "Array<Image>"}, "Galleries"
