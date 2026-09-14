@@ -44,4 +44,11 @@ class Files(Table[UUID, File]):
             Database.session.delete(row)
 
 
+@databasemethod(commit=False)
+def type_name_of(uuid: UUID) -> str | None:
+    """The stored type_name for a file uuid, or None (ADR-0019)."""
+    row = Database.session.get(TABLE_Files, uuid)
+    return None if row is None else row.type_name
+
+
 files = Files()

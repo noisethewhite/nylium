@@ -1,7 +1,6 @@
 """File CRUD, blob lifecycle and storage stats (ADR-0015)."""
 from __future__ import annotations
 
-from typing import cast
 from uuid import UUID, uuid4
 
 from nylium.api.shared import ApiShared
@@ -94,22 +93,12 @@ class FilesApi(ApiShared):
         needed — the size query goes through the engine directly."""
         import shutil
 
-        import sqlalchemy as sqla
-
-        from nylium.database import Database
+        from nylium.database import database_size_bytes
         from nylium.objects.wfile import WFile
 
         storage = WFile.storage_dir()
         usage = shutil.disk_usage(storage)
-        with Database.engine.connect() as connection:
-            db_bytes = cast(
-                int,
-                connection.execute(
-                    sqla.select(
-                        sqla.func.pg_database_size(sqla.func.current_database())
-                    )
-                ).scalar_one(),
-            )
+        db_bytes = database_size_bytes()
         blob_bytes = sum(
             path.stat().st_size for path in storage.iterdir() if path.is_file()
         )

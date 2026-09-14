@@ -1,8 +1,14 @@
-"""The instances table as a Mapping of writable instances (Table class + singleton)."""
+"""The instances table as a Mapping of writable instances (Table class + singleton).
+
+Also hosts the per-row statement helpers used by the objects layer
+(ADR-0019): reads, delete, modified_at bumps and ownership lookups.
+"""
 from __future__ import annotations
 
 from typing import ClassVar
 from uuid import UUID
+
+import sqlalchemy as sqla
 
 from nylium.database import Database, databasemethod
 from nylium.database.table import Row, Table
@@ -57,3 +63,52 @@ class Instances(Table[UUID, Instance]):
 
 
 instances = Instances()
+
+
+@databasemethod(commit=False)
+def get(uuid: UUID) -> Instance | None:
+    """The instance row, or None when the uuid is unknown."""
+    row = Database.session.get(TABLE_Instances, uuid)
+    return Instance(row) if row is not None else None
+
+
+@databasemethod(commit=False)
+def delete_row(uuid: UUID) -> None:
+    """Delete the instance row itself (caller handles value cleanup)."""
+    row = Database.session.get(TABLE_Instances, uuid)
+    if row is not None:
+        Database.session.delete(row)
+
+
+@databasemethod(commit=False)
+def touch(uuid: UUID) -> None:
+    """Bump modified_at after any prop write."""
+    _ = Database.session.execute(
+        sqla.update(TABLE_Instances)
+        .where(TABLE_Instances.uuid == uuid)
+        .values(modified_at=sqla.func.now())
+    )
+
+
+@databasemethod(commit=False)
+def owned_uuids(owner_object_uuid: UUID) -> list[UUID]:
+    """Uuids of every embedded instance owned by the given object."""
+    return list(
+        Database.session.scalars(
+            sqla.select(TABLE_Instances.uuid).where(
+                TABLE_Instances.owner_object_uuid == owner_object_uuid
+            )
+        ).all()
+    )
+
+
+@databasemethod(commit=False)
+def existing_uuids(uuids: list[UUID]) -> set[UUID]:
+    """The subset of ``uuids`` that are real instance rows (ADR-0019)."""
+    if not uuids:
+        return set()
+    return set(
+        Database.session.scalars(
+            sqla.select(TABLE_Instances.uuid).where(TABLE_Instances.uuid.in_(uuids))
+        ).all()
+    )

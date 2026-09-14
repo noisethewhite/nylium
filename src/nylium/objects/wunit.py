@@ -12,11 +12,13 @@ from __future__ import annotations
 from decimal import Decimal
 from uuid import UUID
 
-from nylium.database import Database, databasemethod
+from nylium.database import databasemethod
 from nylium.tables.objects.unit_parts import unit_parts
-from nylium.tables import TABLE_NumericValues
+from nylium.tables.values import cells
+from nylium.tables.values.numeric_values import read_with_unit, write_with_unit
 from nylium.objects.quantity import Quantity
 from nylium.objects.wprop import WProp
+from nylium.objects.wscalar import WNumeric
 from nylium.objects.wtype import WType
 from nylium.server.errors import ValidationError
 
@@ -63,11 +65,10 @@ class WUnit:
     def read(
         cls, inst_uuid: UUID, prop: WProp, type_name: str
     ) -> Quantity | None:
-        row = Database.session.get(TABLE_NumericValues, (inst_uuid, prop.uuid))
-        if row is None:
+        stored = read_with_unit(inst_uuid, prop.uuid)
+        if stored is None:
             return None
-        canonical = row.value
-        entered_unit = row.unit
+        canonical, entered_unit = stored
         if entered_unit is None:
             return Quantity(value=canonical, unit=None)
         owner = cls._unit_owner(type_name)
@@ -94,23 +95,9 @@ class WUnit:
         cls, inst_uuid: UUID, prop: WProp, quantity: Quantity | None
     ) -> None:
         if quantity is None:
-            row = Database.session.get(TABLE_NumericValues, (inst_uuid, prop.uuid))
-            if row is not None:
-                Database.session.delete(row)
+            _ = cells.clear(WNumeric.TABLE, inst_uuid, prop.uuid)
             return
-        row = Database.session.get(TABLE_NumericValues, (inst_uuid, prop.uuid))
-        if row is None:
-            Database.session.add(
-                TABLE_NumericValues(
-                    inst_uuid=inst_uuid,
-                    prop_uuid=prop.uuid,
-                    value=quantity.value,
-                    unit=quantity.unit,
-                )
-            )
-            return
-        row.value = quantity.value
-        row.unit = quantity.unit
+        write_with_unit(inst_uuid, prop.uuid, quantity.value, quantity.unit)
 
     # --- internals ---
 

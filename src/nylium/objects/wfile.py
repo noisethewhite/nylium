@@ -10,8 +10,8 @@ from __future__ import annotations
 from pathlib import Path
 from uuid import UUID
 
-from nylium.database import Database, databasemethod
-from nylium.tables import TABLE_Files, files
+from nylium.database import databasemethod
+from nylium.tables import files
 from typing import ClassVar
 
 
@@ -117,15 +117,10 @@ class WFile:
     def reset_icons_referencing(cls, image_uuid: UUID) -> None:
         """Deleting an Image used as an icon is allowed (ADR-0006): every
         type pointing at it falls back to the default glyph."""
-        import sqlalchemy as sqla
+        from nylium.tables.decor.type_decors import reset_icons_referencing
 
         marker = f"{cls.ICON_IMAGE_PREFIX}{image_uuid}"
-        from nylium.tables.decor import TABLE_TypeDecor
-
-        for decor_row in Database.session.scalars(
-            sqla.select(TABLE_TypeDecor).where(TABLE_TypeDecor.icon == marker)
-        ).all():
-            decor_row.icon = cls.DEFAULT_GLYPH
+        reset_icons_referencing(marker, cls.DEFAULT_GLYPH)
 
     @classmethod
     def parse_icon_image(cls, icon: str) -> UUID | None:
@@ -141,8 +136,9 @@ class WFile:
     @classmethod
     @databasemethod(commit=False)
     def image_file_exists(cls, uuid: UUID) -> bool:
-        row = Database.session.get(TABLE_Files, uuid)
-        return row is not None and row.type_name == cls.TYPE_IMAGE
+        from nylium.tables.files import type_name_of
+
+        return type_name_of(uuid) == cls.TYPE_IMAGE
 
     @classmethod
     @databasemethod(commit=False)
@@ -150,10 +146,6 @@ class WFile:
         """Deleting a file also drops Array<File/Document/Image> members that
         pointed at it (ADR-0008) — mirrors WObject.delete's cleanup of array
         links, so no dangling files.uuid survives in an array."""
-        import sqlalchemy as sqla
+        from nylium.tables.values.array_values import delete_memberships
 
-        from nylium.tables import TABLE_ArrayValues
-
-        _ = Database.session.execute(
-            sqla.delete(TABLE_ArrayValues).where(TABLE_ArrayValues.value_uuid == uuid)
-        )
+        delete_memberships(uuid)

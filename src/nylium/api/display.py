@@ -17,22 +17,15 @@ from decimal import Decimal
 from typing import Self, cast
 from uuid import UUID
 
-import sqlalchemy as sqla
 from pydantic import ConfigDict
 from pydantic.dataclasses import dataclass
-from sqlalchemy.orm import aliased
 
-from nylium.database import Database, databasemethod
-from nylium.tables import (
-    TABLE_ArrayValues,
-    TABLE_InstanceValues,
-    TABLE_Instances,
-    TABLE_Props,
-    TABLE_StringValues,
-    instances,
-)
-from nylium.tables.objects.types import TABLE_Types
+from nylium.database import databasemethod
+from nylium.tables import instances
+from nylium.tables.objects.instances import existing_uuids
+from nylium.tables.values.array_values import array_tag_rows
 from nylium.objects import WObject, WType
+from nylium.objects.wtypemeta import WObjectShape
 from nylium.objects.monthday import MonthDay, MonthDayTime
 from nylium.objects.quantity import Quantity
 from nylium.objects.wembedded import EMBEDDED_NAME_SEPARATOR
@@ -248,49 +241,10 @@ class ObjectView:
         ``Array<type_name>`` prop whose stored array contains this object
         becomes one tag ``<owner display name> → <prop key>``. One query,
         no N+1."""
-        name_prop = aliased(TABLE_Props)
-        owner_types = aliased(TABLE_Types)
-        from nylium.tables.decor import TABLE_TypeDecor
-
-        owner_decor = aliased(TABLE_TypeDecor)
-        rows = Database.session.execute(
-            sqla.select(
-                TABLE_InstanceValues.inst_uuid,  # owner object uuid
-                TABLE_Props.key,  # array prop key
-                TABLE_Instances.name,  # owner registry name (fallback title)
-                TABLE_StringValues.value,  # owner's `name` prop value (display title)
-                owner_decor.color,  # owner type's decor color paints the chip
-            )
-            .select_from(TABLE_ArrayValues)
-            .join(TABLE_InstanceValues, TABLE_InstanceValues.uuid == TABLE_ArrayValues.inst_uuid)
-            .join(TABLE_Props, TABLE_Props.uuid == TABLE_InstanceValues.prop_uuid)
-            .join(TABLE_Types, TABLE_Types.uuid == TABLE_Props.value_type_uuid)
-            .join(TABLE_Instances, TABLE_Instances.uuid == TABLE_InstanceValues.inst_uuid)
-            .join(owner_types, owner_types.uuid == TABLE_Instances.type_uuid)
-            .join(owner_decor, owner_decor.uuid == owner_types.uuid)
-            .join(name_prop, name_prop.owner_type_uuid == TABLE_Instances.type_uuid)
-            .join(
-                TABLE_StringValues,
-                sqla.and_(
-                    TABLE_StringValues.inst_uuid == TABLE_Instances.uuid,
-                    TABLE_StringValues.prop_uuid == name_prop.uuid,
-                ),
-                isouter=True,
-            )
-            .where(
-                TABLE_ArrayValues.value_uuid == uuid,
-                TABLE_Types.name == WType.array_name(type_name),
-                name_prop.key == NAME_PROP_KEY,
-            )
-            .distinct()
-        ).all()
+        rows = array_tag_rows(uuid, WType.array_name(type_name), NAME_PROP_KEY)
         tags: list[TagView] = []
-        for row in rows:
-            owner_uuid = cast(UUID, row[0])
-            prop_key = cast(str, row[1])
-            registry_name = cast(str, row[2])
-            display_name = cast(str | None, row[3]) or registry_name
-            color = cast(str, row[4])
+        for owner_uuid, prop_key, registry_name, display_name, color in rows:
+            display_name = display_name or registry_name
             tags.append(
                 TagView(
                     owner_uuid=owner_uuid,
@@ -314,7 +268,7 @@ class ObjectView:
 
     @classmethod
     @databasemethod(commit=False)
-    def _eval_formula(cls, wrapper: WObject, prop: WProp) -> ScalarValue:
+    def _eval_formula(cls, wrapper: WObjectShape, prop: WProp) -> ScalarValue:
         """ADR-0005 read-time evaluation: fold the stored formula over the
         live rows of the arrays it references. Unset cells count as 0; a
         dangling member keeps its stored row (COUNT sees it, the numeric
@@ -323,15 +277,9 @@ class ObjectView:
         refs = Formula.references(prop.formula)
         arrays: dict[str, list[dict[str, Decimal | None]]] = {}
         for array_key in {key for key, _ in refs}:
-            members = cast(list[WObject] | None, getattr(wrapper, array_key)) or []
+            members = cast(list[WObjectShape] | None, getattr(wrapper, array_key)) or []
             existing: set[UUID] = (
-                set(
-                    Database.session.scalars(
-                        sqla.select(TABLE_Instances.uuid).where(
-                            TABLE_Instances.uuid.in_([member.uuid for member in members])
-                        )
-                    ).all()
-                )
+                existing_uuids([member.uuid for member in members])
                 if members
                 else set()
             )

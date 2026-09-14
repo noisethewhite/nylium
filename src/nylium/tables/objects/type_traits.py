@@ -4,6 +4,8 @@ from __future__ import annotations
 from typing import ClassVar
 from uuid import UUID
 
+import sqlalchemy as sqla
+
 from nylium.database import Database, databasemethod
 from nylium.database.table import Row, Table
 from nylium.tables.objects.table_type_traits import TABLE_TypeTraits
@@ -29,6 +31,20 @@ class TypeTraits(Table[tuple[UUID, UUID], TypeTrait]):
         row = Database.session.get(TABLE_TypeTraits, (type_uuid, trait_uuid))
         if row is not None:
             Database.session.delete(row)
+
+
+@databasemethod(commit=False)
+def is_attached(type_uuid: UUID, trait_uuid: UUID | None) -> bool:
+    """True when (type_uuid, trait_uuid) is an attach edge (ADR-0019)."""
+    if trait_uuid is None:
+        return False
+    attached = Database.session.scalar(
+        sqla.select(TABLE_TypeTraits.type_uuid).where(
+            TABLE_TypeTraits.type_uuid == type_uuid,
+            TABLE_TypeTraits.trait_uuid == trait_uuid,
+        )
+    )
+    return attached is not None
 
 
 type_traits = TypeTraits()

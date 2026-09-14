@@ -2,15 +2,20 @@
 # string_values like a String, but writes are checked against the
 # enum_options of the value type. Shared by WObject attribute access
 # and WArray boxing so both enforce the same membership rule.
+#
+# ADR-0019: all storage statements go through `tables.values.cells`
+# (via the objects-layer table alias WString.TABLE) — no Database/sql
+# knowledge here.
 from __future__ import annotations
 
 from typing import cast
 from uuid import UUID
 
-from nylium.database import Database, databasemethod
-from nylium.tables import TABLE_StringValues
+from nylium.database import databasemethod
 from nylium.tables.objects.enum_options import enum_options
+from nylium.tables.values import cells
 from nylium.objects.wprop import WProp
+from nylium.objects.wscalar import WString
 from nylium.objects.wtype import WType
 from nylium.server.errors import ValidationError
 
@@ -40,18 +45,12 @@ class WEnum:
     @classmethod
     @databasemethod(commit=False)
     def read(cls, inst_uuid: UUID, prop: WProp) -> str | None:
-        row = Database.session.get(TABLE_StringValues, (inst_uuid, prop.uuid))
-        return None if row is None else cast(str | None, row.value)
+        return cast(str | None, cells.read(WString.TABLE, inst_uuid, prop.uuid))
 
     @classmethod
     @databasemethod(commit=False)
     def write(cls, inst_uuid: UUID, prop: WProp, value: str | None) -> None:
-        row = Database.session.get(TABLE_StringValues, (inst_uuid, prop.uuid))
         if value is None:
-            if row is not None:
-                Database.session.delete(row)
+            _ = cells.clear(WString.TABLE, inst_uuid, prop.uuid)
             return
-        if row is None:
-            Database.session.add(TABLE_StringValues(inst_uuid=inst_uuid, prop_uuid=prop.uuid, value=value))
-            return
-        row.value = value
+        cells.write(WString.TABLE, inst_uuid, prop.uuid, value)

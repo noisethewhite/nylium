@@ -17,10 +17,10 @@ from collections.abc import Callable
 from typing import ClassVar, Protocol, TypeAlias, cast, get_args, get_origin
 from uuid import UUID
 
-import sqlalchemy as sqla
-
-from nylium.database import Database, databasemethod
-from nylium.tables import TABLE_Instances, TABLE_Traits, TABLE_TypeTraits
+from nylium.database import databasemethod
+from nylium.tables.objects.instances import get as instance_get
+from nylium.tables.objects.traits import uuid_by_name as trait_uuid_by_name
+from nylium.tables.objects.type_traits import is_attached
 from nylium.objects.quantity import Quantity
 from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import ScalarPayload, WScalar
@@ -37,6 +37,8 @@ WOBJECT_ROOT_NAME = "WObject"
 
 class WObjectShape(Protocol):
     """The slice of WObject that lower layers are allowed to rely on."""
+
+    _uuid: UUID
 
     @classmethod
     def wrap(cls, uuid: UUID) -> "WObjectShape": ...
@@ -110,7 +112,7 @@ class WTypeMeta(type):
                     f"{expected_name} prop takes {expected_name}, got {type(value).__name__}"
                 )
             return
-        inst = Database.session.get(TABLE_Instances, value.uuid)
+        inst = instance_get(value.uuid)
         actual = None if inst is None else WType.by_uuid(inst.type_uuid)
         if actual is None or actual.name != expected_name:
             raise TypeError(
@@ -132,7 +134,7 @@ class WTypeMeta(type):
             raise TypeError(
                 f"Any<{trait_name}> prop takes a WObject, got {type(value).__name__}"
             )
-        inst = Database.session.get(TABLE_Instances, value.uuid)
+        inst = instance_get(value.uuid)
         actual = None if inst is None else WType.by_uuid(inst.type_uuid)
         if actual is None:
             raise TypeError(
@@ -142,16 +144,8 @@ class WTypeMeta(type):
             raise TypeError(
                 f"Any<{trait_name}> target {actual.name!r} is embedded (ADR-0004) — link it from its owner only"
             )
-        trait_uuid = Database.session.scalar(
-            sqla.select(TABLE_Traits.uuid).where(TABLE_Traits.name == trait_name)
-        )
-        attached = Database.session.scalar(
-            sqla.select(TABLE_TypeTraits.type_uuid).where(
-                TABLE_TypeTraits.type_uuid == actual.uuid,
-                TABLE_TypeTraits.trait_uuid == trait_uuid,
-            )
-        )
-        if attached is None:
+        trait_uuid = trait_uuid_by_name(trait_name)
+        if not is_attached(actual.uuid, trait_uuid):
             raise TypeError(
                 f"Any<{trait_name}> prop takes an object with trait {trait_name!r}, got {actual.name!r}"
             )

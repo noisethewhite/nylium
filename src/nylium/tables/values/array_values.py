@@ -4,13 +4,16 @@
 # Array<File/Document/Image> (ADR-0008) — a files.uuid. So value_uuid is a
 # bare uuid, not an FK: files aren't instances and would violate the
 # instances FK. Cleanup is manual in WArray, not DB-cascaded.
+# Statement helpers live here too (ADR-0019).
+from typing import ClassVar, cast
 from uuid import UUID
 
+import sqlalchemy as sqla
 from sqlalchemy import ForeignKey, Integer
 from sqlalchemy.orm import Mapped, mapped_column
 
+from nylium.database import Database, databasemethod
 from nylium.tables.base import reg
-from typing import ClassVar
 
 
 @reg.mapped_as_dataclass
@@ -22,3 +25,72 @@ class TABLE_ArrayValues:
     )
     index: Mapped[int] = mapped_column(Integer, primary_key=True)
     value_uuid: Mapped[UUID] = mapped_column(nullable=False)
+
+
+@databasemethod(commit=False)
+def delete_memberships(value_uuid: UUID) -> None:
+    """Drop every array-membership row pointing at the given element uuid."""
+    _ = Database.session.execute(
+        sqla.delete(TABLE_ArrayValues).where(TABLE_ArrayValues.value_uuid == value_uuid)
+    )
+
+
+@databasemethod(commit=False)
+def array_tag_rows(
+    element_uuid: UUID, array_type_name: str, name_prop_key: str
+) -> list[tuple[UUID, str, str, str | None, str]]:
+    """ADR-0005 reverse projection: every array that holds ``element_uuid``
+    as a member of an ``Array<array_type_name>`` prop, with enough info to
+    paint a tag chip — (owner uuid, prop key, registry name, display name,
+    owner type color). One query, no N+1.
+
+    Table classes are imported lazily so this module stays cycle-free at
+    load time (mirrors ``instance_values.array_link_uuids_of``).
+    """
+    from sqlalchemy.orm import aliased
+
+    from nylium.tables.decor.table_type_decor import TABLE_TypeDecor
+    from nylium.tables.objects.table_instances import TABLE_Instances
+    from nylium.tables.objects.table_props import TABLE_Props
+    from nylium.tables.objects.table_types import TABLE_Types
+    from nylium.tables.values.instance_values import TABLE_InstanceValues
+    from nylium.tables.values.string_values import TABLE_StringValues
+
+    name_prop = aliased(TABLE_Props)
+    owner_types = aliased(TABLE_Types)
+    owner_decor = aliased(TABLE_TypeDecor)
+    rows = Database.session.execute(
+        sqla.select(
+            TABLE_InstanceValues.inst_uuid,
+            TABLE_Props.key,
+            TABLE_Instances.name,
+            TABLE_StringValues.value,
+            owner_decor.color,
+        )
+        .select_from(TABLE_ArrayValues)
+        .join(TABLE_InstanceValues, TABLE_InstanceValues.uuid == TABLE_ArrayValues.inst_uuid)
+        .join(TABLE_Props, TABLE_Props.uuid == TABLE_InstanceValues.prop_uuid)
+        .join(TABLE_Types, TABLE_Types.uuid == TABLE_Props.value_type_uuid)
+        .join(TABLE_Instances, TABLE_Instances.uuid == TABLE_InstanceValues.inst_uuid)
+        .join(owner_types, owner_types.uuid == TABLE_Instances.type_uuid)
+        .join(owner_decor, owner_decor.uuid == owner_types.uuid)
+        .join(name_prop, name_prop.owner_type_uuid == TABLE_Instances.type_uuid)
+        .join(
+            TABLE_StringValues,
+            sqla.and_(
+                TABLE_StringValues.inst_uuid == TABLE_Instances.uuid,
+                TABLE_StringValues.prop_uuid == name_prop.uuid,
+            ),
+            isouter=True,
+        )
+        .where(
+            TABLE_ArrayValues.value_uuid == element_uuid,
+            TABLE_Types.name == array_type_name,
+            name_prop.key == name_prop_key,
+        )
+        .distinct()
+    ).all()
+    return [
+        (cast(UUID, r[0]), cast(str, r[1]), cast(str, r[2]), cast("str | None", r[3]), cast(str, r[4]))
+        for r in rows
+    ]
