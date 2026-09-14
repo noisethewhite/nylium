@@ -95,18 +95,3 @@ class Type(Row):
         yield from sorted(
             unit_parts.where(type_uuid=self.uuid), key=lambda p: p.position
         )
-
-    def wire(self) -> dict[str, object]:
-        """The JSON-safe wire shape, matching web/src/contracts.ts TypeView."""
-        return {
-            "name": self.name,
-            "plural_name": self.plural_name,
-            "icon": self.icon,
-            "color": self.color,
-            "kind": self.kind,
-            "embedded": self.embedded,
-            "traits": [trait.name for trait in self.traits],
-            "enum_options": [option.wire() for option in self.enum_options],
-            "unit_parts": [part.wire() for part in self.unit_parts],
-            "props": [prop.wire() for prop in self.props],
-        }

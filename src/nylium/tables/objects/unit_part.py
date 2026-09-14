@@ -24,14 +24,3 @@ class UnitPart(Row):
     offset: Decimal
     is_base: bool
     position: int
-
-    def wire(self) -> dict[str, object]:
-        """The JSON-safe wire shape: Decimals cross as strings, matching
-        web/src/contracts.ts UnitPartView."""
-        return {
-            "uuid": str(self.uuid),
-            "name": self.name,
-            "multiplier": str(self.multiplier),
-            "offset": str(self.offset),
-            "is_base": self.is_base,
-        }

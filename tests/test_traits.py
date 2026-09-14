@@ -4,6 +4,7 @@ import pytest
 
 from nylium.api import Api, ObjectRef, RefValue, ScalarValue
 from nylium.server.errors import ValidationError
+from nylium.server.views import PropView, TraitView
 
 
 def stamped_trait(color: str = "#3a7d5c"):
@@ -23,7 +24,7 @@ def test_create_trait_view():
     assert view.name == "Stamped"
     assert view.color == "#3a7d5c"
     assert [prop.key for prop in view.props] == ["created_note", "priority"]
-    assert view.wire()["attached"] == []
+    assert TraitView.from_row(view).attached == []
 
 
 def test_create_trait_duplicate_name():
@@ -48,10 +49,10 @@ def test_attach_makes_props_effective():
         "created_note",
         "priority",
     ]
-    origin = {prop.key: prop.wire()["trait"] for prop in view.props}
+    origin = {prop.key: PropView.from_row(prop).trait for prop in view.props}
     assert origin["title"] is None
     assert origin["created_note"] == "Stamped"
-    colors = {prop.key: prop.wire()["trait_color"] for prop in view.props}
+    colors = {prop.key: PropView.from_row(prop).trait_color for prop in view.props}
     assert colors["priority"] == "#3a7d5c"
 
 
@@ -205,7 +206,7 @@ def test_any_trait_wire_name_roundtrip():
         "Task",
         [(name_uuid, "name", "String", None), (None, "related", "Any<Stamped>", None)],
     )
-    spec = {prop.key: prop.wire()["value_type"] for prop in view.props}
+    spec = {prop.key: prop.value_type for prop in view.props}
     assert spec["related"] == "Any<Stamped>"
 
 

@@ -20,13 +20,3 @@ class File(Row):
     name: str
     mime: str
     size_bytes: int
-
-    def wire(self) -> dict[str, object]:
-        """The JSON-safe wire shape, matching web/src/contracts.ts FileView."""
-        return {
-            "uuid": str(self.uuid),
-            "type_name": self.type_name,
-            "name": self.name,
-            "mime": self.mime,
-            "size_bytes": self.size_bytes,
-        }

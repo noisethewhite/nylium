@@ -60,18 +60,3 @@ class Prop(Row):
         if t is None:
             raise KeyError(f"Type with UUID {self.value_type_uuid} does not exist")
         return t.name
-
-    def wire(self) -> dict[str, object]:
-        """The JSON-safe wire shape: uuid/uuids as strings, matching
-        web/src/contracts.ts PropView."""
-        function_uuid = self.function_uuid
-        owner_trait = self.owner_trait
-        return {
-            "uuid": str(self.uuid),
-            "key": self.key,
-            "value_type": self.value_type,
-            "formula": self.formula,
-            "function_uuid": None if function_uuid is None else str(function_uuid),
-            "trait": None if owner_trait is None else owner_trait[0],
-            "trait_color": None if owner_trait is None else owner_trait[1],
-        }

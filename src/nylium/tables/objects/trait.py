@@ -39,15 +39,6 @@ class Trait(Row):
             props.where(owner_trait_uuid=self.uuid), key=lambda p: p.position
         )
 
-    def wire(self) -> dict[str, object]:
-        """The JSON-safe wire shape, matching web/src/contracts.ts TraitView."""
-        return {
-            "name": self.name,
-            "color": self.color,
-            "props": [prop.wire() for prop in self.props],
-            "attached": list(self.attached),
-        }
-
     @property
     def attached(self) -> Generator[str, None, None]:
         """Names of types this trait is attached to, in attach order."""

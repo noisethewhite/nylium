@@ -20,8 +20,3 @@ class EnumOption(Row):
     type_uuid: UUID
     value: str
     position: int
-
-    def wire(self) -> dict[str, object]:
-        """The JSON-safe wire shape, matching web/src/contracts.ts
-        EnumOptionView."""
-        return {"uuid": str(self.uuid), "value": self.value}
