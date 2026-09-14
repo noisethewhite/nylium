@@ -21,7 +21,9 @@ class CreateTypeBody:
     """props maps prop key -> value type name, like Api.create_type."""
 
     name: str
-    plural_name: str
+    # ADR-0019+: optional — backend falls back to a naive `f"{name}s"`,
+    # the frontend pre-fills it with a smarter guess as the user types
+    plural_name: str | None = None
     props: dict[str, str] = field(default_factory=dict)
     # ADR-0005: optional prop key -> formula string
     formulas: dict[str, str] | None = None

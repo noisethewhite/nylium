@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 import { useState } from "react";
 import { TypeNames } from "../contracts";
+import { pluralize } from "../pluralize";
 import { WorkspaceStore } from "../state/workspace";
 import { DEFAULT_COLOR, DEFAULT_ICON, IconPicker } from "./icon-picker";
 import { TypePicker } from "./type-picker";
@@ -17,6 +18,9 @@ export function TypeCreateForm(props: {
 }): ReactElement {
   const [name, setName] = useState("");
   const [pluralName, setPluralName] = useState("");
+  // plural auto-follows the singular via `pluralize` until the user
+  // edits it by hand — after that the manual value wins
+  const [pluralTouched, setPluralTouched] = useState(false);
   const [icon, setIcon] = useState(DEFAULT_ICON);
   const [color, setColor] = useState(DEFAULT_COLOR);
   const [propsDraft, setPropsDraft] = useState<PropDraft[]>([{ ...EMPTY_PROP }]);
@@ -34,7 +38,9 @@ export function TypeCreateForm(props: {
   const submit = (): void => {
     // stray whitespace around names must not reach the backend
     const typeName = name.trim();
-    const typePlural = pluralName.trim();
+    // an emptied manual plural falls back to the generated guess —
+    // never ship "" to the backend
+    const typePlural = pluralName.trim() || pluralize(typeName);
     // every type opens with the pinned `name` prop — the instance title
     const propsRecord: Record<string, string> = { name: "String" };
     for (const draft of propsDraft) {
@@ -66,7 +72,13 @@ export function TypeCreateForm(props: {
               className="input type-name-input"
               placeholder="Type name"
               value={name}
-              onChange={(event) => setName(event.target.value)}
+              onChange={(event) => {
+                const next = event.target.value;
+                setName(next);
+                if (!pluralTouched) {
+                  setPluralName(pluralize(next));
+                }
+              }}
             />
           </div>
         </div>
@@ -77,7 +89,10 @@ export function TypeCreateForm(props: {
               className="input type-name-input"
               placeholder="Name (plural)"
               value={pluralName}
-              onChange={(event) => setPluralName(event.target.value)}
+              onChange={(event) => {
+                setPluralTouched(true);
+                setPluralName(event.target.value);
+              }}
             />
           </div>
         </div>
@@ -130,7 +145,7 @@ export function TypeCreateForm(props: {
         </button>
         <button
           className="button button-primary"
-          disabled={name.trim() === "" || pluralName.trim() === ""}
+          disabled={name.trim() === ""}
           onClick={submit}
         >
           Create
