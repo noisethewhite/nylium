@@ -171,6 +171,11 @@ body {
   outline: none;
 }
 
+/* keyboard users keep a visible focus ring; mouse clicks don't flash it */
+.input:focus-visible {
+  outline: 1px solid var(--accent);
+}
+
 select.input option {
   /* the dropdown list itself still needs a surface */
   background: var(--bg-raised);
@@ -799,7 +804,7 @@ select.input option {
 
 .computed-badge {
   font-size: 11px;
-  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  border: 1px solid var(--border);
   border-radius: 999px;
   padding: 1px 8px;
 }
@@ -1360,7 +1365,7 @@ select.input option {
 }
 
 .file-block-link {
-  color: var(--accent, #57ab5a);
+  color: var(--accent);
   text-decoration: none;
 }
 
@@ -1373,7 +1378,7 @@ select.input option {
   flex-direction: column;
   gap: 2px;
   padding-bottom: 6px;
-  border-bottom: 1px solid var(--border, #2d333b);
+  border-bottom: 1px solid var(--border);
   margin-bottom: 6px;
 }
 

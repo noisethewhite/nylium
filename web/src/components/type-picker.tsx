@@ -11,6 +11,15 @@ import { TypeName } from "./type-name";
 /** Submenu the two bottom buttons open — same view, different wrapping. */
 type ObjectMode = "single" | "array";
 
+/** Which submenu is on screen. One tagged state — mutually exclusive by
+ * construction, instead of four booleans that can disagree. */
+type Submenu =
+  | { kind: "root" }
+  | { kind: "object"; mode: ObjectMode }
+  | { kind: "calendar" }
+  | { kind: "unit" }
+  | { kind: "any" };
+
 /** Scalars listed flat in the menu — the calendar family hides behind
  * its own submenu so five variants don't flood the list. */
 const FLAT_SCALARS = [TypeNames.STRING, TypeNames.INTEGER, TypeNames.NUMERIC, TypeNames.BOOLEAN];
@@ -20,18 +29,10 @@ export function TypePicker(props: {
   value: string;
   onChange: (value: string) => void;
 }): ReactElement {
-  const [objectMode, setObjectMode] = useState<ObjectMode | null>(null);
-  const [calendarOpen, setCalendarOpen] = useState(false);
-  const [unitOpen, setUnitOpen] = useState(false);
-  const [anyOpen, setAnyOpen] = useState(false);
+  const [submenu, setSubmenu] = useState<Submenu>({ kind: "root" });
   const state = useObservable(props.workspace);
 
-  const reset = (): void => {
-    setObjectMode(null);
-    setCalendarOpen(false);
-    setUnitOpen(false);
-    setAnyOpen(false);
-  };
+  const reset = (): void => setSubmenu({ kind: "root" });
 
   const scalarIcon = (name: string): ReactElement => {
     const view = props.workspace.typeView(name);
@@ -87,12 +88,12 @@ export function TypePicker(props: {
           reset();
           close();
         };
-        if (objectMode !== null) {
+        if (submenu.kind === "object") {
           // ADR-0004: Array<Embedded> is rejected server-side — arrays
           // never list embedded types; single-object mode keeps them,
           // picking one makes the prop a composition
           const candidates =
-            objectMode === "array"
+            submenu.mode === "array"
               ? props.workspace.userTypes().filter((view) => !view.embedded)
               : props.workspace.userTypes();
           return (
@@ -100,7 +101,7 @@ export function TypePicker(props: {
               items={candidates}
               getKey={(view) => view.name}
               getLabel={(view) =>
-                objectMode === "array" ? TypeNames.arrayOf(view.name) : view.name
+                submenu.mode === "array" ? TypeNames.arrayOf(view.name) : view.name
               }
               renderIcon={(view) => (
                 <TypeIcon icon={view.icon} color={view.color} size={15} />
@@ -112,24 +113,24 @@ export function TypePicker(props: {
                   <button
                     className="icon-button"
                     title="Back"
-                    onClick={() => setObjectMode(null)}
+                    onClick={reset}
                   >
                     ←
                   </button>
                   <span className="dim type-menu-title">
-                    {objectMode === "array" ? "Array of objects" : "Object"}
+                    {submenu.mode === "array" ? "Array of objects" : "Object"}
                   </span>
                 </div>
               }
               onPick={(view) =>
                 pick(
-                  objectMode === "array" ? TypeNames.arrayOf(view.name) : view.name,
+                  submenu.mode === "array" ? TypeNames.arrayOf(view.name) : view.name,
                 )
               }
             />
           );
         }
-        if (unitOpen) {
+        if (submenu.kind === "unit") {
           const units = props.workspace
             .userTypes()
             .filter((view) => view.kind === "unit");
@@ -148,7 +149,7 @@ export function TypePicker(props: {
                   <button
                     className="icon-button"
                     title="Back"
-                    onClick={() => setUnitOpen(false)}
+                    onClick={reset}
                   >
                     ←
                   </button>
@@ -159,14 +160,14 @@ export function TypePicker(props: {
             />
           );
         }
-        if (calendarOpen) {
+        if (submenu.kind === "calendar") {
           return (
             <>
               <div className="type-menu-search">
                 <button
                   className="icon-button"
                   title="Back"
-                  onClick={() => setCalendarOpen(false)}
+                  onClick={reset}
                 >
                   ←
                 </button>
@@ -183,7 +184,7 @@ export function TypePicker(props: {
             </>
           );
         }
-        if (anyOpen) {
+        if (submenu.kind === "any") {
           // ADR-0013: pick a trait to bind a polymorphic ref to
           return (
             <NameSearch
@@ -200,7 +201,7 @@ export function TypePicker(props: {
                   <button
                     className="icon-button"
                     title="Back"
-                    onClick={() => setAnyOpen(false)}
+                    onClick={reset}
                   >
                     ←
                   </button>
@@ -224,18 +225,18 @@ export function TypePicker(props: {
                   <TypeName workspace={props.workspace} name={scalar} />
                 </button>
               ))}
-              <button className="type-menu-row" onClick={() => setCalendarOpen(true)}>
+              <button className="type-menu-row" onClick={() => setSubmenu({ kind: "calendar" })}>
                 {scalarIcon(TypeNames.DATE)}
                 <span>Date &amp; time →</span>
               </button>
-              <button className="type-menu-row" onClick={() => setUnitOpen(true)}>
+              <button className="type-menu-row" onClick={() => setSubmenu({ kind: "unit" })}>
                 {scalarIcon(TypeNames.NUMERIC)}
                 <span>Numeric with unit →</span>
               </button>
               <button
                 className="type-menu-row"
                 title="Link to any object carrying a trait (ADR-0013)"
-                onClick={() => setAnyOpen(true)}
+                onClick={() => setSubmenu({ kind: "any" })}
               >
                 <span className="trait-dot trait-dot-hollow" />
                 <span>Any with trait →</span>
@@ -256,10 +257,10 @@ export function TypePicker(props: {
             </div>
             <div className="type-menu-divider" />
             <div className="type-menu-footer">
-              <button className="type-menu-row" onClick={() => setObjectMode("single")}>
+              <button className="type-menu-row" onClick={() => setSubmenu({ kind: "object", mode: "single" })}>
                 Object
               </button>
-              <button className="type-menu-row" onClick={() => setObjectMode("array")}>
+              <button className="type-menu-row" onClick={() => setSubmenu({ kind: "object", mode: "array" })}>
                 Array of objects
               </button>
             </div>

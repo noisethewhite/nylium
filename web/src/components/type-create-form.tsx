@@ -32,14 +32,18 @@ export function TypeCreateForm(props: {
   };
 
   const submit = (): void => {
+    // stray whitespace around names must not reach the backend
+    const typeName = name.trim();
+    const typePlural = pluralName.trim();
     // every type opens with the pinned `name` prop — the instance title
     const propsRecord: Record<string, string> = { name: "String" };
     for (const draft of propsDraft) {
-      if (draft.key !== "") {
-        propsRecord[draft.key] = draft.valueType;
+      const key = draft.key.trim();
+      if (key !== "") {
+        propsRecord[key] = draft.valueType;
       }
     }
-    void props.workspace.createType(name, pluralName, propsRecord, icon, color, embedded);
+    void props.workspace.createType(typeName, typePlural, propsRecord, icon, color, embedded);
   };
 
   return (
@@ -126,7 +130,7 @@ export function TypeCreateForm(props: {
         </button>
         <button
           className="button button-primary"
-          disabled={name === "" || pluralName === ""}
+          disabled={name.trim() === "" || pluralName.trim() === ""}
           onClick={submit}
         >
           Create

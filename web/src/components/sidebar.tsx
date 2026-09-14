@@ -1,4 +1,4 @@
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { useRef, useState } from "react";
 import { TypeNames } from "../contracts";
 import { AuthStore } from "../state/auth";
@@ -13,6 +13,35 @@ import { TypeIcon } from "./type-icon";
 /** What the "+" popover is showing: the root menu or the pick-a-type
  * list that "New object" expands into. */
 type PlusMenuMode = "root" | "object" | "file";
+
+/** One explorer row: icon + label opens the page, optional trailing
+ * delete. All five sections below render through this so the markup
+ * lives in exactly one place. */
+function SidebarRow(props: {
+  icon: ReactNode;
+  label: ReactNode;
+  onOpen: () => void;
+  deleteTitle?: string;
+  onDelete?: () => void;
+}): ReactElement {
+  return (
+    <div className="type-row">
+      <button className="type-row-name" onClick={props.onOpen}>
+        {props.icon}
+        {props.label}
+      </button>
+      {props.onDelete !== undefined && (
+        <button
+          className="icon-button type-row-delete"
+          title={props.deleteTitle}
+          onClick={props.onDelete}
+        >
+          ×
+        </button>
+      )}
+    </div>
+  );
+}
 
 /** Temporary explorer: every type and every object, flat. */
 export function Sidebar(props: {
@@ -260,85 +289,61 @@ export function Sidebar(props: {
         </div>
         <div className="sidebar-section">Types</div>
         {types.map((view) => (
-          <div className="type-row" key={view.name}>
-            <button
-              className="type-row-name"
-              onClick={() => props.workspace.openType(view.name)}
-            >
-              <TypeIcon icon={view.icon} color={view.color} />
-              <span className="type-name-text" style={{ color: view.color }}>{view.name}</span>
-              {view.embedded && <span className="embedded-badge">embedded</span>}
-            </button>
-            <button
-              className="icon-button type-row-delete"
-              title={`Delete type ${view.name}`}
-              onClick={() => void props.workspace.deleteType(view.name)}
-            >
-              ×
-            </button>
-          </div>
+          <SidebarRow
+            key={view.name}
+            icon={<TypeIcon icon={view.icon} color={view.color} />}
+            label={
+              <>
+                <span className="type-name-text" style={{ color: view.color }}>{view.name}</span>
+                {view.embedded && <span className="embedded-badge">embedded</span>}
+              </>
+            }
+            onOpen={() => props.workspace.openType(view.name)}
+            deleteTitle={`Delete type ${view.name}`}
+            onDelete={() => void props.workspace.deleteType(view.name)}
+          />
         ))}
         <div className="sidebar-section">Files</div>
         {fileTypes.map((view) => (
-          <div className="type-row" key={view.name}>
-            <button
-              className="type-row-name"
-              onClick={() => props.workspace.openType(view.name)}
-            >
-              <TypeIcon icon={view.icon} color={view.color} />
+          <SidebarRow
+            key={view.name}
+            icon={<TypeIcon icon={view.icon} color={view.color} />}
+            label={
               <span className="type-name-text" style={{ color: view.color }}>{view.name}</span>
-            </button>
-          </div>
+            }
+            onOpen={() => props.workspace.openType(view.name)}
+          />
         ))}
         <div className="sidebar-section">Traits</div>
         {state.traits.map((trait) => (
-          <div className="type-row" key={trait.name}>
-            <button
-              className="type-row-name"
-              onClick={() => props.workspace.openTrait(trait.name)}
-            >
-              <span className="trait-dot" style={{ background: trait.color }} />
-              <span>{trait.name}</span>
-            </button>
-            <button
-              className="icon-button type-row-delete"
-              title={`Delete trait ${trait.name}`}
-              onClick={() => void props.workspace.deleteTrait(trait.name)}
-            >
-              ×
-            </button>
-          </div>
+          <SidebarRow
+            key={trait.name}
+            icon={<span className="trait-dot" style={{ background: trait.color }} />}
+            label={<span>{trait.name}</span>}
+            onOpen={() => props.workspace.openTrait(trait.name)}
+            deleteTitle={`Delete trait ${trait.name}`}
+            onDelete={() => void props.workspace.deleteTrait(trait.name)}
+          />
         ))}
         <div className="sidebar-section">Scalars</div>
         {scalarTypes.map((view) => (
-          <div className="type-row" key={view.name}>
-            <button
-              className="type-row-name"
-              onClick={() => props.workspace.openType(view.name)}
-            >
-              <TypeIcon icon={view.icon} color={view.color} variant="scalar" />
-              <span className="scalar-name">{view.name}</span>
-            </button>
-          </div>
+          <SidebarRow
+            key={view.name}
+            icon={<TypeIcon icon={view.icon} color={view.color} variant="scalar" />}
+            label={<span className="scalar-name">{view.name}</span>}
+            onOpen={() => props.workspace.openType(view.name)}
+          />
         ))}
         <div className="sidebar-section">Functions</div>
         {state.functions.map((fn) => (
-          <div className="type-row" key={fn.uuid}>
-            <button
-              className="type-row-name"
-              onClick={() => props.workspace.openFunction(fn.uuid)}
-            >
-              <span className="tab-function-icon">ƒ</span>
-              <span>{fn.name}</span>
-            </button>
-            <button
-              className="icon-button type-row-delete"
-              title={`Delete function ${fn.name}`}
-              onClick={() => void props.workspace.deleteFunction(fn.uuid)}
-            >
-              ×
-            </button>
-          </div>
+          <SidebarRow
+            key={fn.uuid}
+            icon={<span className="tab-function-icon">ƒ</span>}
+            label={<span>{fn.name}</span>}
+            onOpen={() => props.workspace.openFunction(fn.uuid)}
+            deleteTitle={`Delete function ${fn.name}`}
+            onDelete={() => void props.workspace.deleteFunction(fn.uuid)}
+          />
         ))}
         <div className="sidebar-section">Objects</div>
         {state.objects.map((view) => {
