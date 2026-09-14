@@ -8,6 +8,7 @@ from uuid import UUID, uuid4
 import pytest
 
 from nylium.api import Api, ScalarValue
+from nylium.api.shared import PropInput
 from nylium.objects.wfunction import WFunction
 from nylium.server.errors import ValidationError
 
@@ -36,9 +37,10 @@ def invoice_type():
 
 def invoice(total="100", tax="4", amounts=None):
     _ = invoice_type()
-    props = {"name": "inv", "total": Decimal(total), "tax": Decimal(tax)}
+    props: dict[str, PropInput] = {"name": "inv", "total": Decimal(total), "tax": Decimal(tax)}
     if amounts is not None:
-        props["amounts"] = [Decimal(a) for a in amounts]
+        amount_values: list[PropInput] = [Decimal(a) for a in amounts]
+        props["amounts"] = amount_values
     return Api.create_object("Invoice", props)
 
 

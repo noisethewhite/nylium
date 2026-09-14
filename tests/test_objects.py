@@ -39,7 +39,8 @@ def test_round_trip():
     Person = person_class()
     oleg = Person(name="Oleg", age=30)
     oleg.friend = Person(name="Max", age=26)
-    oleg.tags = ["admin", "owner"]
+    # DSL coercion: plain lists are boxed into elements on assignment
+    oleg.tags = ["admin", "owner"]  # pyright: ignore[reportArgumentType]
 
     back = Person.get(oleg.uuid)
     assert back is not None
@@ -69,8 +70,9 @@ def test_link_type_check():
 
 def test_array_element_check():
     person = person_class()(name="Max", age=26)
+    # deliberately wrong element type: the DSL must reject it at runtime
     with pytest.raises(TypeError):
-        person.tags = ["ok", 42]
+        person.tags = ["ok", 42]  # pyright: ignore[reportArgumentType]
 
 
 def test_nested_arrays_round_trip_and_rewrite():
@@ -98,10 +100,11 @@ def test_array_box_cascade_on_rewrite_and_delete():
     Person = person_class()
     oleg = Person(name="Oleg", age=30)
     oleg.friend = Person(name="Max", age=26)
-    oleg.tags = ["admin", "owner"]
+    # DSL coercion: plain lists are boxed into elements on assignment
+    oleg.tags = ["admin", "owner"]  # pyright: ignore[reportArgumentType]
 
     before = instance_count()  # oleg, maxim, 2 tag boxes
-    oleg.tags = ["solo"]
+    oleg.tags = ["solo"]  # pyright: ignore[reportArgumentType]
     assert instance_count() == before - 1
     oleg.delete()
     assert instance_count() == before - 4

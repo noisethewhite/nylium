@@ -2,6 +2,7 @@
 membership and conversion on write/read. Api-level; HTTP shape lives in
 test_http.py."""
 from decimal import Decimal
+from uuid import UUID
 
 import pytest
 
@@ -29,8 +30,13 @@ def oven_type() -> Type:
     )
 
 
-def _part_uuids(view: Type) -> dict[str, object]:
-    return {part.name: part.uuid for part in view.unit_parts}
+def _part_uuids(view: Type) -> dict[str, UUID]:
+    return {p.name: p.uuid for p in view.unit_parts}
+
+
+# list invariance: unit-part drafts mixing (uuid, ...) and (None, ...)
+# tuples need the declared element type, not the inferred join
+PartDraft = list[tuple[UUID | None, str, Decimal, Decimal, bool]]
 
 
 def test_create_unit_view():
@@ -96,13 +102,11 @@ def test_sync_parts_rename_propagates():
     _ = oven_type()
     oven = Api.create_object("Oven", {"name": "o1", "temp": Quantity(Decimal(32), "°F")})
     uuids = _part_uuids(view)
-    synced = Api.sync_unit_parts(
-        "Temperature",
-        [
-            (uuids["°C"], "°C", Decimal(1), Decimal(0), True),  # type: ignore[list-item]
-            (uuids["°F"], "fahrenheit", Decimal("1.8"), Decimal(32), False),  # type: ignore[list-item]
-        ],
-    )
+    draft: PartDraft = [
+        (uuids["°C"], "°C", Decimal(1), Decimal(0), True),
+        (uuids["°F"], "fahrenheit", Decimal("1.8"), Decimal(32), False),
+    ]
+    synced = Api.sync_unit_parts("Temperature", draft)
     assert [p.name for p in synced.unit_parts] == ["°C", "fahrenheit"]
     reloaded = Api.get_object(oven.uuid)
     assert reloaded is not None
@@ -115,10 +119,8 @@ def test_sync_parts_delete_in_use_refused():
     _ = Api.create_object("Oven", {"name": "o1", "temp": Quantity(Decimal(32), "°F")})
     uuids = _part_uuids(view)
     with pytest.raises(ValueError):
-        Api.sync_unit_parts(
-            "Temperature",
-            [(uuids["°C"], "°C", Decimal(1), Decimal(0), True)],  # type: ignore[list-item]
-        )
+        draft: PartDraft = [(uuids["°C"], "°C", Decimal(1), Decimal(0), True)]
+        Api.sync_unit_parts("Temperature", draft)
 
 
 def test_sync_parts_base_switch_refused_with_values():
@@ -127,13 +129,11 @@ def test_sync_parts_base_switch_refused_with_values():
     _ = Api.create_object("Oven", {"name": "o1", "temp": Quantity(Decimal(0), "°C")})
     uuids = _part_uuids(view)
     with pytest.raises(ValidationError):
-        Api.sync_unit_parts(
-            "Temperature",
-            [
-                (uuids["°C"], "°C", Decimal(1), Decimal(0), False),  # type: ignore[list-item]
-                (uuids["°F"], "°F", Decimal("1.8"), Decimal(32), True),  # type: ignore[list-item]
-            ],
-        )
+        draft: PartDraft = [
+            (uuids["°C"], "°C", Decimal(1), Decimal(0), False),
+            (uuids["°F"], "°F", Decimal("1.8"), Decimal(32), True),
+        ]
+        Api.sync_unit_parts("Temperature", draft)
 
 
 def test_sync_parts_validation():
@@ -141,22 +141,18 @@ def test_sync_parts_validation():
     uuids = _part_uuids(view)
     # not exactly one base
     with pytest.raises(ValidationError):
-        Api.sync_unit_parts(
-            "Temperature",
-            [
-                (uuids["°C"], "°C", Decimal(1), Decimal(0), True),  # type: ignore[list-item]
-                (uuids["°F"], "°F", Decimal("1.8"), Decimal(32), True),  # type: ignore[list-item]
-            ],
-        )
+        two_bases: PartDraft = [
+            (uuids["°C"], "°C", Decimal(1), Decimal(0), True),
+            (uuids["°F"], "°F", Decimal("1.8"), Decimal(32), True),
+        ]
+        Api.sync_unit_parts("Temperature", two_bases)
     # non-identity base
     with pytest.raises(ValidationError):
-        Api.sync_unit_parts(
-            "Temperature",
-            [
-                (uuids["°C"], "°C", Decimal(2), Decimal(0), True),  # type: ignore[list-item]
-                (uuids["°F"], "°F", Decimal("1.8"), Decimal(32), False),  # type: ignore[list-item]
-            ],
-        )
+        bad_base: PartDraft = [
+            (uuids["°C"], "°C", Decimal(2), Decimal(0), True),
+            (uuids["°F"], "°F", Decimal("1.8"), Decimal(32), False),
+        ]
+        Api.sync_unit_parts("Temperature", bad_base)
     with pytest.raises(KeyError):
         Api.sync_unit_parts("NoSuchUnit", [])
     _ = Api.create_type("Plain", {"name": "String"}, "Plains")

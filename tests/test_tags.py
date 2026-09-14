@@ -3,6 +3,8 @@ member object as a tag named "<owner name> → <prop key>". Nothing is
 stored — the tag is recomputed on every read. Api-level; HTTP shape lives
 in test_http.py."""
 
+from uuid import UUID
+
 from nylium.api import Api, TagView
 from nylium.objects.wscalar import WColor
 
@@ -143,7 +145,7 @@ def test_renaming_prop_key_renames_tag():
     book = Api.create_object("Book", {"name": "Dune"})
     shelf = Api.create_object("Shelf", {"name": "Sci-Fi", "books": [book.uuid]})
 
-    items = [
+    items: list[tuple[UUID | None, str, str, str | None]] = [
         (
             prop.uuid,
             "items" if prop.key == "books" else prop.key,

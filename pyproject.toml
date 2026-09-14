@@ -29,14 +29,42 @@ nylium = "nylium.main:main"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
-# Gate scope is src: tests use the declarative WObject DSL (class-level
-# prop declarations) that static analysis cannot see through; pytest is
-# their gate.
+# Gate scope covers src and tests. Tests run under a dedicated execution
+# environment (below): the declarative WObject DSL (class-level prop
+# declarations materialized by the metaclass at runtime) and strict-mode
+# unknown-type reporting are structural false positives there, so the
+# test profile relaxes them while keeping real checks (argument types,
+# optional member access) active.
 [tool.basedpyright]
-include = ["src"]
+include = ["src", "tests"]
 # Analyze as the oldest supported interpreter (CI runs 3.12): local runs on
 # newer Pythons must not hide errors like eager class-body annotations.
 pythonVersion = "3.12"
+
+[[tool.basedpyright.executionEnvironments]]
+root = "tests"
+# WObject subclasses declare props as bare class-body annotations; the
+# metaclass turns them into runtime accessors static analysis cannot see.
+reportUninitializedInstanceVariable = false
+reportAttributeAccessIssue = false
+# Strict-mode unknown-type noise: test helpers are deliberately untyped.
+reportUnknownMemberType = false
+reportUnknownVariableType = false
+reportUnknownParameterType = false
+reportUnknownArgumentType = false
+reportMissingParameterType = false
+reportAny = false
+reportExplicitAny = false
+# Tests call mutating API methods for side effects; results are often
+# intentionally discarded (or their effect is asserted via a reload).
+reportUnusedCallResult = false
+# Fixtures and helpers legitimately go unused in single files; tests may
+# poke private seams to set up scenarios the public API cannot reach.
+reportUnusedParameter = false
+reportUnusedFunction = false
+reportUnusedVariable = false
+reportUnusedClass = false
+reportPrivateUsage = false
 
 [dependency-groups]
 dev = [

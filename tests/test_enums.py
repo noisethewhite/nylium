@@ -1,6 +1,8 @@
 """String enums: kind='enum' types, option CRUD with propagation,
 membership validation on write. Api-level; HTTP shape lives in
 test_http.py."""
+from uuid import UUID
+
 import pytest
 
 from nylium.api import Api, ArrayValue, ScalarValue
@@ -57,7 +59,7 @@ def test_enum_array_prop():
         Api.update_object(created.uuid, {"tags": ["open", "bogus"]})
 
 
-def _option_uuids(view: Type) -> dict[str, object]:
+def _option_uuids(view: Type) -> dict[str, UUID]:
     return {option.value: option.uuid for option in view.enum_options}
 
 
@@ -66,9 +68,10 @@ def test_sync_options_rename_propagates():
     _ = ticket_type()
     ticket = Api.create_object("Ticket", {"name": "t1", "status": "open"})
     uuids = _option_uuids(view)
-    synced = Api.sync_enum_options(
-        "Status", [(uuids["open"], "in progress"), (None, "archived")]  # type: ignore[list-item]
-    )
+    # list invariance: mixed (uuid, value) / (None, value) tuples need
+    # the declared element type, not the inferred join
+    draft: list[tuple[UUID | None, str]] = [(uuids["open"], "in progress"), (None, "archived")]
+    synced = Api.sync_enum_options("Status", draft)
     assert [option.value for option in synced.enum_options] == ["in progress", "archived"]
     reloaded = Api.get_object(ticket.uuid)
     assert reloaded is not None
@@ -80,15 +83,17 @@ def test_sync_options_delete_in_use_refused():
     _ = ticket_type()
     _ = Api.create_object("Ticket", {"name": "t1", "status": "open"})
     uuids = _option_uuids(view)
+    draft: list[tuple[UUID | None, str]] = [(uuids["closed"], "closed")]
     with pytest.raises(ValueError):
-        Api.sync_enum_options("Status", [(uuids["closed"], "closed")])  # type: ignore[list-item]
+        Api.sync_enum_options("Status", draft)
 
 
 def test_sync_options_delete_unused_ok():
     view = status_enum()
     _ = ticket_type()
     uuids = _option_uuids(view)
-    synced = Api.sync_enum_options("Status", [(uuids["open"], "open")])  # type: ignore[list-item]
+    draft: list[tuple[UUID | None, str]] = [(uuids["open"], "open")]
+    synced = Api.sync_enum_options("Status", draft)
     assert [option.value for option in synced.enum_options] == ["open"]
 
 
@@ -96,9 +101,11 @@ def test_sync_options_guards():
     view = status_enum()
     uuids = _option_uuids(view)
     with pytest.raises(ValidationError):
-        Api.sync_enum_options("Status", [(uuids["open"], ""), (None, "closed")])  # type: ignore[list-item]
+        bad: list[tuple[UUID | None, str]] = [(uuids["open"], ""), (None, "closed")]
+        Api.sync_enum_options("Status", bad)
     with pytest.raises(ValidationError):
-        Api.sync_enum_options("Status", [(uuids["open"], "dup"), (None, "dup")])  # type: ignore[list-item]
+        dup: list[tuple[UUID | None, str]] = [(uuids["open"], "dup"), (None, "dup")]
+        Api.sync_enum_options("Status", dup)
     with pytest.raises(KeyError):
         Api.sync_enum_options("NoSuchEnum", [])
     _ = Api.create_type("Plain", {"name": "String"}, "Plains")

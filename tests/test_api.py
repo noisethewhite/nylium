@@ -1,5 +1,7 @@
 """Api facade: CRUD over types and objects, view-shaped returns.
 Classes live inside tests — see test_objects.py for why."""
+from uuid import UUID
+
 import pytest
 
 from nylium.api import (
@@ -152,7 +154,12 @@ def note_type():
     )
 
 
-def draft_items(view, drop=(), rename=None, retype=None, add=()):
+# list invariance: drafts mixing (uuid, ...) and (None, ...) tuples need
+# the declared element type, not the inferred join
+PropDraft = list[tuple[UUID | None, str, str, str | None]]
+
+
+def draft_items(view, drop=(), rename=None, retype=None, add=()) -> PropDraft:
     """Build a sync_props draft from a view: drop/rename/retype by key,
     then append (key, value type) additions."""
     rename = rename or {}
@@ -220,7 +227,7 @@ def test_sync_props_rejects_bad_drafts():
         Api.sync_props("Note", draft_items(view, add=[("body", "String")]))
     with pytest.raises(ValidationError):
         Api.sync_props("Note", draft_items(view, add=[("", "String")]))
-    forged = [(body.uuid, "body", "String", None)]
+    forged: PropDraft = [(body.uuid, "body", "String", None)]
     with pytest.raises(ValidationError):
         Api.sync_props("Note", forged + draft_items(view, drop=("body",)))
     with pytest.raises(KeyError):

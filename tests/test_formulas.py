@@ -270,6 +270,7 @@ def test_rename_array_key_rewrites_formula():
 def test_rename_member_key_rewrites_formula():
     view = receipt_type({"total": "SUM(lines.price) * 1.21"})
     item = Api.get_type("Item")
+    assert item is not None
     _ = Api.sync_props(
         "Item",
         [
@@ -278,6 +279,7 @@ def test_rename_member_key_rewrites_formula():
         ],
     )
     receipt = Api.get_type("Receipt")
+    assert receipt is not None
     by_key = {prop.key: prop for prop in receipt.props}
     assert by_key["total"].formula == "(SUM(lines.cost) * 1.21)"
 
@@ -294,6 +296,7 @@ def test_delete_referenced_array_key_rejected():
 def test_delete_referenced_member_key_rejected():
     _ = receipt_type({"total": "SUM(lines.price)"})
     item = Api.get_type("Item")
+    assert item is not None
     draft = [(prop.uuid, prop.key, prop.value_type, prop.formula) for prop in item.props]
     with pytest.raises(ValidationError):
         Api.sync_props("Item", [row for row in draft if row[1] != "price"])
