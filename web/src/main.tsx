@@ -11,6 +11,17 @@ import "./styles/tokens.css";
 import "./styles/app.css";
 import "@fontsource/material-symbols-outlined";
 
+// <meta theme-color> can't consume custom properties — sync it from the
+// token so tokens.css stays the single source of truth
+const themeColor = getComputedStyle(document.documentElement)
+  .getPropertyValue("--bg")
+  .trim();
+if (themeColor !== "") {
+  document
+    .querySelector('meta[name="theme-color"]')
+    ?.setAttribute("content", themeColor);
+}
+
 /** Composition root: build the object graph, probe the session, render. */
 const container = document.getElementById("root");
 if (container === null) {

@@ -26,7 +26,7 @@
 }
 
 .login-card .brand {
-  font-size: 20px;
+  font-size: var(--font-size-3xl);
 }
 
 .login-card .error-banner {
@@ -50,7 +50,7 @@
   padding: 0;
   color: var(--fg-dim);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   cursor: pointer;
   text-align: center;
 }

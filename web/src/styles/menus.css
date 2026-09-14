@@ -44,7 +44,7 @@
 }
 
 .type-picker-chevron {
-  font-size: 16px;
+  font-size: var(--font-size-xl);
   color: var(--fg-faint);
   flex-shrink: 0;
   user-select: none;
@@ -124,5 +124,5 @@
 
 .type-menu-title {
   align-self: center;
-  font-size: 13px;
+  font-size: var(--font-size-sm);
 }

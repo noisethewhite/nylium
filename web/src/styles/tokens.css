@@ -26,6 +26,16 @@
   --radius-small: 6px;
   --radius-xs: 4px;
   --radius-pill: 999px;
+  /* typography scale */
+  --font-size-2xs: 11px;
+  --font-size-xs: 12px;
+  --font-size-sm: 13px;
+  --font-size-md: 14px;
+  --font-size-lg: 15px;
+  --font-size-xl: 16px;
+  --font-size-2xl: 18px;
+  --font-size-3xl: 20px;
+  --font-size-4xl: 24px;
   /* spacing scale (4px step) */
   --space-1: 4px;
   --space-2: 8px;

@@ -26,7 +26,7 @@
   border-radius: var(--radius-pill);
   color: var(--fg-dim);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   padding: var(--space-1) var(--space-3);
   cursor: pointer;
 }
@@ -47,7 +47,7 @@
   border: 1px solid transparent;
   border-radius: var(--radius-small);
   color: var(--danger);
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   padding: var(--space-2) var(--space-3);
   opacity: 0.55;
   transition: opacity 120ms ease;
@@ -80,12 +80,12 @@
   justify-content: space-between;
   padding: 0 var(--space-2) var(--space-1);
   color: var(--fg-dim);
-  font-size: 13px;
+  font-size: var(--font-size-sm);
 }
 
 .error-log-empty {
   padding: var(--space-2);
-  font-size: 13px;
+  font-size: var(--font-size-sm);
 }
 
 .error-log-entry {
@@ -93,7 +93,7 @@
   gap: var(--space-2);
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-small);
-  font-size: 13px;
+  font-size: var(--font-size-sm);
 }
 
 .error-log-entry:hover {

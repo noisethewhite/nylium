@@ -38,7 +38,7 @@
   border: none;
   color: var(--fg-dim);
   font: inherit;
-  font-size: 16px;
+  font-size: var(--font-size-xl);
   cursor: pointer;
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-small);
@@ -82,14 +82,14 @@ select.input option {
 
 /* the create-form title IS a field */
 .type-name-input {
-  font-size: 20px;
+  font-size: var(--font-size-3xl);
   font-weight: 600;
   padding: 0 0 var(--space-2);
 }
 
 /* the object's name prop IS its page heading — same borderless trick */
 .object-name-input {
-  font-size: 24px;
+  font-size: var(--font-size-4xl);
   font-weight: 600;
   padding: 0 0 var(--space-3);
   width: 100%;

@@ -24,7 +24,7 @@
 }
 
 .calendar-title {
-  font-size: 18px;
+  font-size: var(--font-size-2xl);
   font-weight: 600;
   min-width: 180px;
   text-align: center;
@@ -38,7 +38,7 @@
 
 .calendar-weekday {
   text-align: center;
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--fg-faint);
@@ -73,7 +73,7 @@
 }
 
 .calendar-cell-day {
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   color: var(--fg-dim);
 }
 
@@ -90,7 +90,7 @@
 .calendar-cell-badge {
   margin-top: auto;
   align-self: flex-end;
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--accent);
   font-variant-numeric: tabular-nums;
 }
@@ -104,7 +104,7 @@
 }
 
 .calendar-day-title {
-  font-size: 15px;
+  font-size: var(--font-size-lg);
   font-weight: 600;
 }
 
@@ -137,5 +137,5 @@
 
 .calendar-event-span {
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: var(--font-size-xs);
 }
