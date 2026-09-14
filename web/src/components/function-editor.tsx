@@ -1,11 +1,6 @@
 import type { ReactElement } from "react";
 import { useMemo, useState } from "react";
-import type {
-  FunctionEdgeInput,
-  FunctionNodeInput,
-  PropView,
-  TypeView,
-} from "../contracts";
+import type { FunctionEdgeInput, PropView } from "../contracts";
 import { TypeNames } from "../contracts";
 import { useObservable } from "../state/use-observable";
 import { usePinTabOnEdit } from "../state/use-pin-tab-on-edit";
@@ -13,134 +8,28 @@ import { WorkspaceStore } from "../state/workspace";
 import { ObjectLabels } from "./object-labels";
 import { TypeIcon } from "./type-icon";
 import { TypeSelect } from "./type-select";
+import type { EdgeDraft, NodeDraft } from "./function-editor-logic";
+import {
+  FunctionEditorLogic,
+  KIND_SPECS,
+  NODE_KINDS,
+  isNodeKind,
+} from "./function-editor-logic";
 
 /** ADR-0007: a Function<T,R> is an action DAG of whitelisted nodes. The
  * editor is form-based — nodes and edges as rows — because the closed
  * v1 node set (get_prop/const/arithmetic/aggregates/cast) is small enough
  * that a canvas would be ceremony, not power. */
 
-interface NodeDraft {
-  uuid: string;
-  kind: string;
-  config: Record<string, string | number>;
-}
-
-interface EdgeDraft {
-  from_node_uuid: string;
-  to_node_uuid: string;
-  to_port: number;
-}
-
-type ConfigKey = "key" | "value" | "target" | null;
-
-interface KindSpec {
-  arity: number;
-  configKey: ConfigKey;
-}
-
-/** Mirror of WFunction.NODES — kind -> input arity + config field. */
-const KIND_SPECS: Record<string, KindSpec> = {
-  get_prop: { arity: 0, configKey: "key" },
-  const: { arity: 0, configKey: "value" },
-  add: { arity: 2, configKey: null },
-  sub: { arity: 2, configKey: null },
-  mul: { arity: 2, configKey: null },
-  div: { arity: 2, configKey: null },
-  sum: { arity: 1, configKey: null },
-  average: { arity: 1, configKey: null },
-  count: { arity: 1, configKey: null },
-  min: { arity: 1, configKey: null },
-  max: { arity: 1, configKey: null },
-  cast: { arity: 1, configKey: "target" },
-  map: { arity: 1, configKey: "key" },
-};
-
-const NODE_KINDS = Object.keys(KIND_SPECS);
-
-function newUuid(): string {
-  return crypto.randomUUID();
-}
-
-function emptyConfig(key: ConfigKey): Record<string, string | number> {
-  if (key === null) {
-    return {};
-  }
-  return { [key]: "" };
-}
-
-function nodeLabel(node: NodeDraft): string {
-  const spec = KIND_SPECS[node.kind];
-  if (spec?.configKey !== null && spec !== undefined) {
-    const raw = node.config[spec.configKey];
-    const text = raw === undefined || raw === "" ? "…" : String(raw);
-    return `${node.kind} ${text}`;
-  }
-  return node.kind;
-}
-
-function toNodeInput(node: NodeDraft, position: number): FunctionNodeInput {
-  return { uuid: node.uuid, kind: node.kind, position, config: node.config };
-}
-
-/** `const` values cross the wire typed: parse numerics, else keep text. */
-function parseConstValue(raw: string): string | number {
-  const trimmed = raw.trim();
-  if (trimmed === "") {
-    return "";
-  }
-  const numeric = Number(trimmed);
-  return Number.isNaN(numeric) ? raw : numeric;
-}
-
-/** Best-effort static output type of a node — a frontend mirror of
- * WFunction.node_output_type, just enough to resolve a `map` node's array
- * element type from its incoming edge. */
-function inferNodeType(
-  node: NodeDraft,
-  inputSchema: TypeView | undefined,
-): string | undefined {
-  if (node.kind === "get_prop") {
-    return inputSchema?.props.find((prop) => prop.key === node.config.key)
-      ?.value_type;
-  }
-  if (node.kind === "const") {
-    return typeof node.config.value === "number"
-      ? TypeNames.NUMERIC
-      : typeof node.config.value === "string"
-        ? TypeNames.STRING
-        : undefined;
-  }
-  if (node.kind === "cast") {
-    return typeof node.config.target === "string"
-      ? node.config.target
-      : undefined;
-  }
-  if (node.kind === "count") {
-    return TypeNames.INTEGER;
-  }
-  if (
-    node.kind === "sum" ||
-    node.kind === "average" ||
-    node.kind === "min" ||
-    node.kind === "max" ||
-    node.kind === "add" ||
-    node.kind === "sub" ||
-    node.kind === "mul" ||
-    node.kind === "div"
-  ) {
-    return TypeNames.NUMERIC;
-  }
-  return undefined;
-}
-
 export function FunctionEditor(props: {
   workspace: WorkspaceStore;
   uuid?: string;
 }): ReactElement {
-  const state = useObservable(props.workspace);
-  const existing = props.uuid === undefined
+  const { workspace, uuid } = props;
+  const state = useObservable(workspace);
+  const existing = uuid === undefined
     ? undefined
-    : state.functions.find((view) => view.uuid === props.uuid);
+    : state.functions.find((view) => view.uuid === uuid);
 
   const [name, setName] = useState(existing?.name ?? "");
   const [inputType, setInputType] = useState(
@@ -153,16 +42,11 @@ export function FunctionEditor(props: {
     existing?.input_object_uuid ?? null,
   );
   const [nodes, setNodes] = useState<NodeDraft[]>(
-    existing?.nodes.map((node) => ({
-      uuid: node.uuid,
-      kind: node.kind,
-      config: Object.fromEntries(
-        Object.entries(node.config).map(([key, value]) => [
-          key,
-          value as string | number,
-        ]),
-      ),
-    })) ?? [],
+    existing === undefined
+      ? []
+      : existing.nodes
+          .map((node) => FunctionEditorLogic.fromWireNode(node))
+          .filter((node): node is NodeDraft => node !== null),
   );
   const [edges, setEdges] = useState<EdgeDraft[]>(
     existing?.edges.map((edge) => ({
@@ -203,7 +87,7 @@ export function FunctionEditor(props: {
     if (source === undefined) {
       return [];
     }
-    const sourceType = inferNodeType(source, inputSchema);
+    const sourceType = FunctionEditorLogic.inferNodeType(source, inputSchema);
     if (sourceType === undefined || !TypeNames.isArray(sourceType)) {
       return [];
     }
@@ -220,17 +104,27 @@ export function FunctionEditor(props: {
   };
 
   const addNode = (kind: string): void => {
+    if (!isNodeKind(kind)) {
+      return;
+    }
     const spec = KIND_SPECS[kind];
     if (spec === undefined) {
       return;
     }
     setNodes([
       ...nodes,
-      { uuid: newUuid(), kind, config: emptyConfig(spec.configKey) },
+      {
+        uuid: FunctionEditorLogic.newUuid(),
+        kind,
+        config: FunctionEditorLogic.emptyConfig(spec.configKey),
+      },
     ]);
   };
 
   const setNodeKind = (uuid: string, kind: string): void => {
+    if (!isNodeKind(kind)) {
+      return;
+    }
     const spec = KIND_SPECS[kind];
     if (spec === undefined) {
       return;
@@ -238,7 +132,11 @@ export function FunctionEditor(props: {
     setNodes(
       nodes.map((node) =>
         node.uuid === uuid
-          ? { uuid, kind, config: emptyConfig(spec.configKey) }
+          ? {
+              uuid,
+              kind,
+              config: FunctionEditorLogic.emptyConfig(spec.configKey),
+            }
           : node,
       ),
     );
@@ -286,7 +184,7 @@ export function FunctionEditor(props: {
   };
 
   const wireNodes = useMemo(
-    () => nodes.map((node, index) => toNodeInput(node, index)),
+    () => nodes.map((node, index) => FunctionEditorLogic.toNodeInput(node, index)),
     [nodes],
   );
   const wireEdges = useMemo<FunctionEdgeInput[]>(
@@ -312,7 +210,7 @@ export function FunctionEditor(props: {
       inputObjectUuid === existing.input_object_uuid &&
       JSON.stringify(wireNodes) === JSON.stringify(existing.nodes) &&
       JSON.stringify(wireEdges) === JSON.stringify(existing.edges));
-  usePinTabOnEdit(props.workspace, !pristine);
+  usePinTabOnEdit(workspace, !pristine);
 
   const canSave = name.trim() !== "" && inputType !== "" && outputType !== "";
 
@@ -320,8 +218,8 @@ export function FunctionEditor(props: {
     if (!canSave) {
       return;
     }
-    if (props.uuid === undefined) {
-      void props.workspace.createFunction(
+    if (uuid === undefined) {
+      void workspace.createFunction(
         inputType,
         outputType,
         name.trim(),
@@ -330,8 +228,8 @@ export function FunctionEditor(props: {
         wireEdges,
       );
     } else {
-      void props.workspace.saveFunctionEdits(
-        props.uuid,
+      void workspace.saveFunctionEdits(
+        uuid,
         name.trim(),
         inputObjectUuid,
         wireNodes,
@@ -354,12 +252,12 @@ export function FunctionEditor(props: {
           disabled={!canSave}
           onClick={save}
         >
-          {props.uuid === undefined ? "Create" : "Save"}
+          {uuid === undefined ? "Create" : "Save"}
         </button>
-        {props.uuid !== undefined && (
+        {uuid !== undefined && (
           <button
             className="button button-danger"
-            onClick={() => void props.workspace.deleteFunction(props.uuid as string)}
+            onClick={() => void workspace.deleteFunction(uuid)}
           >
             Delete
           </button>
@@ -371,7 +269,7 @@ export function FunctionEditor(props: {
           <span className="field-label">Input type</span>
           <span className="field-body">
             <TypeSelect
-              workspace={props.workspace}
+              workspace={workspace}
               value={inputType}
               options={inputTypes.map((view) => view.name)}
               onChange={(value) => {
@@ -387,7 +285,7 @@ export function FunctionEditor(props: {
           <span className="field-label">Output type</span>
           <span className="field-body">
             <TypeSelect
-              workspace={props.workspace}
+              workspace={workspace}
               value={outputType}
               options={TypeNames.SCALARS}
               onChange={setOutputType}
@@ -493,7 +391,9 @@ export function FunctionEditor(props: {
                   setNodeConfig(node.uuid, "value", event.target.value)
                 }
                 onBlur={(event) => {
-                  const parsed = parseConstValue(event.target.value);
+                  const parsed = FunctionEditorLogic.parseConstValue(
+                    event.target.value,
+                  );
                   if (parsed !== event.target.value) {
                     setNodeConfig(node.uuid, "value", parsed);
                   }
@@ -502,7 +402,7 @@ export function FunctionEditor(props: {
             )}
             {node.kind === "cast" && (
               <TypeSelect
-                workspace={props.workspace}
+                workspace={workspace}
                 value={String(node.config.target ?? "")}
                 options={TypeNames.SCALARS}
                 onChange={(value) => setNodeConfig(node.uuid, "target", value)}
@@ -545,7 +445,7 @@ export function FunctionEditor(props: {
               <option value="">— from —</option>
               {nodes.map((node) => (
                 <option key={node.uuid} value={node.uuid}>
-                  {nodeLabel(node)}
+                  {FunctionEditorLogic.nodeLabel(node)}
                 </option>
               ))}
             </select>
@@ -560,7 +460,7 @@ export function FunctionEditor(props: {
               <option value="">— to —</option>
               {nodes.map((node) => (
                 <option key={node.uuid} value={node.uuid}>
-                  {nodeLabel(node)}
+                  {FunctionEditorLogic.nodeLabel(node)}
                 </option>
               ))}
             </select>
