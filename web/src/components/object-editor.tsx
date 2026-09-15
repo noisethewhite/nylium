@@ -8,6 +8,7 @@ import { useSaveShortcut } from "../state/use-save-shortcut";
 import { usePinTabOnEdit } from "../state/use-pin-tab-on-edit";
 import { WorkspaceStore } from "../state/workspace";
 import { FieldEditor } from "./field-editors";
+import { BacklinkChips } from "./backlink-chips";
 import { TagChips } from "./tag-chips";
 import { TypeIcon } from "./type-icon";
 import { TextFieldModel } from "../fields/scalar-fields";
@@ -122,6 +123,7 @@ function ObjectEditorInner(props: {
           );
         })}
       </div>
+      <BacklinkChips workspace={props.workspace} object={props.object} />
       {editorState.error !== null && (
         <div className="error-banner">{editorState.error}</div>
       )}
