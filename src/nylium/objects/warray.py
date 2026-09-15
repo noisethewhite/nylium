@@ -27,6 +27,7 @@ from nylium.tables.values.array_values import (
 )
 from nylium.tables.values.instance_values import add_link, delete_links_to, link_for
 from nylium.objects.wenum import WEnum
+from nylium.objects.wembedded import WEmbedded
 from nylium.objects.wfile import WFile
 from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import VALUE_PROP_KEY, ScalarPayload, WScalar, WString
@@ -49,10 +50,16 @@ class WArray:
         owner_uuid: UUID,
         prop: WProp,
         elem_type: str,
-        values: list[StoredValue],
+        values: list[StoredValue] | None,
     ) -> None:
+        if values is None:
+            # None unsets the prop: destroy the array instance (and its boxes)
+            link = link_for(owner_uuid, prop.uuid)
+            if link is not None:
+                cls.destroy(link.uuid)
+            return
         array_uuid = cls._ensure_array_instance(owner_uuid, prop, elem_type)
-        cls._fill(array_uuid, elem_type, values)
+        cls._fill(array_uuid, elem_type, values, owner_uuid, prop)
 
     @classmethod
     @databasemethod(commit=True)
@@ -67,11 +74,18 @@ class WArray:
     @classmethod
     @databasemethod(commit=True)
     def _fill(
-        cls, array_uuid: UUID, elem_type: str, values: list[StoredValue]
+        cls,
+        array_uuid: UUID,
+        elem_type: str,
+        values: list[StoredValue],
+        owner_uuid: UUID,
+        prop: WProp,
     ) -> None:
         cls._destroy_boxes(array_uuid)
         for index, item in enumerate(values):
-            add_element(array_uuid, index, cls._box(elem_type, item))
+            add_element(
+                array_uuid, index, cls._box(elem_type, item, array_uuid, owner_uuid, prop, index)
+            )
 
     @classmethod
     @databasemethod(commit=True)
@@ -97,6 +111,12 @@ class WArray:
             return
         if WType.is_array_name(owner.name):
             cls.destroy(box_uuid)
+            return
+        if owner.is_embedded:
+            # ADR-0021: an Array<Embedded> element is a composition child —
+            # its lifecycle is owned by the array, so a rewrite/delete of
+            # the array deletes it (recursively, via the object's cascade).
+            WTypeMeta.root().wrap(box_uuid).delete()
             return
         # user-type instance referenced from the array: not a box, keep it
 
@@ -148,15 +168,29 @@ class WArray:
 
     @classmethod
     @databasemethod(commit=True)
-    def _box(cls, type_name: str, value: StoredValue) -> UUID:
+    def _box(
+        cls,
+        type_name: str,
+        value: StoredValue,
+        array_uuid: UUID,
+        owner_uuid: UUID,
+        prop: WProp,
+        index: int,
+    ) -> UUID:
         if WType.is_array_name(type_name):
             if not isinstance(value, list):
                 raise TypeError(
                     f"{type_name} element takes list, got {type(value).__name__}"
                 )
-            array_uuid = cls._create_array_instance(type_name)
-            cls._fill(array_uuid, WType.element_name(type_name), value)
-            return array_uuid
+            nested_array_uuid = cls._create_array_instance(type_name)
+            cls._fill(
+                nested_array_uuid,
+                WType.element_name(type_name),
+                value,
+                owner_uuid,
+                prop,
+            )
+            return nested_array_uuid
         scalar = WScalar.by_type_name(type_name)
         if scalar is None:
             if WFile.is_file_type(type_name):
@@ -175,6 +209,14 @@ class WArray:
                 scalar = WString
                 value = validated
             else:
+                embedded = WType.by_name(type_name)
+                if embedded is not None and embedded.is_embedded:
+                    # ADR-0021: an Array<Embedded> element is a composition
+                    # child owned by the array instance, filled from its
+                    # inline props draft and named <parent> → <prop> #<index>
+                    return cls._box_embedded(
+                        embedded, value, array_uuid, owner_uuid, prop, index
+                    )
                 WTypeMeta.check_link(type_name, value)
                 return cast(WObjectShape, value).uuid
         WScalar.validate(scalar.TYPE_NAME, cast(ScalarPayload | None, value))
@@ -191,3 +233,27 @@ class WArray:
             scalar.to_storage(cast(ScalarPayload, value)),
         )
         return box_uuid
+
+    @classmethod
+    @databasemethod(commit=True)
+    def _box_embedded(
+        cls,
+        embedded: WType,
+        draft: StoredValue,
+        array_uuid: UUID,
+        owner_uuid: UUID,
+        prop: WProp,
+        index: int,
+    ) -> UUID:
+        if not isinstance(draft, dict):
+            raise TypeError(
+                f"{embedded.name} element takes a props dict, got {type(draft).__name__}"
+            )
+        return WEmbedded.create_array_element(
+            embedded,
+            array_uuid,
+            owner_uuid,
+            prop,
+            index,
+            cast(dict[str, StoredValue], draft),
+        )

@@ -24,6 +24,7 @@ from nylium.database import databasemethod
 from nylium.tables import instances
 from nylium.tables.objects.instances import get as instance_get
 from nylium.tables.values import cells
+from nylium.tables.values.array_values import element_uuids_of
 from nylium.tables.values.instance_values import add_link, link_for, linked_uuids_of
 from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import WString
@@ -77,10 +78,12 @@ class WEmbedded:
     @classmethod
     @databasemethod(commit=True)
     def destroy_children_of_prop(cls, prop_uuid: UUID) -> None:
-        """Every child linked through this prop, across all instances.
+        """Every child held through this prop, across all instances.
         Called from Api.sync_props before an embedded prop is deleted or
         retyped — otherwise the link rows cascade away and the child
-        instances orphan."""
+        instances orphan. For an Array<Embedded> prop the link rows point
+        at the array instances; deleting one cascades (via its own
+        lifecycle) to the composed elements."""
         child_uuids = linked_uuids_of(prop_uuid)
         for child_uuid in child_uuids:
             cls._destroy_child(child_uuid)
@@ -88,10 +91,11 @@ class WEmbedded:
     @classmethod
     @databasemethod(commit=True)
     def regenerate_names(cls, object_uuid: UUID) -> None:
-        """Rewrite generated names of this object's embedded children,
-        then recurse — grandchild names embed the child name. The
-        instance graph is a tree (children are always created fresh),
-        so the recursion terminates."""
+        """Rewrite generated names of this object's embedded children
+        (composition links and Array<Embedded> elements), then recurse —
+        grandchild names embed the child name. The instance graph is a
+        tree (children are always created fresh), so the recursion
+        terminates."""
         inst = instance_get(object_uuid)
         if inst is None:
             return
@@ -99,13 +103,29 @@ class WEmbedded:
         if owner is None:
             return
         for prop in WProp.effective_for(owner):
-            if prop.is_trait_bound or not prop.value_type().is_embedded:
+            if prop.is_trait_bound:
                 continue
-            link = link_for(object_uuid, prop.uuid)
-            if link is None:
+            value_type = prop.value_type()
+            if value_type.is_embedded:
+                link = link_for(object_uuid, prop.uuid)
+                if link is None:
+                    continue
+                cls._write_generated_name(link.uuid, cls.generated_name(object_uuid, prop))
+                cls.regenerate_names(link.uuid)
                 continue
-            cls._write_generated_name(link.uuid, cls.generated_name(object_uuid, prop))
-            cls.regenerate_names(link.uuid)
+            # ADR-0021: Array<Embedded> elements are named
+            # "<parent> → <prop key> #<index>" and owned by the array
+            # instance, not the parent — regenerate each in index order.
+            if cls.array_element_type(value_type) is None:
+                continue
+            array_link = link_for(object_uuid, prop.uuid)
+            if array_link is None:
+                continue
+            for index, element_uuid in enumerate(element_uuids_of(array_link.uuid)):
+                cls._write_generated_name(
+                    element_uuid, cls.array_element_name(object_uuid, prop, index)
+                )
+                cls.regenerate_names(element_uuid)
 
     @classmethod
     @databasemethod(commit=False)
@@ -128,6 +148,54 @@ class WEmbedded:
         if not base:
             base = str(owner_uuid)
         return f"{base} {EMBEDDED_NAME_SEPARATOR} {prop.key}"
+
+    @classmethod
+    @databasemethod(commit=False)
+    def array_element_type(cls, value_type: WType) -> WType | None:
+        """ADR-0021: the embedded element type when ``value_type`` names an
+        Array<Embedded>, else None."""
+        if not WType.is_array_name(value_type.name):
+            return None
+        element = WType.by_name(WType.element_name(value_type.name))
+        if element is not None and element.is_embedded:
+            return element
+        return None
+
+    @classmethod
+    def array_element_name(cls, owner_uuid: UUID, prop: WProp, index: int) -> str:
+        """ADR-0021: '<parent> → <prop key> #<index>' (1-based)."""
+        return f"{cls.generated_name(owner_uuid, prop)} #{index + 1}"
+
+    @classmethod
+    @databasemethod(commit=True)
+    def create_array_element(
+        cls,
+        embedded: WType,
+        array_uuid: UUID,
+        owner_uuid: UUID,
+        prop: WProp,
+        index: int,
+        draft: dict[str, StoredValue],
+    ) -> UUID:
+        """ADR-0021: create one embedded child of an Array<Embedded> prop.
+
+        The child is owned by the array instance (owner_object_uuid =
+        array_uuid), filled from its inline props draft, and named
+        ``<parent> → <prop key> #<index>`` (1-based)."""
+        child_uuid = uuid4()
+        instances.create(
+            child_uuid,
+            embedded.uuid,
+            REGISTRY_NAME_FORMAT.format(
+                type_name=embedded.name,
+                short_uuid=str(child_uuid)[:SHORT_UUID_LENGTH],
+            ),
+            owner_object_uuid=array_uuid,
+            owner_prop_uuid=None,
+        )
+        cls._fill_child(child_uuid, draft)
+        cls._write_generated_name(child_uuid, cls.array_element_name(owner_uuid, prop, index))
+        return child_uuid
 
     # --- internals ---
 

@@ -137,7 +137,14 @@ class SchemaApi(_SchemaBase):
             if prop.is_trait_bound:
                 continue  # Any<…> has no concrete value type to compare
             old_value_type = prop.value_type()
-            if not old_value_type.is_embedded:
+            # composition-backed props — embedded links and Array<Embedded>
+            # — own their child instances: deleting or retyping them would
+            # cascade the link rows away and orphan the children, so destroy
+            # them while the prop still stands (ADR-0021)
+            if (
+                not old_value_type.is_embedded
+                and WEmbedded.array_element_type(old_value_type) is None
+            ):
                 continue
             draft = kept.get(prop.uuid)
             if draft is None or draft[1] != old_value_type.uuid:

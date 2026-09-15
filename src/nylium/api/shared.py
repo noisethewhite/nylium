@@ -92,11 +92,7 @@ class ApiShared:
                 raise ValidationError(f"no unit type {unit_param!r}")
             return WType.ensure(name)
         if WType.is_array_name(name):
-            element = cls._ensure_value_type(WType.element_name(name))
-            if element.is_embedded:
-                raise ValidationError(
-                    f"arrays of embedded type {element.name!r} are not supported yet"
-                )
+            _ = cls._ensure_value_type(WType.element_name(name))
             return WType.ensure(name)
         resolved = WType.ensure(name)
         if resolved.is_unit:
@@ -198,6 +194,8 @@ class ApiShared:
                 f"trait-bound prop of type {type_name!r} takes an object reference, got {type(value).__name__}"
             )
         if WType.is_array_name(type_name):
+            if value is None:
+                return None  # None unsets; [] is an empty array
             if not isinstance(value, list):
                 raise TypeError(f"array prop takes list, got {type(value).__name__}")
             element_name = WType.element_name(type_name)

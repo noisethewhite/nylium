@@ -6,7 +6,7 @@ from uuid import UUID
 
 import pytest
 
-from nylium.api import Api, EmbeddedValue, ScalarValue
+from nylium.api import Api, ArrayValue, EmbeddedValue, ScalarValue
 from nylium.tables.objects.types import Type
 from nylium.server.errors import ValidationError
 
@@ -155,12 +155,106 @@ def test_link_to_existing_refused():
         )
 
 
-def test_array_of_embedded_refused():
+def team_type() -> Type:
     _ = contact_details_type()
-    with pytest.raises(ValidationError):
-        Api.create_type(
-            "Team", {"name": "String", "members": "Array<ContactDetails>"}, "Teams"
-        )
+    return Api.create_type(
+        "Team", {"name": "String", "members": "Array<ContactDetails>"}, "Teams"
+    )
+
+
+def test_array_of_embedded_round_trip():
+    _ = team_type()
+    team = Api.create_object(
+        "Team",
+        {
+            "name": "A-Team",
+            "members": [{"email": "a@x.com"}, {"email": "b@x.com"}],
+        },
+    )
+    members = team.props["members"]
+    assert isinstance(members, ArrayValue)
+    assert members.items is not None and len(members.items) == 2
+    first, second = members.items
+    assert isinstance(first, EmbeddedValue) and isinstance(second, EmbeddedValue)
+    assert first.props["email"] == ScalarValue(value="a@x.com")
+    assert second.props["email"] == ScalarValue(value="b@x.com")
+    # generated names carry the array prop key and the 1-based position
+    assert first.props["name"] == ScalarValue(value="A-Team → members #1")
+    assert second.props["name"] == ScalarValue(value="A-Team → members #2")
+    # elements are readable by uuid but never listed standalone
+    first_uuid = first.uuid
+    assert isinstance(first_uuid, UUID) and Api.get_object(first_uuid) is not None
+    assert Api.list_objects("ContactDetails") == []
+
+
+def test_array_of_embedded_rewrite_deletes_old_elements():
+    _ = team_type()
+    team = Api.create_object(
+        "Team",
+        {"name": "A-Team", "members": [{"email": "a@x.com"}, {"email": "b@x.com"}]},
+    )
+    members = team.props["members"]
+    assert isinstance(members, ArrayValue) and members.items is not None
+    old_uuids = [
+        item.uuid
+        for item in members.items
+        if isinstance(item, EmbeddedValue) and item.uuid is not None
+    ]
+    assert len(old_uuids) == 2
+    team = Api.update_object(team.uuid, {"members": [{"email": "c@x.com"}]})
+    members = team.props["members"]
+    assert isinstance(members, ArrayValue) and members.items is not None
+    assert len(members.items) == 1
+    for uuid in old_uuids:
+        assert Api.get_object(uuid) is None
+
+
+def test_array_of_embedded_cascade_delete():
+    _ = team_type()
+    team = Api.create_object(
+        "Team",
+        {"name": "A-Team", "members": [{"email": "a@x.com"}, {"email": "b@x.com"}]},
+    )
+    members = team.props["members"]
+    assert isinstance(members, ArrayValue) and members.items is not None
+    member_uuids = [
+        item.uuid
+        for item in members.items
+        if isinstance(item, EmbeddedValue) and item.uuid is not None
+    ]
+    assert len(member_uuids) == 2
+    assert Api.delete_object(team.uuid)
+    for uuid in member_uuids:
+        assert Api.get_object(uuid) is None
+
+
+def test_array_of_embedded_empty_and_clear():
+    _ = team_type()
+    team = Api.create_object(
+        "Team",
+        {"name": "A-Team", "members": [{"email": "a@x.com"}]},
+    )
+    members = team.props["members"]
+    assert isinstance(members, ArrayValue) and members.items is not None
+    member = members.items[0]
+    assert isinstance(member, EmbeddedValue)
+    member_uuid = member.uuid
+    assert member_uuid is not None
+    # `[]` empties the array, deleting the composed children
+    team = Api.update_object(team.uuid, {"members": []})
+    members = team.props["members"]
+    assert isinstance(members, ArrayValue) and members.items == []
+    assert Api.get_object(member_uuid) is None
+    # `None` unsets the prop entirely, also deleting composed children
+    team = Api.update_object(team.uuid, {"members": [{"email": "b@x.com"}]})
+    members = team.props["members"]
+    assert isinstance(members, ArrayValue) and members.items is not None
+    second = members.items[0]
+    assert isinstance(second, EmbeddedValue) and second.uuid is not None
+    second_uuid = second.uuid
+    team = Api.update_object(team.uuid, {"members": None})
+    assert team.props["members"] == ArrayValue(items=None)
+    assert Api.get_object(second_uuid) is None
 
 
 def test_reserved_separator():
@@ -214,6 +308,85 @@ def test_sync_props_rename_regenerates_names():
     assert isinstance(details, EmbeddedValue)
     assert details.uuid == contact.uuid
     assert details.props["name"] == ScalarValue(value="Vasya → details")
+
+
+def test_array_of_embedded_parent_rename_regenerates_names():
+    _ = team_type()
+    team = Api.create_object(
+        "Team",
+        {"name": "A-Team", "members": [{"email": "a@x.com"}, {"email": "b@x.com"}]},
+    )
+    members = team.props["members"]
+    assert isinstance(members, ArrayValue) and members.items is not None
+    first, second = members.items
+    assert isinstance(first, EmbeddedValue) and isinstance(second, EmbeddedValue)
+    assert first.props["name"] == ScalarValue(value="A-Team → members #1")
+    team = Api.update_object(team.uuid, {"name": "B-Team"})
+    members = team.props["members"]
+    assert isinstance(members, ArrayValue) and members.items is not None
+    first, second = members.items
+    assert isinstance(first, EmbeddedValue) and isinstance(second, EmbeddedValue)
+    assert first.props["name"] == ScalarValue(value="B-Team → members #1")
+    assert second.props["name"] == ScalarValue(value="B-Team → members #2")
+
+
+def test_sync_props_delete_destroys_array_children():
+    view = team_type()
+    team = Api.create_object(
+        "Team",
+        {"name": "A-Team", "members": [{"email": "a@x.com"}, {"email": "b@x.com"}]},
+    )
+    members = team.props["members"]
+    assert isinstance(members, ArrayValue) and members.items is not None
+    member_uuids = [
+        item.uuid
+        for item in members.items
+        if isinstance(item, EmbeddedValue) and item.uuid is not None
+    ]
+    assert len(member_uuids) == 2
+    name_prop = next(prop for prop in view.props if prop.key == "name")
+    # drop the members prop from the schema entirely
+    synced = Api.sync_props("Team", [(name_prop.uuid, "name", "String", None)])
+    assert [prop.key for prop in synced.props] == ["name"]
+    for uuid in member_uuids:
+        assert Api.get_object(uuid) is None
+
+
+def test_sync_props_rename_regenerates_array_names():
+    view = team_type()
+    team = Api.create_object(
+        "Team",
+        {"name": "A-Team", "members": [{"email": "a@x.com"}, {"email": "b@x.com"}]},
+    )
+    members = team.props["members"]
+    assert isinstance(members, ArrayValue) and members.items is not None
+    member_uuids = [
+        item.uuid
+        for item in members.items
+        if isinstance(item, EmbeddedValue) and item.uuid is not None
+    ]
+    assert len(member_uuids) == 2
+    items = [
+        (prop.uuid, prop.key, prop.value_type, prop.formula) for prop in view.props
+    ]
+    items = [
+        (uuid, "crew" if key == "members" else key, vt, formula)
+        for uuid, key, vt, formula in items
+    ]
+    _ = Api.sync_props("Team", items)
+    reloaded = Api.get_object(team.uuid)
+    assert reloaded is not None
+    crew = reloaded.props["crew"]
+    assert isinstance(crew, ArrayValue) and crew.items is not None
+    assert [
+        item.uuid
+        for item in crew.items
+        if isinstance(item, EmbeddedValue) and item.uuid is not None
+    ] == member_uuids
+    first, second = crew.items
+    assert isinstance(first, EmbeddedValue) and isinstance(second, EmbeddedValue)
+    assert first.props["name"] == ScalarValue(value="A-Team → crew #1")
+    assert second.props["name"] == ScalarValue(value="A-Team → crew #2")
 
 
 def test_nested_embedded_names():

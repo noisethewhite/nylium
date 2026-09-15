@@ -84,7 +84,7 @@ class AttrsMixin(PersistenceMixin):
                 self._uuid,
                 prop,
                 WType.element_name(value_type),
-                cast(list[StoredValue], value),
+                cast(list[StoredValue] | None, value),
             )
         elif prop.is_trait_bound:
             # ADR-0013: Any<TraitName> — a plain object link whose type
