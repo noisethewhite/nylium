@@ -5,6 +5,7 @@ import { useSaveShortcut } from "../state/use-save-shortcut";
 import { usePinTabOnEdit } from "../state/use-pin-tab-on-edit";
 import { WorkspaceStore } from "../state/workspace";
 import { IconPicker } from "./icon-picker";
+import { Table } from "./table";
 
 /** One row of the unit part draft — uuid null marks a not-yet-created
  * part; an existing uuid with a changed name is a rename that the
@@ -143,60 +144,58 @@ export function UnitTypePanel(props: {
           </div>
         </div>
       </div>
-      <div className="editor-rows">
-        {rows.map((row, index) => (
-          <div key={row.uuid ?? `new-${index}`} className="prop-draft-row">
-            <input
-              type="radio"
-              name="unit-base"
-              title="Base part — stored values are kept in this part"
-              checked={row.is_base}
-              onChange={() =>
-                setRows((drafts) =>
-                  drafts.map((draft, position) => ({
-                    ...draft,
-                    is_base: position === index,
-                  })),
-                )
-              }
-            />
-            <input
-              className="input"
-              placeholder="Part name"
-              value={row.name}
-              onChange={(event) => updateRow(index, { name: event.target.value })}
-            />
-            {!row.is_base && (
-              <>
-                <input
-                  className="input"
-                  placeholder="Multiplier"
-                  inputMode="decimal"
-                  value={row.multiplier}
-                  onChange={(event) => updateRow(index, { multiplier: event.target.value })}
-                />
-                <input
-                  className="input"
-                  placeholder="Offset (0)"
-                  inputMode="decimal"
-                  value={row.offset}
-                  onChange={(event) => updateRow(index, { offset: event.target.value })}
-                />
-              </>
-            )}
-            <button
-              className="icon-button"
-              title="Delete part — refused while any value uses it"
-              disabled={rows.length <= 1}
-              onClick={() =>
-                setRows((drafts) => drafts.filter((_, position) => position !== index))
-              }
-            >
-              ×
-            </button>
-          </div>
-        ))}
-      </div>
+      <Table
+        rows={rows}
+        keyOf={(row, index) => row.uuid ?? `new-${index}`}
+        columns={[
+          {
+            kind: "radio",
+            name: "unit-base",
+            header: "Base",
+            title: "Base part — stored values are kept in this part",
+            checked: (row) => row.is_base,
+            onSelect: (row, index) =>
+              setRows((drafts) =>
+                drafts.map((draft, position) => ({
+                  ...draft,
+                  is_base: position === index,
+                })),
+              ),
+          },
+          {
+            kind: "string",
+            header: "Part",
+            placeholder: "Part name",
+            value: (row) => row.name,
+            onEdit: (row, value, index) => updateRow(index, { name: value }),
+          },
+          {
+            kind: "string",
+            header: "Multiplier",
+            placeholder: "Multiplier",
+            numeric: true,
+            value: (row) => row.multiplier,
+            visible: (row) => !row.is_base,
+            onEdit: (row, value, index) => updateRow(index, { multiplier: value }),
+          },
+          {
+            kind: "string",
+            header: "Offset",
+            placeholder: "Offset (0)",
+            numeric: true,
+            value: (row) => row.offset,
+            visible: (row) => !row.is_base,
+            onEdit: (row, value, index) => updateRow(index, { offset: value }),
+          },
+          {
+            kind: "remove",
+            title: "Delete part — refused while any value uses it",
+            disabled: (row, index, allRows) => allRows.length <= 1,
+            onRemove: (index) =>
+              setRows((drafts) => drafts.filter((_, position) => position !== index)),
+          },
+        ]}
+      />
       <div className="editor-footer">
         <button
           className="button"

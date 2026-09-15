@@ -4,7 +4,7 @@ import { TypeNames } from "../contracts";
 import { pluralize } from "../pluralize";
 import { WorkspaceStore } from "../state/workspace";
 import { DEFAULT_COLOR, DEFAULT_ICON, IconPicker } from "./icon-picker";
-import { TypePicker } from "./type-picker";
+import { Table } from "./table";
 
 interface PropDraft {
   key: string;
@@ -98,36 +98,36 @@ export function TypeCreateForm(props: {
         </div>
       </div>
       {/* every type opens with the pinned `name` prop — the instance title */}
-      <div className="prop-draft-row prop-draft-row-fixed">
-        <span className="schema-prop-key">name</span>
-        <span className="dim">String · title</span>
-      </div>
-      {propsDraft.map((draft, index) => (
-        <div className="prop-draft-row" key={index}>
-          <input
-            className="input"
-            placeholder="Property Name"
-            value={draft.key}
-            onChange={(event) => updateProp(index, { key: event.target.value })}
-          />
-          <TypePicker
-            workspace={props.workspace}
-            value={draft.valueType}
-            onChange={(valueType) => updateProp(index, { valueType })}
-          />
-          <button
-            className="icon-button"
-            title="Remove prop"
-            onClick={() =>
+      <Table
+        rows={[{ key: "name", valueType: TypeNames.STRING }, ...propsDraft]}
+        keyOf={(row, index) => (index === 0 ? "fixed-name" : `draft-${index}`)}
+        locked={(row, index) => index === 0}
+        columns={[
+          {
+            kind: "string",
+            placeholder: "Property Name",
+            value: (row) => row.key,
+            onEdit: (row, value, index) => updateProp(index - 1, { key: value }),
+          },
+          {
+            kind: "type-selector",
+            workspace: props.workspace,
+            value: (row) => row.valueType,
+            display: (row, index) =>
+              index === 0 ? <span className="dim">String · title</span> : undefined,
+            onPick: (row, value, index) => updateProp(index - 1, { valueType: value }),
+          },
+          {
+            kind: "remove",
+            title: "Remove prop",
+            visible: (row, index) => index > 0,
+            onRemove: (index) =>
               setPropsDraft((drafts) =>
-                drafts.filter((_, position) => position !== index),
-              )
-            }
-          >
-            ×
-          </button>
-        </div>
-      ))}
+                drafts.filter((_, position) => position !== index - 1),
+              ),
+          },
+        ]}
+      />
       <div className="editor-footer">
         <label className="embedded-checkbox">
           <input

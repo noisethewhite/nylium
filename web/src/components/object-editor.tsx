@@ -11,6 +11,7 @@ import { FieldEditor } from "./field-editors";
 import { BacklinkChips } from "./backlink-chips";
 import { TagChips } from "./tag-chips";
 import { TypeIcon } from "./type-icon";
+import { FieldModel } from "../fields/field-model";
 import { TextFieldModel } from "../fields/scalar-fields";
 
 export function ObjectEditor(props: {
@@ -101,24 +102,29 @@ function ObjectEditorInner(props: {
         </div>
       )}
       <div className="object-editor-fields">
-        {gridFields.map((field) => {
-          // ADR-0013: trait-owned fields carry a left border in the
-          // trait's color — you can see at a glance which props come
-          // from a trait vs the type itself
-          const traitProp = props.schema.props.find(
-            (prop) => prop.key === field.key && prop.trait !== null,
-          );
-          if (traitProp === undefined) {
-            return <FieldEditor key={field.key} field={field} editor={store} />;
+        {groupTraitFields(gridFields, props.schema).map((segment) => {
+          if (segment.trait === null) {
+            return segment.fields.map((field) => (
+              <FieldEditor key={field.key} field={field} editor={store} />
+            ));
           }
+          // ADR-0013: props owned by a trait render as one group inside a
+          // rounded frame in the trait's color — a visible capsule
           return (
             <div
-              key={field.key}
-              className="trait-tinted-field"
-              style={{ borderLeftColor: traitProp.trait_color ?? undefined }}
-              title={`From trait ${traitProp.trait ?? ""}`}
+              key={`trait-${segment.trait.name}`}
+              className="trait-field-group"
+              style={{ borderColor: segment.trait.color ?? undefined }}
             >
-              <FieldEditor field={field} editor={store} />
+              <div
+                className="trait-field-group-label"
+                style={{ color: segment.trait.color ?? undefined }}
+              >
+                {segment.trait.name}
+              </div>
+              {segment.fields.map((field) => (
+                <FieldEditor key={field.key} field={field} editor={store} />
+              ))}
             </div>
           );
         })}
@@ -144,6 +150,39 @@ function ObjectEditorInner(props: {
       </div>
     </div>
   );
+}
+
+/** A run of editor fields that either all belong to one trait or to the
+ * type itself (`trait: null`). Consecutive fields of the same trait stay
+ * one segment so they render inside a single rounded frame. */
+interface FieldSegment {
+  readonly trait: { readonly name: string; readonly color: string | null } | null;
+  readonly fields: FieldModel[];
+}
+
+function groupTraitFields(
+  fields: readonly FieldModel[],
+  schema: TypeView,
+): FieldSegment[] {
+  const segments: FieldSegment[] = [];
+  for (const field of fields) {
+    const traitProp = schema.props.find(
+      (prop) => prop.key === field.key && prop.trait !== null,
+    );
+    const last = segments[segments.length - 1];
+    if (traitProp !== undefined && last?.trait?.name === traitProp.trait) {
+      last.fields.push(field);
+      continue;
+    }
+    segments.push({
+      trait:
+        traitProp === undefined
+          ? null
+          : { name: traitProp.trait as string, color: traitProp.trait_color },
+      fields: [field],
+    });
+  }
+  return segments;
 }
 
 /** ADR-0005/0007: a computed prop is always scalar on read — render its

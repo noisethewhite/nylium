@@ -94,8 +94,3 @@ select.input option {
   padding: 0 0 var(--space-3);
   width: 100%;
 }
-
-.prop-grip-spacer {
-  cursor: default;
-  width: 11px;
-}

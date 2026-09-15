@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import { useState } from "react";
 import { WorkspaceStore } from "../state/workspace";
 import { DEFAULT_COLOR, DEFAULT_ICON, IconPicker } from "./icon-picker";
+import { Table } from "./table";
 
 interface SecondaryDraft {
   readonly name: string;
@@ -94,39 +95,41 @@ export function UnitCreateForm(props: {
           </div>
         </div>
       </div>
-      {secondaries.map((row, index) => (
-        <div className="prop-draft-row" key={index}>
-          <input
-            className="input"
-            placeholder="Part name (e.g. °F)"
-            value={row.name}
-            onChange={(event) => updateSecondary(index, { name: event.target.value })}
-          />
-          <input
-            className="input"
-            placeholder="Multiplier"
-            inputMode="decimal"
-            value={row.multiplier}
-            onChange={(event) => updateSecondary(index, { multiplier: event.target.value })}
-          />
-          <input
-            className="input"
-            placeholder="Offset (0)"
-            inputMode="decimal"
-            value={row.offset}
-            onChange={(event) => updateSecondary(index, { offset: event.target.value })}
-          />
-          <button
-            className="icon-button"
-            title="Remove part"
-            onClick={() =>
-              setSecondaries((drafts) => drafts.filter((_, position) => position !== index))
-            }
-          >
-            ×
-          </button>
-        </div>
-      ))}
+      <Table
+        rows={secondaries}
+        keyOf={(row, index) => `secondary-${index}`}
+        columns={[
+          {
+            kind: "string",
+            header: "Part",
+            placeholder: "Part name (e.g. °F)",
+            value: (row) => row.name,
+            onEdit: (row, value, index) => updateSecondary(index, { name: value }),
+          },
+          {
+            kind: "string",
+            header: "Multiplier",
+            placeholder: "Multiplier",
+            numeric: true,
+            value: (row) => row.multiplier,
+            onEdit: (row, value, index) => updateSecondary(index, { multiplier: value }),
+          },
+          {
+            kind: "string",
+            header: "Offset",
+            placeholder: "Offset (0)",
+            numeric: true,
+            value: (row) => row.offset,
+            onEdit: (row, value, index) => updateSecondary(index, { offset: value }),
+          },
+          {
+            kind: "remove",
+            title: "Remove part",
+            onRemove: (index) =>
+              setSecondaries((drafts) => drafts.filter((_, position) => position !== index)),
+          },
+        ]}
+      />
       <div className="editor-footer">
         <button
           className="button"

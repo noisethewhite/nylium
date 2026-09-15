@@ -1,4 +1,4 @@
-import type { DragEvent, ReactElement } from "react";
+import type { ReactElement } from "react";
 import { useEffect, useState } from "react";
 import type { FunctionView, TypeView } from "../contracts";
 import { TypeNames } from "../contracts";
@@ -8,7 +8,7 @@ import { usePinTabOnEdit } from "../state/use-pin-tab-on-edit";
 import { WorkspaceStore } from "../state/workspace";
 import { FloatingMenu } from "./floating-menu";
 import { IconPicker } from "./icon-picker";
-import { TypePicker } from "./type-picker";
+import { Table } from "./table";
 
 /** One row of the editor's draft — uuid null marks a not-yet-created
  * prop; everything else is matched to the live schema by uuid. */
@@ -30,21 +30,6 @@ function draftsOf(schema: TypeView): PropDraft[] {
     }));
 }
 
-/** Six-dot grip (2×3) — the affordance that a schema row is draggable. */
-function PropGrip(): ReactElement {
-  const dots: ReactElement[] = [];
-  for (let row = 0; row < 3; row += 1) {
-    for (let col = 0; col < 2; col += 1) {
-      dots.push(<circle key={`${row}-${col}`} cx={3 + col * 5} cy={3 + row * 4} r={1.4} />);
-    }
-  }
-  return (
-    <svg className="prop-grip-icon" width="11" height="14" viewBox="0 0 11 14">
-      {dots}
-    </svg>
-  );
-}
-
 /** The type page IS the editor — same shape as the object editor:
  * borderless heading (the type name), prop rows with grips, one Save. */
 export function TypeViewPanel(props: {
@@ -58,8 +43,6 @@ export function TypeViewPanel(props: {
   const [iconDraft, setIconDraft] = useState(schema.icon);
   const [colorDraft, setColorDraft] = useState(schema.color);
   const [rows, setRows] = useState<PropDraft[]>(() => draftsOf(schema));
-  const [dragIndex, setDragIndex] = useState<number | null>(null);
-  const [overIndex, setOverIndex] = useState<number | null>(null);
 
   useEffect(() => {
     setNameDraft(schema.name);
@@ -77,42 +60,22 @@ export function TypeViewPanel(props: {
     );
   };
 
-  const dropAt = (target: number): void => {
-    if (dragIndex === null || dragIndex === target) {
-      return;
-    }
-    // the pinned `name` row never leaves position 0
-    if (dragIndex === 0 || target === 0) {
-      return;
-    }
+  const moveRow = (from: number, to: number): void => {
     setRows((drafts) => {
-      const moved = drafts[dragIndex];
+      const moved = drafts[from];
       if (moved === undefined) {
         return drafts;
       }
-      const next = drafts.filter((_, position) => position !== dragIndex);
-      next.splice(target, 0, moved);
+      const next = drafts.filter((_, position) => position !== from);
+      next.splice(to, 0, moved);
       return next;
     });
-    setDragIndex(null);
-    setOverIndex(null);
   };
 
-  const onDrop = (event: DragEvent, target: number): void => {
-    event.preventDefault();
-    dropAt(target);
-  };
-
-  const rowClass = (index: number): string => {
-    const classes = ["prop-draft-row", "schema-prop-row"];
-    if (index === dragIndex) {
-      classes.push("schema-prop-row-dragging");
-    }
-    if (index === overIndex && dragIndex !== null && dragIndex !== index) {
-      classes.push("schema-prop-row-over");
-    }
-    return classes.join(" ");
-  };
+  // the schema's first row is the pinned `name` title — locked key and
+  // type, not draggable, not a drop target, no remove button
+  const isPinned = (row: PropDraft, index: number): boolean =>
+    index === 0 && row.key === "name";
 
   const pristine =
     nameDraft === schema.name &&
@@ -258,18 +221,49 @@ export function TypeViewPanel(props: {
           )}
         </FloatingMenu>
       </div>
-      <div className="editor-rows">
-        {rows.map((row, index) => {
-          // the schema's first row is the pinned `name` title — no grip,
-          // locked key and type, not draggable, not a drop target
-          const pinned = index === 0 && row.key === "name";
+      <Table
+        rows={rows}
+        keyOf={(row, index) => row.uuid ?? `new-${index}`}
+        locked={isPinned}
+        onReorder={moveRow}
+        columns={[
+          { kind: "drag" },
+          {
+            kind: "string",
+            placeholder: "Property Name",
+            value: (row) => row.key,
+            onEdit: (row, value, index) => updateRow(index, { key: value }),
+          },
+          {
+            kind: "type-selector",
+            workspace,
+            value: (row) => row.valueType,
+            display: (row, index) =>
+              isPinned(row, index) ? <span className="dim">String · title</span> : undefined,
+            onPick: (row, value, index) => updateRow(index, { valueType: value }),
+          },
+          {
+            kind: "remove",
+            title: "Delete prop — removes it from every instance",
+            visible: (row, index) => !isPinned(row, index),
+            onRemove: (index) =>
+              setRows((drafts) => drafts.filter((_, position) => position !== index)),
+          },
+        ]}
+        rowExtra={(row, index) => {
+          if (isPinned(row, index)) {
+            return null;
+          }
           // ADR-0007: an existing scalar prop can carry a function-backed
           // value — the bind menu offers functions whose output matches.
           const schemaProp =
             row.uuid === null
               ? undefined
               : schema.props.find((prop) => prop.uuid === row.uuid);
-          const boundUuid = schemaProp?.function_uuid ?? null;
+          if (schemaProp === undefined || !TypeNames.isScalar(row.valueType)) {
+            return null;
+          }
+          const boundUuid = schemaProp.function_uuid ?? null;
           const boundName =
             boundUuid === null
               ? null
@@ -279,101 +273,39 @@ export function TypeViewPanel(props: {
             return params !== null && params.output === row.valueType;
           });
           return (
-            <div
-              key={row.uuid ?? `new-${index}`}
-              className={rowClass(index)}
-              draggable={!pinned}
-              onDragStart={() => {
-                if (!pinned) {
-                  setDragIndex(index);
-                }
-              }}
-              onDragOver={(event) => {
-                if (pinned) {
-                  return;
-                }
-                event.preventDefault();
-                setOverIndex(index);
-              }}
-              onDragLeave={() => setOverIndex((current) => (current === index ? null : current))}
-              onDrop={(event) => {
-                if (!pinned) {
-                  onDrop(event, index);
-                }
-              }}
-              onDragEnd={() => {
-                setDragIndex(null);
-                setOverIndex(null);
-              }}
-            >
-              {pinned ? (
-                <span className="prop-grip prop-grip-spacer" title="The name prop is pinned first" />
-              ) : (
-                <span className="prop-grip" title="Drag to reorder">
-                  <PropGrip />
-                </span>
-              )}
-              {pinned ? (
-                <>
-                  <span className="schema-prop-key">name</span>
-                  <span className="dim">String · title</span>
-                </>
-              ) : (
-                <>
-                  <input
-                    className="input"
-                    placeholder="Property Name"
-                    value={row.key}
-                    onChange={(event) => updateRow(index, { key: event.target.value })}
-                  />
-                  <TypePicker
-                    workspace={workspace}
-                    value={row.valueType}
-                    onChange={(valueType) => updateRow(index, { valueType })}
-                  />
-                  {schemaProp !== undefined && TypeNames.isScalar(row.valueType) && (
-                    <FunctionBindButton
-                      bound={boundUuid !== null}
-                      boundName={boundName}
-                      functions={matchingFunctions}
-                      onBind={(uuid) =>
-                        void workspace.setPropFunction(schema.name, schemaProp.key, uuid)
-                      }
-                    />
-                  )}
-                  <button
-                    className="icon-button"
-                    title="Delete prop — removes it from every instance"
-                    onClick={() =>
-                      setRows((drafts) => drafts.filter((_, position) => position !== index))
-                    }
-                  >
-                    ×
-                  </button>
-                </>
-              )}
-            </div>
+            <FunctionBindButton
+              bound={boundUuid !== null}
+              boundName={boundName}
+              functions={matchingFunctions}
+              onBind={(uuid) =>
+                void workspace.setPropFunction(schema.name, schemaProp.key, uuid)
+              }
+            />
           );
-        })}
-        {/* ADR-0013: trait-owned props — read-only rows tinted with the
-            trait color; edit them on the trait page */}
-        {schema.props
-          .filter((prop) => prop.trait !== null)
-          .map((prop) => (
-            <div
-              key={prop.uuid}
-              className="prop-draft-row schema-prop-row schema-prop-row-trait"
-              style={{ borderLeftColor: prop.trait_color ?? undefined }}
-              title={`From trait ${prop.trait ?? ""} — edit on the trait page`}
-            >
-              <span className="prop-grip prop-grip-spacer" />
-              <span className="schema-prop-key">{prop.key}</span>
-              <span className="dim">
-                {prop.value_type} · {prop.trait}
-              </span>
-            </div>
-          ))}
-      </div>
+        }}
+        trailing={
+          /* ADR-0013: trait-owned props — read-only rows tinted with the
+             trait color; edit them on the trait page */
+          <>
+            {schema.props
+              .filter((prop) => prop.trait !== null)
+              .map((prop) => (
+                <div
+                  key={prop.uuid}
+                  className="table-row table-row-trait"
+                  style={{ borderLeftColor: prop.trait_color ?? undefined }}
+                  title={`From trait ${prop.trait ?? ""} — edit on the trait page`}
+                >
+                  <span className="table-grip table-grip-spacer" />
+                  <span className="table-cell-static">{prop.key}</span>
+                  <span className="dim">
+                    {prop.value_type} · {prop.trait}
+                  </span>
+                </div>
+              ))}
+          </>
+        }
+      />
       <div className="editor-footer">
         <button
           className="button"

@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import { useState } from "react";
 import { WorkspaceStore } from "../state/workspace";
 import { DEFAULT_COLOR, DEFAULT_ICON, IconPicker } from "./icon-picker";
+import { Table } from "./table";
 
 /** The create-enum tab: name + icon + a flat list of option strings.
  * No plural name, no props — an enum is a list, not a schema. */
@@ -51,25 +52,24 @@ export function EnumCreateForm(props: {
           </div>
         </div>
       </div>
-      {options.map((option, index) => (
-        <div className="prop-draft-row" key={index}>
-          <input
-            className="input"
-            placeholder="Option"
-            value={option}
-            onChange={(event) => updateOption(index, event.target.value)}
-          />
-          <button
-            className="icon-button"
-            title="Remove option"
-            onClick={() =>
-              setOptions((drafts) => drafts.filter((_, position) => position !== index))
-            }
-          >
-            ×
-          </button>
-        </div>
-      ))}
+      <Table
+        rows={options}
+        keyOf={(option, index) => `option-${index}`}
+        columns={[
+          {
+            kind: "string",
+            placeholder: "Option",
+            value: (option) => option,
+            onEdit: (option, value, index) => updateOption(index, value),
+          },
+          {
+            kind: "remove",
+            title: "Remove option",
+            onRemove: (index) =>
+              setOptions((drafts) => drafts.filter((_, position) => position !== index)),
+          },
+        ]}
+      />
       <div className="editor-footer">
         <button className="button" onClick={() => setOptions((drafts) => [...drafts, ""])}>
           Add Option

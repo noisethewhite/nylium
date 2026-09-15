@@ -6,8 +6,8 @@ import { useSaveShortcut } from "../state/use-save-shortcut";
 import { usePinTabOnEdit } from "../state/use-pin-tab-on-edit";
 import { WorkspaceStore } from "../state/workspace";
 import { FloatingMenu } from "./floating-menu";
+import { Table } from "./table";
 import { DEFAULT_COLOR, ICON_COLORS } from "./type-icon";
-import { TypePicker } from "./type-picker";
 
 /** One row of the trait editor's draft — uuid null marks a not-yet-created
  * prop; everything else is matched to the live trait by uuid. */
@@ -162,32 +162,30 @@ export function TraitPanel(props: {
           </div>
         )}
       </div>
-      <div className="editor-rows">
-        {rows.map((row, index) => (
-          <div key={row.uuid ?? `new-${index}`} className="prop-draft-row schema-prop-row">
-            <input
-              className="input"
-              placeholder="Property Name"
-              value={row.key}
-              onChange={(event) => updateRow(index, { key: event.target.value })}
-            />
-            <TypePicker
-              workspace={workspace}
-              value={row.valueType}
-              onChange={(valueType) => updateRow(index, { valueType })}
-            />
-            <button
-              className="icon-button"
-              title="Delete prop — removes it from every attached type's instances"
-              onClick={() =>
-                setRows((drafts) => drafts.filter((_, position) => position !== index))
-              }
-            >
-              ×
-            </button>
-          </div>
-        ))}
-      </div>
+      <Table
+        rows={rows}
+        keyOf={(row, index) => row.uuid ?? `new-${index}`}
+        columns={[
+          {
+            kind: "string",
+            placeholder: "Property Name",
+            value: (row) => row.key,
+            onEdit: (row, value, index) => updateRow(index, { key: value }),
+          },
+          {
+            kind: "type-selector",
+            workspace,
+            value: (row) => row.valueType,
+            onPick: (row, value, index) => updateRow(index, { valueType: value }),
+          },
+          {
+            kind: "remove",
+            title: "Delete prop — removes it from every attached type's instances",
+            onRemove: (index) =>
+              setRows((drafts) => drafts.filter((_, position) => position !== index)),
+          },
+        ]}
+      />
       <div className="editor-footer">
         <button
           className="button"

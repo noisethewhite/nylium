@@ -5,6 +5,7 @@ import { useSaveShortcut } from "../state/use-save-shortcut";
 import { usePinTabOnEdit } from "../state/use-pin-tab-on-edit";
 import { WorkspaceStore } from "../state/workspace";
 import { IconPicker } from "./icon-picker";
+import { Table } from "./table";
 
 /** One row of the enum option draft — uuid null marks a not-yet-created
  * option; an existing uuid with a changed value is a rename that the
@@ -112,27 +113,24 @@ export function EnumTypePanel(props: {
           </div>
         </div>
       </div>
-      <div className="editor-rows">
-        {rows.map((row, index) => (
-          <div key={row.uuid ?? `new-${index}`} className="prop-draft-row">
-            <input
-              className="input"
-              placeholder="Option"
-              value={row.value}
-              onChange={(event) => updateRow(index, event.target.value)}
-            />
-            <button
-              className="icon-button"
-              title="Delete option — refused while any value uses it"
-              onClick={() =>
-                setRows((drafts) => drafts.filter((_, position) => position !== index))
-              }
-            >
-              ×
-            </button>
-          </div>
-        ))}
-      </div>
+      <Table
+        rows={rows}
+        keyOf={(row, index) => row.uuid ?? `new-${index}`}
+        columns={[
+          {
+            kind: "string",
+            placeholder: "Option",
+            value: (row) => row.value,
+            onEdit: (row, value, index) => updateRow(index, value),
+          },
+          {
+            kind: "remove",
+            title: "Delete option — refused while any value uses it",
+            onRemove: (index) =>
+              setRows((drafts) => drafts.filter((_, position) => position !== index)),
+          },
+        ]}
+      />
       <div className="editor-footer">
         <button
           className="button"
