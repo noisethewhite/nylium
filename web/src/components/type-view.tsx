@@ -137,9 +137,9 @@ export function TypeViewPanel(props: {
   usePinTabOnEdit(workspace, !pristine);
 
   return (
-    <div className="tab-content">
-      <div className="type-actions-bar">
-        <span className="dim type-header-title">
+    <div className="editor-shell">
+      <div className="editor-header">
+        <span className="dim editor-header-title">
           Editing type
           {schema.embedded && (
             <span className="embedded-badge" title="Composition type — instances exist only as a property value of an owner object">
@@ -147,7 +147,7 @@ export function TypeViewPanel(props: {
             </span>
           )}
         </span>
-        <div className="type-header-actions">
+        <div className="editor-actions">
           <button
             className="button button-primary"
             disabled={pristine || invalid}
@@ -164,10 +164,10 @@ export function TypeViewPanel(props: {
           </button>
         </div>
       </div>
-      <div className="type-header-boxes">
-        <div className="type-field-box">
-          <span className="type-field-box-label">Type name</span>
-          <div className="type-field-box-content">
+      <div className="editor-boxes">
+        <div className="editor-box">
+          <span className="editor-box-label">Type name</span>
+          <div className="editor-box-content">
             <IconPicker
               icon={iconDraft}
               color={colorDraft}
@@ -185,9 +185,9 @@ export function TypeViewPanel(props: {
             />
           </div>
         </div>
-        <div className="type-field-box">
-          <span className="type-field-box-label">Type plural name</span>
-          <div className="type-field-box-content">
+        <div className="editor-box">
+          <span className="editor-box-label">Type plural name</span>
+          <div className="editor-box-content">
             <input
               className="input type-name-input"
               placeholder="Name (plural)"
@@ -258,7 +258,7 @@ export function TypeViewPanel(props: {
           )}
         </FloatingMenu>
       </div>
-      <div className="schema-props">
+      <div className="editor-rows">
         {rows.map((row, index) => {
           // the schema's first row is the pinned `name` title — no grip,
           // locked key and type, not draggable, not a drop target
@@ -374,7 +374,7 @@ export function TypeViewPanel(props: {
             </div>
           ))}
       </div>
-      <div className="type-create-actions">
+      <div className="editor-footer">
         <button
           className="button"
           onClick={() =>

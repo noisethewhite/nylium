@@ -29,10 +29,10 @@ export function EnumCreateForm(props: {
 
   return (
     <div className="type-create-form">
-      <div className="type-header-boxes">
-        <div className="type-field-box">
-          <span className="type-field-box-label">Enum name</span>
-          <div className="type-field-box-content">
+      <div className="editor-boxes">
+        <div className="editor-box">
+          <span className="editor-box-label">Enum name</span>
+          <div className="editor-box-content">
             <IconPicker
               icon={icon}
               color={color}
@@ -70,7 +70,7 @@ export function EnumCreateForm(props: {
           </button>
         </div>
       ))}
-      <div className="type-create-actions">
+      <div className="editor-footer">
         <button className="button" onClick={() => setOptions((drafts) => [...drafts, ""])}>
           Add Option
         </button>

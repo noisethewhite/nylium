@@ -54,10 +54,10 @@ export function TypeCreateForm(props: {
 
   return (
     <div className="type-create-form">
-      <div className="type-header-boxes">
-        <div className="type-field-box">
-          <span className="type-field-box-label">Type name</span>
-          <div className="type-field-box-content">
+      <div className="editor-boxes">
+        <div className="editor-box">
+          <span className="editor-box-label">Type name</span>
+          <div className="editor-box-content">
             <IconPicker
               icon={icon}
               color={color}
@@ -82,9 +82,9 @@ export function TypeCreateForm(props: {
             />
           </div>
         </div>
-        <div className="type-field-box">
-          <span className="type-field-box-label">Type plural name</span>
-          <div className="type-field-box-content">
+        <div className="editor-box">
+          <span className="editor-box-label">Type plural name</span>
+          <div className="editor-box-content">
             <input
               className="input type-name-input"
               placeholder="Name (plural)"
@@ -128,7 +128,7 @@ export function TypeCreateForm(props: {
           </button>
         </div>
       ))}
-      <div className="type-create-actions">
+      <div className="editor-footer">
         <label className="embedded-checkbox">
           <input
             type="checkbox"

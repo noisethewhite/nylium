@@ -107,10 +107,10 @@ export function TraitPanel(props: {
   usePinTabOnEdit(workspace, !pristine);
 
   return (
-    <div className="tab-content">
-      <div className="type-actions-bar">
-        <span className="dim type-header-title">Editing trait</span>
-        <div className="type-header-actions">
+    <div className="editor-shell">
+      <div className="editor-header">
+        <span className="dim editor-header-title">Editing trait</span>
+        <div className="editor-actions">
           <button
             className="button button-primary"
             disabled={pristine || invalid}
@@ -133,10 +133,10 @@ export function TraitPanel(props: {
           </button>
         </div>
       </div>
-      <div className="type-header-boxes">
-        <div className="type-field-box">
-          <span className="type-field-box-label">Trait name</span>
-          <div className="type-field-box-content">
+      <div className="editor-boxes">
+        <div className="editor-box">
+          <span className="editor-box-label">Trait name</span>
+          <div className="editor-box-content">
             <TraitColorPicker color={colorDraft} onChange={setColorDraft} />
             <input
               className="input type-name-input"
@@ -146,9 +146,9 @@ export function TraitPanel(props: {
           </div>
         </div>
         {trait.attached.length > 0 && (
-          <div className="type-field-box">
-            <span className="type-field-box-label">Attached to</span>
-            <div className="type-field-box-content trait-attached-list">
+          <div className="editor-box">
+            <span className="editor-box-label">Attached to</span>
+            <div className="editor-box-content trait-attached-list">
               {trait.attached.map((name) => (
                 <button
                   key={name}
@@ -162,7 +162,7 @@ export function TraitPanel(props: {
           </div>
         )}
       </div>
-      <div className="schema-props">
+      <div className="editor-rows">
         {rows.map((row, index) => (
           <div key={row.uuid ?? `new-${index}`} className="prop-draft-row schema-prop-row">
             <input
@@ -188,7 +188,7 @@ export function TraitPanel(props: {
           </div>
         ))}
       </div>
-      <div className="type-create-actions">
+      <div className="editor-footer">
         <button
           className="button"
           onClick={() =>
@@ -215,10 +215,10 @@ export function TraitCreateForm(props: { workspace: WorkspaceStore }): ReactElem
 
   return (
     <div className="type-create-form">
-      <div className="type-header-boxes">
-        <div className="type-field-box">
-          <span className="type-field-box-label">Trait name</span>
-          <div className="type-field-box-content">
+      <div className="editor-boxes">
+        <div className="editor-box">
+          <span className="editor-box-label">Trait name</span>
+          <div className="editor-box-content">
             <TraitColorPicker color={color} onChange={setColor} />
             <input
               className="input type-name-input"
@@ -234,7 +234,7 @@ export function TraitCreateForm(props: { workspace: WorkspaceStore }): ReactElem
         props the <code>Any&lt;Trait&gt;</code> type to accept any object
         carrying it.
       </p>
-      <div className="type-create-actions">
+      <div className="editor-footer">
         <button
           className="button button-primary"
           disabled={invalid}

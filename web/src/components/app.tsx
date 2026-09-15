@@ -75,35 +75,35 @@ export function App(props: {
     }
     if (tab.kind === "create-type") {
       return (
-        <div className="tab-content create-type-page">
+        <div className="editor-shell">
           <TypeCreateForm workspace={props.workspace} />
         </div>
       );
     }
     if (tab.kind === "create-trait") {
       return (
-        <div className="tab-content create-type-page">
+        <div className="editor-shell">
           <TraitCreateForm workspace={props.workspace} />
         </div>
       );
     }
     if (tab.kind === "create-enum") {
       return (
-        <div className="tab-content create-type-page">
+        <div className="editor-shell">
           <EnumCreateForm workspace={props.workspace} />
         </div>
       );
     }
     if (tab.kind === "create-unit") {
       return (
-        <div className="tab-content create-type-page">
+        <div className="editor-shell">
           <UnitCreateForm workspace={props.workspace} />
         </div>
       );
     }
     if (tab.kind === "create-function") {
       return (
-        <div className="tab-content create-type-page">
+        <div className="tab-content">
           <FunctionEditor workspace={props.workspace} />
         </div>
       );
@@ -157,9 +157,7 @@ export function App(props: {
       return <div className="empty-state dim">Object is gone.</div>;
     }
     return (
-      <div className="tab-content">
-        <ObjectEditor key={object.uuid} workspace={props.workspace} object={object} />
-      </div>
+      <ObjectEditor key={object.uuid} workspace={props.workspace} object={object} />
     );
   };
 

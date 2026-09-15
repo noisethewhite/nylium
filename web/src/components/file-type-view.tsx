@@ -18,16 +18,16 @@ export function FileTypePanel(props: {
   const files = state.files.filter((file) => file.type_name === props.schema.name);
 
   return (
-    <div className="tab-content">
-      <div className="type-actions-bar">
-        <span className="dim type-header-title">
+    <div className="editor-shell">
+      <div className="editor-header">
+        <span className="dim editor-header-title">
           <Lock /> Built-in file type
         </span>
       </div>
-      <div className="type-header-boxes">
-        <div className="type-field-box">
-          <span className="type-field-box-label">Type name</span>
-          <div className="type-field-box-content">
+      <div className="editor-boxes">
+        <div className="editor-box">
+          <span className="editor-box-label">Type name</span>
+          <div className="editor-box-content">
             <TypeIcon icon={props.schema.icon} color={props.schema.color} size={22} />
             <span className="type-name-input">{props.schema.name}</span>
           </div>

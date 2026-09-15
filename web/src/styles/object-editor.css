@@ -1,22 +1,6 @@
 /* --- object editor: fields, computed props, embedded sections --- */
-
-.object-editor {
-  flex: 1;
-  overflow-y: auto;
-  padding: var(--space-6);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-4);
-  --editor-max-width: 760px;
-}
-
-/* one centered column: every direct child block shares the editor width,
- * horizontally centered, wide enough to not look cramped */
-.object-editor > * {
-  width: 100%;
-  max-width: var(--editor-max-width);
-}
+/* layout (scroll, padding, centering) lives in .editor-shell — editor.css;
+ * the root keeps the .object-editor class so its blocks below still match */
 
 .object-editor-empty {
   padding: 0;

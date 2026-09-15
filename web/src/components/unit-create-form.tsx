@@ -61,10 +61,10 @@ export function UnitCreateForm(props: {
 
   return (
     <div className="type-create-form">
-      <div className="type-header-boxes">
-        <div className="type-field-box">
-          <span className="type-field-box-label">Unit name</span>
-          <div className="type-field-box-content">
+      <div className="editor-boxes">
+        <div className="editor-box">
+          <span className="editor-box-label">Unit name</span>
+          <div className="editor-box-content">
             <IconPicker
               icon={icon}
               color={color}
@@ -82,9 +82,9 @@ export function UnitCreateForm(props: {
             />
           </div>
         </div>
-        <div className="type-field-box">
-          <span className="type-field-box-label">Base part</span>
-          <div className="type-field-box-content">
+        <div className="editor-box">
+          <span className="editor-box-label">Base part</span>
+          <div className="editor-box-content">
             <input
               className="input"
               placeholder="e.g. °C, kg, m"
@@ -127,7 +127,7 @@ export function UnitCreateForm(props: {
           </button>
         </div>
       ))}
-      <div className="type-create-actions">
+      <div className="editor-footer">
         <button
           className="button"
           onClick={() =>

@@ -1,0 +1,126 @@
+/* --- editor shell & shared blocks ---
+ * Every form-like editor (object, type, trait, unit, enum, scalar, file,
+ * create pages) renders inside one .editor-shell: a centered column that
+ * owns width and padding, so any block dropped inside lands correctly.
+ * The handful of shared blocks editors are built from:
+ *   .editor-header (+ .editor-header-title + .editor-actions) — заголовок
+ *   .editor-boxes / .editor-box (+ -label/-content) — labeled fields
+ *   .editor-rows — vertical list of draft/radio/checkbox rows
+ *   .editor-footer — trailing button row
+ * Buttons (.button, controls.css) and chips (.trait-chip/.type-traits-row,
+ * traits-chips.css) stay global. */
+
+.editor-shell {
+  /* full-height flex column that centers its content horizontally */
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  --editor-max-width: 760px;
+}
+
+/* scroll containers center their content, NOT their scrollbar — hence
+ * width on children instead of margin: 0 auto on the shell */
+.editor-shell > * {
+  width: 100%;
+  max-width: var(--editor-max-width);
+}
+
+/* --- header: title left, actions right --- */
+.editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.editor-header-title {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.editor-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+/* --- labeled boxes (name / plural / attached-to ...) --- */
+.editor-boxes {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.editor-box {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+}
+
+.editor-box-label {
+  font-size: var(--font-size-xs);
+  color: var(--fg-dim);
+}
+
+.editor-box-content {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.editor-box-content .type-name-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+}
+
+/* --- vertical list of rows (props, enum options, unit parts, files) --- */
+.editor-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* the type editor composes prop-draft-row (inputs) with schema-prop-row
+ * (grips + drop states) — the draft variant wins on spacing */
+.editor-rows .prop-draft-row {
+  padding: var(--space-2) var(--space-3);
+}
+
+/* --- draft row (radio/checkbox/option row: input + picker + remove) --- */
+.prop-draft-row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.prop-draft-row > .input {
+  width: auto;
+  flex: 1;
+  min-width: 0;
+}
+
+/* the prop key is a field — underline makes that legible in a borderless UI */
+.prop-draft-row > .input:first-child {
+  border-bottom: 1px solid var(--separator);
+  padding-bottom: var(--space-1);
+}
+
+.prop-draft-row > .input:first-child:focus {
+  border-bottom-color: var(--accent);
+}
+
+/* --- trailing button row (Add …) --- */
+.editor-footer {
+  display: flex;
+  justify-content: space-between;
+}

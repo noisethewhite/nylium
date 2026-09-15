@@ -58,7 +58,7 @@ function ObjectEditorInner(props: {
   const gridFields = titleField !== undefined ? fields.slice(1) : fields;
 
   return (
-    <div className="object-editor">
+    <div className="editor-shell object-editor">
       {titleField !== undefined && (
         <div className="object-name-row">
           <TypeIcon icon={props.schema.icon} color={props.schema.color} size={24} />

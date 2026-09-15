@@ -98,10 +98,10 @@ export function UnitTypePanel(props: {
   usePinTabOnEdit(workspace, !pristine);
 
   return (
-    <div className="tab-content">
-      <div className="type-actions-bar">
-        <span className="dim type-header-title">Editing unit</span>
-        <div className="type-header-actions">
+    <div className="editor-shell">
+      <div className="editor-header">
+        <span className="dim editor-header-title">Editing unit</span>
+        <div className="editor-actions">
           <button
             className="button button-primary"
             disabled={pristine || invalid}
@@ -122,10 +122,10 @@ export function UnitTypePanel(props: {
           </button>
         </div>
       </div>
-      <div className="type-header-boxes">
-        <div className="type-field-box">
-          <span className="type-field-box-label">Unit name</span>
-          <div className="type-field-box-content">
+      <div className="editor-boxes">
+        <div className="editor-box">
+          <span className="editor-box-label">Unit name</span>
+          <div className="editor-box-content">
             <IconPicker
               icon={iconDraft}
               color={colorDraft}
@@ -143,7 +143,7 @@ export function UnitTypePanel(props: {
           </div>
         </div>
       </div>
-      <div className="schema-props">
+      <div className="editor-rows">
         {rows.map((row, index) => (
           <div key={row.uuid ?? `new-${index}`} className="prop-draft-row">
             <input
@@ -197,7 +197,7 @@ export function UnitTypePanel(props: {
           </div>
         ))}
       </div>
-      <div className="type-create-actions">
+      <div className="editor-footer">
         <button
           className="button"
           onClick={() =>
