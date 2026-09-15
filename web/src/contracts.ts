@@ -110,6 +110,9 @@ export interface ObjectView {
   /** ADR-0005: derived tags — one per Array<T> edge pointing at this
    * object, colored by the owner type */
   tags: TagView[];
+  /** ADR-0020: reverse link projection — every object pointing at this
+   * one through a link prop or array membership */
+  backlinks: ObjectRef[];
 }
 
 /** ADR-0008: a first-class file entity — a self-contained `files` row.

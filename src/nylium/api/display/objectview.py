@@ -13,6 +13,7 @@ from nylium.database import databasemethod
 from nylium.tables import instances
 from nylium.tables.objects.instances import existing_uuids
 from nylium.tables.values.array_values import array_tag_rows
+from nylium.tables.values.backlinks import backlink_refs
 from nylium.objects import WObject, WType
 from nylium.objects.wtypemeta import StoredValue, WObjectShape
 from nylium.objects.monthday import MonthDay, MonthDayTime
@@ -41,12 +42,15 @@ from nylium.api.display.values import (
 class ObjectView:
     """Snapshot of one instance: every prop rendered as a typed
     ScalarValue / RefValue / ArrayValue — no Any escapes. `tags` is the
-    ADR-0005 reverse projection of the arrays that contain this object."""
+    ADR-0005 reverse projection of the arrays that contain this object.
+    `backlinks` is the ADR-0020 reverse projection of every link that
+    points at this object — direct link props and array membership."""
 
     uuid: UUID
     type_name: str
     props: dict[str, PropValue]
     tags: list[TagView] = field(default_factory=list)
+    backlinks: list[ObjectRef] = field(default_factory=list)
 
     @classmethod
     @databasemethod(commit=False)
@@ -75,7 +79,19 @@ class ObjectView:
             type_name=owner.name,
             props=props,
             tags=cls._tags_for(uuid, owner.name),
+            backlinks=cls._backlinks_for(uuid),
         )
+
+    @classmethod
+    @databasemethod(commit=False)
+    def _backlinks_for(cls, uuid: UUID) -> list[ObjectRef]:
+        """ADR-0020: reverse-projection of incoming links — every owner
+        pointing at this object through a link prop or an array. One
+        query per direction, no N+1."""
+        return [
+            ObjectRef(uuid=owner_uuid, type_name=type_name)
+            for owner_uuid, type_name in backlink_refs(uuid)
+        ]
 
     @classmethod
     @databasemethod(commit=False)
