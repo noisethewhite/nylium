@@ -8,7 +8,8 @@ from decimal import Decimal
 import pytest
 from uuid import UUID
 
-from nylium.api import Api, ScalarValue
+from nylium.api import Api, ArrayValue, EmbeddedValue, ScalarValue
+from nylium.objects.quantity import Quantity
 from nylium.server.errors import ValidationError
 
 
@@ -300,3 +301,76 @@ def test_delete_referenced_member_key_rejected():
     draft = [(prop.uuid, prop.key, prop.value_type, prop.formula) for prop in item.props]
     with pytest.raises(ValidationError):
         Api.sync_props("Item", [row for row in draft if row[1] != "price"])
+
+
+# --- prop-to-prop formulas with unit results (ADR-0022) ---
+
+
+def _currency() -> None:
+    Api.create_unit("Currency", "€")
+
+
+def _receipt_item_type() -> None:
+    _currency()
+    Api.create_type(
+        "ReceiptItem",
+        {
+            "name": "String",
+            "price": "Numeric<Currency>",
+            "quantity": "Numeric",
+            "line_total": "Numeric<Currency>",
+        },
+        "ReceiptItems",
+        embedded=True,
+        formulas={"line_total": "price * quantity"},
+    )
+
+
+def test_prop_to_prop_with_unit_result():
+    _receipt_item_type()
+    _ = Api.create_type(
+        "Receipt", {"name": "String", "lines": "Array<ReceiptItem>"}, "Receipts"
+    )
+    receipt = Api.create_object(
+        "Receipt",
+        {
+            "name": "R1",
+            "lines": [
+                {"price": Quantity(Decimal(5), "€"), "quantity": Decimal(2)},
+                {"price": Quantity(Decimal(3), "€"), "quantity": Decimal(4)},
+            ],
+        },
+    )
+    lines = receipt.props["lines"]
+    assert isinstance(lines, ArrayValue)
+    assert lines.items is not None and len(lines.items) == 2
+    first, second = lines.items
+    assert isinstance(first, EmbeddedValue) and isinstance(second, EmbeddedValue)
+    # line_total = price * quantity folds a Quantity (Currency) with a
+    # Decimal (quantity) into a Quantity carrying the left unit
+    assert first.props["line_total"] == ScalarValue(value=Decimal(10), unit="€")
+    assert second.props["line_total"] == ScalarValue(value=Decimal(12), unit="€")
+
+
+def test_prop_to_prop_rejects_array_sibling():
+    _currency()
+    _ = Api.create_type("Inner", {"name": "String"}, "Inners", embedded=True)
+    with pytest.raises(ValidationError):
+        Api.create_type(
+            "Outer",
+            {"name": "String", "items": "Array<Inner>", "total": "Numeric"},
+            "Outers",
+            formulas={"total": "items * 2"},
+        )
+
+
+def test_prop_to_prop_rejects_unknown_sibling():
+    _currency()
+    _ = Api.create_type("Inner", {"name": "String"}, "Inners", embedded=True)
+    with pytest.raises(ValidationError):
+        Api.create_type(
+            "Outer",
+            {"name": "String", "items": "Array<Inner>", "total": "Numeric"},
+            "Outers",
+            formulas={"total": "ghost * 2"},
+        )

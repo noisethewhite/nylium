@@ -36,6 +36,15 @@ class Neg:
 
 
 @dataclass(frozen=True)
+class Ref:
+    """A sibling-prop reference (ADR-0022): a bare identifier naming
+    another prop of the same owner. Evaluates to the sibling's stored
+    scalar value (0 when unset)."""
+
+    key: str
+
+
+@dataclass(frozen=True)
 class Call:
     """A reduction over an array prop. ``func`` is the uppercase name;
     ``path`` is ``(array_key,)`` for a bare COUNT, else
@@ -45,7 +54,7 @@ class Call:
     path: tuple[str, ...]
 
 
-Expr: TypeAlias = Number | BinOp | Neg | Call
+Expr: TypeAlias = Number | BinOp | Neg | Call | Ref
 
 FUNCTIONS: frozenset[str] = frozenset({"SUM", "AVERAGE", "COUNT", "MIN", "MAX"})
 

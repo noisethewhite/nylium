@@ -259,8 +259,8 @@ class FunctionsApi(_FunctionsBase):
                 raise ValidationError(
                     "an Integer formula prop must be a bare COUNT(<array>) call"
                 )
-        elif value_type_name != WNumeric.TYPE_NAME:
+        elif value_type_name != WNumeric.TYPE_NAME and WType.unit_param_of(value_type_name) is None:
             raise ValidationError(
-                f"a formula prop must be {WNumeric.TYPE_NAME} (or {WInteger.TYPE_NAME} for a bare COUNT), got {value_type_name!r}"
+                f"a formula prop must be {WNumeric.TYPE_NAME} (or {WInteger.TYPE_NAME} for a bare COUNT, or Numeric<Unit>), got {value_type_name!r}"
             )
         Formula.validate(formula, owner_type_props, cls._member_props)

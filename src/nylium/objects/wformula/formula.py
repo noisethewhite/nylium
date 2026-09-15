@@ -14,9 +14,10 @@ from decimal import Decimal, InvalidOperation
 from typing import ClassVar
 
 from nylium.objects.wformula.evaluation import evaluate_ast
-from nylium.objects.wformula.nodes import FUNCTIONS, BinOp, Call, Expr, Neg
+from nylium.objects.wformula.nodes import FUNCTIONS, BinOp, Call, Expr, Neg, Ref
 from nylium.objects.wformula.parsing import Parser, tokenize
 from nylium.objects.wformula.rewriting import render, rewrite_ast
+from nylium.objects.quantity import Quantity
 from nylium.objects.wscalar import WInteger, WNumeric
 from nylium.objects.wtype import WType
 
@@ -30,6 +31,17 @@ def _calls(node: Expr) -> Iterator[Call]:
         yield from _calls(node.right)
     elif isinstance(node, Neg):
         yield from _calls(node.operand)
+
+
+def _refs(node: Expr) -> Iterator[Ref]:
+    """Every Ref node in the AST, depth-first."""
+    if isinstance(node, Ref):
+        yield node
+    elif isinstance(node, BinOp):
+        yield from _refs(node.left)
+        yield from _refs(node.right)
+    elif isinstance(node, Neg):
+        yield from _refs(node.operand)
 
 
 def _is_numeric(type_name: str) -> bool:
@@ -105,6 +117,20 @@ class Formula:
                 raise ValidationError(
                     f"member prop {array_key}.{member_key} is not numeric ({member_type!r})"
                 )
+        for ref in _refs(ast):
+            value_type = owner.get(ref.key)
+            if value_type is None:
+                raise ValidationError(
+                    f"formula references unknown prop {ref.key!r}"
+                )
+            if WType.is_array_name(value_type):
+                raise ValidationError(
+                    f"formula references {ref.key!r} which is an array prop — use SUM({ref.key}.<prop>)"
+                )
+            if not _is_numeric(value_type):
+                raise ValidationError(
+                    f"sibling prop {ref.key!r} is not numeric ({value_type!r})"
+                )
 
     @classmethod
     def references(cls, formula: str) -> set[tuple[str, str | None]]:
@@ -116,18 +142,26 @@ class Formula:
         }
 
     @classmethod
+    def sibling_references(cls, formula: str) -> set[str]:
+        """Every sibling prop key the formula reads (ADR-0022)."""
+        return {ref.key for ref in _refs(cls.parse(formula))}
+
+    @classmethod
     def evaluate(
         cls,
         formula: str,
         arrays: Mapping[str, Sequence[Mapping[str, Decimal | None]]],
-    ) -> Decimal | None:
-        """Fold a formula over live array rows. Unset member values count
-        as 0 — the ADR-0005 missing-ref rule applied to cells; an empty
-        array aggregates to 0. A division by zero (incl. 0/0, which
-        Decimal reports as InvalidOperation) yields None — the prop
-        renders empty — rather than failing the whole read."""
+        scalars: Mapping[str, Decimal | Quantity | None] | None = None,
+    ) -> Decimal | Quantity | None:
+        """Fold a formula over live array rows and sibling prop values.
+        Unset member/sibling values count as 0 — the ADR-0005 missing-ref
+        rule applied to cells; an empty array aggregates to 0. Arithmetic
+        promotes to a Quantity when an operand is one (ADR-0022). A
+        division by zero (incl. 0/0, which Decimal reports as
+        InvalidOperation) yields None — the prop renders empty — rather
+        than failing the whole read."""
         try:
-            return evaluate_ast(cls.parse(formula), arrays)
+            return evaluate_ast(cls.parse(formula), arrays, scalars or {})
         except (ZeroDivisionError, InvalidOperation):
             return None
 

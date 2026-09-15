@@ -38,6 +38,19 @@ from nylium.api.display.values import (
 )
 
 
+def _sibling_cell(value: StoredValue) -> Decimal | Quantity | None:
+    """Normalize a sibling prop's stored value for formula folding: plain
+    ints/Decimals become Decimal, a Quantity is kept (unit promotion needs
+    its part name), everything else folds to unset (→ 0 in evaluation)."""
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, Decimal)):
+        return Decimal(value)
+    if isinstance(value, Quantity):
+        return value
+    return None
+
+
 @dataclass(config=CONFIG)
 class ObjectView:
     """Snapshot of one instance: every prop rendered as a typed
@@ -128,10 +141,12 @@ class ObjectView:
     @classmethod
     @databasemethod(commit=False)
     def _eval_formula(cls, wrapper: WObjectShape, prop: WProp) -> ScalarValue:
-        """ADR-0005 read-time evaluation: fold the stored formula over the
-        live rows of the arrays it references. Unset cells count as 0; a
-        dangling member keeps its stored row (COUNT sees it, the numeric
-        aggregates treat it as 0). Division by zero renders empty."""
+        """ADR-0005/0022 read-time evaluation: fold the stored formula over
+        the live rows of the arrays it references and the owner's sibling
+        prop values. Unset cells count as 0; a dangling member keeps its
+        stored row (COUNT sees it, the numeric aggregates treat it as 0).
+        A unit result renders as a Quantity (value + part); division by
+        zero renders empty."""
         assert prop.formula is not None
         refs = Formula.references(prop.formula)
         arrays: dict[str, list[dict[str, Decimal | None]]] = {}
@@ -161,11 +176,21 @@ class ObjectView:
                         row[key] = None
                 rows.append(row)
             arrays[array_key] = rows
-        result = Formula.evaluate(prop.formula, arrays)
+        scalars = {
+            key: _sibling_cell(cast(StoredValue, getattr(wrapper, key)))
+            for key in Formula.sibling_references(prop.formula)
+        }
+        result = Formula.evaluate(prop.formula, arrays, scalars)
         if result is None:
             return ScalarValue(value=None)
         if prop.value_type().name == WInteger.TYPE_NAME:
-            return ScalarValue(value=int(result))
+            return ScalarValue(value=int(cast(Decimal, result)))
+        if WType.unit_param_of(prop.value_type().name) is not None:
+            if isinstance(result, Quantity):
+                return ScalarValue(value=result.value, unit=result.unit)
+            return ScalarValue(value=result)
+        if isinstance(result, Quantity):
+            return ScalarValue(value=result.value)
         return ScalarValue(value=result)
 
     @classmethod

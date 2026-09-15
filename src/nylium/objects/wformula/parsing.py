@@ -4,9 +4,13 @@ Grammar (recursive descent, no ``eval``, no third-party deps)::
 
     expr   := term (('+' | '-') term)*
     term   := factor (('*' | '/') factor)*
-    factor := NUMBER | '(' expr ')' | FUNC '(' path ')' | '-' factor
+    factor := NUMBER | '(' expr ')' | FUNC '(' path ')' | IDENT | '-' factor
     FUNC   := SUM | AVERAGE | COUNT | MIN | MAX   (case-insensitive)
     path   := IDENT '.' IDENT | IDENT              (bare IDENT only for COUNT)
+
+A bare ``IDENT`` that is not immediately followed by ``'('`` is a
+sibling-prop reference (ADR-0022); an ``IDENT`` directly followed by
+``'('`` is a function call.
 """
 from __future__ import annotations
 
@@ -20,6 +24,7 @@ from nylium.objects.wformula.nodes import (
     Expr,
     Neg,
     Number,
+    Ref,
     error,
 )
 
@@ -140,11 +145,15 @@ class Parser:
             _ = self._expect("rparen", "')'")
             return node
         if token.kind == "ident":
-            return self._call()
+            name_token = self._advance()
+            # an ident directly followed by '(' is a function call; a bare
+            # ident is a sibling-prop reference (ADR-0022)
+            if self._peek().kind == "lparen":
+                return self._call(name_token)
+            return Ref(name_token.text)
         error("expected a number, '(', function or '-'", token.pos)
 
-    def _call(self) -> Call:
-        name_token = self._advance()
+    def _call(self, name_token: _Token) -> Call:
         func = name_token.text.upper()
         if func not in FUNCTIONS:
             error(f"unknown function {name_token.text!r}", name_token.pos)

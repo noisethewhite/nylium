@@ -7,12 +7,14 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-from nylium.objects.wformula.nodes import BinOp, Call, Expr, Neg, Number
+from nylium.objects.wformula.nodes import BinOp, Call, Expr, Neg, Number, Ref
 
 
 def render(node: Expr) -> str:
     if isinstance(node, Number):
         return str(node.value)
+    if isinstance(node, Ref):
+        return node.key
     if isinstance(node, Neg):
         return f"-{render(node.operand)}"
     if isinstance(node, BinOp):
@@ -25,6 +27,9 @@ def rewrite_ast(
     array_renames: Mapping[str, str],
     member_renames: Mapping[str, Mapping[str, str]],
 ) -> Expr:
+    if isinstance(node, Ref):
+        # the owner-prop rename map rebinds sibling references (ADR-0022)
+        return Ref(array_renames.get(node.key, node.key))
     if isinstance(node, Call):
         array_key = array_renames.get(node.path[0], node.path[0])
         if len(node.path) == 1:

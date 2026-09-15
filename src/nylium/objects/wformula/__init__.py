@@ -23,7 +23,7 @@ Grammar (recursive descent, no ``eval``, no third-party deps)::
 """
 from nylium.objects.wformula.evaluation import ArrayRows
 from nylium.objects.wformula.formula import Formula
-from nylium.objects.wformula.nodes import FUNCTIONS, BinOp, Call, Expr, Neg, Number
+from nylium.objects.wformula.nodes import FUNCTIONS, BinOp, Call, Expr, Neg, Number, Ref
 
 __all__ = [
     "FUNCTIONS",
@@ -34,4 +34,5 @@ __all__ = [
     "Formula",
     "Neg",
     "Number",
+    "Ref",
 ]
