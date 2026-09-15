@@ -91,7 +91,7 @@ export abstract class FieldFactory {
         return MonthDayTimeFieldModel.fromWire(key, value);
       default:
         if (TypeNames.isArray(valueType)) {
-          return ArrayFieldModel.fromWire(key, valueType, value, enumOptionsOf, unitPartsOf);
+          return ArrayFieldModel.fromWire(key, valueType, value, enumOptionsOf, unitPartsOf, embeddedSchemaOf);
         }
         {
           const embeddedSchema = embeddedSchemaOf?.(valueType);

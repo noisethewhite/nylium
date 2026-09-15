@@ -187,6 +187,7 @@ export abstract class ChipDispatch {
         undefined,
         field.enumOptionsOf,
         field.unitPartsOf,
+        field.embeddedSchemaOf,
       );
     if (probe instanceof RefFieldModel) {
       return "ref";

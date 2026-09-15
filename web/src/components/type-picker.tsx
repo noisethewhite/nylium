@@ -89,13 +89,9 @@ export function TypePicker(props: {
           close();
         };
         if (submenu.kind === "object") {
-          // ADR-0004: Array<Embedded> is rejected server-side — arrays
-          // never list embedded types; single-object mode keeps them,
-          // picking one makes the prop a composition
-          const candidates =
-            submenu.mode === "array"
-              ? props.workspace.userTypes().filter((view) => !view.embedded)
-              : props.workspace.userTypes();
+          // ADR-0021: Array<Embedded> is allowed — ref and embedded types
+          // are both valid array elements now
+          const candidates = props.workspace.userTypes();
           return (
             <NameSearch
               items={candidates}

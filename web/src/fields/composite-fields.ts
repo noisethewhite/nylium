@@ -1,6 +1,7 @@
 /** Composite field kinds — link and array, peers of one file. */
 import type { ArrayValue, ObjectView, PropValue, RefValue } from "../contracts";
 import { PropValues, TypeNames } from "../contracts";
+import type { EmbeddedSchemaOf } from "./embedded-fields";
 import type { EnumOptionsOf } from "./enum-fields";
 import type { UnitPartsOf } from "./unit-fields";
 import { FieldFactory } from "./field-factory";
@@ -42,6 +43,7 @@ export class ArrayFieldModel extends FieldModel {
   /** Carried so addItem builds the same item kinds fromWire did. */
   readonly enumOptionsOf: EnumOptionsOf | undefined;
   readonly unitPartsOf: UnitPartsOf | undefined;
+  readonly embeddedSchemaOf: EmbeddedSchemaOf | undefined;
 
   constructor(
     key: string,
@@ -49,11 +51,13 @@ export class ArrayFieldModel extends FieldModel {
     items: FieldModel[],
     enumOptionsOf?: EnumOptionsOf,
     unitPartsOf?: UnitPartsOf,
+    embeddedSchemaOf?: EmbeddedSchemaOf,
   ) {
     super(key, valueType);
     this.items = items;
     this.enumOptionsOf = enumOptionsOf;
     this.unitPartsOf = unitPartsOf;
+    this.embeddedSchemaOf = embeddedSchemaOf;
   }
 
   static fromWire(
@@ -62,6 +66,7 @@ export class ArrayFieldModel extends FieldModel {
     value: PropValue | undefined,
     enumOptionsOf?: EnumOptionsOf,
     unitPartsOf?: UnitPartsOf,
+    embeddedSchemaOf?: EmbeddedSchemaOf,
   ): ArrayFieldModel {
     const wireItems =
       value !== undefined && PropValues.isArray(value) && value.items !== null
@@ -69,9 +74,9 @@ export class ArrayFieldModel extends FieldModel {
         : [];
     const elementType = TypeNames.elementOf(valueType);
     const items = wireItems.map((item) =>
-      FieldFactory.createForType(key, elementType, item, enumOptionsOf, unitPartsOf),
+      FieldFactory.createForType(key, elementType, item, enumOptionsOf, unitPartsOf, embeddedSchemaOf),
     );
-    return new ArrayFieldModel(key, valueType, items, enumOptionsOf, unitPartsOf);
+    return new ArrayFieldModel(key, valueType, items, enumOptionsOf, unitPartsOf, embeddedSchemaOf);
   }
 
   get elementType(): string {
@@ -85,6 +90,7 @@ export class ArrayFieldModel extends FieldModel {
       undefined,
       this.enumOptionsOf,
       this.unitPartsOf,
+      this.embeddedSchemaOf,
     );
     this.items = [...this.items, item];
     return item;
