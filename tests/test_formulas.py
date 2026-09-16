@@ -374,3 +374,44 @@ def test_prop_to_prop_rejects_unknown_sibling():
             "Outers",
             formulas={"total": "ghost * 2"},
         )
+
+
+# --- aggregates over Array<Embedded> (ADR-0023) ---
+
+
+def _receipt_with_lines(subtotal_formula):
+    _receipt_item_type()
+    _ = Api.create_type(
+        "Receipt",
+        {
+            "name": "String",
+            "lines": "Array<ReceiptItem>",
+            "subtotal": "Numeric<Currency>",
+        },
+        "Receipts",
+        formulas={"subtotal": subtotal_formula},
+    )
+    return Api.create_object(
+        "Receipt",
+        {
+            "name": "R1",
+            "lines": [
+                {"price": Quantity(Decimal(5), "€"), "quantity": Decimal(2)},
+                {"price": Quantity(Decimal(3), "€"), "quantity": Decimal(4)},
+            ],
+        },
+    )
+
+
+def test_aggregate_over_embedded_chained_and_unit():
+    # SUM(lines.line_total) folds each element's computed line_total
+    # (price * quantity) one level down, then sums the resulting quantities
+    receipt = _receipt_with_lines("SUM(lines.line_total)")
+    assert receipt.props["subtotal"] == ScalarValue(value=Decimal(22), unit="€")
+
+
+def test_aggregate_over_embedded_unit_member():
+    # SUM(lines.price) over a unit-numeric member yields a Quantity, not a
+    # bare magnitude (ADR-0023 unit-preserving cells)
+    receipt = _receipt_with_lines("SUM(lines.price)")
+    assert receipt.props["subtotal"] == ScalarValue(value=Decimal(8), unit="€")

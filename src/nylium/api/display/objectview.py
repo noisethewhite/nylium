@@ -79,7 +79,7 @@ class ObjectView:
         props = {
             prop.key: cls._eval_function(prop)
             if prop.function_uuid is not None
-            else cls._eval_formula(wrapper, prop)
+            else cls._eval_formula(wrapper, owner, prop)
             if prop.formula is not None
             else cls._render_prop(
                 cast(StoredValue, getattr(wrapper, prop.key)),
@@ -140,47 +140,15 @@ class ObjectView:
 
     @classmethod
     @databasemethod(commit=False)
-    def _eval_formula(cls, wrapper: WObjectShape, prop: WProp) -> ScalarValue:
-        """ADR-0005/0022 read-time evaluation: fold the stored formula over
-        the live rows of the arrays it references and the owner's sibling
-        prop values. Unset cells count as 0; a dangling member keeps its
-        stored row (COUNT sees it, the numeric aggregates treat it as 0).
-        A unit result renders as a Quantity (value + part); division by
-        zero renders empty."""
+    def _eval_formula(cls, wrapper: WObjectShape, owner: WType, prop: WProp) -> ScalarValue:
+        """ADR-0005/0022/0023 read-time evaluation: fold the stored formula
+        over the live rows of the arrays it references, the owner's sibling
+        prop values and (one level down) computed member props. Unset cells
+        count as 0; a dangling member keeps its stored row (COUNT sees it,
+        the numeric aggregates treat it as 0). A unit result renders as a
+        Quantity (value + part); division by zero renders empty."""
         assert prop.formula is not None
-        refs = Formula.references(prop.formula)
-        arrays: dict[str, list[dict[str, Decimal | None]]] = {}
-        for array_key in {key for key, _ in refs}:
-            members = cast(list[WObjectShape] | None, getattr(wrapper, array_key)) or []
-            existing: set[UUID] = (
-                existing_uuids([member.uuid for member in members])
-                if members
-                else set()
-            )
-            wanted = {member for key, member in refs if key == array_key and member}
-            rows: list[dict[str, Decimal | None]] = []
-            for member in members:
-                if member.uuid not in existing:
-                    rows.append({})
-                    continue
-                row: dict[str, Decimal | None] = {}
-                for key in wanted:
-                    value = cast(StoredValue, getattr(member, key))
-                    if isinstance(value, bool):
-                        row[key] = None
-                    elif isinstance(value, (int, Decimal)):
-                        row[key] = Decimal(value)
-                    elif isinstance(value, Quantity):
-                        row[key] = value.value
-                    else:
-                        row[key] = None
-                rows.append(row)
-            arrays[array_key] = rows
-        scalars = {
-            key: _sibling_cell(cast(StoredValue, getattr(wrapper, key)))
-            for key in Formula.sibling_references(prop.formula)
-        }
-        result = Formula.evaluate(prop.formula, arrays, scalars)
+        result = cls._evaluate_formula(wrapper, owner, prop.formula)
         if result is None:
             return ScalarValue(value=None)
         if prop.value_type().name == WInteger.TYPE_NAME:
@@ -192,6 +160,64 @@ class ObjectView:
         if isinstance(result, Quantity):
             return ScalarValue(value=result.value)
         return ScalarValue(value=result)
+
+    @classmethod
+    def _evaluate_formula(
+        cls, wrapper: WObjectShape, owner: WType, formula: str
+    ) -> Decimal | Quantity | None:
+        """Fold a formula over an owner's array rows and sibling props,
+        returning the raw value (None on division by zero). A computed
+        member prop of an array element folds one level down (ADR-0023)."""
+        refs = Formula.references(formula)
+        arrays: dict[str, list[dict[str, Decimal | Quantity | None]]] = {}
+        for array_key in {key for key, _ in refs}:
+            array_prop = WProp.effective_by_key(owner, array_key)
+            element_type = None
+            if array_prop is not None:
+                element_type = WType.by_name(
+                    WType.element_name(array_prop.value_type().name)
+                )
+            member_schema = (
+                {p.key: p for p in WProp.effective_for(element_type)}
+                if element_type is not None
+                else {}
+            )
+            members = cast(list[WObjectShape] | None, getattr(wrapper, array_key)) or []
+            existing: set[UUID] = (
+                existing_uuids([member.uuid for member in members]) if members else set()
+            )
+            wanted = {member for key, member in refs if key == array_key and member}
+            rows: list[dict[str, Decimal | Quantity | None]] = []
+            for member in members:
+                if member.uuid not in existing:
+                    rows.append({})
+                    continue
+                row: dict[str, Decimal | Quantity | None] = {}
+                for key in wanted:
+                    row[key] = cls._member_cell(member, element_type, member_schema.get(key))
+                rows.append(row)
+            arrays[array_key] = rows
+        scalars = {
+            key: _sibling_cell(cast(StoredValue, getattr(wrapper, key)))
+            for key in Formula.sibling_references(formula)
+        }
+        return Formula.evaluate(formula, arrays, scalars)
+
+    @classmethod
+    def _member_cell(
+        cls, member: WObjectShape, element_type: WType | None, prop: WProp | None
+    ) -> Decimal | Quantity | None:
+        """One member cell. A computed member prop folds its own formula
+        over the member's siblings (the ADR-0023 chained level); otherwise
+        the stored value normalizes via _sibling_cell, keeping a Quantity's
+        part so aggregates stay unit-aware."""
+        if prop is None:
+            return None
+        if prop.formula is not None:
+            if element_type is None:
+                return None
+            return cls._evaluate_formula(member, element_type, prop.formula)
+        return _sibling_cell(cast(StoredValue, getattr(member, prop.key)))
 
     @classmethod
     @databasemethod(commit=False)

@@ -1,8 +1,9 @@
-"""ADR-0005 read-time evaluation: fold a formula AST over live array
-rows and the owner's sibling prop values (ADR-0022). Unset member and
-sibling values count as 0 — the ADR-0005 missing-ref rule applied to
-cells. Arithmetic promotes to a Quantity whenever either operand is a
-Quantity, carrying the source part name through."""
+"""ADR-0005/0022/0023 read-time evaluation: fold a formula AST over live
+array rows and the owner's sibling prop values. Unset member and sibling
+values count as 0 — the ADR-0005 missing-ref rule applied to cells.
+Arithmetic promotes to a Quantity whenever either operand is a Quantity,
+carrying the source part name through; array aggregates over unit-numeric
+members likewise produce a Quantity (ADR-0023)."""
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
@@ -12,7 +13,7 @@ from nylium.objects.quantity import Quantity
 from nylium.objects.wformula.nodes import BinOp, Expr, Neg, Number, Ref
 
 # array key -> rows; a row maps member key -> value (None = unset)
-ArrayRows = Mapping[str, Sequence[Mapping[str, Decimal | None]]]
+ArrayRows = Mapping[str, Sequence[Mapping[str, "Value | None"]]]
 # sibling prop key -> stored scalar (None = unset); a Quantity stays a
 # Quantity so unit promotion can recover the entered part name
 SiblingRow = Mapping[str, Decimal | Quantity | None]
@@ -20,9 +21,29 @@ SiblingRow = Mapping[str, Decimal | Quantity | None]
 Value = Decimal | Quantity
 
 
-def _cell(row: Mapping[str, Decimal | None], key: str) -> Decimal:
+def _cell(row: Mapping[str, "Value | None"], key: str) -> Value:
     value = row.get(key)
     return Decimal(0) if value is None else value
+
+
+def _magnitude(value: Value) -> Decimal:
+    return value.value if isinstance(value, Quantity) else value
+
+
+def _sum(values: Sequence[Value]) -> Value:
+    """Aggregate SUM. A quantity cell promotes the total to a Quantity in
+    the first quantity's part (members share one type, so parts agree)."""
+    part = next((v.unit for v in values if isinstance(v, Quantity)), None)
+    total = sum((_magnitude(v) for v in values), Decimal(0))
+    return Quantity(total, part) if part is not None else total
+
+
+def _average(values: Sequence[Value]) -> Value:
+    total = _sum(values)
+    count = Decimal(len(values))
+    if isinstance(total, Quantity):
+        return Quantity(total.value / count, total.unit)
+    return total / count
 
 
 def _apply(op: str, left: Decimal, right: Decimal) -> Decimal:
@@ -71,9 +92,9 @@ def evaluate_ast(node: Expr, arrays: ArrayRows, scalars: SiblingRow) -> Value:
     if not values:
         return Decimal(0)
     if node.func == "SUM":
-        return sum(values, Decimal(0))
+        return _sum(values)
     if node.func == "AVERAGE":
-        return sum(values, Decimal(0)) / Decimal(len(values))
+        return _average(values)
     if node.func == "MIN":
-        return min(values)
-    return max(values)
+        return min(values, key=_magnitude)
+    return max(values, key=_magnitude)

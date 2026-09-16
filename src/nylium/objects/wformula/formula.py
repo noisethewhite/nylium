@@ -150,7 +150,7 @@ class Formula:
     def evaluate(
         cls,
         formula: str,
-        arrays: Mapping[str, Sequence[Mapping[str, Decimal | None]]],
+        arrays: Mapping[str, Sequence[Mapping[str, Decimal | Quantity | None]]],
         scalars: Mapping[str, Decimal | Quantity | None] | None = None,
     ) -> Decimal | Quantity | None:
         """Fold a formula over live array rows and sibling prop values.
