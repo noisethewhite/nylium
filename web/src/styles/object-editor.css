@@ -123,6 +123,68 @@
   flex: 1;
 }
 
+/* --- embedded array table (ADR-0026) --- */
+
+.field-array-table {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-2);
+}
+
+.field-array-table > .field-label {
+  flex: none;
+}
+
+.field-array-table > .field-body {
+  width: 100%;
+}
+
+.embedded-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.embedded-table th {
+  text-align: left;
+  font-weight: 500;
+  color: var(--fg-dim);
+  padding: var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--separator);
+  white-space: nowrap;
+}
+
+.embedded-table td {
+  padding: var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--separator);
+  vertical-align: top;
+}
+
+.embedded-table .field {
+  margin: 0;
+  border: none;
+  padding: 0;
+  gap: 0;
+}
+
+.embedded-table .field-label {
+  display: none;
+}
+
+.embedded-table .field-body {
+  width: 100%;
+}
+
+.embedded-table .input {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.embedded-table-remove {
+  width: 24px;
+  text-align: right;
+}
+
 /* --- embedded (composition) section, ADR-0004 --- */
 
 .embedded-toggle {

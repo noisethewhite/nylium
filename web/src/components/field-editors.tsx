@@ -1,6 +1,6 @@
 import type { ChangeEvent, ReactElement } from "react";
 import { useEffect, useRef, useState } from "react";
-import type { ObjectView } from "../contracts";
+import type { ObjectView, TypeView } from "../contracts";
 import { ArrayFieldModel, RefFieldModel } from "../fields/composite-fields";
 import { EmbeddedFieldModel } from "../fields/embedded-fields";
 import { EnumFieldModel } from "../fields/enum-fields";
@@ -585,6 +585,13 @@ function ArrayEditor({ field, editor }: { field: ArrayFieldModel; editor: Object
   if (chipKind !== null) {
     return <ChipArrayInput field={field} editor={editor} kind={chipKind} />;
   }
+  // ADR-0026: an array of embedded objects renders as a table — one column
+  // per editable member prop, one row per element — instead of the stacked
+  // collapsible cards (which stay for the generic non-embedded case).
+  const elementSchema = editor.typeOf(field.elementType);
+  if (elementSchema?.embedded) {
+    return <EmbeddedTableEditor field={field} editor={editor} schema={elementSchema} />;
+  }
   return (
     <div className="field field-array">
       <span className="field-label">
@@ -610,6 +617,81 @@ function ArrayEditor({ field, editor }: { field: ArrayFieldModel; editor: Object
             </button>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+/** ADR-0026: an Array<Embedded> prop edited as a table — columns are the
+ * element's editable (non-computed) member props, rows are the elements.
+ * Computed members (formula/function/collect) stay out of the editor and
+ * render in the read-only object view instead. */
+function EmbeddedTableEditor({
+  field,
+  editor,
+  schema,
+}: {
+  field: ArrayFieldModel;
+  editor: ObjectEditorStore;
+  schema: TypeView;
+}): ReactElement {
+  const columns = schema.props.filter(
+    (prop) =>
+      prop.key !== "name" &&
+      prop.formula === null &&
+      prop.function_uuid === null &&
+      prop.collect === null,
+  );
+  return (
+    <div className="field field-array field-array-table">
+      <span className="field-label">
+        {field.key} <span className="dim">→ {field.elementType}</span>
+      </span>
+      <div className="field-body">
+        <div className="field-array-head">
+          <button className="button" onClick={() => editor.addArrayItem(field)}>
+            + item
+          </button>
+        </div>
+        <table className="embedded-table">
+          <thead>
+            <tr>
+              {columns.map((column) => (
+                <th key={column.key}>{column.key}</th>
+              ))}
+              <th aria-hidden />
+            </tr>
+          </thead>
+          <tbody>
+            {field.items.map((item, index) => {
+              const childFields =
+                item instanceof EmbeddedFieldModel ? item.childFields : [];
+              return (
+                <tr key={index}>
+                  {columns.map((column) => {
+                    const child = childFields.find((c) => c.key === column.key);
+                    return (
+                      <td key={column.key}>
+                        {child !== undefined && (
+                          <FieldEditor field={child} editor={editor} />
+                        )}
+                      </td>
+                    );
+                  })}
+                  <td className="embedded-table-remove">
+                    <button
+                      className="icon-button"
+                      title="Remove item"
+                      onClick={() => editor.removeArrayItem(field, index)}
+                    >
+                      ×
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     </div>
   );
