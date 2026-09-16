@@ -299,3 +299,12 @@ class NyliumApp:
             bodies.SetPropFunctionBody.route,
             methods=["PUT"], dependencies=guard,
         )
+        # --- formula AST (ADR-0026) ---
+        app.add_api_route(
+            f"{prefix}/formulas/parse", bodies.FormulaParseBody.route,
+            methods=["POST"], dependencies=guard,
+        )
+        app.add_api_route(
+            f"{prefix}/formulas/render", bodies.FormulaRenderBody.route,
+            methods=["POST"], dependencies=guard,
+        )

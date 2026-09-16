@@ -17,6 +17,7 @@ from nylium.objects.wformula.evaluation import evaluate_ast
 from nylium.objects.wformula.nodes import FUNCTIONS, BinOp, Call, Expr, If, Neg, Ref
 from nylium.objects.wformula.parsing import Parser, tokenize
 from nylium.objects.wformula.rewriting import render, rewrite_ast
+from nylium.objects.wformula.serialization import ast_to_dict, dict_to_ast
 from nylium.objects.quantity import Quantity
 from nylium.objects.wscalar import WInteger, WNumeric, WString
 from nylium.objects.wtype import WType
@@ -231,3 +232,14 @@ class Formula:
         """Re-render canonically with prop renames applied. ``member_renames``
         is keyed by the array key as written in the formula (pre-rename)."""
         return render(rewrite_ast(cls.parse(formula), array_renames, member_renames))
+
+    @classmethod
+    def to_dict(cls, formula: str) -> dict[str, object]:
+        """ADR-0026: parse to the block-editor AST contract (raises 422 on a
+        syntax error, like the save-path validator)."""
+        return ast_to_dict(cls.parse(formula))
+
+    @classmethod
+    def from_dict(cls, data: object) -> str:
+        """ADR-0026: build canonical text from a block-editor AST node."""
+        return render(dict_to_ast(data))

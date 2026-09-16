@@ -35,6 +35,10 @@ from nylium.server.bodies.functions import (
     SetPropFunctionBody,
     UpdateFunctionBody,
 )
+from nylium.server.bodies.formulas import (
+    FormulaParseBody,
+    FormulaRenderBody,
+)
 from nylium.server.bodies.objects import (
     CreateObjectBody,
     ListObjectsRequest,
@@ -76,6 +80,8 @@ __all__ = [
     "CreateUnitBody",
     "DetachTraitRequest",
     "FileUuidRequest",
+    "FormulaParseBody",
+    "FormulaRenderBody",
     "FunctionEdgeInput",
     "FunctionNodeInput",
     "FunctionUuidRequest",
