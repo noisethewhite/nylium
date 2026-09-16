@@ -19,7 +19,7 @@ export function CollectSelector(props: {
       : [];
   return (
     <span className="collect-selector">
-      <span className="collect-label">собирать по</span>
+      <span className="collect-label">collect by</span>
       <select
         className="block-select"
         value={collect ?? ""}

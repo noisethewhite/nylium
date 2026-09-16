@@ -284,27 +284,27 @@ export function FormulaBlockEditor(props: {
     <div className="formula-block-editor">
       <div className="formula-palette">
         <button className="palette-item palette-number" onClick={() => insert(zero)}>
-          Число
+          Number
         </button>
         <button
           className="palette-item palette-ref"
           disabled={ctx.refProps.length === 0}
           onClick={() => insert({ kind: "ref", key: ctx.refProps[0] ?? "" })}
         >
-          Проп
+          Variable
         </button>
         <button
           className="palette-item palette-call"
           disabled={ctx.arrayProps.length === 0}
           onClick={() => insert({ kind: "call", func: "SUM", path: [ctx.arrayProps[0]?.key ?? ""] })}
         >
-          Агрегат
+          Aggregate
         </button>
         <button
           className="palette-item palette-binop"
           onClick={() => insert({ kind: "binop", op: "+", left: zero, right: zero })}
         >
-          Операция
+          Operator
         </button>
         <button
           className="palette-item palette-if"
@@ -320,23 +320,76 @@ export function FormulaBlockEditor(props: {
             })
           }
         >
-          Если
+          If
         </button>
       </div>
       <div className="formula-canvas">
         {!loaded ? (
           <span className="dim">…</span>
         ) : node === null ? (
-          <span className="dim">Пусто — выбери блок выше</span>
+          <span className="dim">Empty — pick a block above</span>
         ) : (
           <div className="formula-canvas-tree">
             <NodeBlock node={node} onChange={commit} ctx={ctx} />
             <button className="button" onClick={() => commit(null)}>
-              Очистить
+              Clear
             </button>
           </div>
         )}
       </div>
     </div>
+  );
+}
+
+/** ADR-0026: a right-hand side panel hosting the block editor. The editor
+ * lives in a drawer instead of an inline popover so a nested formula has
+ * room to breathe; it closes on Escape, the × button, or the backdrop. */
+export function FormulaDrawer(props: {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  formula: string | null;
+  onChange: (formula: string | null) => void;
+  schema: TypeView;
+  types: readonly TypeView[];
+  parse: (formula: string) => Promise<FormulaNode>;
+}): ReactElement | null {
+  const { open, onClose } = props;
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open, onClose]);
+  if (!open) {
+    return null;
+  }
+  return (
+    <>
+      <div className="drawer-backdrop" onClick={onClose} />
+      <aside className="drawer formula-drawer">
+        <header className="drawer-header">
+          <span className="drawer-title">{props.title}</span>
+          <button className="icon-button" title="Close" onClick={onClose}>
+            ×
+          </button>
+        </header>
+        <div className="drawer-body">
+          <FormulaBlockEditor
+            formula={props.formula}
+            onChange={props.onChange}
+            schema={props.schema}
+            types={props.types}
+            parse={props.parse}
+          />
+        </div>
+      </aside>
+    </>
   );
 }

@@ -8,7 +8,7 @@ import { usePinTabOnEdit } from "../state/use-pin-tab-on-edit";
 import { WorkspaceStore } from "../state/workspace";
 import { CollectSelector } from "./collect-selector";
 import { FloatingMenu } from "./floating-menu";
-import { FormulaBlockEditor } from "./formula-block-editor";
+import { FormulaDrawer } from "./formula-block-editor";
 import { IconPicker } from "./icon-picker";
 import { Table } from "./table";
 
@@ -410,9 +410,9 @@ function FunctionBindButton(props: {
   );
 }
 
-/** ADR-0026: opens the block-based formula editor for a scalar prop. The
- * stored text is parsed to blocks on open and re-rendered to text on every
- * edit; the backend validates the text on save. */
+/** ADR-0026: opens the block-based formula editor in a right-hand drawer.
+ * The stored text is parsed to blocks on open and re-rendered to text on
+ * every edit; the backend validates the text on save. */
 function FormulaBindButton(props: {
   formula: string | null;
   schema: TypeView;
@@ -421,28 +421,30 @@ function FormulaBindButton(props: {
   onChange: (formula: string | null) => void;
 }): ReactElement {
   const bound = props.formula !== null;
+  const [open, setOpen] = useState(false);
+  const title = bound ? "Edit formula" : "Add formula";
   return (
-    <FloatingMenu
-      wrapperClassName="function-bind"
-      triggerClassName={bound ? "function-bind-trigger bound" : "function-bind-trigger"}
-      menuClassName="formula-menu"
-      title={bound ? "Edit formula" : "Add formula"}
-      trigger={
+    <>
+      <button
+        className={bound ? "function-bind-trigger bound" : "function-bind-trigger"}
+        title={title}
+        onClick={() => setOpen(true)}
+      >
         <span className="function-bind-label">
           <span className="tab-function-icon">ƒx</span>
           {bound && <span className="function-bind-name">formula</span>}
         </span>
-      }
-    >
-      {() => (
-        <FormulaBlockEditor
-          formula={props.formula}
-          onChange={props.onChange}
-          schema={props.schema}
-          types={props.types}
-          parse={props.parse}
-        />
-      )}
-    </FloatingMenu>
+      </button>
+      <FormulaDrawer
+        open={open}
+        onClose={() => setOpen(false)}
+        title={title}
+        formula={props.formula}
+        onChange={props.onChange}
+        schema={props.schema}
+        types={props.types}
+        parse={props.parse}
+      />
+    </>
   );
 }
