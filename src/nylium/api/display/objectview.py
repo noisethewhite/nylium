@@ -39,15 +39,18 @@ from nylium.api.display.values import (
 )
 
 
-def _sibling_cell(value: StoredValue) -> Decimal | Quantity | None:
+def _sibling_cell(value: StoredValue) -> Decimal | Quantity | str | None:
     """Normalize a sibling prop's stored value for formula folding: plain
     ints/Decimals become Decimal, a Quantity is kept (unit promotion needs
-    its part name), everything else folds to unset (→ 0 in evaluation)."""
+    its part name), a str passes through (an IF cond compares it), and
+    everything else folds to unset (→ 0 in evaluation)."""
     if isinstance(value, bool):
         return None
     if isinstance(value, (int, Decimal)):
         return Decimal(value)
     if isinstance(value, Quantity):
+        return value
+    if isinstance(value, str):
         return value
     return None
 
@@ -232,7 +235,8 @@ class ObjectView:
             if element_type is None:
                 return None
             return cls._evaluate_formula(member, element_type, prop.formula)
-        return _sibling_cell(cast(StoredValue, getattr(member, prop.key)))
+        value = _sibling_cell(cast(StoredValue, getattr(member, prop.key)))
+        return None if isinstance(value, str) else value
 
     @classmethod
     @databasemethod(commit=False)

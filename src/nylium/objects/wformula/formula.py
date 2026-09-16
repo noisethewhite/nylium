@@ -14,16 +14,16 @@ from decimal import Decimal, InvalidOperation
 from typing import ClassVar
 
 from nylium.objects.wformula.evaluation import evaluate_ast
-from nylium.objects.wformula.nodes import FUNCTIONS, BinOp, Call, Expr, Neg, Ref
+from nylium.objects.wformula.nodes import FUNCTIONS, BinOp, Call, Expr, If, Neg, Ref
 from nylium.objects.wformula.parsing import Parser, tokenize
 from nylium.objects.wformula.rewriting import render, rewrite_ast
 from nylium.objects.quantity import Quantity
-from nylium.objects.wscalar import WInteger, WNumeric
+from nylium.objects.wscalar import WInteger, WNumeric, WString
 from nylium.objects.wtype import WType
 
 
 def _calls(node: Expr) -> Iterator[Call]:
-    """Every Call node in the AST, depth-first."""
+    """Every Call node in the AST, depth-first (into IF branches too)."""
     if isinstance(node, Call):
         yield node
     elif isinstance(node, BinOp):
@@ -31,10 +31,13 @@ def _calls(node: Expr) -> Iterator[Call]:
         yield from _calls(node.right)
     elif isinstance(node, Neg):
         yield from _calls(node.operand)
+    elif isinstance(node, If):
+        yield from _calls(node.then)
+        yield from _calls(node.else_)
 
 
 def _refs(node: Expr) -> Iterator[Ref]:
-    """Every Ref node in the AST, depth-first."""
+    """Every Ref node in the AST, depth-first (into IF branches too)."""
     if isinstance(node, Ref):
         yield node
     elif isinstance(node, BinOp):
@@ -42,6 +45,27 @@ def _refs(node: Expr) -> Iterator[Ref]:
         yield from _refs(node.right)
     elif isinstance(node, Neg):
         yield from _refs(node.operand)
+    elif isinstance(node, If):
+        yield from _refs(node.then)
+        yield from _refs(node.else_)
+
+
+def _ifs(node: Expr) -> Iterator[If]:
+    """Every IF conditional in the AST, depth-first (nested included)."""
+    if isinstance(node, If):
+        yield node
+        yield from _ifs(node.then)
+        yield from _ifs(node.else_)
+    elif isinstance(node, BinOp):
+        yield from _ifs(node.left)
+        yield from _ifs(node.right)
+    elif isinstance(node, Neg):
+        yield from _ifs(node.operand)
+
+
+def _is_string_literal(value: str) -> bool:
+    """A cond literal written quoted (a string/enum constant), vs a bare number."""
+    return value.startswith('"') or value.startswith("'")
 
 
 def _is_numeric(type_name: str) -> bool:
@@ -81,6 +105,7 @@ class Formula:
         formula: str,
         owner_type_props: Sequence[tuple[str, str]],
         resolve_member_type: Callable[[str], Sequence[tuple[str, str]] | None],
+        is_string_like: Callable[[str], bool] | None = None,
     ) -> None:
         from nylium.server.errors import ValidationError
 
@@ -131,6 +156,35 @@ class Formula:
                 raise ValidationError(
                     f"sibling prop {ref.key!r} is not numeric ({value_type!r})"
                 )
+        for if_node in _ifs(ast):
+            value_type = owner.get(if_node.prop)
+            if value_type is None:
+                raise ValidationError(
+                    f"IF condition references unknown prop {if_node.prop!r}"
+                )
+            if WType.is_array_name(value_type):
+                raise ValidationError(
+                    f"IF condition prop {if_node.prop!r} is an array — conditions need a scalar"
+                )
+            string_like = (
+                value_type == WString.TYPE_NAME
+                if is_string_like is None
+                else is_string_like(value_type)
+            )
+            if string_like:
+                if not _is_string_literal(if_node.value):
+                    raise ValidationError(
+                        f"IF condition prop {if_node.prop!r} is a string/enum — use a quoted literal"
+                    )
+            else:
+                if not _is_numeric(value_type):
+                    raise ValidationError(
+                        f"IF condition prop {if_node.prop!r} must be String, an enum, or numeric"
+                    )
+                if _is_string_literal(if_node.value):
+                    raise ValidationError(
+                        f"IF condition prop {if_node.prop!r} is numeric — use a numeric literal"
+                    )
 
     @classmethod
     def references(cls, formula: str) -> set[tuple[str, str | None]]:
@@ -143,15 +197,17 @@ class Formula:
 
     @classmethod
     def sibling_references(cls, formula: str) -> set[str]:
-        """Every sibling prop key the formula reads (ADR-0022)."""
-        return {ref.key for ref in _refs(cls.parse(formula))}
+        """Every sibling prop key the formula reads (ADR-0022), including
+        the cond props of IF conditionals (ADR-0024)."""
+        ast = cls.parse(formula)
+        return {ref.key for ref in _refs(ast)} | {if_node.prop for if_node in _ifs(ast)}
 
     @classmethod
     def evaluate(
         cls,
         formula: str,
         arrays: Mapping[str, Sequence[Mapping[str, Decimal | Quantity | None]]],
-        scalars: Mapping[str, Decimal | Quantity | None] | None = None,
+        scalars: Mapping[str, Decimal | Quantity | str | None] | None = None,
     ) -> Decimal | Quantity | None:
         """Fold a formula over live array rows and sibling prop values.
         Unset member/sibling values count as 0 — the ADR-0005 missing-ref

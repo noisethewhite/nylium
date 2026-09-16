@@ -22,6 +22,7 @@ from nylium.objects.wformula.nodes import (
     BinOp,
     Call,
     Expr,
+    If,
     Neg,
     Number,
     Ref,
@@ -60,6 +61,33 @@ def tokenize(formula: str) -> list[_Token]:
             while i < length and (formula[i].isalnum() or formula[i] == "_"):
                 i += 1
             tokens.append(_Token("ident", formula[start:i], start))
+            continue
+        if ch == '"' or ch == "'":
+            quote = ch
+            start = i
+            i += 1
+            while i < length and formula[i] != quote:
+                i += 1
+            if i >= length:
+                error("unterminated string literal", start)
+            i += 1
+            tokens.append(_Token("string", formula[start:i], start))
+            continue
+        if ch == "=":
+            if i + 1 < length and formula[i + 1] == "=":
+                tokens.append(_Token("eq", "==", i))
+                i += 2
+                continue
+            error(f"unexpected character {ch!r}", i)
+        if ch == "!":
+            if i + 1 < length and formula[i + 1] == "=":
+                tokens.append(_Token("ne", "!=", i))
+                i += 2
+                continue
+            error(f"unexpected character {ch!r}", i)
+        if ch == ",":
+            tokens.append(_Token("comma", ch, i))
+            i += 1
             continue
         if ch == "(":
             tokens.append(_Token("lparen", ch, i))
@@ -146,9 +174,12 @@ class Parser:
             return node
         if token.kind == "ident":
             name_token = self._advance()
-            # an ident directly followed by '(' is a function call; a bare
-            # ident is a sibling-prop reference (ADR-0022)
+            # an ident directly followed by '(' is a function call (or an
+            # IF conditional); a bare ident is a sibling-prop reference
+            # (ADR-0022)
             if self._peek().kind == "lparen":
+                if name_token.text.upper() == "IF":
+                    return self._if()
                 return self._call(name_token)
             return Ref(name_token.text)
         error("expected a number, '(', function or '-'", token.pos)
@@ -171,3 +202,27 @@ class Parser:
             path = (first.text,)
         _ = self._expect("rparen", "')'")
         return Call(func=func, path=path)
+
+    def _if(self) -> If:
+        _ = self._expect("lparen", "'('")
+        prop = self._expect("ident", "a prop key")
+        op_token = self._peek()
+        if op_token.kind not in ("eq", "ne"):
+            error("expected '==' or '!='", op_token.pos)
+        _ = self._advance()
+        value_token = self._peek()
+        if value_token.kind not in ("string", "number"):
+            error("expected a string or number literal", value_token.pos)
+        _ = self._advance()
+        _ = self._expect("comma", "','")
+        then = self._expr()
+        _ = self._expect("comma", "','")
+        else_ = self._expr()
+        _ = self._expect("rparen", "')'")
+        return If(
+            prop=prop.text,
+            op=op_token.text,
+            value=value_token.text,
+            then=then,
+            else_=else_,
+        )

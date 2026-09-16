@@ -7,16 +7,17 @@ members likewise produce a Quantity (ADR-0023)."""
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from nylium.objects.quantity import Quantity
-from nylium.objects.wformula.nodes import BinOp, Expr, Neg, Number, Ref
+from nylium.objects.wformula.nodes import BinOp, Expr, If, Neg, Number, Ref
 
 # array key -> rows; a row maps member key -> value (None = unset)
 ArrayRows = Mapping[str, Sequence[Mapping[str, "Value | None"]]]
 # sibling prop key -> stored scalar (None = unset); a Quantity stays a
-# Quantity so unit promotion can recover the entered part name
-SiblingRow = Mapping[str, Decimal | Quantity | None]
+# Quantity so unit promotion can recover the entered part name, and a
+# String/enum stays a str so an IF cond can compare it
+SiblingRow = Mapping[str, Decimal | Quantity | str | None]
 
 Value = Decimal | Quantity
 
@@ -67,12 +68,30 @@ def _binop(op: str, left: Value, right: Value) -> Value:
     return _apply(op, left, right)
 
 
+def _compare(actual: Decimal | Quantity | str | None, op: str, value_str: str) -> bool:
+    """ADR-0024 cond: an unset value is not equal; a number compares
+    numerically against the literal; anything else (a String/enum) compares
+    as text against the literal with its quotes stripped."""
+    if actual is None:
+        equal = False
+    elif isinstance(actual, (Decimal, int)):
+        try:
+            equal = actual == Decimal(value_str)
+        except InvalidOperation:
+            equal = False
+    else:
+        equal = str(actual) == value_str.strip("\"'")
+    return equal if op == "==" else not equal
+
+
 def evaluate_ast(node: Expr, arrays: ArrayRows, scalars: SiblingRow) -> Value:
     if isinstance(node, Number):
         return node.value
     if isinstance(node, Ref):
         value = scalars.get(node.key)
-        return Decimal(0) if value is None else value
+        # a Ref names a numeric sibling (validation rejects the rest), so
+        # any str in the mapping belongs to a cond prop, never here
+        return Decimal(0) if value is None or isinstance(value, str) else value
     if isinstance(node, Neg):
         inner = evaluate_ast(node.operand, arrays, scalars)
         if isinstance(inner, Quantity):
@@ -82,6 +101,10 @@ def evaluate_ast(node: Expr, arrays: ArrayRows, scalars: SiblingRow) -> Value:
         left = evaluate_ast(node.left, arrays, scalars)
         right = evaluate_ast(node.right, arrays, scalars)
         return _binop(node.op, left, right)
+    if isinstance(node, If):
+        if _compare(scalars.get(node.prop), node.op, node.value):
+            return evaluate_ast(node.then, arrays, scalars)
+        return evaluate_ast(node.else_, arrays, scalars)
     rows = arrays.get(node.path[0], ())
     if node.func == "COUNT":
         if len(node.path) == 1:

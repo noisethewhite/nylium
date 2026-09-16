@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-from nylium.objects.wformula.nodes import BinOp, Call, Expr, Neg, Number, Ref
+from nylium.objects.wformula.nodes import BinOp, Call, Expr, If, Neg, Number, Ref
 
 
 def render(node: Expr) -> str:
@@ -19,6 +19,8 @@ def render(node: Expr) -> str:
         return f"-{render(node.operand)}"
     if isinstance(node, BinOp):
         return f"({render(node.left)} {node.op} {render(node.right)})"
+    if isinstance(node, If):
+        return f"IF({node.prop} {node.op} {node.value}, {render(node.then)}, {render(node.else_)})"
     return f"{node.func}({'.'.join(node.path)})"
 
 
@@ -44,4 +46,12 @@ def rewrite_ast(
         )
     if isinstance(node, Neg):
         return Neg(rewrite_ast(node.operand, array_renames, member_renames))
+    if isinstance(node, If):
+        return If(
+            array_renames.get(node.prop, node.prop),
+            node.op,
+            node.value,
+            rewrite_ast(node.then, array_renames, member_renames),
+            rewrite_ast(node.else_, array_renames, member_renames),
+        )
     return node

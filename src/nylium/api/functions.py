@@ -22,7 +22,7 @@ from nylium.tables.objects.types import Type
 from nylium.objects.wformula import Formula
 from nylium.objects.wfunction import INPUT_PROP_KEY, WFunction
 from nylium.objects.wprop import WProp
-from nylium.objects.wscalar import WDate, WDatetime, WInteger, WNumeric
+from nylium.objects.wscalar import WDate, WDatetime, WInteger, WNumeric, WString
 from nylium.objects.wtype import WType
 
 
@@ -240,7 +240,7 @@ class FunctionsApi(_FunctionsBase):
                 if prop.formula is None:
                     continue
                 rewritten = Formula.rewrite(prop.formula, {}, member_renames)
-                Formula.validate(rewritten, dependent_schema, resolve_member_type)
+                Formula.validate(rewritten, dependent_schema, resolve_member_type, cls._is_string_like)
                 if rewritten != prop.formula:
                     updates.append((prop.uuid, rewritten))
         return updates
@@ -267,7 +267,7 @@ class FunctionsApi(_FunctionsBase):
             raise ValidationError(
                 f"a formula prop must be {WNumeric.TYPE_NAME} (or {WInteger.TYPE_NAME} for a bare COUNT, or Numeric<Unit>), got {value_type_name!r}"
             )
-        Formula.validate(formula, owner_type_props, cls._member_props)
+        Formula.validate(formula, owner_type_props, cls._member_props, cls._is_string_like)
 
     @classmethod
     def _is_ordered_scalar(cls, spec_name: str) -> bool:
@@ -282,6 +282,15 @@ class FunctionsApi(_FunctionsBase):
             }
             or WType.unit_param_of(spec_name) is not None
         )
+
+    @classmethod
+    def _is_string_like(cls, spec_name: str) -> bool:
+        """ADR-0024: a String or enum spec — the families an IF condition may
+        compare against a quoted literal."""
+        if spec_name == WString.TYPE_NAME:
+            return True
+        target = WType.by_name(spec_name)
+        return target is not None and target.is_enum
 
     @classmethod
     def _check_collect_prop(

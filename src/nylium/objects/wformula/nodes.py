@@ -54,7 +54,21 @@ class Call:
     path: tuple[str, ...]
 
 
-Expr: TypeAlias = Number | BinOp | Neg | Call | Ref
+@dataclass(frozen=True)
+class If:
+    """A conditional (ADR-0024): fold to ``then`` when the owner's ``prop``
+    compares true against ``value`` with ``op`` (``==`` or ``!=``), else
+    ``else_``. ``value`` keeps the literal exactly as written — quoted for
+    a string, bare for a number."""
+
+    prop: str
+    op: str
+    value: str
+    then: Expr
+    else_: Expr
+
+
+Expr: TypeAlias = Number | BinOp | Neg | Call | Ref | If
 
 FUNCTIONS: frozenset[str] = frozenset({"SUM", "AVERAGE", "COUNT", "MIN", "MAX"})
 
