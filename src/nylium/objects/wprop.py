@@ -42,6 +42,7 @@ class WProp:
         self._value_type_uuid: UUID | None = row.value_type_uuid
         self._value_trait_uuid: UUID | None = row.value_trait_uuid
         self._formula: str | None = row.formula
+        self._collect: str | None = row.collect
         self._function_uuid: UUID | None = row.function_uuid
 
     @property
@@ -55,6 +56,10 @@ class WProp:
     @property
     def formula(self) -> str | None:
         return self._formula
+
+    @property
+    def collect(self) -> str | None:
+        return self._collect
 
     @property
     def function_uuid(self) -> UUID | None:
@@ -142,10 +147,14 @@ class WProp:
         cls, owner: "WType", key: str, value_type: "WType | None",
         position: int = 0, formula: str | None = None,
         value_trait_uuid: UUID | None = None,
+        collect: str | None = None,
     ) -> "WProp":
         value_type_uuid = None if value_type is None else value_type.uuid
         return cls(
-            ensure_row(owner.uuid, key, value_type_uuid, value_trait_uuid, position, formula)
+            ensure_row(
+                owner.uuid, key, value_type_uuid, value_trait_uuid, position,
+                formula, collect,
+            )
         )
 
     @databasemethod(commit=False)

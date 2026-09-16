@@ -28,9 +28,12 @@ from nylium.tables.values.string_values import TABLE_StringValues
 from nylium.tables.values.time_values import TABLE_TimeValues
 
 # (uuid | None, key, value_type_uuid | None, value_trait_uuid | None,
-#  formula | None) — None uuid means "new prop"; None formula means a
-# plain stored prop; value_type_uuid XOR value_trait_uuid (ADR-0013)
-SchemaItem: TypeAlias = "tuple[UUID | None, str, UUID | None, UUID | None, str | None]"
+#  formula | None, collect | None) — None uuid means "new prop"; None formula
+# / collect means a plain stored prop; value_type_uuid XOR value_trait_uuid
+# (ADR-0013)
+SchemaItem: TypeAlias = (
+    "tuple[UUID | None, str, UUID | None, UUID | None, str | None, str | None]"
+)
 
 
 class _PropKeyedValues(Protocol):
@@ -127,6 +130,7 @@ def ensure_row(
     value_trait_uuid: UUID | None,
     position: int,
     formula: str | None,
+    collect: str | None,
 ) -> TABLE_Props:
     """Fetch-or-create one type-owned prop; an existing row is retyped /
     repositioned in place (flushed by the surrounding transaction)."""
@@ -136,6 +140,7 @@ def ensure_row(
         row.value_trait_uuid = value_trait_uuid
         row.position = position
         row.formula = formula
+        row.collect = collect
         return row
     row = TABLE_Props(
         uuid=uuid4(),
@@ -145,6 +150,7 @@ def ensure_row(
         value_trait_uuid=value_trait_uuid,
         position=position,
         formula=formula,
+        collect=collect,
     )
     Database.add(row)
     Database.flush()
@@ -171,14 +177,14 @@ def sync_owned(
             sqla.select(TABLE_Props).where(owner_column == owner_uuid)
         )
     }
-    kept = {uuid for uuid, _, _, _, _ in items if uuid is not None}
+    kept = {uuid for uuid, _, _, _, _, _ in items if uuid is not None}
     for stale_uuid, stale_row in existing.items():
         if stale_uuid not in kept:
             Database.delete(stale_row)
     Database.flush()
-    for position, (prop_uuid, key, value_type_uuid, value_trait_uuid, formula) in enumerate(
-        items
-    ):
+    for position, (
+        prop_uuid, key, value_type_uuid, value_trait_uuid, formula, collect
+    ) in enumerate(items):
         if prop_uuid is None or prop_uuid not in existing:
             row = TABLE_Props(
                 uuid=uuid4(),
@@ -187,6 +193,7 @@ def sync_owned(
                 value_trait_uuid=value_trait_uuid,
                 position=position,
                 formula=formula,
+                collect=collect,
             )
             setattr(row, owner_column_name, owner_uuid)
             Database.add(row)
@@ -202,6 +209,7 @@ def sync_owned(
         row.key = key
         row.position = position
         row.formula = formula
+        row.collect = collect
     Database.flush()
 
 

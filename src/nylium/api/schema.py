@@ -45,7 +45,10 @@ class SchemaApi(_SchemaBase):
     @classmethod
     @databasemethod(commit=True)
     def sync_props(
-        cls, type_name: str, items: list[tuple[UUID | None, str, str, str | None]]
+        cls,
+        type_name: str,
+        items: list[tuple[UUID | None, str, str, str | None]],
+        collects: dict[str, str] | None = None,
     ) -> Type:
         """Apply the type editor's full prop draft at once. Each item is
         (uuid | None, key, value type name, formula | None): a matching
@@ -54,7 +57,7 @@ class SchemaApi(_SchemaBase):
         draft are deleted for every instance at once. The pinned `name`
         prop must keep its uuid, its key, its String type and the first
         position. A formula (ADR-0005) must be Numeric, or Integer for a
-        bare COUNT."""
+        bare COUNT. collects maps prop key -> collect member key (ADR-0025)."""
         from nylium.server.errors import ValidationError
 
         owner = WType.by_name(type_name)
@@ -116,10 +119,22 @@ class SchemaApi(_SchemaBase):
                 for uuid, key, value_type_name, formula in items
             ]
         owner_props = [(key, value_type_name) for _, key, value_type_name, _ in items]
-        for _, _, value_type_name, formula in items:
+        collects = dict(collects or {})
+        collect_strangers = sorted(set(collects) - set(keys))
+        if collect_strangers:
+            raise ValidationError(
+                f"collect keys {collect_strangers!r} do not name a prop of {type_name!r}"
+            )
+        for _, key, value_type_name, formula in items:
+            collect = collects.get(key)
+            if formula is not None and collect is not None:
+                raise ValidationError(
+                    f"prop {key!r} cannot be both a formula and a collect prop"
+                )
             cls._check_formula_prop(formula, value_type_name, owner_props)
+            cls._check_collect_prop(collect, value_type_name, owner_props)
         resolved = [
-            (uuid, key, *cls._resolve_value_spec(value_type_name), formula)
+            (uuid, key, *cls._resolve_value_spec(value_type_name), formula, collects.get(key))
             for uuid, key, value_type_name, formula in items
         ]
         # cross-type pass: other types aggregate over Array<type_name>
@@ -131,7 +146,7 @@ class SchemaApi(_SchemaBase):
         # embedded children die with their prop: deleting or retyping an
         # embedded prop would cascade the link rows away and orphan the
         # child instances — destroy them while the prop still stands
-        kept = {uuid: (key, vt) for uuid, key, vt, _, _ in resolved if uuid is not None}
+        kept = {uuid: (key, vt) for uuid, key, vt, _, _, _ in resolved if uuid is not None}
         embedded_renamed = False
         for prop in existing:
             if prop.is_trait_bound:

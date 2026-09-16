@@ -41,6 +41,7 @@ class TypesApi(_TypesBase):
         color: str = WColor.DEFAULT,
         embedded: bool = False,
         formulas: dict[str, str] | None = None,
+        collects: dict[str, str] | None = None,
     ) -> Type:
         """props maps key -> value type name. Missing value types are created.
         Dict order becomes the schema's display order (positions).
@@ -48,12 +49,14 @@ class TypesApi(_TypesBase):
         NAME_PROP_KEY. embedded marks a composition type (ADR-0004):
         its instances exist only as a prop value of an owner object.
         formulas maps prop key -> formula string (ADR-0005); a formula
-        prop must be Numeric (or Integer for a bare COUNT)."""
+        prop must be Numeric (or Integer for a bare COUNT). collects maps
+        prop key -> collect member key (ADR-0025)."""
         # lazy: a module-level import would circle api -> server -> api
         from nylium.server.errors import ValidationError
 
         props = dict(props or {})
         formulas = dict(formulas or {})
+        collects = dict(collects or {})
         keys = list(props)
         if not keys or keys[0] != NAME_PROP_KEY:
             raise ValidationError(f"first prop of a type must be {NAME_PROP_KEY!r}")
@@ -70,9 +73,21 @@ class TypesApi(_TypesBase):
             raise ValidationError(
                 f"formula keys {strangers!r} do not name a prop of {name!r}"
             )
+        collect_strangers = sorted(set(collects) - set(props))
+        if collect_strangers:
+            raise ValidationError(
+                f"collect keys {collect_strangers!r} do not name a prop of {name!r}"
+            )
         owner_props = list(props.items())
         for key, value_type_name in props.items():
-            cls._check_formula_prop(formulas.get(key), value_type_name, owner_props)
+            formula = formulas.get(key)
+            collect = collects.get(key)
+            if formula is not None and collect is not None:
+                raise ValidationError(
+                    f"prop {key!r} cannot be both a formula and a collect prop"
+                )
+            cls._check_formula_prop(formula, value_type_name, owner_props)
+            cls._check_collect_prop(collect, value_type_name, owner_props)
         cls._check_color(color)
         cls._check_icon(icon)
         WScalar.ensure_builtins()
@@ -86,6 +101,7 @@ class TypesApi(_TypesBase):
                 position,
                 formulas.get(key),
                 value_trait_uuid=value_trait_uuid,
+                collect=collects.get(key),
             )
         decor = type_decor[owner.uuid]
         decor.icon = icon

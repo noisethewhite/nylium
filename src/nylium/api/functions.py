@@ -22,7 +22,7 @@ from nylium.tables.objects.types import Type
 from nylium.objects.wformula import Formula
 from nylium.objects.wfunction import INPUT_PROP_KEY, WFunction
 from nylium.objects.wprop import WProp
-from nylium.objects.wscalar import WInteger, WNumeric
+from nylium.objects.wscalar import WDate, WDatetime, WInteger, WNumeric
 from nylium.objects.wtype import WType
 
 
@@ -167,6 +167,10 @@ class FunctionsApi(_FunctionsBase):
             raise ValidationError(
                 f"prop {prop_key!r} already has a formula — a prop cannot be both"
             )
+        if prop.collect is not None:
+            raise ValidationError(
+                f"prop {prop_key!r} is a collect prop — it cannot run a function"
+            )
         props[prop.uuid].function_uuid = function_uuid
         WFunction.assert_no_dependency_cycle()
         result = cls._type_result(type_name)
@@ -264,3 +268,65 @@ class FunctionsApi(_FunctionsBase):
                 f"a formula prop must be {WNumeric.TYPE_NAME} (or {WInteger.TYPE_NAME} for a bare COUNT, or Numeric<Unit>), got {value_type_name!r}"
             )
         Formula.validate(formula, owner_type_props, cls._member_props)
+
+    @classmethod
+    def _is_ordered_scalar(cls, spec_name: str) -> bool:
+        """ADR-0025: a value spec that supports a [from, to] range comparison."""
+        return (
+            spec_name
+            in {
+                WInteger.TYPE_NAME,
+                WNumeric.TYPE_NAME,
+                WDate.TYPE_NAME,
+                WDatetime.TYPE_NAME,
+            }
+            or WType.unit_param_of(spec_name) is not None
+        )
+
+    @classmethod
+    def _check_collect_prop(
+        cls,
+        collect: str | None,
+        value_type_name: str,
+        owner_type_props: list[tuple[str, str]],
+    ) -> None:
+        """ADR-0025: a collect prop is an Array<T> whose element type T has an
+        ordered scalar member named by `collect`; the owner must define
+        `from`/`to` props of exactly that value spec."""
+        from nylium.server.errors import ValidationError
+
+        if collect is None:
+            return
+        if not WType.is_array_name(value_type_name):
+            raise ValidationError(
+                f"a collect prop must be an array (Array<T>), got {value_type_name!r}"
+            )
+        element_name = WType.element_name(value_type_name)
+        element = WType.by_name(element_name)
+        if element is None:
+            raise ValidationError(f"collect target type {element_name!r} does not exist")
+        if element.is_embedded:
+            raise ValidationError(
+                f"collect target {element_name!r} is embedded — collect works over standalone types"
+            )
+        member_spec = next(
+            (
+                spec
+                for key, spec in (cls._member_props(element_name) or [])
+                if key == collect
+            ),
+            None,
+        )
+        if member_spec is None:
+            raise ValidationError(f"collect member {collect!r} not found on {element_name!r}")
+        if not cls._is_ordered_scalar(member_spec):
+            raise ValidationError(
+                f"collect member {collect!r} of {element_name!r} is not an ordered scalar "
+                + "(Numeric, Integer, Date, Datetime, or Numeric<Unit>)"
+            )
+        owner_spec = dict(owner_type_props)
+        for bound in ("from", "to"):
+            if owner_spec.get(bound) != member_spec:
+                raise ValidationError(
+                    f"a collect prop requires the owner to define {bound!r} as {member_spec!r}"
+                )

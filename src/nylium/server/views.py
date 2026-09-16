@@ -36,6 +36,7 @@ class PropView:
     key: str
     value_type: str
     formula: str | None
+    collect: str | None
     function_uuid: UUID | None
     trait: str | None
     trait_color: str | None
@@ -48,6 +49,7 @@ class PropView:
             key=prop.key,
             value_type=prop.value_type,
             formula=prop.formula,
+            collect=prop.collect,
             function_uuid=prop.function_uuid,
             trait=None if owner_trait is None else owner_trait[0],
             trait_color=None if owner_trait is None else owner_trait[1],

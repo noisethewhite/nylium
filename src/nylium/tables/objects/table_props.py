@@ -61,6 +61,10 @@ class TABLE_Props:
     # ADR-0005: a formula string over the owner's Array<T> props (e.g.
     # "SUM(items.price) * 1.21"); NULL means a plain stored prop
     formula: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
+    # ADR-0025: a collect spec — the key of an ordered scalar member prop on
+    # this Array<T>'s element type. The array is derived at read time as every
+    # element whose member prop falls within the owner's [from, to] bounds.
+    collect: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
     # ADR-0007: a reference to a Function<T,R> instance whose output type
     # is this prop's value type; the result is computed lazily at read time
     # (like a formula). Mutually exclusive with `formula`.

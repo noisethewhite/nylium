@@ -14,6 +14,7 @@ from nylium.tables import instances
 from nylium.tables.objects.instances import existing_uuids
 from nylium.tables.values.array_values import array_tag_rows
 from nylium.tables.values.backlinks import backlink_refs
+from nylium.tables.values.collect_range import collect_range
 from nylium.objects import WObject, WType
 from nylium.objects.wtypemeta import StoredValue, WObjectShape
 from nylium.objects.monthday import MonthDay, MonthDayTime
@@ -51,6 +52,14 @@ def _sibling_cell(value: StoredValue) -> Decimal | Quantity | None:
     return None
 
 
+def _comparable(value: object) -> object:
+    """ADR-0025: reduce a stored bound to its comparable scalar — a Quantity
+    compares on its canonical magnitude, everything else passes through."""
+    if isinstance(value, Quantity):
+        return value.value
+    return value
+
+
 @dataclass(config=CONFIG)
 class ObjectView:
     """Snapshot of one instance: every prop rendered as a typed
@@ -81,6 +90,8 @@ class ObjectView:
             if prop.function_uuid is not None
             else cls._eval_formula(wrapper, owner, prop)
             if prop.formula is not None
+            else cls._render_collect(wrapper, prop)
+            if prop.collect is not None
             else cls._render_prop(
                 cast(StoredValue, getattr(wrapper, prop.key)),
                 prop.value_spec_name(),
@@ -182,7 +193,11 @@ class ObjectView:
                 if element_type is not None
                 else {}
             )
-            members = cast(list[WObjectShape] | None, getattr(wrapper, array_key)) or []
+            members = (
+                [WObject.wrap(u) for u in cls._collect_uuids(wrapper, array_prop)]
+                if array_prop is not None and array_prop.collect is not None
+                else cast(list[WObjectShape] | None, getattr(wrapper, array_key)) or []
+            )
             existing: set[UUID] = (
                 existing_uuids([member.uuid for member in members]) if members else set()
             )
@@ -218,6 +233,38 @@ class ObjectView:
                 return None
             return cls._evaluate_formula(member, element_type, prop.formula)
         return _sibling_cell(cast(StoredValue, getattr(member, prop.key)))
+
+    @classmethod
+    @databasemethod(commit=False)
+    def _collect_uuids(cls, wrapper: WObjectShape, prop: WProp) -> list[UUID]:
+        """ADR-0025: the derived member uuids of a collect prop — one reverse
+        range query over the target type's member prop, bounded by the owner's
+        from/to siblings. Missing bounds / dangling member yield an empty set."""
+        assert prop.collect is not None
+        element_type = WType.by_name(WType.element_name(prop.value_type().name))
+        member_prop = (
+            WProp.effective_by_key(element_type, prop.collect)
+            if element_type is not None
+            else None
+        )
+        lo = _comparable(cast(StoredValue, getattr(wrapper, "from")))
+        hi = _comparable(cast(StoredValue, getattr(wrapper, "to")))
+        if member_prop is None or lo is None or hi is None:
+            return []
+        return collect_range(member_prop.uuid, member_prop.value_spec_name(), lo, hi)
+
+    @classmethod
+    @databasemethod(commit=False)
+    def _render_collect(cls, wrapper: WObjectShape, prop: WProp) -> ArrayValue:
+        """ADR-0025: render a collect prop as an array of refs to the derived
+        members (same shape as a stored Array<T> of standalone objects)."""
+        element_name = WType.element_name(prop.value_type().name)
+        return ArrayValue(
+            items=[
+                RefValue(ref=ObjectRef(uuid=u, type_name=element_name))
+                for u in cls._collect_uuids(wrapper, prop)
+            ]
+        )
 
     @classmethod
     @databasemethod(commit=False)

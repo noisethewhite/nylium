@@ -27,6 +27,7 @@ class Prop(Row):
     value_trait_uuid: UUID | None
     position: int
     formula: str | None
+    collect: str | None
     function_uuid: UUID | None
 
     @property

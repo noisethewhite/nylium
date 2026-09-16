@@ -13,6 +13,9 @@ export interface PropView {
   /** ADR-0005: a formula over the owner's Array<T> props, or null for a
    * plain stored prop */
   formula: string | null;
+  /** ADR-0025: a collect member key on the Array<T>'s element type, or
+   * null for a plain stored prop. Derived at read time, read-only. */
+  collect: string | null;
   /** ADR-0007: uuid of a Function<T,R> instance whose DAG computes this
    * prop on read, or null. Mutually exclusive with `formula`; like
    * formula-backed props it is read-only on the wire. */

@@ -27,6 +27,8 @@ class CreateTypeBody:
     props: dict[str, str] = field(default_factory=dict)
     # ADR-0005: optional prop key -> formula string
     formulas: dict[str, str] | None = None
+    # ADR-0025: optional prop key -> collect member key
+    collects: dict[str, str] | None = None
     icon: str = "inventory_2"
     color: str = WColor.DEFAULT
     # ADR-0004: composition type — instances exist only as prop values
@@ -43,6 +45,7 @@ class CreateTypeBody:
                 body.color,
                 body.embedded,
                 body.formulas,
+                body.collects,
             )
         )
 
@@ -176,6 +179,8 @@ class SyncPropItem:
     uuid: UUID | None = None
     # ADR-0005: a formula over the owner's Array<T> props, or None
     formula: str | None = None
+    # ADR-0025: a collect member key on the Array<T>'s element type, or None
+    collect: str | None = None
 
 
 @dataclass(config=BODY_CONFIG)
@@ -191,6 +196,7 @@ class SyncPropsBody:
             Api.sync_props(
                 name,
                 [(item.uuid, item.key, item.value_type, item.formula) for item in body.props],
+                {item.key: item.collect for item in body.props if item.collect is not None},
             )
         )
 

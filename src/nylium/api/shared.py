@@ -136,6 +136,7 @@ class ApiShared:
         owner_props = list(owner_type_row.props)
         formula_readonly = {p.key for p in owner_props if p.formula is not None}
         function_readonly = {p.key for p in owner_props if p.function_uuid is not None}
+        collect_readonly = {p.key for p in owner_props if p.collect is not None}
         result: dict[str, StoredValue] = {}
         for key, value in prop_specs.items():
             if key in formula_readonly:
@@ -149,6 +150,12 @@ class ApiShared:
 
                 raise ValidationError(
                     f"prop {key!r} of {type_name!r} is computed by a function — it is read-only"
+                )
+            if key in collect_readonly:
+                from nylium.server.errors import ValidationError
+
+                raise ValidationError(
+                    f"prop {key!r} of {type_name!r} is computed by collect — it is read-only"
                 )
             normalized = cls._normalize_value(
                 value, cls._prop_value_type_name(owner_type_row.uuid, key)
@@ -217,6 +224,7 @@ class ApiShared:
             function_readonly = {
                 p.key for p in resolved_props if p.function_uuid is not None
             }
+            collect_readonly = {p.key for p in resolved_props if p.collect is not None}
             for child_key in value:
                 if child_key in formula_readonly:
                     from nylium.server.errors import ValidationError
@@ -229,6 +237,12 @@ class ApiShared:
 
                     raise ValidationError(
                         f"prop {child_key!r} of {type_name!r} is computed by a function — it is read-only"
+                    )
+                if child_key in collect_readonly:
+                    from nylium.server.errors import ValidationError
+
+                    raise ValidationError(
+                        f"prop {child_key!r} of {type_name!r} is computed by collect — it is read-only"
                     )
             return {
                 key: cls._normalize_value(

@@ -53,7 +53,7 @@ class TraitsApi(ApiShared):
             cls._check_reserved_name(key, "prop key")
         WScalar.ensure_builtins()
         resolved: list[SchemaItem] = [
-            (None, key, *cls._resolve_value_spec(spec), None)
+            (None, key, *cls._resolve_value_spec(spec), None, None)
             for key, spec in specs.items()
         ]
         trait = traits.create(final_name, color)
@@ -115,7 +115,7 @@ class TraitsApi(ApiShared):
                     f"prop uuids {strangers!r} do not belong to trait {name!r}"
                 )
             resolved: list[SchemaItem] = [
-                (uuid, key, *cls._resolve_value_spec(spec), None)
+                (uuid, key, *cls._resolve_value_spec(spec), None, None)
                 for uuid, key, spec, _ in items
             ]
             WProp.sync_trait_schema(row.uuid, resolved)
