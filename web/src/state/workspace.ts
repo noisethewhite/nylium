@@ -1,5 +1,6 @@
 import type {
   FileView,
+  FormulaNode,
   FunctionEdgeInput,
   FunctionNodeInput,
   FunctionView,
@@ -437,7 +438,13 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
   async saveTypeEdits(
     typeName: string,
     patch: { name: string; plural_name: string; icon: string; color: string },
-    props: { uuid: string | null; key: string; value_type: string }[],
+    props: {
+      uuid: string | null;
+      key: string;
+      value_type: string;
+      formula: string | null;
+      collect: string | null;
+    }[],
   ): Promise<void> {
     await this.guard(async () => {
       const current = this.getSnapshot().types.find((v) => v.name === typeName);
@@ -661,6 +668,12 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
       });
       await this.refreshObjectsOf(typeName);
     });
+  }
+
+  /** ADR-0026: parse a formula text to its AST (the block editor opens a
+   * stored formula with this); raises on a syntax error. */
+  async parseFormula(formula: string): Promise<FormulaNode> {
+    return this.api.parseFormula(formula);
   }
 
   private async refreshAllObjects(): Promise<void> {

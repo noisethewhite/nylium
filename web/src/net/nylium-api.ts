@@ -1,5 +1,6 @@
 import type {
   FileView,
+  FormulaNode,
   FunctionEdgeInput,
   FunctionNodeInput,
   FunctionView,
@@ -89,11 +90,34 @@ export class NyliumApi extends HttpTransport {
 
   syncProps(
     typeName: string,
-    props: { uuid: string | null; key: string; value_type: string }[],
+    props: {
+      uuid: string | null;
+      key: string;
+      value_type: string;
+      formula: string | null;
+      collect: string | null;
+    }[],
   ): Promise<TypeView> {
     return this.request<TypeView>(
       "PUT", `/types/${encodeURIComponent(typeName)}/props`, { props },
     );
+  }
+
+  /** ADR-0026: text → AST (the block editor opens a stored formula with
+   * this); raises on a syntax error. */
+  async parseFormula(formula: string): Promise<FormulaNode> {
+    const result = await this.request<{ ast: FormulaNode }>(
+      "POST", "/formulas/parse", { formula },
+    );
+    return result.ast;
+  }
+
+  /** ADR-0026: AST → canonical text (the block editor commits with this). */
+  async renderFormula(ast: FormulaNode): Promise<string> {
+    const result = await this.request<{ formula: string }>(
+      "POST", "/formulas/render", { ast },
+    );
+    return result.formula;
   }
 
   updateType(

@@ -22,6 +22,19 @@ export interface PropView {
   function_uuid: string | null;
 }
 
+/** ADR-0026: the formula AST as a discriminated JSON union — the block
+ * editor's in-memory shape, mirroring nylium.objects.wformula.nodes.
+ * `number.value` is a decimal string; `call.path` is `[arrayKey]` for a
+ * bare COUNT or `[arrayKey, memberKey]` otherwise; `if.value` keeps the
+ * literal exactly as written (quoted for string/enum, bare for numeric). */
+export type FormulaNode =
+  | { kind: "number"; value: string }
+  | { kind: "ref"; key: string }
+  | { kind: "binop"; op: string; left: FormulaNode; right: FormulaNode }
+  | { kind: "neg"; operand: FormulaNode }
+  | { kind: "call"; func: string; path: string[] }
+  | { kind: "if"; prop: string; op: string; value: string; then: FormulaNode; else: FormulaNode };
+
 export interface EnumOptionView {
   uuid: string;
   value: string;

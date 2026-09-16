@@ -1,12 +1,14 @@
 import type { ReactElement } from "react";
 import { useEffect, useState } from "react";
-import type { FunctionView, TypeView } from "../contracts";
+import type { FormulaNode, FunctionView, TypeView } from "../contracts";
 import { TypeNames } from "../contracts";
 import { useObservable } from "../state/use-observable";
 import { useSaveShortcut } from "../state/use-save-shortcut";
 import { usePinTabOnEdit } from "../state/use-pin-tab-on-edit";
 import { WorkspaceStore } from "../state/workspace";
+import { CollectSelector } from "./collect-selector";
 import { FloatingMenu } from "./floating-menu";
+import { FormulaBlockEditor } from "./formula-block-editor";
 import { IconPicker } from "./icon-picker";
 import { Table } from "./table";
 
@@ -16,6 +18,8 @@ interface PropDraft {
   readonly uuid: string | null;
   readonly key: string;
   readonly valueType: string;
+  readonly formula: string | null;
+  readonly collect: string | null;
 }
 
 function draftsOf(schema: TypeView): PropDraft[] {
@@ -27,6 +31,8 @@ function draftsOf(schema: TypeView): PropDraft[] {
       uuid: prop.uuid,
       key: prop.key,
       valueType: prop.value_type,
+      formula: prop.formula,
+      collect: prop.collect,
     }));
 }
 
@@ -93,7 +99,13 @@ export function TypeViewPanel(props: {
     void workspace.saveTypeEdits(
       schema.name,
       { name: nameDraft.trim(), plural_name: pluralDraft, icon: iconDraft, color: colorDraft },
-      rows.map((row) => ({ uuid: row.uuid, key: row.key, value_type: row.valueType })),
+      rows.map((row) => ({
+        uuid: row.uuid,
+        key: row.key,
+        value_type: row.valueType,
+        formula: row.formula,
+        collect: row.collect,
+      })),
     );
   };
   useSaveShortcut(save, !pristine && !invalid);
@@ -254,33 +266,51 @@ export function TypeViewPanel(props: {
           if (isPinned(row, index)) {
             return null;
           }
-          // ADR-0007: an existing scalar prop can carry a function-backed
-          // value — the bind menu offers functions whose output matches.
           const schemaProp =
             row.uuid === null
               ? undefined
               : schema.props.find((prop) => prop.uuid === row.uuid);
-          if (schemaProp === undefined || !TypeNames.isScalar(row.valueType)) {
+          if (schemaProp === undefined) {
             return null;
           }
-          const boundUuid = schemaProp.function_uuid ?? null;
-          const boundName =
-            boundUuid === null
-              ? null
-              : (state.functions.find((fn) => fn.uuid === boundUuid)?.name ?? null);
-          const matchingFunctions = state.functions.filter((fn) => {
-            const params = TypeNames.functionParams(fn.type_name);
-            return params !== null && params.output === row.valueType;
-          });
+          const scalar = TypeNames.isScalar(row.valueType);
+          const array = TypeNames.isArray(row.valueType);
           return (
-            <FunctionBindButton
-              bound={boundUuid !== null}
-              boundName={boundName}
-              functions={matchingFunctions}
-              onBind={(uuid) =>
-                void workspace.setPropFunction(schema.name, schemaProp.key, uuid)
-              }
-            />
+            <>
+              {scalar && (
+                <>
+                  <FunctionBindButton
+                    bound={schemaProp.function_uuid !== null}
+                    boundName={
+                      state.functions.find((fn) => fn.uuid === schemaProp.function_uuid)?.name ??
+                      null
+                    }
+                    functions={state.functions.filter((fn) => {
+                      const params = TypeNames.functionParams(fn.type_name);
+                      return params !== null && params.output === row.valueType;
+                    })}
+                    onBind={(uuid) =>
+                      void workspace.setPropFunction(schema.name, schemaProp.key, uuid)
+                    }
+                  />
+                  <FormulaBindButton
+                    formula={row.formula}
+                    schema={schema}
+                    types={state.types}
+                    parse={(formula) => workspace.parseFormula(formula)}
+                    onChange={(formula) => updateRow(index, { formula })}
+                  />
+                </>
+              )}
+              {array && (
+                <CollectSelector
+                  valueType={row.valueType}
+                  collect={row.collect}
+                  onChange={(collect) => updateRow(index, { collect })}
+                  types={state.types}
+                />
+              )}
+            </>
           );
         }}
         trailing={
@@ -312,7 +342,7 @@ export function TypeViewPanel(props: {
           onClick={() =>
             setRows((drafts) => [
               ...drafts,
-              { uuid: null, key: "", valueType: TypeNames.STRING },
+              { uuid: null, key: "", valueType: TypeNames.STRING, formula: null, collect: null },
             ])
           }
         >
@@ -375,6 +405,43 @@ function FunctionBindButton(props: {
             </button>
           ))}
         </div>
+      )}
+    </FloatingMenu>
+  );
+}
+
+/** ADR-0026: opens the block-based formula editor for a scalar prop. The
+ * stored text is parsed to blocks on open and re-rendered to text on every
+ * edit; the backend validates the text on save. */
+function FormulaBindButton(props: {
+  formula: string | null;
+  schema: TypeView;
+  types: readonly TypeView[];
+  parse: (formula: string) => Promise<FormulaNode>;
+  onChange: (formula: string | null) => void;
+}): ReactElement {
+  const bound = props.formula !== null;
+  return (
+    <FloatingMenu
+      wrapperClassName="function-bind"
+      triggerClassName={bound ? "function-bind-trigger bound" : "function-bind-trigger"}
+      menuClassName="formula-menu"
+      title={bound ? "Edit formula" : "Add formula"}
+      trigger={
+        <span className="function-bind-label">
+          <span className="tab-function-icon">ƒx</span>
+          {bound && <span className="function-bind-name">formula</span>}
+        </span>
+      }
+    >
+      {() => (
+        <FormulaBlockEditor
+          formula={props.formula}
+          onChange={props.onChange}
+          schema={props.schema}
+          types={props.types}
+          parse={props.parse}
+        />
       )}
     </FloatingMenu>
   );
