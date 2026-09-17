@@ -1,7 +1,9 @@
 # Values that are references to other instances (links, nested objects,
-# arrays). The referenced instance's own uuid doubles as this row's pk.
-# Also hosts the link-statement helpers (ADR-0019): the objects layer
-# decides semantics, statements live here.
+# arrays). Keyed by (owner instance, prop) — one target per (owner, prop)
+# — with the target as an indexed FK so a single target may be referenced
+# from any number of owners (ADR-0028 many-to-one). Also hosts the
+# link-statement helpers (ADR-0019): the objects layer decides semantics,
+# statements live here.
 from uuid import UUID
 
 import sqlalchemy as sqla
@@ -18,13 +20,13 @@ class TABLE_InstanceValues:
     __tablename__: ClassVar[str] = "instance_values"
 
     uuid: Mapped[UUID] = mapped_column(
-        ForeignKey("instances.uuid"), primary_key=True
+        ForeignKey("instances.uuid"), nullable=False, index=True
     )
     prop_uuid: Mapped[UUID] = mapped_column(
-        ForeignKey("props.uuid", ondelete="CASCADE"), nullable=False
+        ForeignKey("props.uuid", ondelete="CASCADE"), nullable=False, primary_key=True
     )
     inst_uuid: Mapped[UUID] = mapped_column(
-        ForeignKey("instances.uuid", ondelete="CASCADE"), nullable=False
+        ForeignKey("instances.uuid", ondelete="CASCADE"), nullable=False, primary_key=True
     )
 
 
@@ -41,7 +43,8 @@ def link_for(inst_uuid: UUID, prop_uuid: UUID) -> TABLE_InstanceValues | None:
 
 @databasemethod(commit=False)
 def merge_link(uuid: UUID, prop_uuid: UUID, inst_uuid: UUID) -> None:
-    """Insert-or-replace the link row whose pk is the target uuid."""
+    """Insert-or-replace the link row for (owner, prop) — the composite
+    pk — pointing at the given target uuid (ADR-0028)."""
     _ = Database.merge(
         TABLE_InstanceValues(uuid=uuid, prop_uuid=prop_uuid, inst_uuid=inst_uuid)
     )
