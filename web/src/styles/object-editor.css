@@ -113,6 +113,12 @@
   justify-content: flex-end;
 }
 
+/* embedded-table toolbar: "+ item" on the left, column-visibility icon
+ * on the right (ADR-0026) */
+.field-array-head-table {
+  justify-content: space-between;
+}
+
 .field-array-item {
   display: flex;
   align-items: flex-start;
@@ -209,6 +215,14 @@
 
 .table-columns-trigger {
   gap: var(--space-1);
+}
+
+/* right-anchored dropdown for the icon-only columns trigger: drop from
+ * the button's right edge so a narrow right-aligned trigger doesn't
+ * overflow the container's right side */
+.type-menu-right {
+  left: auto;
+  right: 0;
 }
 
 .column-toggle-menu {

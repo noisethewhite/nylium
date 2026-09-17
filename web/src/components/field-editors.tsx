@@ -716,18 +716,18 @@ function EmbeddedTableEditor({
         {field.key} <span className="dim">→ {field.elementType}</span>
       </span>
       <div className="field-body">
-        <div className="field-array-head">
+        <div className="field-array-head field-array-head-table">
+          <button className="button" onClick={() => editor.addArrayItem(field)}>
+            + item
+          </button>
           <FloatingMenu
-            wrapperClassName="type-picker"
+            title="Toggle columns"
             triggerClassName="button table-columns-trigger"
-            menuClassName="type-menu"
+            menuClassName="type-menu type-menu-right"
             trigger={
-              <>
-                <span className="material-symbols-outlined" aria-hidden>
-                  view_column
-                </span>
-                <span>columns</span>
-              </>
+              <span className="material-symbols-outlined" aria-hidden>
+                view_column
+              </span>
             }
           >
             {() => (
@@ -745,9 +745,6 @@ function EmbeddedTableEditor({
               </div>
             )}
           </FloatingMenu>
-          <button className="button" onClick={() => editor.addArrayItem(field)}>
-            + item
-          </button>
         </div>
         <table className="embedded-table">
           <thead>
