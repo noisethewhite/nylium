@@ -105,7 +105,13 @@ export class EmbeddedFieldModel extends FieldModel {
     embeddedSchemaOf?: EmbeddedSchemaOf,
   ): FieldModel[] {
     return schema.props
-      .filter((prop) => prop.key !== "name")
+      .filter(
+        (prop) =>
+          prop.key !== "name" &&
+          prop.formula === null &&
+          prop.function_uuid === null &&
+          prop.collect === null,
+      )
       .map((prop) =>
         FieldFactory.createForType(
           prop.key,

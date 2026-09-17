@@ -92,7 +92,16 @@ class PropCodec:
                     "unsetting arrays is not supported — omit the prop (untouched) or send an empty list"
                 )
             element_name = WType.element_name(type_name)
-            return [cls._decode_value(item, element_name) for item in value.items]
+            decoded: list[PropInput] = [
+                cls._decode_value(item, element_name) for item in value.items
+            ]
+            element_type = WType.by_name(element_name)
+            if element_type is not None and element_type.is_embedded:
+                # ADR-0004: an empty embedded draft decodes to None ("no
+                # child"); as an array element that means "no row" — drop it
+                # rather than let a null element reach the array writer.
+                decoded = [item for item in decoded if item is not None]
+            return decoded
         owner = WType.by_name(type_name)
         if owner is not None and owner.is_embedded:
             if not isinstance(value, EmbeddedValue):

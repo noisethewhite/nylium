@@ -7,7 +7,9 @@ a true many-to-one link (ADR-0028), not the old 1-target-1-owner keying."""
 from decimal import Decimal
 
 from nylium.api import Api
+from nylium.api.display import ArrayValue, EmbeddedValue, ObjectRef, RefValue, ScalarValue
 from nylium.objects.quantity import Quantity
+from nylium.server.codec import PropCodec
 
 
 def _currency() -> None:
@@ -69,3 +71,36 @@ def test_product_backlink_projects_every_receipt_item():
     assert reloaded is not None
     items = [ref for ref in reloaded.backlinks if ref.type_name == "ReceiptItem"]
     assert len(items) == 2  # both receipts' lines point back at the product
+
+
+def test_empty_embedded_array_element_is_dropped():
+    """An Array<Embedded> draft with an all-empty element must not become a
+    null row: the codec turns an empty draft into None ("no child") and the
+    array decode drops it, instead of handing None to the array writer."""
+    _receipt_schema()
+    product = Api.create_object("Product", {"name": "Olive Oil"})
+    decoded = PropCodec.decode(
+        "Receipt",
+        {
+            "lines": ArrayValue(
+                items=[
+                    EmbeddedValue(
+                        uuid=None,
+                        type_name="ReceiptItem",
+                        props={
+                            "product": RefValue(
+                                ref=ObjectRef(uuid=product.uuid, type_name="Product")
+                            ),
+                            "price": ScalarValue(value="5.0", unit="€"),
+                            "quantity": ScalarValue(value="2"),
+                        },
+                    ),
+                    EmbeddedValue(uuid=None, type_name="ReceiptItem", props={}),
+                ]
+            )
+        },
+    )
+    lines = decoded["lines"]
+    assert isinstance(lines, list)
+    assert len(lines) == 1  # the empty draft is dropped, not stored as None
+    assert None not in lines
