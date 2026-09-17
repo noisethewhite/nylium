@@ -185,6 +185,72 @@
   text-align: right;
 }
 
+/* --- embedded array table controls (ADR-0026) --- */
+
+.table-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.table-sort:hover {
+  color: var(--fg-dim);
+}
+
+.table-sort .material-symbols-outlined {
+  font-size: var(--font-size-sm);
+}
+
+.table-columns-trigger {
+  gap: var(--space-1);
+}
+
+.column-toggle-menu {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 180px;
+}
+
+.column-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  cursor: pointer;
+  border-radius: var(--radius-small);
+}
+
+.column-toggle-row:hover {
+  background: var(--bg-hover);
+}
+
+/* unit notation inside a table cell: the number keeps the width, the
+ * €/kg part collapses to a compact suffix instead of a 50/50 picker */
+.embedded-table .field-row .type-picker {
+  flex: none;
+  min-width: 0;
+}
+
+.embedded-table .field-row .type-picker-value {
+  flex: none;
+  max-width: 3.5em;
+}
+
+.embedded-table .field-row .type-picker-trigger {
+  gap: var(--space-1);
+}
+
+.embedded-table .field-row .type-picker-chevron {
+  font-size: var(--font-size-sm);
+}
+
 /* --- embedded (composition) section, ADR-0004 --- */
 
 .embedded-toggle {

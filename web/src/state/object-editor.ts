@@ -114,6 +114,16 @@ export class ObjectEditorStore extends Observable<EditorState> {
     this.touch();
   }
 
+  /** ADR-0026 table sorting: reorder an Array<Embedded>'s elements in
+   * place (array order is meaningful data — it persists on save). */
+  sortArrayItems(
+    array: ArrayFieldModel,
+    compare: (a: FieldModel, b: FieldModel) => number,
+  ): void {
+    array.items = [...array.items].sort(compare);
+    this.touch();
+  }
+
   async save(): Promise<void> {
     const { object, fields } = this.getSnapshot();
     for (const field of fields) {

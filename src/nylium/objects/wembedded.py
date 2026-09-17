@@ -227,7 +227,12 @@ class WEmbedded:
 
     @classmethod
     def _write_generated_name(cls, child_uuid: UUID, name: str) -> None:
-        setattr(WTypeMeta.root().wrap(child_uuid), NAME_PROP_KEY, name)
+        child = WTypeMeta.root().wrap(child_uuid)
+        inst = instance_get(child_uuid)
+        owner = WType.by_uuid(inst.type_uuid) if inst is not None else None
+        if owner is None or WProp.by_key(owner, NAME_PROP_KEY) is None:
+            return  # name-less embedded type (ADR-0027) keeps its registry name
+        setattr(child, NAME_PROP_KEY, name)
 
     @classmethod
     def _destroy_child(cls, child_uuid: UUID) -> None:

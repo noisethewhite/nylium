@@ -315,7 +315,6 @@ def _receipt_item_type() -> None:
     Api.create_type(
         "ReceiptItem",
         {
-            "name": "String",
             "price": "Numeric<Currency>",
             "quantity": "Numeric",
             "line_total": "Numeric<Currency>",

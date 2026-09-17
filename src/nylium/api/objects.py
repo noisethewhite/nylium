@@ -11,6 +11,7 @@ from nylium.database import databasemethod
 from nylium.tables import instances
 from nylium.objects.wembedded import WEmbedded
 from nylium.objects.wobject import WObject
+from nylium.objects.wprop import WProp
 from nylium.objects.wtype import WType
 from nylium.objects.wtypemeta import WTypeMeta
 
@@ -53,11 +54,13 @@ class ObjectsApi(ApiShared):
             return None
 
         def ref_label(ref: ObjectRef) -> str:
-            wrapper = WObject.wrap(ref.uuid)
-            label = cast(str | None, getattr(wrapper, NAME_PROP_KEY))
-            if label:
-                return label
             inst = instances.get(ref.uuid)
+            owner = WType.by_uuid(inst.type_uuid) if inst is not None else None
+            if owner is not None and WProp.by_key(owner, NAME_PROP_KEY) is not None:
+                wrapper = WObject.wrap(ref.uuid)
+                label = cast(str | None, getattr(wrapper, NAME_PROP_KEY))
+                if label:
+                    return label
             return "" if inst is None else inst.name
 
         return MarkdownRenderer(ref_label).render(view)

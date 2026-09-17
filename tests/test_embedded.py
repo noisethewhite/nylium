@@ -2,6 +2,7 @@
 a prop value of an owner object (ADR-0004). Lazy create on first write,
 generated names, cascade delete, guards against standalone use.
 Api-level; HTTP shape lives in test_http.py."""
+from decimal import Decimal
 from uuid import UUID
 
 import pytest
@@ -417,3 +418,32 @@ def test_nested_embedded_names():
     assert Api.delete_object(person.uuid)
     assert Api.get_object(contact.uuid) is None
     assert Api.get_object(address.uuid) is None
+
+
+def test_embedded_type_may_omit_name():
+    # ADR-0027: embedded composition types are not required to carry a
+    # `name` prop — e.g. a receipt line identifies itself by its product
+    # reference, not a generated title.
+    view = Api.create_type("Item", {"sku": "String", "qty": "Numeric"}, "Items", embedded=True)
+    assert view.embedded is True
+    assert [prop.key for prop in view.props] == ["sku", "qty"]
+
+
+def test_name_less_embedded_array():
+    _ = Api.create_type("Item", {"sku": "String", "qty": "Numeric"}, "Items", embedded=True)
+    _ = Api.create_type("Order", {"name": "String", "lines": "Array<Item>"}, "Orders")
+    order = Api.create_object(
+        "Order", {"name": "N1", "lines": [{"sku": "A", "qty": Decimal("2")}]}
+    )
+    lines = order.props["lines"]
+    assert isinstance(lines, ArrayValue) and lines.items is not None
+    item = lines.items[0]
+    assert isinstance(item, EmbeddedValue)
+    # no generated `name` prop — name-less embedded types keep their registry
+    # name instead (display falls back to it in the UI)
+    assert "name" not in item.props
+    assert item.props["sku"] == ScalarValue(value="A")
+    assert item.props["qty"] == ScalarValue(value=Decimal("2"))
+    # readable by uuid, never listed standalone
+    assert isinstance(item.uuid, UUID) and Api.get_object(item.uuid) is not None
+    assert Api.list_objects("Item") == []

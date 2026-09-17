@@ -58,12 +58,21 @@ class TypesApi(_TypesBase):
         formulas = dict(formulas or {})
         collects = dict(collects or {})
         keys = list(props)
-        if not keys or keys[0] != NAME_PROP_KEY:
-            raise ValidationError(f"first prop of a type must be {NAME_PROP_KEY!r}")
-        if props[NAME_PROP_KEY] != WString.TYPE_NAME:
-            raise ValidationError(
-                f"the {NAME_PROP_KEY!r} prop must be of type {WString.TYPE_NAME!r}"
-            )
+        if embedded:
+            # ADR-0004 composition types may omit the `name` prop — their
+            # instances carry a generated/registry title instead (ADR-0027).
+            # When present it must still be a String.
+            if NAME_PROP_KEY in props and props[NAME_PROP_KEY] != WString.TYPE_NAME:
+                raise ValidationError(
+                    f"the {NAME_PROP_KEY!r} prop must be of type {WString.TYPE_NAME!r}"
+                )
+        else:
+            if not keys or keys[0] != NAME_PROP_KEY:
+                raise ValidationError(f"first prop of a type must be {NAME_PROP_KEY!r}")
+            if props[NAME_PROP_KEY] != WString.TYPE_NAME:
+                raise ValidationError(
+                    f"the {NAME_PROP_KEY!r} prop must be of type {WString.TYPE_NAME!r}"
+                )
         cls._check_reserved_name(name, "type name")
         for key in keys:
             # keys land inside generated embedded names — same reservation

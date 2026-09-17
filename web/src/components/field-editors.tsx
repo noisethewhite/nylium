@@ -622,10 +622,37 @@ function ArrayEditor({ field, editor }: { field: ArrayFieldModel; editor: Object
   );
 }
 
+/** A sortable string for a field: scalar drafts, booleans, ref labels,
+ * enum selections. Numeric drafts sort numerically via localeCompare. */
+function sortValueOf(field: FieldModel | undefined): string {
+  if (field === undefined) {
+    return "";
+  }
+  if (field instanceof ScalarFieldModel) {
+    return field.draft;
+  }
+  if (field instanceof BooleanFieldModel) {
+    return field.checked ? "1" : "0";
+  }
+  if (field instanceof RefFieldModel) {
+    const selected = field.options.find((o) => o.uuid === field.selectedUuid);
+    return selected !== undefined ? ObjectLabels.of(selected) : "";
+  }
+  if (field instanceof EnumFieldModel) {
+    return field.selected ?? "";
+  }
+  return "";
+}
+
+function compareValues(a: string, b: string): number {
+  return a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" });
+}
+
 /** ADR-0026: an Array<Embedded> prop edited as a table — columns are the
  * element's editable (non-computed) member props, rows are the elements.
  * Computed members (formula/function/collect) stay out of the editor and
- * render in the read-only object view instead. */
+ * render in the read-only object view instead. Columns sort by click and
+ * can be hidden via the columns menu. */
 function EmbeddedTableEditor({
   field,
   editor,
@@ -635,13 +662,54 @@ function EmbeddedTableEditor({
   editor: ObjectEditorStore;
   schema: TypeView;
 }): ReactElement {
-  const columns = schema.props.filter(
+  const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set());
+
+  const allColumns = schema.props.filter(
     (prop) =>
       prop.key !== "name" &&
       prop.formula === null &&
       prop.function_uuid === null &&
       prop.collect === null,
   );
+  const columns = allColumns.filter((column) => !hidden.has(column.key));
+
+  const childOf = (item: FieldModel, key: string): FieldModel | undefined =>
+    item instanceof EmbeddedFieldModel
+      ? item.childFields.find((child) => child.key === key)
+      : undefined;
+
+  const applySort = (key: string, dir: "asc" | "desc"): void => {
+    editor.sortArrayItems(field, (a, b) => {
+      const cmp = compareValues(sortValueOf(childOf(a, key)), sortValueOf(childOf(b, key)));
+      return dir === "asc" ? cmp : -cmp;
+    });
+  };
+
+  const toggleSort = (key: string): void => {
+    if (sortColumn !== key) {
+      setSortColumn(key);
+      setSortDir("asc");
+      applySort(key, "asc");
+    } else if (sortDir === "asc") {
+      setSortDir("desc");
+      applySort(key, "desc");
+    } else {
+      setSortColumn(null);
+    }
+  };
+
+  const toggleColumn = (key: string): void => {
+    const next = new Set(hidden);
+    if (next.has(key)) {
+      next.delete(key);
+    } else {
+      next.add(key);
+    }
+    setHidden(next);
+  };
+
   return (
     <div className="field field-array field-array-table">
       <span className="field-label">
@@ -649,6 +717,34 @@ function EmbeddedTableEditor({
       </span>
       <div className="field-body">
         <div className="field-array-head">
+          <FloatingMenu
+            wrapperClassName="type-picker"
+            triggerClassName="button table-columns-trigger"
+            menuClassName="type-menu"
+            trigger={
+              <>
+                <span className="material-symbols-outlined" aria-hidden>
+                  view_column
+                </span>
+                <span>columns</span>
+              </>
+            }
+          >
+            {() => (
+              <div className="column-toggle-menu">
+                {allColumns.map((column) => (
+                  <label key={column.key} className="column-toggle-row">
+                    <input
+                      type="checkbox"
+                      checked={!hidden.has(column.key)}
+                      onChange={() => toggleColumn(column.key)}
+                    />
+                    <span>{column.key}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </FloatingMenu>
           <button className="button" onClick={() => editor.addArrayItem(field)}>
             + item
           </button>
@@ -656,9 +752,25 @@ function EmbeddedTableEditor({
         <table className="embedded-table">
           <thead>
             <tr>
-              {columns.map((column) => (
-                <th key={column.key}>{column.key}</th>
-              ))}
+              {columns.map((column) => {
+                const active = sortColumn === column.key;
+                return (
+                  <th key={column.key}>
+                    <button
+                      className="table-sort"
+                      onClick={() => toggleSort(column.key)}
+                      title={active ? "Clear sort" : "Sort ascending"}
+                    >
+                      <span>{column.key}</span>
+                      {active && (
+                        <span className="material-symbols-outlined" aria-hidden>
+                          {sortDir === "asc" ? "arrow_upward" : "arrow_downward"}
+                        </span>
+                      )}
+                    </button>
+                  </th>
+                );
+              })}
               <th aria-hidden />
             </tr>
           </thead>

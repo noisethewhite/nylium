@@ -37,7 +37,11 @@ class SchemaApi(_SchemaBase):
         existing = [prop.key for prop in WProp.all_for(owner)]
         if set(keys) != set(existing):
             raise ValueError(f"prop order {keys!r} does not match {type_name!r} schema")
-        if NAME_PROP_KEY in existing and (not keys or keys[0] != NAME_PROP_KEY):
+        if (
+            not owner.is_embedded
+            and NAME_PROP_KEY in existing
+            and (not keys or keys[0] != NAME_PROP_KEY)
+        ):
             raise ValidationError(f"the {NAME_PROP_KEY!r} prop must stay first")
         WProp.reorder(owner, keys)
         return cls._type_result(type_name)
@@ -70,17 +74,20 @@ class SchemaApi(_SchemaBase):
         name_prop = next(
             (prop for prop in existing if prop.key == NAME_PROP_KEY), None
         )
-        if not items:
-            raise ValidationError("a type must keep at least its 'name' prop")
-        first_uuid, first_key, first_type, _ = items[0]
-        if (
-            name_prop is not None
-            and (first_uuid, first_key, first_type)
-            != (name_prop.uuid, NAME_PROP_KEY, WString.TYPE_NAME)
-        ):
-            raise ValidationError(
-                f"the {NAME_PROP_KEY!r} prop must stay first, keyed {NAME_PROP_KEY!r}, typed {WString.TYPE_NAME!r}"
-            )
+        if not owner.is_embedded:
+            # standalone types keep a pinned `name` prop first; embedded
+            # composition types (ADR-0004) may omit it entirely (ADR-0027)
+            if not items:
+                raise ValidationError("a type must keep at least its 'name' prop")
+            first_uuid, first_key, first_type, _ = items[0]
+            if (
+                name_prop is not None
+                and (first_uuid, first_key, first_type)
+                != (name_prop.uuid, NAME_PROP_KEY, WString.TYPE_NAME)
+            ):
+                raise ValidationError(
+                    f"the {NAME_PROP_KEY!r} prop must stay first, keyed {NAME_PROP_KEY!r}, typed {WString.TYPE_NAME!r}"
+                )
         keys = [key for _, key, _, _ in items]
         if any(not key.strip() for key in keys):
             raise ValidationError("prop keys must not be empty")
