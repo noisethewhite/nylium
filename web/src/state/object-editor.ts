@@ -31,6 +31,17 @@ export interface TagCandidate {
   readonly propKey: string;
 }
 
+/** Re-read the computed (formula/function) values off a freshly saved
+ * object. `computed` is captured once at editor creation and its `value`
+ * goes stale after a save unless it is re-derived here — otherwise
+ * editing a formula's inputs leaves the "Computed" section frozen. */
+function recomputeComputed(
+  computed: readonly ComputedProp[],
+  props: Record<string, PropValue>,
+): ComputedProp[] {
+  return computed.map((prop) => ({ ...prop, value: props[prop.key] }));
+}
+
 /** Draft owner for one open object: field models, ref options,
  * save/delete. Field models are mutable draft objects; every mutation
  * is followed by touch() so React re-reads the snapshot. Server
@@ -156,6 +167,7 @@ export class ObjectEditorStore extends Observable<EditorState> {
       this.setState({
         ...this.getSnapshot(),
         object: updated,
+        computed: recomputeComputed(this.getSnapshot().computed, updated.props),
         saving: false,
         dirty: false,
       });
