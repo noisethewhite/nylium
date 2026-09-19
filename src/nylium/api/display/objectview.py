@@ -88,9 +88,16 @@ class ObjectView:
         if owner is None:
             raise RuntimeError(f"instance {uuid} has dangling type")
         wrapper = WObject.wrap(uuid)
+        # ADR-0029: function bindings are instance-level — load them once
+        # and map prop_uuid -> function_uuid to avoid an N+1 per prop.
+        from nylium.tables.functions.instance_function_links import (
+            function_links_of_instance,
+        )
+
+        bound = dict(function_links_of_instance(uuid))
         props = {
-            prop.key: cls._eval_function(prop)
-            if prop.function_uuid is not None
+            prop.key: cls._eval_function(uuid, bound[prop.uuid])
+            if prop.uuid in bound
             else cls._eval_formula(wrapper, owner, prop)
             if prop.formula is not None
             else cls._render_collect(wrapper, prop)
@@ -145,11 +152,10 @@ class ObjectView:
 
     @classmethod
     @databasemethod(commit=False)
-    def _eval_function(cls, prop: WProp) -> ScalarValue:
-        """ADR-0007 read-time evaluation: fold the function's DAG over its
-        current input object. A div-by-zero / missing input renders empty."""
-        assert prop.function_uuid is not None
-        value = WFunction.evaluate_for(prop.function_uuid)
+    def _eval_function(cls, inst_uuid: UUID, function_uuid: UUID) -> ScalarValue:
+        """ADR-0029 read-time evaluation: fold the function's DAG over the
+        owner's sibling props. A div-by-zero / missing input renders empty."""
+        value = WFunction.evaluate_for(inst_uuid, function_uuid)
         return ScalarValue(value=value)
 
     @classmethod

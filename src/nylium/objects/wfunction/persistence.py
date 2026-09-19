@@ -1,24 +1,28 @@
-"""WFunction graph persistence and the recompute dependency index
-(ADR-0007): sync_graph/sync_deps, the public node/edge readers for the
-FunctionView render, and the cross-function dependency cycle check."""
+"""WFunction graph persistence and the local dependency cycle check
+(ADR-0029): sync_graph, the public node/edge readers for the FunctionView
+render, and the per-owner cross-function dependency cycle detection.
+
+ADR-0029 removed the `function_deps` input-object index: a function's
+input is now the sibling props of the object it is bound into, so the
+dependency graph is local to a single owner's prop graph. A function `A`
+(bound to prop `P` of owner `O`) reads a sibling `Q` that is itself
+computed by `B` (bound to `Q` on the same owner) — that is an edge A→B.
+A back-edge means a function would recurse forever at read time."""
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from uuid import UUID
 
 from nylium.database import databasemethod
-from nylium.tables import instances
 from nylium.tables.functions import graph
-from nylium.tables.functions.function_deps import replace_dep
 from nylium.tables.functions.function_edges import TABLE_FunctionEdges
 from nylium.tables.functions.function_nodes import TABLE_FunctionNodes
+from nylium.tables.functions.instance_function_links import function_links_of_instance
 from nylium.tables.objects.instances import get as instance_get
 from nylium.tables.objects.instances import uuids_of_kind
-from nylium.tables.values.instance_values import link_for
 from nylium.objects.wprop import WProp
 from nylium.objects.wtype import WType
-from nylium.objects.wfunction.constants import INPUT_PROP_KEY, fail
-from nylium.objects.wfunction.inputs import input_object_uuid
+from nylium.objects.wfunction.constants import NODE_GET_PROP, fail
 
 
 @databasemethod(commit=True)
@@ -34,23 +38,6 @@ def sync_graph(
 
 
 @databasemethod(commit=False)
-def sync_deps(function_uuid: UUID) -> None:
-    """Rebuild the function's function_deps row from its current input
-    link. The input prop is a link to a T object; no link -> no row."""
-    inst = instance_get(function_uuid)
-    if inst is None:
-        return
-    owner = WType.by_uuid(inst.type_uuid)
-    if owner is None or not owner.is_function:
-        return
-    prop = WProp.by_key(owner, INPUT_PROP_KEY)
-    if prop is None:
-        return
-    link = link_for(function_uuid, prop.uuid)
-    replace_dep(function_uuid, None if link is None else link.uuid)
-
-
-@databasemethod(commit=False)
 def _function_instance_uuids() -> list[UUID]:
     """Every function instance uuid (instances whose type kind is
     'function')."""
@@ -58,29 +45,40 @@ def _function_instance_uuids() -> list[UUID]:
 
 
 @databasemethod(commit=False)
-def assert_no_dependency_cycle() -> None:
-    """ADR-0007 cross-function cycle check: a function A depends on B
-    when A's input object type carries a prop computed by B (reading A
-    transitively forces reading B). A back-edge in that graph means a
-    function would recurse forever at read time. Run this on save,
-    before persisting a function or binding a prop to one."""
-    function_uuids = set(_function_instance_uuids())
-    deps: dict[UUID, set[UUID]] = {}
-    for function_uuid in function_uuids:
-        deps[function_uuid] = set()
-        input_uuid = input_object_uuid(function_uuid)
-        if input_uuid is None:
-            continue
-        inst = instances.get(input_uuid)
-        type_uuid = None if inst is None else inst.type_uuid
-        if type_uuid is None:
-            continue
-        owner = WType.by_uuid(type_uuid)
-        if owner is None:
-            continue
-        for prop in WProp.all_for(owner):
-            if prop.function_uuid is not None and prop.function_uuid in function_uuids:
-                deps[function_uuid].add(prop.function_uuid)
+def assert_no_dependency_cycle(inst_uuid: UUID) -> None:
+    """ADR-0029 local cycle check: within one owner, build the function
+    dependency graph and refuse a back-edge. Function A (bound to prop P)
+    depends on function B when A's DAG reads (via `get_prop`) a sibling
+    prop that B computes on the same owner. A cycle would recurse forever
+    at read time. Run on bind and on function DAG save."""
+    # prop_uuid -> function_uuid bound on this owner
+    bindings = {prop_uuid: fn_uuid for prop_uuid, fn_uuid in function_links_of_instance(inst_uuid)}
+    if not bindings:
+        return
+    # prop key -> prop_uuid on the owner (to map get_prop keys back)
+    inst = instance_get(inst_uuid)
+    type_uuid = None if inst is None else inst.type_uuid
+    if type_uuid is None:
+        return
+    owner = WType.by_uuid(type_uuid)
+    if owner is None:
+        return
+    prop_uuid_by_key = {prop.key: prop.uuid for prop in WProp.effective_for(owner)}
+
+    deps: dict[UUID, set[UUID]] = {fn_uuid: set() for fn_uuid in bindings.values()}
+    for fn_uuid in bindings.values():
+        for node in graph.nodes_of(fn_uuid):
+            if node.kind != NODE_GET_PROP:
+                continue
+            key = node.config.get("key")
+            if not isinstance(key, str):
+                continue
+            target_prop = prop_uuid_by_key.get(key)
+            if target_prop is None:
+                continue
+            target_fn = bindings.get(target_prop)
+            if target_fn is not None and target_fn != fn_uuid:
+                deps[fn_uuid].add(target_fn)
     _assert_acyclic(deps)
 
 

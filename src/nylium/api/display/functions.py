@@ -37,15 +37,15 @@ class FunctionEdgeView:
 
 @dataclass(config=CONFIG)
 class FunctionView:
-    """Snapshot of one Function<T,R> instance: its parameterization, its
-    input link, and its full action DAG (nodes + edges)."""
+    """Snapshot of one Function<T,R> instance: its parameterization and its
+    full action DAG (nodes + edges). ADR-0029: no input link — the input is
+    the sibling props of the object the function is bound into."""
 
     uuid: UUID
     name: str
     type_name: str
     input_type: str
     output_type: str
-    input_object_uuid: UUID | None
     nodes: list[FunctionNodeView]
     edges: list[FunctionEdgeView]
 
@@ -74,7 +74,6 @@ class FunctionView:
             type_name=owner.name,
             input_type=input_type,
             output_type=output_type,
-            input_object_uuid=WFunction.input_object_uuid(uuid),
             nodes=[
                 FunctionNodeView(
                     uuid=node.uuid,

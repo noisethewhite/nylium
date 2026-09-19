@@ -9,10 +9,9 @@ from uuid import UUID
 from fastapi.responses import Response
 from pydantic.dataclasses import dataclass
 from nylium.api.api import Api
-from nylium.api.display import FunctionView
+from nylium.api.display import FunctionView, ObjectView
 from nylium.server.bodies.shared import BODY_CONFIG, PATH_PARAMS, resolve_route_hints
 from nylium.server.errors import NotFoundError
-from nylium.server.views import TypeView
 
 
 @dataclass(config=BODY_CONFIG)
@@ -38,13 +37,13 @@ class FunctionEdgeInput:
 
 @dataclass(config=BODY_CONFIG)
 class CreateFunctionBody:
-    """A Function<T,R> instance: parameterization, input link and the
-    full action DAG in one draft."""
+    """A Function<T,R> instance (ADR-0029): parameterization + the full
+    action DAG in one draft. No input link — the function reads the sibling
+    props of the object it is bound into."""
 
     input_type: str
     output_type: str
     name: str
-    input_object_uuid: UUID | None = None
     nodes: list[FunctionNodeInput] = field(default_factory=list)
     edges: list[FunctionEdgeInput] = field(default_factory=list)
 
@@ -54,7 +53,6 @@ class CreateFunctionBody:
             body.input_type,
             body.output_type,
             body.name,
-            body.input_object_uuid,
             [(n.uuid, n.kind, n.position, n.config) for n in body.nodes],
             [
                 (e.from_node_uuid, e.from_port, e.to_node_uuid, e.to_port)
@@ -65,11 +63,10 @@ class CreateFunctionBody:
 
 @dataclass(config=BODY_CONFIG)
 class UpdateFunctionBody:
-    """Replace a function's name, input link and DAG (full-draft PUT
-    semantics — the input/output parameterization is fixed)."""
+    """Replace a function's name and DAG (full-draft PUT semantics — the
+    input/output parameterization is fixed)."""
 
     name: str
-    input_object_uuid: UUID | None = None
     nodes: list[FunctionNodeInput] = field(default_factory=list)
     edges: list[FunctionEdgeInput] = field(default_factory=list)
 
@@ -78,7 +75,6 @@ class UpdateFunctionBody:
         return Api.update_function(
             function_uuid,
             body.name,
-            body.input_object_uuid,
             [(n.uuid, n.kind, n.position, n.config) for n in body.nodes],
             [
                 (e.from_node_uuid, e.from_port, e.to_node_uuid, e.to_port)
@@ -117,16 +113,17 @@ class FunctionUuidRequest:
 
 
 @dataclass(config=BODY_CONFIG)
-class SetPropFunctionBody:
-    """Bind a Function<T,R> instance to a prop (None unbinds)."""
+class SetInstancePropFunctionBody:
+    """ADR-0029: bind a Function<T,R> to a prop of a specific object (None
+    unbinds)."""
 
     function_uuid: UUID | None = None
 
     @classmethod
-    def route(cls, name: str, prop_key: str, body: "SetPropFunctionBody") -> TypeView:
-        return TypeView.from_row(
-            Api.set_prop_function(name, prop_key, body.function_uuid)
-        )
+    def route(
+        cls, object_uuid: UUID, prop_key: str, body: "SetInstancePropFunctionBody"
+    ) -> ObjectView:
+        return Api.set_instance_prop_function(object_uuid, prop_key, body.function_uuid)
 
 
 resolve_route_hints(sys.modules[__name__])

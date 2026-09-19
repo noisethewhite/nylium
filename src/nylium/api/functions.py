@@ -15,12 +15,17 @@ if TYPE_CHECKING:
     from nylium.api.objects import ObjectsApi as _FunctionsBase
 else:
     _FunctionsBase = ApiShared
-from nylium.api.display import FunctionView
+from nylium.api.display import FunctionView, ObjectView
 from nylium.database import databasemethod
 from nylium.tables import props, types
-from nylium.tables.objects.types import Type
+from nylium.tables.functions.instance_function_links import (
+    delete_function_link,
+    delete_links_to_function,
+    instance_uuids_bound_to,
+    merge_function_link,
+)
 from nylium.objects.wformula import Formula
-from nylium.objects.wfunction import INPUT_PROP_KEY, WFunction
+from nylium.objects.wfunction import WFunction
 from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import WDate, WDatetime, WInteger, WNumeric, WString
 from nylium.objects.wtype import WType
@@ -45,17 +50,15 @@ class FunctionsApi(_FunctionsBase):
         input_type: str,
         output_type: str,
         name: str,
-        input_object_uuid: UUID | None,
         nodes: list[tuple[UUID, str, int, Mapping[str, object]]],
         edges: list[tuple[UUID, int, UUID, int]],
     ) -> FunctionView:
-        """Create a Function<T,R> instance: validate the DAG draft before
-        anything persists, materialize the parameterized type, create the
-        object (name + input link), then save the graph, index deps and
-        refuse a cross-function cycle. `nodes` items are (uuid, kind,
-        position, config) — client-generated uuids so edges can reference
-        them; `edges` items are (from_node_uuid, from_port, to_node_uuid,
-        to_port)."""
+        """Create a Function<T,R> instance (ADR-0029): validate the DAG
+        draft before anything persists, materialize the parameterized type,
+        create the object (name only — no input link), then save the graph.
+        `nodes` items are (uuid, kind, position, config) — client-generated
+        uuids so edges can reference them; `edges` items are
+        (from_node_uuid, from_port, to_node_uuid, to_port)."""
         from nylium.server.errors import ValidationError
 
         if not name.strip():
@@ -70,12 +73,8 @@ class FunctionsApi(_FunctionsBase):
         )
         owner = WFunction.ensure_type(input_type, output_type)
         props_draft: dict[str, PropInput] = {NAME_PROP_KEY: name}
-        if input_object_uuid is not None:
-            props_draft[INPUT_PROP_KEY] = input_object_uuid
         view = cls.create_object(owner.name, props_draft)
         WFunction.sync_graph(view.uuid, nodes, edges)
-        WFunction.sync_deps(view.uuid)
-        WFunction.assert_no_dependency_cycle()
         result = FunctionView.from_uuid(view.uuid)
         if result is None:
             raise RuntimeError(f"created function {view.uuid} vanished")
@@ -87,13 +86,13 @@ class FunctionsApi(_FunctionsBase):
         cls,
         uuid: UUID,
         name: str,
-        input_object_uuid: UUID | None,
         nodes: list[tuple[UUID, str, int, Mapping[str, object]]],
         edges: list[tuple[UUID, int, UUID, int]],
     ) -> FunctionView:
-        """Replace a function's DAG and re-point its input in one draft.
-        The declared input/output types are fixed (they parameterize the
-        type); only the graph, name and input link change here."""
+        """Replace a function's DAG and rename it in one draft. The
+        declared input/output types are fixed (they parameterize the type);
+        only the graph and name change here. After the graph lands, re-run
+        the per-owner cycle check on every object binding this function."""
         from nylium.server.errors import ValidationError
 
         if not name.strip():
@@ -108,13 +107,10 @@ class FunctionsApi(_FunctionsBase):
             existing.input_type,
             existing.output_type,
         )
-        props_draft: dict[str, PropInput] = {NAME_PROP_KEY: name}
-        if input_object_uuid is not None:
-            props_draft[INPUT_PROP_KEY] = input_object_uuid
-        _ = cls.update_object(uuid, props_draft)
+        _ = cls.update_object(uuid, {NAME_PROP_KEY: name})
         WFunction.sync_graph(uuid, nodes, edges)
-        WFunction.sync_deps(uuid)
-        WFunction.assert_no_dependency_cycle()
+        for owner_uuid in instance_uuids_bound_to(uuid):
+            WFunction.assert_no_dependency_cycle(owner_uuid)
         result = FunctionView.from_uuid(uuid)
         if result is None:
             raise RuntimeError(f"updated function {uuid} vanished")
@@ -125,31 +121,35 @@ class FunctionsApi(_FunctionsBase):
     def delete_function(cls, uuid: UUID) -> bool:
         if FunctionView.from_uuid(uuid) is None:
             return False
-        # unbind every prop computed through it first, then drop the object
-        # (graph + deps cascade on the FK)
-        for prop in props.where(function_uuid=uuid):
-            prop.function_uuid = None
+        # unbind every (owner, prop) computed through it first, then drop
+        # the object (graph + links cascade on the FK)
+        delete_links_to_function(uuid)
         return cls.delete_object(uuid)
 
     @classmethod
     @databasemethod(commit=True)
-    def set_prop_function(
-        cls, type_name: str, prop_key: str, function_uuid: UUID | None
-    ) -> Type:
-        """Bind a Function<T,R> instance to a prop (None unbinds). The
-        function's output type must equal the prop's value type, and a
-        formula-backed prop cannot become function-backed. Refuses a
-        cross-function dependency cycle."""
+    def set_instance_prop_function(
+        cls, inst_uuid: UUID, prop_key: str, function_uuid: UUID | None
+    ) -> ObjectView:
+        """ADR-0029: bind a Function<T,R> to a specific prop of a specific
+        object (None unbinds). The function's output type must equal the
+        prop's value type; a formula- or collect-backed prop cannot become
+        function-backed. Refuses a per-owner cross-function cycle."""
         from nylium.server.errors import ValidationError
 
-        owner = WType.by_name(type_name)
+        from nylium.tables.objects.instances import get as instance_get
+
+        inst = instance_get(inst_uuid)
+        if inst is None:
+            raise ValidationError(f"no object {inst_uuid}")
+        owner = WType.by_uuid(inst.type_uuid)
         if owner is None:
-            raise KeyError(f"no type {type_name!r}")
-        if cls._is_builtin_type(owner):
-            raise ValidationError(f"type {type_name!r} is builtin and cannot be edited")
+            raise ValidationError(f"object {inst_uuid} has no type")
         prop = WProp.by_key(owner, prop_key)
         if prop is None:
-            raise ValidationError(f"type {type_name!r} has no prop {prop_key!r}")
+            raise ValidationError(
+                f"type {owner.name!r} has no prop {prop_key!r}"
+            )
         if prop.is_trait_bound:
             raise ValidationError(
                 f"prop {prop_key!r} is {WType.ANY_PREFIX}…>-bound and cannot run a function"
@@ -171,10 +171,15 @@ class FunctionsApi(_FunctionsBase):
             raise ValidationError(
                 f"prop {prop_key!r} is a collect prop — it cannot run a function"
             )
-        props[prop.uuid].function_uuid = function_uuid
-        WFunction.assert_no_dependency_cycle()
-        result = cls._type_result(type_name)
-        return result
+        if function_uuid is None:
+            delete_function_link(inst_uuid, prop.uuid)
+        else:
+            merge_function_link(inst_uuid, prop.uuid, function_uuid)
+        WFunction.assert_no_dependency_cycle(inst_uuid)
+        view = ObjectView.from_uuid(inst_uuid)
+        if view is None:
+            raise RuntimeError(f"object {inst_uuid} vanished after function bind")
+        return view
 
     # --- internals ---
 

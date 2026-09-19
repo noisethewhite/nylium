@@ -106,6 +106,25 @@ class ObjectsApi(ApiShared):
         wrapper = WObject.wrap(uuid)
         type_name = instances[uuid].type_name
         normalized = cls._normalize_props(type_name, props)
+        # ADR-0029: function-bound props are instance-level read-only.
+        from nylium.tables.functions.instance_function_links import (
+            function_links_of_instance,
+        )
+
+        bound_prop_uuids = {prop_uuid for prop_uuid, _ in function_links_of_instance(uuid)}
+        if bound_prop_uuids:
+            owner_type = WType.by_name(type_name)
+            if owner_type is not None:
+                bound_keys = {
+                    p.key
+                    for p in WProp.effective_for(owner_type)
+                    if p.uuid in bound_prop_uuids
+                }
+                for key in normalized:
+                    if key in bound_keys:
+                        raise ValidationError(
+                            f"prop {key!r} is computed by a function on this object — it is read-only"
+                        )
         for key, value in normalized.items():
             setattr(wrapper, key, value)
         # a renamed parent (or a reordered draft) invalidates the

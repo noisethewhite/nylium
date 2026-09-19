@@ -32,7 +32,7 @@ from nylium.server.bodies.functions import (
     FunctionNodeInput,
     FunctionUuidRequest,
     ListFunctionsRequest,
-    SetPropFunctionBody,
+    SetInstancePropFunctionBody,
     UpdateFunctionBody,
 )
 from nylium.server.bodies.formulas import (
@@ -93,7 +93,7 @@ __all__ = [
     "ObjectUuidRequest",
     "RenameFileBody",
     "ReorderPropsBody",
-    "SetPropFunctionBody",
+    "SetInstancePropFunctionBody",
     "StorageRequest",
     "SyncEnumOptionItem",
     "SyncEnumOptionsBody",

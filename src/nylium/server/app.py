@@ -295,8 +295,8 @@ class NyliumApp:
             status_code=no_content, dependencies=guard,
         )
         app.add_api_route(
-            f"{prefix}/types/{{name}}/props/{{prop_key}}/function",
-            bodies.SetPropFunctionBody.route,
+            f"{prefix}/objects/{{object_uuid}}/props/{{prop_key}}/function",
+            bodies.SetInstancePropFunctionBody.route,
             methods=["PUT"], dependencies=guard,
         )
         # --- formula AST (ADR-0026) ---

@@ -28,7 +28,6 @@ class Prop(Row):
     position: int
     formula: str | None
     collect: str | None
-    function_uuid: UUID | None
 
     @property
     def owner_trait(self) -> "tuple[str, str] | None":

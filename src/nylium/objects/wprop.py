@@ -43,7 +43,6 @@ class WProp:
         self._value_trait_uuid: UUID | None = row.value_trait_uuid
         self._formula: str | None = row.formula
         self._collect: str | None = row.collect
-        self._function_uuid: UUID | None = row.function_uuid
 
     @property
     def uuid(self) -> UUID:
@@ -60,10 +59,6 @@ class WProp:
     @property
     def collect(self) -> str | None:
         return self._collect
-
-    @property
-    def function_uuid(self) -> UUID | None:
-        return self._function_uuid
 
     @property
     def is_trait_bound(self) -> bool:

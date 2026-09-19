@@ -45,7 +45,7 @@ from nylium.tables.decor import (
 from nylium.tables.values.file_values import TABLE_FileValues
 from nylium.tables.functions.function_nodes import TABLE_FunctionNodes
 from nylium.tables.functions.function_edges import TABLE_FunctionEdges
-from nylium.tables.functions.function_deps import TABLE_FunctionDeps
+from nylium.tables.functions.instance_function_links import TABLE_InstanceFunctionLinks
 
 __all__ = [
     "reg",
@@ -94,5 +94,5 @@ __all__ = [
     "trait_decor",
     "TABLE_FunctionNodes",
     "TABLE_FunctionEdges",
-    "TABLE_FunctionDeps",
+    "TABLE_InstanceFunctionLinks",
 ]

@@ -1,6 +1,7 @@
-"""Function<T, R> props (ADR-0007): DAG creation, validation, read-time
-evaluation, prop binding, write guard and cycle detection. Api-level;
-the HTTP shape lives in test_http.py."""
+"""Function<T, R> props (ADR-0007 / ADR-0029): DAG creation, validation,
+read-time evaluation over the owner's sibling props, instance-level prop
+binding, write guard and per-owner cycle detection. Api-level; the HTTP
+shape lives in test_http.py."""
 
 from decimal import Decimal
 from uuid import UUID, uuid4
@@ -30,6 +31,7 @@ def invoice_type():
             "tax": "Numeric",
             "label": "String",
             "amounts": "Array<Numeric>",
+            "taxed": "Numeric",
         },
         "Invoices",
     )
@@ -44,14 +46,11 @@ def invoice(total="100", tax="4", amounts=None):
     return Api.create_object("Invoice", props)
 
 
-def report_type():
-    return Api.create_type("Report", {"name": "String", "amount": "Numeric"}, "Reports")
-
-
-def passthrough(input_object_uuid=None):
+def passthrough():
+    """Function<Invoice, Numeric> reading sibling prop `total`."""
     _ = invoice_type()
     return Api.create_function(
-        "Invoice", "Numeric", "total", input_object_uuid,
+        "Invoice", "Numeric", "total",
         [node(uuid4(), "get_prop", 0, {"key": "total"})],
         [],
     )
@@ -65,7 +64,6 @@ def test_create_function_get_prop():
     assert fn.input_type == "Invoice"
     assert fn.output_type == "Numeric"
     assert fn.name == "total"
-    assert fn.input_object_uuid is None
     assert fn.type_name == "Function<Invoice, Numeric>"
     assert len(fn.nodes) == 1
     assert fn.nodes[0].kind == "get_prop"
@@ -94,7 +92,7 @@ def test_internal_cycle_rejected():
     a, b = uuid4(), uuid4()
     with pytest.raises(ValidationError):
         Api.create_function(
-            "Invoice", "Numeric", "cyclic", None,
+            "Invoice", "Numeric", "cyclic",
             [
                 node(a, "cast", 0, {"target": "Numeric"}),
                 node(b, "cast", 1, {"target": "Numeric"}),
@@ -107,7 +105,7 @@ def test_unknown_kind_rejected():
     _ = invoice_type()
     with pytest.raises(ValidationError):
         Api.create_function(
-            "Invoice", "Numeric", "bad", None,
+            "Invoice", "Numeric", "bad",
             [node(uuid4(), "explode", 0, {})],
             [],
         )
@@ -118,7 +116,7 @@ def test_output_type_mismatch_rejected():
     _ = invoice_type()
     with pytest.raises(ValidationError):
         Api.create_function(
-            "Invoice", "String", "mismatch", None,
+            "Invoice", "String", "mismatch",
             [node(uuid4(), "get_prop", 0, {"key": "total"})],
             [],
         )
@@ -129,7 +127,7 @@ def test_non_scalar_output_rejected():
     _ = invoice_type()
     with pytest.raises(ValidationError):
         Api.create_function(
-            "Invoice", "Array<Numeric>", "array-out", None,
+            "Invoice", "Array<Numeric>", "array-out",
             [node(uuid4(), "get_prop", 0, {"key": "amounts"})],
             [],
         )
@@ -138,23 +136,23 @@ def test_non_scalar_output_rejected():
 def test_empty_graph_rejected():
     _ = invoice_type()
     with pytest.raises(ValidationError):
-        Api.create_function("Invoice", "Numeric", "empty", None, [], [])
+        Api.create_function("Invoice", "Numeric", "empty", [], [])
 
 
-# --- evaluation (read-time) ---
+# --- evaluation (read-time, over the owner's sibling props) ---
 
 
 def test_eval_get_prop():
     inv = invoice("42")
-    fn = passthrough(inv.uuid)
-    assert WFunction.evaluate_for(fn.uuid) == Decimal("42")
+    fn = passthrough()
+    assert WFunction.evaluate_for(inv.uuid, fn.uuid) == Decimal("42")
 
 
 def test_eval_mul():
     inv = invoice("100", "5")
     a, b, c = uuid4(), uuid4(), uuid4()
     fn = Api.create_function(
-        "Invoice", "Numeric", "taxed", inv.uuid,
+        "Invoice", "Numeric", "taxed",
         [
             node(a, "get_prop", 0, {"key": "total"}),
             node(b, "get_prop", 1, {"key": "tax"}),
@@ -162,7 +160,7 @@ def test_eval_mul():
         ],
         [edge(a, 0, c, 0), edge(b, 0, c, 1)],
     )
-    assert WFunction.evaluate_for(fn.uuid) == Decimal("500")
+    assert WFunction.evaluate_for(inv.uuid, fn.uuid) == Decimal("500")
 
 
 def test_eval_div_respects_port_order():
@@ -174,7 +172,7 @@ def test_eval_div_respects_port_order():
     b = UUID("00000000-0000-0000-0000-000000000001")
     c = uuid4()
     fn = Api.create_function(
-        "Invoice", "Numeric", "ratio", inv.uuid,
+        "Invoice", "Numeric", "ratio",
         [
             node(a, "get_prop", 0, {"key": "total"}),
             node(b, "get_prop", 1, {"key": "tax"}),
@@ -182,21 +180,21 @@ def test_eval_div_respects_port_order():
         ],
         [edge(a, 0, c, 0), edge(b, 0, c, 1)],
     )
-    assert WFunction.evaluate_for(fn.uuid) == Decimal("25")
+    assert WFunction.evaluate_for(inv.uuid, fn.uuid) == Decimal("25")
 
 
 def test_eval_sum_array():
     inv = invoice(amounts=["10", "20", "30"])
     a, b = uuid4(), uuid4()
     fn = Api.create_function(
-        "Invoice", "Numeric", "sum", inv.uuid,
+        "Invoice", "Numeric", "sum",
         [
             node(a, "get_prop", 0, {"key": "amounts"}),
             node(b, "sum", 1, {}),
         ],
         [edge(a, 0, b, 0)],
     )
-    assert WFunction.evaluate_for(fn.uuid) == Decimal("60")
+    assert WFunction.evaluate_for(inv.uuid, fn.uuid) == Decimal("60")
 
 
 def test_eval_map_over_object_array():
@@ -212,7 +210,7 @@ def test_eval_map_over_object_array():
     rep = Api.create_object("Report", {"name": "r", "lines": [i1.uuid, i2.uuid]})
     a, b, c = uuid4(), uuid4(), uuid4()
     fn = Api.create_function(
-        "Report", "Numeric", "sum-lines", rep.uuid,
+        "Report", "Numeric", "sum-lines",
         [
             node(a, "get_prop", 0, {"key": "lines"}),
             node(b, "map", 1, {"key": "total"}),
@@ -220,7 +218,7 @@ def test_eval_map_over_object_array():
         ],
         [edge(a, 0, b, 0), edge(b, 0, c, 0)],
     )
-    assert WFunction.evaluate_for(fn.uuid) == Decimal("30")
+    assert WFunction.evaluate_for(rep.uuid, fn.uuid) == Decimal("30")
 
 
 def test_map_over_scalar_array_rejected():
@@ -228,7 +226,7 @@ def test_map_over_scalar_array_rejected():
     a, b, c = uuid4(), uuid4(), uuid4()
     with pytest.raises(ValidationError):
         Api.create_function(
-            "Invoice", "Numeric", "bad-map", None,
+            "Invoice", "Numeric", "bad-map",
             [
                 node(a, "get_prop", 0, {"key": "amounts"}),
                 node(b, "map", 1, {"key": "total"}),
@@ -242,7 +240,7 @@ def test_eval_div_by_zero_renders_none():
     inv = invoice("100", "0")
     a, b, c = uuid4(), uuid4(), uuid4()
     fn = Api.create_function(
-        "Invoice", "Numeric", "ratio", inv.uuid,
+        "Invoice", "Numeric", "ratio",
         [
             node(a, "get_prop", 0, {"key": "total"}),
             node(b, "get_prop", 1, {"key": "tax"}),
@@ -250,7 +248,7 @@ def test_eval_div_by_zero_renders_none():
         ],
         [edge(a, 0, c, 0), edge(b, 0, c, 1)],
     )
-    assert WFunction.evaluate_for(fn.uuid) is None
+    assert WFunction.evaluate_for(inv.uuid, fn.uuid) is None
 
 
 # --- update / delete ---
@@ -258,10 +256,10 @@ def test_eval_div_by_zero_renders_none():
 
 def test_update_function_replaces_graph():
     inv = invoice("7")
-    fn = passthrough(inv.uuid)
+    fn = passthrough()
     a, b, c = uuid4(), uuid4(), uuid4()
     updated = Api.update_function(
-        fn.uuid, "doubled", inv.uuid,
+        fn.uuid, "doubled",
         [
             node(a, "get_prop", 0, {"key": "total"}),
             node(b, "const", 1, {"value": 2}),
@@ -271,7 +269,7 @@ def test_update_function_replaces_graph():
     )
     assert updated.name == "doubled"
     assert len(updated.nodes) == 3
-    assert WFunction.evaluate_for(fn.uuid) == Decimal("14")
+    assert WFunction.evaluate_for(inv.uuid, fn.uuid) == Decimal("14")
 
 
 def test_delete_function():
@@ -281,15 +279,14 @@ def test_delete_function():
     assert Api.get_function(fn.uuid) is None
 
 
-# --- prop binding ---
+# --- instance-level prop binding (ADR-0029) ---
 
 
-def test_set_prop_function_binds_and_reads():
-    _ = report_type()
+def test_set_instance_prop_function_binds_and_reads():
     inv = invoice("10", "3")
     a, b, c = uuid4(), uuid4(), uuid4()
     fn = Api.create_function(
-        "Invoice", "Numeric", "taxed", inv.uuid,
+        "Invoice", "Numeric", "taxed",
         [
             node(a, "get_prop", 0, {"key": "total"}),
             node(b, "get_prop", 1, {"key": "tax"}),
@@ -297,88 +294,78 @@ def test_set_prop_function_binds_and_reads():
         ],
         [edge(a, 0, c, 0), edge(b, 0, c, 1)],
     )
-    type_view = Api.set_prop_function("Report", "amount", fn.uuid)
-    by_key = {p.key: p for p in type_view.props}
-    assert by_key["amount"].function_uuid == fn.uuid
-    rep = Api.create_object("Report", {"name": "r1"})
-    view = Api.get_object(rep.uuid)
-    assert view is not None
-    assert view.props["amount"] == ScalarValue(value=Decimal("30"))
+    view = Api.set_instance_prop_function(inv.uuid, "taxed", fn.uuid)
+    assert view.props["taxed"] == ScalarValue(value=Decimal("30"))
 
 
-def test_set_prop_function_unbinds():
-    _ = report_type()
+def test_set_instance_prop_function_unbinds():
+    inv = invoice("10", "3")
     fn = passthrough()
-    _ = Api.set_prop_function("Report", "amount", fn.uuid)
-    type_view = Api.set_prop_function("Report", "amount", None)
-    by_key = {p.key: p for p in type_view.props}
-    assert by_key["amount"].function_uuid is None
+    _ = Api.set_instance_prop_function(inv.uuid, "taxed", fn.uuid)
+    view = Api.set_instance_prop_function(inv.uuid, "taxed", None)
+    assert view.props["taxed"] == ScalarValue(value=None)
 
 
-def test_set_prop_function_output_type_mismatch_rejected():
-    _ = invoice_type()
-    _ = report_type()
+def test_set_instance_prop_function_output_type_mismatch_rejected():
+    inv = invoice("10", "3")
     fn = Api.create_function(
-        "Invoice", "String", "label", None,
+        "Invoice", "String", "label",
         [node(uuid4(), "get_prop", 0, {"key": "label"})],
         [],
     )
     with pytest.raises(ValidationError):
-        Api.set_prop_function("Report", "amount", fn.uuid)
+        Api.set_instance_prop_function(inv.uuid, "taxed", fn.uuid)
 
 
-def test_set_prop_function_formula_conflict_rejected():
+def test_set_instance_prop_function_formula_conflict_rejected():
     _ = invoice_type()
     _ = Api.create_type(
         "Report",
-        {"name": "String", "amount": "Numeric", "items": "Array<Invoice>"},
+        {"name": "String", "amount": "Numeric", "lines": "Array<Invoice>"},
         "Reports",
-        formulas={"amount": "SUM(items.total)"},
+        formulas={"amount": "SUM(lines.total)"},
     )
     fn = passthrough()
+    rep = Api.create_object("Report", {"name": "r"})
     with pytest.raises(ValidationError):
-        Api.set_prop_function("Report", "amount", fn.uuid)
+        Api.set_instance_prop_function(rep.uuid, "amount", fn.uuid)
 
 
 # --- write guard ---
 
 
 def test_write_guard_function_prop():
-    _ = report_type()
+    inv = invoice("10", "3")
     fn = passthrough()
-    _ = Api.set_prop_function("Report", "amount", fn.uuid)
+    _ = Api.set_instance_prop_function(inv.uuid, "taxed", fn.uuid)
     with pytest.raises(ValidationError):
-        Api.create_object("Report", {"name": "r", "amount": Decimal("5")})
-    rep = Api.create_object("Report", {"name": "r"})
-    with pytest.raises(ValidationError):
-        Api.update_object(rep.uuid, {"amount": Decimal("5")})
+        Api.update_object(inv.uuid, {"taxed": Decimal("5")})
     # plain props still write fine alongside a computed sibling
-    updated = Api.update_object(rep.uuid, {"name": "r2"})
+    updated = Api.update_object(inv.uuid, {"name": "r2"})
     assert updated.props["name"] == ScalarValue(value="r2")
 
 
-# --- cross-function dependency cycle ---
+# --- per-owner cross-function dependency cycle (ADR-0029) ---
 
 
 def test_cross_function_dependency_cycle_rejected():
-    _ = Api.create_type("Alpha", {"name": "String", "computed": "Numeric"}, "Alphas")
-    _ = Api.create_type("Beta", {"name": "String", "computed": "Numeric"}, "Betas")
-    a1 = Api.create_object("Alpha", {"name": "a1"})
-    b1 = Api.create_object("Beta", {"name": "b1"})
+    _ = Api.create_type(
+        "Node", {"name": "String", "va": "Numeric", "vb": "Numeric"}, "Nodes"
+    )
+    n1 = Api.create_object("Node", {"name": "n1"})
+    # fa reads vb; fb reads va — on the same owner they close a cycle
     fa = Api.create_function(
-        "Beta", "Numeric", "fa", b1.uuid,
-        [node(uuid4(), "get_prop", 0, {"key": "computed"})],
+        "Node", "Numeric", "fa",
+        [node(uuid4(), "get_prop", 0, {"key": "vb"})],
         [],
     )
     fb = Api.create_function(
-        "Alpha", "Numeric", "fb", a1.uuid,
-        [node(uuid4(), "get_prop", 0, {"key": "computed"})],
+        "Node", "Numeric", "fb",
+        [node(uuid4(), "get_prop", 0, {"key": "va"})],
         [],
     )
-    # FB -> Beta.computed is fine on its own: FB reads Alpha, which isn't
-    # bound yet
-    _ = Api.set_prop_function("Beta", "computed", fb.uuid)
-    # FA -> Alpha.computed closes the loop: FA reads Beta (computed by FB)
-    # and FB reads Alpha (computed by FA)
+    # fb -> vb reads va, which isn't bound yet: fine
+    _ = Api.set_instance_prop_function(n1.uuid, "vb", fb.uuid)
+    # fa -> va reads vb (computed by fb) and fb reads va: cycle
     with pytest.raises(ValidationError):
-        Api.set_prop_function("Alpha", "computed", fa.uuid)
+        Api.set_instance_prop_function(n1.uuid, "va", fa.uuid)

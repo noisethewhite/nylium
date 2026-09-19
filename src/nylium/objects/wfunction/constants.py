@@ -24,11 +24,9 @@ NODE_MAX = "max"
 NODE_CAST = "cast"
 NODE_MAP = "map"
 
-# The one pinned prop a function type carries: a link to its input object.
-INPUT_PROP_KEY = "input"
-
-# The object title prop (mirrors api.NAME_PROP_KEY) — pinned first on every
-# object type, including function types.
+# The one pinned prop every function type carries: `name` (String, like
+# every object type). ADR-0029 removed the `input` link prop — a function's
+# input is now the sibling props of the object it is bound into.
 NAME_PROP_KEY = "name"
 
 # A node output type: an exact scalar TYPE_NAME, or an Array<ElementTypeName>.

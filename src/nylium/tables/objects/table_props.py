@@ -65,7 +65,3 @@ class TABLE_Props:
     # this Array<T>'s element type. The array is derived at read time as every
     # element whose member prop falls within the owner's [from, to] bounds.
     collect: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
-    # ADR-0007: a reference to a Function<T,R> instance whose output type
-    # is this prop's value type; the result is computed lazily at read time
-    # (like a formula). Mutually exclusive with `formula`.
-    function_uuid: Mapped[UUID | None] = mapped_column(nullable=True, default=None)

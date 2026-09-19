@@ -1,8 +1,16 @@
-"""WFunction input materialization (ADR-0007): resolving the pinned
-`input` link and projecting the input object to a plain prop-key -> value
-mapping for the interpreter. A prop that is itself function-backed is
-resolved recursively (composition: a function can read another
-function's output)."""
+"""WFunction input materialization (ADR-0029): projecting the owner's
+sibling props to a plain prop-key -> value mapping for the interpreter.
+The input is no longer a pinned object — it is the object the function is
+bound into. A sibling that is itself function-backed is resolved
+recursively (composition: a function can read another function's output,
+chained through the owner's prop graph).
+
+A `visiting` set breaks the self-reference / cycle at read time: if a
+function's evaluation path re-enters a function already on the stack, that
+edge resolves to None (empty) instead of recursing forever. Bind-time
+cross-function cycle detection remains the primary guard; this is the
+belt-and-suspenders stop so a slipped cycle renders empty rather than
+overflowing the interpreter."""
 from __future__ import annotations
 
 from typing import cast
@@ -10,47 +18,39 @@ from uuid import UUID
 
 from nylium.database import databasemethod
 from nylium.tables import instances
-from nylium.tables.objects.instances import get as instance_get
-from nylium.tables.values.instance_values import link_for
+from nylium.tables.functions.instance_function_links import function_uuid_for
+from nylium.objects.wobject import WObject
 from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import ScalarPayload
 from nylium.objects.wtype import WType
-from nylium.objects.wfunction.constants import INPUT_PROP_KEY
 from nylium.objects.wfunction.evaluation import evaluate
 
 
 @databasemethod(commit=False)
-def input_object_uuid(
-    function_uuid: UUID,
-) -> UUID | None:
-    """The object the function currently reads as its input (its pinned
-    `input` link), or None when the link is unset."""
-    inst = instance_get(function_uuid)
-    if inst is None:
+def evaluate_for(inst_uuid: UUID, function_uuid: UUID) -> ScalarPayload | None:
+    """Fold the function over the owner's sibling props — the read-time
+    entry point for rendering a function-backed prop (ADR-0029)."""
+    return _evaluate_for(inst_uuid, function_uuid, frozenset())
+
+
+def _evaluate_for(
+    inst_uuid: UUID, function_uuid: UUID, visiting: frozenset[UUID]
+) -> ScalarPayload | None:
+    if function_uuid in visiting:
         return None
-    owner = WType.by_uuid(inst.type_uuid)
-    if owner is None or not owner.is_function:
-        return None
-    prop = WProp.by_key(owner, INPUT_PROP_KEY)
-    if prop is None:
-        return None
-    link = link_for(function_uuid, prop.uuid)
-    return None if link is None else link.uuid
+    return evaluate(function_uuid, _materialize_owner(inst_uuid, visiting | {function_uuid}))
 
 
 @databasemethod(commit=False)
-def materialize_input(function_uuid: UUID) -> dict[str, object]:
-    """Project the function's input object to a prop-key -> value mapping
-    the interpreter can fold over. A prop that is itself function-backed
-    is resolved recursively (composition: a function can read another
-    function's output). No input link -> empty mapping."""
-    from nylium.objects.wobject import WObject
+def materialize_owner(inst_uuid: UUID) -> dict[str, object]:
+    """Project the owner object's sibling props to a prop-key -> value
+    mapping. A function-backed sibling is resolved recursively."""
+    return _materialize_owner(inst_uuid, frozenset())
 
-    input_uuid = input_object_uuid(function_uuid)
-    if input_uuid is None:
-        return {}
-    wrapper = WObject.wrap(input_uuid)
-    inst = instances.get(input_uuid)
+
+def _materialize_owner(inst_uuid: UUID, visiting: frozenset[UUID]) -> dict[str, object]:
+    wrapper = WObject.wrap(inst_uuid)
+    inst = instances.get(inst_uuid)
     type_uuid = None if inst is None else inst.type_uuid
     if type_uuid is None:
         return {}
@@ -58,16 +58,10 @@ def materialize_input(function_uuid: UUID) -> dict[str, object]:
     if owner is None:
         return {}
     result: dict[str, object] = {}
-    for prop in WProp.all_for(owner):
-        if prop.function_uuid is not None:
-            result[prop.key] = evaluate_for(prop.function_uuid)
+    for prop in WProp.effective_for(owner):
+        bound = function_uuid_for(inst_uuid, prop.uuid)
+        if bound is not None:
+            result[prop.key] = _evaluate_for(inst_uuid, bound, visiting)
         else:
             result[prop.key] = cast(object, getattr(wrapper, prop.key))
     return result
-
-
-@databasemethod(commit=False)
-def evaluate_for(function_uuid: UUID) -> ScalarPayload | None:
-    """Fold the function over its current input object — the read-time
-    entry point for rendering a function-backed prop."""
-    return evaluate(function_uuid, materialize_input(function_uuid))
