@@ -128,9 +128,19 @@
   padding: 0 var(--space-2) var(--space-2);
 }
 
-.sidebar-section-search {
-  margin: 0 var(--space-2) var(--space-1);
+.input.sidebar-section-search {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: var(--space-2);
   font-size: var(--font-size-sm);
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+}
+
+.input.sidebar-section-search:focus {
+  border-color: var(--accent);
 }
 
 .sidebar-section-list {
@@ -145,8 +155,14 @@
 
 .type-level {
   margin-left: auto;
+  padding: 1px var(--space-2);
   font-size: var(--font-size-2xs);
-  letter-spacing: 0.02em;
+  font-weight: 500;
+  line-height: 1.6;
+  color: var(--accent);
+  background: var(--accent-dim);
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
 }
 
 .object-entry {

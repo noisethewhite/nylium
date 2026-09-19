@@ -366,7 +366,7 @@ export function Sidebar(props: {
                 <>
                   <span className="type-name-text" style={{ color: view.color }}>{view.name}</span>
                   {view.embedded && <span className="embedded-badge">embedded</span>}
-                  <span className="type-level dim">L{levelOf(view.name)}</span>
+                  <span className="type-level">{levelOf(view.name)}</span>
                 </>
               }
               onOpen={() => props.workspace.openType(view.name)}
