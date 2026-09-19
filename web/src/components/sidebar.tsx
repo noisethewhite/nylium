@@ -127,7 +127,7 @@ export function Sidebar(props: {
     [...entries].sort((a, b) => {
       const la = levelOf(key(a));
       const lb = levelOf(key(b));
-      return la !== lb ? la - lb : key(a).localeCompare(key(b));
+      return la !== lb ? lb - la : key(a).localeCompare(key(b));
     });
 
   return (
@@ -366,7 +366,7 @@ export function Sidebar(props: {
                 <>
                   <span className="type-name-text" style={{ color: view.color }}>{view.name}</span>
                   {view.embedded && <span className="embedded-badge">embedded</span>}
-                  <span className="type-level">{levelOf(view.name)}</span>
+                  <span className="dim type-level">Level {levelOf(view.name)}</span>
                 </>
               }
               onOpen={() => props.workspace.openType(view.name)}

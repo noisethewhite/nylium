@@ -155,13 +155,7 @@
 
 .type-level {
   margin-left: auto;
-  padding: 1px var(--space-2);
   font-size: var(--font-size-2xs);
-  font-weight: 500;
-  line-height: 1.6;
-  color: var(--accent);
-  background: var(--accent-dim);
-  border-radius: var(--radius-pill);
   white-space: nowrap;
 }
 
