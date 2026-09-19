@@ -394,6 +394,81 @@ export abstract class TypeNames {
   }
 }
 
+/** Reference-chain depth of a type — how long its longest chain of
+ * object links runs. A type with no object links is level 1; a type
+ * linking to a level-N type is N+1. Cycles and `Any<Trait>` links count
+ * as one step without recursing (a link to an unknown or already-visited
+ * object is just "one object further away"). Used to order the sidebar's
+ * Types and Objects sections by how deep each type's reference chain is. */
+export abstract class TypeLevels {
+  /** Marker for an `Any<Trait>` prop: a polymorphic object link whose
+   * concrete target can't be resolved statically. */ 
+  private static readonly ANY_LINK = "*";
+
+  static compute(types: readonly TypeView[]): ReadonlyMap<string, number> {
+    const byName = new Map(types.map((t) => [t.name, t] as const));
+    const isObject = (name: string): boolean => {
+      const view = byName.get(name);
+      return view !== undefined && view.kind === "object" && !view.embedded;
+    };
+    // name -> type names one link away (ANY_LINK = polymorphic link).
+    const targets = new Map<string, string[]>();
+    for (const view of types) {
+      if (view.kind !== "object" || view.embedded) {
+        continue;
+      }
+      const links: string[] = [];
+      for (const prop of view.props) {
+        const valueType = prop.value_type;
+        if (TypeNames.isAny(valueType)) {
+          links.push(TypeLevels.ANY_LINK);
+        } else if (TypeNames.isArray(valueType)) {
+          const element = TypeNames.elementOf(valueType);
+          if (isObject(element)) {
+            links.push(element);
+          }
+        } else if (
+          !TypeNames.isScalar(valueType) &&
+          !TypeNames.isUnitNumeric(valueType) &&
+          !TypeNames.isFileType(valueType) &&
+          !TypeNames.isFunction(valueType) &&
+          isObject(valueType)
+        ) {
+          links.push(valueType);
+        }
+      }
+      targets.set(view.name, links);
+    }
+    const level = new Map<string, number>();
+    const visiting = new Set<string>();
+    const depth = (name: string): number => {
+      const cached = level.get(name);
+      if (cached !== undefined) {
+        return cached;
+      }
+      if (visiting.has(name)) {
+        return 0; // reference cycle — stop deepening this branch
+      }
+      visiting.add(name);
+      let max = 0;
+      for (const link of targets.get(name) ?? []) {
+        const d = link === TypeLevels.ANY_LINK ? 1 : depth(link);
+        if (d > max) {
+          max = d;
+        }
+      }
+      visiting.delete(name);
+      const result = 1 + max;
+      level.set(name, result);
+      return result;
+    };
+    for (const name of targets.keys()) {
+      depth(name);
+    }
+    return level;
+  }
+}
+
 /** Human-facing labels for the calendar family — everything else
  * shows its raw type name. */
 export const TypeLabels: Readonly<Record<string, string>> = {

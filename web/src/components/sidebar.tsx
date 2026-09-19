@@ -1,6 +1,6 @@
 import type { ReactElement, ReactNode } from "react";
-import { useRef, useState } from "react";
-import { TypeNames } from "../contracts";
+import { Fragment, useMemo, useRef, useState } from "react";
+import { TypeLevels, TypeNames } from "../contracts";
 import { AuthStore } from "../state/auth";
 import { useObservable } from "../state/use-observable";
 import { WorkspaceStore } from "../state/workspace";
@@ -43,6 +43,59 @@ function SidebarRow(props: {
   );
 }
 
+/** A collapsible explorer section: a header toggles a search box and a
+ * scrollable list of rows. Generic over the item type so every section
+ * (Types, Objects, Traits, …) shares one markup and one search path. */
+function SidebarSection<T>(props: {
+  title: string;
+  items: readonly T[];
+  getKey: (item: T) => string;
+  getLabel: (item: T) => string;
+  render: (item: T) => ReactNode;
+}): ReactElement {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const needle = query.trim().toLowerCase();
+  const matches = props.items.filter((item) =>
+    props.getLabel(item).toLowerCase().includes(needle),
+  );
+  return (
+    <div className="sidebar-section">
+      <button
+        className="sidebar-section-header"
+        onClick={() => setOpen((value) => !value)}
+      >
+        <span className="sidebar-section-title">{props.title}</span>
+        <span className="sidebar-section-count">{props.items.length}</span>
+        <span
+          className={`material-symbols-outlined sidebar-section-caret${open ? " open" : ""}`}
+          style={{ fontSize: 15, color: "var(--fg-dim)" }}
+        >
+          expand_more
+        </span>
+      </button>
+      {open && (
+        <div className="sidebar-section-body">
+          <input
+            className="input sidebar-section-search"
+            placeholder={`Search ${props.title.toLowerCase()}…`}
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+          <div className="sidebar-section-list">
+            {matches.map((item) => (
+              <Fragment key={props.getKey(item)}>{props.render(item)}</Fragment>
+            ))}
+            {matches.length === 0 && (
+              <div className="sidebar-section-empty dim">No matches</div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** Temporary explorer: every type and every object, flat. */
 export function Sidebar(props: {
   workspace: WorkspaceStore;
@@ -62,6 +115,20 @@ export function Sidebar(props: {
   );
   const fileTypes = state.types.filter((view) => TypeNames.isFileType(view.name));
   const scalarTypes = state.types.filter((view) => TypeNames.isScalar(view.name));
+  // Reference-chain depth per object type — orders Types and Objects by
+  // how deep each type's link chain runs (a type linking to level-N is
+  // N+1). Non-object kinds and unresolved names fall back to level 1.
+  const levels = useMemo(() => TypeLevels.compute(state.types), [state.types]);
+  const levelOf = (name: string): number => levels.get(name) ?? 1;
+  const byLevel = <T,>(
+    entries: readonly T[],
+    key: (entry: T) => string,
+  ): readonly T[] =>
+    [...entries].sort((a, b) => {
+      const la = levelOf(key(a));
+      const lb = levelOf(key(b));
+      return la !== lb ? la - lb : key(a).localeCompare(key(b));
+    });
 
   return (
     <aside
@@ -287,80 +354,104 @@ export function Sidebar(props: {
             <span>Calendar</span>
           </button>
         </div>
-        <div className="sidebar-section">Types</div>
-        {types.map((view) => (
-          <SidebarRow
-            key={view.name}
-            icon={<TypeIcon icon={view.icon} color={view.color} />}
-            label={
-              <>
+        <SidebarSection
+          title="Types"
+          items={byLevel(types, (view) => view.name)}
+          getKey={(view) => view.name}
+          getLabel={(view) => view.name}
+          render={(view) => (
+            <SidebarRow
+              icon={<TypeIcon icon={view.icon} color={view.color} />}
+              label={
+                <>
+                  <span className="type-name-text" style={{ color: view.color }}>{view.name}</span>
+                  {view.embedded && <span className="embedded-badge">embedded</span>}
+                </>
+              }
+              onOpen={() => props.workspace.openType(view.name)}
+              deleteTitle={`Delete type ${view.name}`}
+              onDelete={() => void props.workspace.deleteType(view.name)}
+            />
+          )}
+        />
+        <SidebarSection
+          title="Files"
+          items={fileTypes}
+          getKey={(view) => view.name}
+          getLabel={(view) => view.name}
+          render={(view) => (
+            <SidebarRow
+              icon={<TypeIcon icon={view.icon} color={view.color} />}
+              label={
                 <span className="type-name-text" style={{ color: view.color }}>{view.name}</span>
-                {view.embedded && <span className="embedded-badge">embedded</span>}
-              </>
-            }
-            onOpen={() => props.workspace.openType(view.name)}
-            deleteTitle={`Delete type ${view.name}`}
-            onDelete={() => void props.workspace.deleteType(view.name)}
-          />
-        ))}
-        <div className="sidebar-section">Files</div>
-        {fileTypes.map((view) => (
-          <SidebarRow
-            key={view.name}
-            icon={<TypeIcon icon={view.icon} color={view.color} />}
-            label={
-              <span className="type-name-text" style={{ color: view.color }}>{view.name}</span>
-            }
-            onOpen={() => props.workspace.openType(view.name)}
-          />
-        ))}
-        <div className="sidebar-section">Traits</div>
-        {state.traits.map((trait) => (
-          <SidebarRow
-            key={trait.name}
-            icon={<span className="trait-dot" style={{ background: trait.color }} />}
-            label={<span>{trait.name}</span>}
-            onOpen={() => props.workspace.openTrait(trait.name)}
-            deleteTitle={`Delete trait ${trait.name}`}
-            onDelete={() => void props.workspace.deleteTrait(trait.name)}
-          />
-        ))}
-        <div className="sidebar-section">Scalars</div>
-        {scalarTypes.map((view) => (
-          <SidebarRow
-            key={view.name}
-            icon={<TypeIcon icon={view.icon} color={view.color} variant="scalar" />}
-            label={<span className="scalar-name">{view.name}</span>}
-            onOpen={() => props.workspace.openType(view.name)}
-          />
-        ))}
-        <div className="sidebar-section">Functions</div>
-        {state.functions.map((fn) => (
-          <SidebarRow
-            key={fn.uuid}
-            icon={<span className="tab-function-icon">ƒ</span>}
-            label={<span>{fn.name}</span>}
-            onOpen={() => props.workspace.openFunction(fn.uuid)}
-            deleteTitle={`Delete function ${fn.name}`}
-            onDelete={() => void props.workspace.deleteFunction(fn.uuid)}
-          />
-        ))}
-        <div className="sidebar-section">Objects</div>
-        {state.objects.map((view) => {
-          const type = state.types.find((entry) => entry.name === view.type_name);
-          return (
-            <button
-              className="type-row object-entry"
-              key={view.uuid}
-              title={view.uuid}
-              onClick={() => props.workspace.openObject(view.uuid)}
-            >
-              {type !== undefined && <TypeIcon icon={type.icon} color={type.color} />}
-              <span className="type-row-name">{ObjectLabels.of(view)}</span>
-              <span className="dim">{view.type_name}</span>
-            </button>
-          );
-        })}
+              }
+              onOpen={() => props.workspace.openType(view.name)}
+            />
+          )}
+        />
+        <SidebarSection
+          title="Traits"
+          items={state.traits}
+          getKey={(trait) => trait.name}
+          getLabel={(trait) => trait.name}
+          render={(trait) => (
+            <SidebarRow
+              icon={<span className="trait-dot" style={{ background: trait.color }} />}
+              label={<span>{trait.name}</span>}
+              onOpen={() => props.workspace.openTrait(trait.name)}
+              deleteTitle={`Delete trait ${trait.name}`}
+              onDelete={() => void props.workspace.deleteTrait(trait.name)}
+            />
+          )}
+        />
+        <SidebarSection
+          title="Scalars"
+          items={scalarTypes}
+          getKey={(view) => view.name}
+          getLabel={(view) => view.name}
+          render={(view) => (
+            <SidebarRow
+              icon={<TypeIcon icon={view.icon} color={view.color} variant="scalar" />}
+              label={<span className="scalar-name">{view.name}</span>}
+              onOpen={() => props.workspace.openType(view.name)}
+            />
+          )}
+        />
+        <SidebarSection
+          title="Functions"
+          items={state.functions}
+          getKey={(fn) => fn.uuid}
+          getLabel={(fn) => fn.name}
+          render={(fn) => (
+            <SidebarRow
+              icon={<span className="tab-function-icon">ƒ</span>}
+              label={<span>{fn.name}</span>}
+              onOpen={() => props.workspace.openFunction(fn.uuid)}
+              deleteTitle={`Delete function ${fn.name}`}
+              onDelete={() => void props.workspace.deleteFunction(fn.uuid)}
+            />
+          )}
+        />
+        <SidebarSection
+          title="Objects"
+          items={byLevel(state.objects, (view) => view.type_name)}
+          getKey={(view) => view.uuid}
+          getLabel={(view) => ObjectLabels.of(view)}
+          render={(view) => {
+            const type = state.types.find((entry) => entry.name === view.type_name);
+            return (
+              <button
+                className="type-row object-entry"
+                title={view.uuid}
+                onClick={() => props.workspace.openObject(view.uuid)}
+              >
+                {type !== undefined && <TypeIcon icon={type.icon} color={type.color} />}
+                <span className="type-row-name">{ObjectLabels.of(view)}</span>
+                <span className="dim">{view.type_name}</span>
+              </button>
+            );
+          }}
+        />
       </nav>
       <div className="sidebar-footer">
         <span className="sidebar-user">{authState.userName}</span>
