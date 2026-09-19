@@ -1,18 +1,16 @@
-"""Rows and table Mappings — the whole SQL seam in one place.
-
-A ``Row`` is a dataclass-flavoured snapshot of one mapped row: the
-constructor copies every column out of the SQLAlchemy object, attribute
-and item access read the snapshot, and assignment (``row.name = x`` or
-``row["name"] = x``) writes through to the database with an UPDATE.
-The primary key is identity: set at creation, never written through.
+"""The ``Table`` Mapping — the read/reverse-lookup half of the SQL seam.
 
 A ``Table`` is ``Mapping[K, Row]`` over one mapped class: ``table[key]``
 SELECTs and constructs the Row, ``table.where(**eq)`` is the single
 reverse-lookup every table answers with, and ``table.all()`` is
 ``where()`` with no criteria. Concrete tables live next to their mapped
 class in ``nylium/tables/`` and add only real business operations
-(``create``/``sync``/``delete``); SQLAlchemy never leaves this module
-and those.
+(``create``/``sync``/``delete``); SQLAlchemy never leaves this module and
+those.
+
+``Row`` (the writable snapshot) lives in ``row.py``; it is re-exported
+here so ``from nylium.database.table import Row`` keeps working at every
+existing import site.
 
 This module imports no ``nylium.tables`` code — importing a table's
 package triggers ``tables/__init__``, which reaches back for ``Row`` /
@@ -24,74 +22,14 @@ from collections.abc import Generator, Iterator, Mapping
 from typing import ClassVar, Generic, TypeVar, cast, override
 
 import sqlalchemy as sqla
-from sqlalchemy.orm import Mapper
 
 from nylium.database import Database
 from nylium.database.databasemethod import databasemethod
+from nylium.database.row import Row as Row, mapper
 from nylium.database.sessioncontext import SessionContext
 
 _K = TypeVar("_K")
 _R = TypeVar("_R", bound="Row")
-_M = TypeVar("_M")
-
-
-def _mapper(mapped: type[_M]) -> Mapper[_M]:
-    mapper = sqla.inspect(mapped)
-    if not isinstance(mapper, Mapper):
-        raise TypeError(f"{mapped!r} is not a mapped class")
-    return cast("Mapper[_M]", mapper)
-
-
-class Row:
-    """A writable snapshot of one mapped row.
-
-    Subclasses set ``__table__`` to their mapped class and annotate the
-    columns for typing (``name: str``); the values themselves are plain
-    instance attributes copied in by the constructor.
-    """
-
-    __table__: ClassVar[type[object]]
-
-    def __init__(self, row: object) -> None:
-        columns = _mapper(type(row)).columns
-        for column in columns:
-            object.__setattr__(self, column.name, getattr(row, column.name))
-
-    @classmethod
-    def pk_name(cls) -> str:
-        """The PK column name (``uuid`` for most, ``token_hash`` /
-        ``challenge`` in auth), read off the mapped class."""
-        return cast(str, _mapper(cls.__table__).primary_key[0].name)
-
-    @override
-    def __setattr__(self, name: str, value: object) -> None:
-        object.__setattr__(self, name, value)
-        columns = _mapper(self.__table__).columns
-        if name in columns and name != self.pk_name():
-            self.persist(name, value)
-
-    def __getitem__(self, name: str) -> object:
-        return cast(object, getattr(self, name))
-
-    def __setitem__(self, name: str, value: object) -> None:
-        setattr(self, name, value)
-
-    @databasemethod(commit=True)
-    def persist(self, column: str, value: object) -> None:
-        """Write one column through: UPDATE … SET column = value WHERE pk.
-
-        ``commit=True`` joins the owner-commits-once semantics: nested
-        writes inside an outer databasemethod share its session and commit
-        once at the boundary, so a multi-field edit stays atomic.
-        """
-        columns = _mapper(self.__table__).columns
-        pk = self.pk_name()
-        pk_value = cast(object, getattr(self, pk))
-        _ = Database.execute(
-            sqla.update(self.__table__)
-            .where(columns[pk] == pk_value)
-            .values({column: value})
-        )
 
 
 class Table(Generic[_K, _R], Mapping[_K, _R]):
@@ -117,7 +55,7 @@ class Table(Generic[_K, _R], Mapping[_K, _R]):
 
     @override
     def __iter__(self) -> Iterator[_K]:
-        pk = _mapper(self._mapped).columns[self.__row__.pk_name()]
+        pk = mapper(self._mapped).columns[self.__row__.pk_name()]
         with SessionContext():
             keys = list(Database.scalars(sqla.select(pk)))
         yield from cast("list[_K]", keys)
