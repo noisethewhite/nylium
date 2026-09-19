@@ -23,11 +23,9 @@ function SidebarRow(props: {
   onOpen: () => void;
   deleteTitle?: string;
   onDelete?: () => void;
-  /** Rendered as a thin outline instead of the "embedded" text badge. */
-  embedded?: boolean;
 }): ReactElement {
   return (
-    <div className={`type-row${props.embedded ? " type-row-embedded" : ""}`}>
+    <div className="type-row">
       <button className="type-row-name" onClick={props.onOpen}>
         {props.icon}
         {props.label}
@@ -366,11 +364,15 @@ export function Sidebar(props: {
               icon={<TypeIcon icon={view.icon} color={view.color} />}
               label={
                 <>
-                  <span className="type-name-text" style={{ color: view.color }}>{view.name}</span>
+                  <span
+                    className={`type-name-text${view.embedded ? " type-name-embedded" : ""}`}
+                    style={{ color: view.color }}
+                  >
+                    {view.name}
+                  </span>
                   <span className="dim type-level">Level {levelOf(view.name)}</span>
                 </>
               }
-              embedded={view.embedded}
               onOpen={() => props.workspace.openType(view.name)}
               deleteTitle={`Delete type ${view.name}`}
               onDelete={() => void props.workspace.deleteType(view.name)}

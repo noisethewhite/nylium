@@ -48,14 +48,11 @@
   background: var(--bg-hover);
 }
 
-/* embedded types get a thin outline instead of a text badge */
-.type-row-embedded {
+/* embedded types: outline the name itself, not the whole row */
+.type-name-embedded {
+  padding: 0 var(--space-2);
   border: 1px solid var(--separator);
-}
-
-.type-row-embedded .type-row-name {
-  /* keep the outline hugging the label, not the delete zone */
-  border-radius: var(--radius-small);
+  border-radius: var(--radius-pill);
 }
 
 .type-row-selected {
@@ -81,6 +78,7 @@
 /* long type names truncate with an ellipsis instead of widening the
  * row and forcing a horizontal scrollbar on the section list */
 .type-row-name .type-name-text {
+  flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
