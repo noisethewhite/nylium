@@ -298,6 +298,40 @@ def test_set_instance_prop_function_binds_and_reads():
     assert view.props["taxed"] == ScalarValue(value=Decimal("30"))
 
 
+def test_function_chain_recomputes_across_bindings():
+    # fb -> taxed = total * tax; fa -> grand = taxed * 2. fa reads a
+    # function-backed sibling, so changing total cascades through fb.
+    inv = invoice("10", "3")
+    a, b, c = uuid4(), uuid4(), uuid4()
+    fb = Api.create_function(
+        "Invoice", "Numeric", "taxed",
+        [
+            node(a, "get_prop", 0, {"key": "total"}),
+            node(b, "get_prop", 1, {"key": "tax"}),
+            node(c, "mul", 2, {}),
+        ],
+        [edge(a, 0, c, 0), edge(b, 0, c, 1)],
+    )
+    d, e, f = uuid4(), uuid4(), uuid4()
+    fa = Api.create_function(
+        "Invoice", "Numeric", "grand",
+        [
+            node(d, "get_prop", 0, {"key": "taxed"}),
+            node(e, "const", 1, {"value": 2}),
+            node(f, "mul", 2, {}),
+        ],
+        [edge(d, 0, f, 0), edge(e, 0, f, 1)],
+    )
+    _ = Api.set_instance_prop_function(inv.uuid, "taxed", fb.uuid)
+    # fa isn't bound to a prop on Invoice, but we can evaluate the chain
+    # directly: materialize_owner resolves the function-backed `taxed` via fb
+    assert WFunction.evaluate_for(inv.uuid, fa.uuid) == Decimal("60")
+    # mutate total -> taxed (30 -> 12) -> grand (60 -> 24) recomputes
+    _ = Api.update_object(inv.uuid, {"total": Decimal("4")})
+    assert WFunction.evaluate_for(inv.uuid, fb.uuid) == Decimal("12")
+    assert WFunction.evaluate_for(inv.uuid, fa.uuid) == Decimal("24")
+
+
 def test_set_instance_prop_function_unbinds():
     inv = invoice("10", "3")
     fn = passthrough()
@@ -321,9 +355,32 @@ def test_set_instance_prop_function_formula_conflict_rejected():
     _ = invoice_type()
     _ = Api.create_type(
         "Report",
-        {"name": "String", "amount": "Numeric", "lines": "Array<Invoice>"},
+        {
+            "name": "String",
+            "amount": "Numeric",
+            "subtotal": "Numeric",
+            "lines": "Array<Invoice>",
+        },
         "Reports",
         formulas={"amount": "SUM(lines.total)"},
+    )
+    # a Function<Report, Numeric> — right owner, wrong prop (formula-backed)
+    fn = Api.create_function(
+        "Report", "Numeric", "read-subtotal",
+        [node(uuid4(), "get_prop", 0, {"key": "subtotal"})],
+        [],
+    )
+    rep = Api.create_object("Report", {"name": "r"})
+    with pytest.raises(ValidationError):
+        Api.set_instance_prop_function(rep.uuid, "amount", fn.uuid)
+
+
+def test_set_instance_prop_function_input_type_mismatch_rejected():
+    # a Function<Invoice, Numeric> cannot bind to a Report prop — its
+    # get_prop nodes read Invoice siblings, not Report siblings
+    _ = invoice_type()
+    _ = Api.create_type(
+        "Report", {"name": "String", "amount": "Numeric"}, "Reports"
     )
     fn = passthrough()
     rep = Api.create_object("Report", {"name": "r"})

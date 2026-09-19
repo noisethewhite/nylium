@@ -158,6 +158,11 @@ class FunctionsApi(_FunctionsBase):
             fn = FunctionView.from_uuid(function_uuid)
             if fn is None:
                 raise ValidationError(f"{function_uuid} is not a function instance")
+            if fn.input_type != owner.name:
+                raise ValidationError(
+                    f"function reads {fn.input_type!r} siblings but the object is "
+                    + f"a {owner.name!r}"
+                )
             if fn.output_type != prop.value_type().name:
                 raise ValidationError(
                     f"function output {fn.output_type!r} does not match "

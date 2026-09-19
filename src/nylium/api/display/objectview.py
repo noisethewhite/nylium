@@ -76,6 +76,10 @@ class ObjectView:
     props: dict[str, PropValue]
     tags: list[TagView] = field(default_factory=list)
     backlinks: list[ObjectRef] = field(default_factory=list)
+    # ADR-0029: instance-level function bindings — prop_key -> function_uuid.
+    # The frontend uses this to mark computed/read-only props instead of the
+    # removed type-level props.function_uuid.
+    function_bindings: dict[str, UUID] = field(default_factory=dict)
 
     @classmethod
     @databasemethod(commit=False)
@@ -95,6 +99,7 @@ class ObjectView:
         )
 
         bound = dict(function_links_of_instance(uuid))
+        effective = list(WProp.effective_for(owner))
         props = {
             prop.key: cls._eval_function(uuid, bound[prop.uuid])
             if prop.uuid in bound
@@ -106,7 +111,12 @@ class ObjectView:
                 cast(StoredValue, getattr(wrapper, prop.key)),
                 prop.value_spec_name(),
             )
-            for prop in WProp.effective_for(owner)
+            for prop in effective
+        }
+        function_bindings = {
+            prop.key: bound[prop.uuid]
+            for prop in effective
+            if prop.uuid in bound
         }
         return cls(
             uuid=uuid,
@@ -114,6 +124,7 @@ class ObjectView:
             props=props,
             tags=cls._tags_for(uuid, owner.name),
             backlinks=cls._backlinks_for(uuid),
+            function_bindings=function_bindings,
         )
 
     @classmethod
