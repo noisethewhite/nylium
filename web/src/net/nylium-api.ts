@@ -197,7 +197,7 @@ export class NyliumApi extends HttpTransport {
     return this.requestVoid("DELETE", `/objects/${uuid}`);
   }
 
-  /** ADR-0007: function instances — parameterization + DAG. */
+  /** ADR-0029: function instances — parameterization + DAG. */
   listFunctions(): Promise<FunctionView[]> {
     return this.request("GET", "/functions");
   }
@@ -210,7 +210,6 @@ export class NyliumApi extends HttpTransport {
     inputType: string,
     outputType: string,
     name: string,
-    inputObjectUuid: string | null,
     nodes: FunctionNodeInput[],
     edges: FunctionEdgeInput[],
   ): Promise<FunctionView> {
@@ -218,7 +217,6 @@ export class NyliumApi extends HttpTransport {
       input_type: inputType,
       output_type: outputType,
       name,
-      input_object_uuid: inputObjectUuid,
       nodes,
       edges,
     });
@@ -227,13 +225,11 @@ export class NyliumApi extends HttpTransport {
   updateFunction(
     uuid: string,
     name: string,
-    inputObjectUuid: string | null,
     nodes: FunctionNodeInput[],
     edges: FunctionEdgeInput[],
   ): Promise<FunctionView> {
     return this.request("PUT", `/functions/${encodeURIComponent(uuid)}`, {
       name,
-      input_object_uuid: inputObjectUuid,
       nodes,
       edges,
     });
@@ -243,15 +239,16 @@ export class NyliumApi extends HttpTransport {
     return this.requestVoid("DELETE", `/functions/${encodeURIComponent(uuid)}`);
   }
 
-  /** Bind (or, with null, unbind) a Function<T,R> to a prop. */
-  setPropFunction(
-    typeName: string,
+  /** ADR-0029: bind (or, with null, unbind) a Function<T,R> to a prop of a
+   * specific object. The server answers with the updated object. */
+  setInstancePropFunction(
+    objectUuid: string,
     propKey: string,
     functionUuid: string | null,
-  ): Promise<TypeView> {
+  ): Promise<ObjectView> {
     return this.request(
       "PUT",
-      `/types/${encodeURIComponent(typeName)}/props/${encodeURIComponent(propKey)}/function`,
+      `/objects/${encodeURIComponent(objectUuid)}/props/${encodeURIComponent(propKey)}/function`,
       { function_uuid: functionUuid },
     );
   }

@@ -584,12 +584,11 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
     return fresh;
   }
 
-  /** ADR-0007: create a Function<T,R> instance and open it as a tab. */
+  /** ADR-0029: create a Function<T,R> instance and open it as a tab. */
   async createFunction(
     inputType: string,
     outputType: string,
     name: string,
-    inputObjectUuid: string | null,
     nodes: FunctionNodeInput[],
     edges: FunctionEdgeInput[],
   ): Promise<void> {
@@ -598,7 +597,6 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
         inputType,
         outputType,
         name,
-        inputObjectUuid,
         nodes,
         edges,
       );
@@ -609,12 +607,11 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
     });
   }
 
-  /** ADR-0007: persist a function's DAG/parameterization. Computed props
+  /** ADR-0029: persist a function's DAG/parameterization. Computed props
    * change value on the next read, so every object re-pulls. */
   async saveFunctionEdits(
     uuid: string,
     name: string,
-    inputObjectUuid: string | null,
     nodes: FunctionNodeInput[],
     edges: FunctionEdgeInput[],
   ): Promise<void> {
@@ -622,7 +619,6 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
       const updated = await this.api.updateFunction(
         uuid,
         name,
-        inputObjectUuid,
         nodes,
         edges,
       );
@@ -634,7 +630,7 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
     });
   }
 
-  /** ADR-0007: deleting a function unbinds every prop that referenced it. */
+  /** ADR-0029: deleting a function unbinds every instance prop referencing it. */
   async deleteFunction(uuid: string): Promise<void> {
     await this.guard(async () => {
       await this.api.deleteFunction(uuid);
@@ -653,20 +649,20 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
     });
   }
 
-  /** ADR-0007: bind/unbind a function on a prop (null unbinds). The
-   * server answers with the schema whose prop now carries the uuid. */
-  async setPropFunction(
-    typeName: string,
+  /** ADR-0029: bind/unbind a function on an instance prop (null unbinds).
+   * The server answers with the updated object — swap it into state and
+   * re-pull every object of that type so the computed value is fresh. */
+  async setInstancePropFunction(
+    objectUuid: string,
     propKey: string,
     functionUuid: string | null,
   ): Promise<void> {
     await this.guard(async () => {
-      const updated = await this.api.setPropFunction(typeName, propKey, functionUuid);
+      const updated = await this.api.setInstancePropFunction(objectUuid, propKey, functionUuid);
       this.setState({
         ...this.getSnapshot(),
-        types: this.getSnapshot().types.map((t) => (t.name === typeName ? updated : t)),
+        objects: this.getSnapshot().objects.map((o) => (o.uuid === objectUuid ? updated : o)),
       });
-      await this.refreshObjectsOf(typeName);
     });
   }
 

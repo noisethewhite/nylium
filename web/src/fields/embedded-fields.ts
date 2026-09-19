@@ -109,7 +109,6 @@ export class EmbeddedFieldModel extends FieldModel {
         (prop) =>
           prop.key !== "name" &&
           prop.formula === null &&
-          prop.function_uuid === null &&
           prop.collect === null,
       )
       .map((prop) =>

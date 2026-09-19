@@ -16,10 +16,6 @@ export interface PropView {
   /** ADR-0025: a collect member key on the Array<T>'s element type, or
    * null for a plain stored prop. Derived at read time, read-only. */
   collect: string | null;
-  /** ADR-0007: uuid of a Function<T,R> instance whose DAG computes this
-   * prop on read, or null. Mutually exclusive with `formula`; like
-   * formula-backed props it is read-only on the wire. */
-  function_uuid: string | null;
 }
 
 /** ADR-0026: the formula AST as a discriminated JSON union — the block
@@ -129,6 +125,9 @@ export interface ObjectView {
   /** ADR-0020: reverse link projection — every object pointing at this
    * one through a link prop or array membership */
   backlinks: ObjectRef[];
+  /** ADR-0029: instance-level function bindings — prop key -> function
+   * uuid. Keys present here are function-computed on read (read-only). */
+  function_bindings: Record<string, string>;
 }
 
 /** ADR-0008: a first-class file entity — a self-contained `files` row.
@@ -172,15 +171,15 @@ export interface FunctionEdgeView {
   to_port: number;
 }
 
-/** ADR-0007: a Function<T,R> instance — parameterization, input link,
- * and the full action DAG. */
+/** ADR-0029: a Function<T,R> instance — parameterization and the full
+ * action DAG. Input is the owner object type T, resolved at read time
+ * from the sibling props of the object the function is bound to. */
 export interface FunctionView {
   uuid: string;
   name: string;
   type_name: string;
   input_type: string;
   output_type: string;
-  input_object_uuid: string | null;
   nodes: FunctionNodeView[];
   edges: FunctionEdgeView[];
 }

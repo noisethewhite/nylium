@@ -670,7 +670,6 @@ function EmbeddedTableEditor({
     (prop) =>
       prop.key !== "name" &&
       prop.formula === null &&
-      prop.function_uuid === null &&
       prop.collect === null,
   );
   const columns = allColumns.filter((column) => !hidden.has(column.key));

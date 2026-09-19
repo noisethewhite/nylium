@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 import { useEffect, useState } from "react";
-import type { FormulaNode, FunctionView, TypeView } from "../contracts";
+import type { FormulaNode, TypeView } from "../contracts";
 import { TypeNames } from "../contracts";
 import { useObservable } from "../state/use-observable";
 import { useSaveShortcut } from "../state/use-save-shortcut";
@@ -279,20 +279,6 @@ export function TypeViewPanel(props: {
             <>
               {scalar && (
                 <>
-                  <FunctionBindButton
-                    bound={schemaProp.function_uuid !== null}
-                    boundName={
-                      state.functions.find((fn) => fn.uuid === schemaProp.function_uuid)?.name ??
-                      null
-                    }
-                    functions={state.functions.filter((fn) => {
-                      const params = TypeNames.functionParams(fn.type_name);
-                      return params !== null && params.output === row.valueType;
-                    })}
-                    onBind={(uuid) =>
-                      void workspace.setPropFunction(schema.name, schemaProp.key, uuid)
-                    }
-                  />
                   <FormulaBindButton
                     formula={row.formula}
                     schema={schema}
@@ -350,63 +336,6 @@ export function TypeViewPanel(props: {
         </button>
       </div>
     </div>
-  );
-}
-
-/** ADR-0007: binds a Function<T,R> to a scalar prop (or unbinds it). The
- * menu lists every function whose output type equals the prop's value
- * type — the backend enforces the same match on save. */
-function FunctionBindButton(props: {
-  bound: boolean;
-  boundName: string | null;
-  functions: FunctionView[];
-  onBind: (uuid: string | null) => void;
-}): ReactElement {
-  return (
-    <FloatingMenu
-      wrapperClassName="function-bind"
-      triggerClassName={props.bound ? "function-bind-trigger bound" : "function-bind-trigger"}
-      menuClassName="type-menu"
-      title={props.bound ? `Bound to ${props.boundName ?? "function"}` : "Bind function"}
-      trigger={
-        <span className="function-bind-label">
-          <span className="tab-function-icon">ƒ</span>
-          {props.boundName !== null && <span className="function-bind-name">{props.boundName}</span>}
-        </span>
-      }
-    >
-      {(close) => (
-        <div className="type-menu-list">
-          {props.bound && (
-            <button
-              className="type-menu-row"
-              onClick={() => {
-                props.onBind(null);
-                close();
-              }}
-            >
-              Unbind
-            </button>
-          )}
-          {props.functions.length === 0 && (
-            <div className="type-menu-empty dim">No function with a matching output.</div>
-          )}
-          {props.functions.map((fn) => (
-            <button
-              key={fn.uuid}
-              className="type-menu-row"
-              onClick={() => {
-                props.onBind(fn.uuid);
-                close();
-              }}
-            >
-              <span className="tab-function-icon">ƒ</span>
-              <span>{fn.name}</span>
-            </button>
-          ))}
-        </div>
-      )}
-    </FloatingMenu>
   );
 }
 

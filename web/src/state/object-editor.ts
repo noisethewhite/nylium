@@ -86,18 +86,26 @@ export class ObjectEditorStore extends Observable<EditorState> {
       return view !== undefined && view.embedded ? view : undefined;
     };
     const fields = schema.props
-      .filter((prop) => prop.formula === null && prop.function_uuid === null)
+      .filter(
+        (prop) =>
+          prop.formula === null &&
+          !(prop.key in object.function_bindings),
+      )
       .map((prop) =>
         FieldFactory.create(prop, object.props[prop.key], enumOptionsOf, unitPartsOf, embeddedSchemaOf),
       );
     const computed: ComputedProp[] = schema.props
-      .filter((prop) => prop.formula !== null || prop.function_uuid !== null)
+      .filter(
+        (prop) =>
+          prop.formula !== null ||
+          prop.key in object.function_bindings,
+      )
       .map((prop) => ({
         key: prop.key,
         valueType: prop.value_type,
         value: object.props[prop.key],
         formula: prop.formula,
-        functionUuid: prop.function_uuid,
+        functionUuid: object.function_bindings[prop.key] ?? null,
       }));
     const store = new ObjectEditorStore(
       { object, fields, computed, saving: false, dirty: false, error: null },
@@ -179,6 +187,17 @@ export class ObjectEditorStore extends Observable<EditorState> {
 
   async deleteObject(): Promise<void> {
     await this.workspace.deleteObject(this.getSnapshot().object.uuid);
+  }
+
+  /** ADR-0029: bind/unbind a Function<T,R> on one of this object's scalar
+   * props (null unbinds). The server answers with the updated object and
+   * the workspace swaps it into state, which remounts this editor. */
+  async setPropFunction(propKey: string, functionUuid: string | null): Promise<void> {
+    await this.workspace.setInstancePropFunction(
+      this.getSnapshot().object.uuid,
+      propKey,
+      functionUuid,
+    );
   }
 
   /** ADR-0005 tag chips — member-side writes against the owner's

@@ -5,7 +5,6 @@ import { TypeNames } from "../contracts";
 import { useObservable } from "../state/use-observable";
 import { usePinTabOnEdit } from "../state/use-pin-tab-on-edit";
 import { WorkspaceStore } from "../state/workspace";
-import { ObjectLabels } from "./object-labels";
 import { TypeIcon } from "./type-icon";
 import { TypeSelect } from "./type-select";
 import type { EdgeDraft, NodeDraft } from "./function-editor-logic";
@@ -38,9 +37,6 @@ export function FunctionEditor(props: {
   const [outputType, setOutputType] = useState(
     existing?.output_type ?? TypeNames.NUMERIC,
   );
-  const [inputObjectUuid, setInputObjectUuid] = useState<string | null>(
-    existing?.input_object_uuid ?? null,
-  );
   const [nodes, setNodes] = useState<NodeDraft[]>(
     existing === undefined
       ? []
@@ -60,9 +56,6 @@ export function FunctionEditor(props: {
     (view) => view.kind === "object" && !view.embedded,
   );
   const inputSchema = state.types.find((view) => view.name === inputType);
-  const inputObjects = state.objects.filter(
-    (view) => view.type_name === inputType,
-  );
   // get_prop reads scalar or array props only
   const readableProps =
     inputSchema === undefined
@@ -207,7 +200,6 @@ export function FunctionEditor(props: {
     (name === existing.name &&
       inputType === existing.input_type &&
       outputType === existing.output_type &&
-      inputObjectUuid === existing.input_object_uuid &&
       JSON.stringify(wireNodes) === JSON.stringify(existing.nodes) &&
       JSON.stringify(wireEdges) === JSON.stringify(existing.edges));
   usePinTabOnEdit(workspace, !pristine);
@@ -223,7 +215,6 @@ export function FunctionEditor(props: {
         inputType,
         outputType,
         name.trim(),
-        inputObjectUuid,
         wireNodes,
         wireEdges,
       );
@@ -231,7 +222,6 @@ export function FunctionEditor(props: {
       void workspace.saveFunctionEdits(
         uuid,
         name.trim(),
-        inputObjectUuid,
         wireNodes,
         wireEdges,
       );
@@ -274,7 +264,6 @@ export function FunctionEditor(props: {
               options={inputTypes.map((view) => view.name)}
               onChange={(value) => {
                 setInputType(value);
-                setInputObjectUuid(null);
               }}
               emptyLabel="— object type —"
               placeholder="Search object types…"
@@ -291,25 +280,6 @@ export function FunctionEditor(props: {
               onChange={setOutputType}
               placeholder="Search scalars…"
             />
-          </span>
-        </label>
-        <label className="field">
-          <span className="field-label">Input object</span>
-          <span className="field-body">
-            <select
-              className="input"
-              value={inputObjectUuid ?? ""}
-              onChange={(event) =>
-                setInputObjectUuid(event.target.value === "" ? null : event.target.value)
-              }
-            >
-              <option value="">— none (compose on read) —</option>
-              {inputObjects.map((object) => (
-                <option key={object.uuid} value={object.uuid}>
-                  {ObjectLabels.of(object)}
-                </option>
-              ))}
-            </select>
           </span>
         </label>
       </div>

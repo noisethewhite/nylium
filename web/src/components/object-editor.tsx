@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 import { useMemo } from "react";
-import type { ObjectView, PropValue, TypeView } from "../contracts";
+import type { FunctionView, ObjectView, PropValue, TypeView } from "../contracts";
 import { PropValues, TypeNames, WireUrls } from "../contracts";
 import { ObjectEditorStore } from "../state/object-editor";
 import { useObservable } from "../state/use-observable";
@@ -11,6 +11,7 @@ import { FieldEditor } from "./field-editors";
 import { BacklinkChips } from "./backlink-chips";
 import { TagChips } from "./tag-chips";
 import { TypeIcon } from "./type-icon";
+import { FloatingMenu } from "./floating-menu";
 import { FieldModel } from "../fields/field-model";
 import { TextFieldModel } from "../fields/scalar-fields";
 
@@ -32,6 +33,7 @@ export function ObjectEditor(props: {
       key={props.object.uuid}
       object={props.object}
       schema={schema}
+      functions={state.functions}
       workspace={props.workspace}
     />
   );
@@ -40,6 +42,7 @@ export function ObjectEditor(props: {
 function ObjectEditorInner(props: {
   object: ObjectView;
   schema: TypeView;
+  functions: readonly FunctionView[];
   workspace: WorkspaceStore;
 }): ReactElement {
   const store = useMemo(
@@ -97,10 +100,28 @@ function ObjectEditorInner(props: {
               <span className="computed-badge dim">
                 {prop.functionUuid !== null ? "function" : "formula"}
               </span>
+              {prop.functionUuid !== null && (
+                <button
+                  className="function-bind-trigger bound"
+                  title="Unbind function"
+                  onClick={() => void store.setPropFunction(prop.key, null)}
+                >
+                  <span className="function-bind-label">
+                    <span className="tab-function-icon">ƒ</span>
+                    <span className="function-bind-name">unbind</span>
+                  </span>
+                </button>
+              )}
             </div>
           ))}
         </div>
       )}
+      <FunctionBindSection
+        object={props.object}
+        schema={props.schema}
+        functions={props.functions}
+        onBind={(propKey, uuid) => void store.setPropFunction(propKey, uuid)}
+      />
       <div className="object-editor-fields">
         {groupTraitFields(gridFields, props.schema).map((segment) => {
           if (segment.trait === null) {
@@ -148,6 +169,105 @@ function ObjectEditorInner(props: {
           Delete
         </button>
       </div>
+    </div>
+  );
+}
+
+/** ADR-0029: instance-level function binding. Lists every bindable scalar
+ * prop of this object and, for each, a menu of functions whose input type
+ * is this object's type and whose output type equals the prop's value
+ * type — the backend enforces the same match. Bound props carry an
+ * "unbind" row instead. */
+function FunctionBindSection(props: {
+  object: ObjectView;
+  schema: TypeView;
+  functions: readonly FunctionView[];
+  onBind: (propKey: string, functionUuid: string | null) => void;
+}): ReactElement | null {
+  const bindable = props.schema.props.filter(
+    (prop) =>
+      prop.key !== "name" &&
+      prop.formula === null &&
+      prop.collect === null &&
+      prop.trait === null &&
+      TypeNames.isScalar(prop.value_type),
+  );
+  if (bindable.length === 0) {
+    return null;
+  }
+  return (
+    <div className="object-editor-functions">
+      <div className="computed-header dim">Functions</div>
+      {bindable.map((prop) => {
+        const boundUuid = props.object.function_bindings[prop.key] ?? null;
+        const boundName =
+          props.functions.find((fn) => fn.uuid === boundUuid)?.name ?? null;
+        const candidates = props.functions.filter(
+          (fn) =>
+            fn.input_type === props.object.type_name &&
+            fn.output_type === prop.value_type,
+        );
+        return (
+          <div className="function-bind-row" key={prop.key}>
+            <span className="function-bind-prop">{prop.key}</span>
+            <FloatingMenu
+              wrapperClassName="function-bind"
+              triggerClassName={
+                boundUuid !== null
+                  ? "function-bind-trigger bound"
+                  : "function-bind-trigger"
+              }
+              title={
+                boundUuid !== null
+                  ? `Bound to ${boundName ?? "function"}`
+                  : "Bind function"
+              }
+              trigger={
+                <span className="function-bind-label">
+                  <span className="tab-function-icon">ƒ</span>
+                  {boundName !== null && (
+                    <span className="function-bind-name">{boundName}</span>
+                  )}
+                </span>
+              }
+            >
+              {(close) => (
+                <div className="type-menu-list">
+                  {boundUuid !== null && (
+                    <button
+                      className="type-menu-row"
+                      onClick={() => {
+                        props.onBind(prop.key, null);
+                        close();
+                      }}
+                    >
+                      Unbind
+                    </button>
+                  )}
+                  {candidates.length === 0 && (
+                    <div className="type-menu-empty dim">
+                      No function with a matching output.
+                    </div>
+                  )}
+                  {candidates.map((fn) => (
+                    <button
+                      key={fn.uuid}
+                      className="type-menu-row"
+                      onClick={() => {
+                        props.onBind(prop.key, fn.uuid);
+                        close();
+                      }}
+                    >
+                      <span className="tab-function-icon">ƒ</span>
+                      <span>{fn.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </FloatingMenu>
+          </div>
+        );
+      })}
     </div>
   );
 }
