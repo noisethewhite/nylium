@@ -143,6 +143,12 @@
   font-size: var(--font-size-sm);
 }
 
+.type-level {
+  margin-left: auto;
+  font-size: var(--font-size-2xs);
+  letter-spacing: 0.02em;
+}
+
 .object-entry {
   width: 100%;
   text-align: left;
