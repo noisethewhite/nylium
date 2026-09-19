@@ -1,6 +1,6 @@
 import type { ReactElement, ReactNode } from "react";
-import { Fragment, useMemo, useRef, useState } from "react";
-import { TypeLevels, TypeNames } from "../contracts";
+import { Fragment, useRef, useState } from "react";
+import { TypeNames } from "../contracts";
 import { AuthStore } from "../state/auth";
 import { useObservable } from "../state/use-observable";
 import { WorkspaceStore } from "../state/workspace";
@@ -115,11 +115,11 @@ export function Sidebar(props: {
   );
   const fileTypes = state.types.filter((view) => TypeNames.isFileType(view.name));
   const scalarTypes = state.types.filter((view) => TypeNames.isScalar(view.name));
-  // Reference-chain depth per object type — orders Types and Objects by
-  // how deep each type's link chain runs (a type linking to level-N is
-  // N+1). Non-object kinds and unresolved names fall back to level 1.
-  const levels = useMemo(() => TypeLevels.compute(state.types), [state.types]);
-  const levelOf = (name: string): number => levels.get(name) ?? 1;
+  // Reference-chain depth per object type, computed server-side and carried
+  // on each TypeView. Orders Types and Objects by how deep each type's
+  // link chain runs; non-object kinds fall back to level 1.
+  const levelOf = (name: string): number =>
+    state.types.find((view) => view.name === name)?.level ?? 1;
   const byLevel = <T,>(
     entries: readonly T[],
     key: (entry: T) => string,
