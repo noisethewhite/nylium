@@ -78,6 +78,8 @@ def test_types_roundtrip(auth_client: TestClient) -> None:
     assert created["name"] == "Book"
     assert created["plural_name"] == "Books"
     assert {prop["key"] for prop in created["props"]} == {"name", "title", "pages"}
+    # a scalar-only type is level 1 (no object links)
+    assert created["level"] == 1
 
     names = {view["name"] for view in auth_client.get("/api/types").json()}
     assert "Book" in names

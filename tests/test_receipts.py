@@ -10,6 +10,7 @@ from nylium.api import Api
 from nylium.api.display import ArrayValue, EmbeddedValue, ObjectRef, RefValue, ScalarValue
 from nylium.objects.quantity import Quantity
 from nylium.server.codec import PropCodec
+from nylium.server.views import TypeView
 
 
 def _currency() -> None:
@@ -46,6 +47,20 @@ def test_receipt_item_embedded_without_name():
         "quantity",
         "line_total",
     ]
+
+
+def test_reference_levels_include_embedded_types():
+    """Server-side reference-chain depth: Product -> 1 (leaf), ReceiptItem
+    -> 2 (links `product: Product`), Receipt -> 3 (links
+    `lines: Array<ReceiptItem>`). Embedded types are full nodes — a bug in
+    the old frontend computation dropped them, flattening everything to 1."""
+    _receipt_schema()
+    views = TypeView.from_rows(Api.list_types())
+    by_name = {view.name: view.level for view in views}
+    assert by_name["Product"] == 1
+    assert by_name["ReceiptItem"] == 2
+    assert by_name["Receipt"] == 3
+
 
 
 def test_product_backlink_projects_every_receipt_item():

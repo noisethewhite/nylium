@@ -243,7 +243,7 @@ class ListTypesRequest:
 
     @classmethod
     def route(cls, _request: Annotated["ListTypesRequest", PATH_PARAMS]) -> list[TypeView]:
-        return [TypeView.from_row(type_) for type_ in Api.list_types()]
+        return TypeView.from_rows(Api.list_types())
 
 
 resolve_route_hints(sys.modules[__name__])

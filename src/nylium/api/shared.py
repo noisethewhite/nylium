@@ -2,7 +2,7 @@
 (ADR-0015)."""
 from __future__ import annotations
 
-from typing import TypeAlias, cast
+from typing import ClassVar, TypeAlias, cast
 from uuid import UUID
 
 from nylium.api.display import ObjectRef
@@ -60,6 +60,75 @@ class ApiShared:
             or WType.unit_param_of(name) is not None
             or WType.is_function_name(name)
         )
+
+    # Marker for a polymorphic `Any<Trait>` prop link: a concrete target
+    # can't be resolved statically, so it contributes one step and stops.
+    _ANY_LINK: ClassVar[str] = "*"
+
+    @classmethod
+    def reference_levels(cls, rows: list[Type]) -> dict[str, int]:
+        """Depth of each object type's longest reference chain.
+
+        A type with no object links is level 1; a type linking to a
+        level-N type is N+1. `Array<T>` counts as a link to T, `Any<Trait>`
+        as one step without recursing. Embedded types participate as full
+        nodes: they link to other types and other types link to them
+        (ReceiptItem -> Product, Receipt -> Array<ReceiptItem>). Cycles are
+        broken at first revisit. Each aggregate navigation opens its own
+        session, so this is callable with or without an active one.
+
+        Lives here, not on WType, for the same reason as `_is_builtin_type`:
+        excluding scalars from the object graph needs WScalar.
+        """
+        object_names = {
+            row.name
+            for row in rows
+            if row.kind == WType.KIND_OBJECT
+            and not WScalar.is_scalar(row.name)
+            and WType.unit_param_of(row.name) is None
+            and not WType.is_array_name(row.name)
+            and not WType.is_function_name(row.name)
+        }
+        links: dict[str, list[str | None]] = {}
+        for row in rows:
+            if row.name not in object_names:
+                continue
+            deps: list[str | None] = []
+            for prop in row.props:
+                value_type = prop.value_type
+                if WType.is_any_name(value_type):
+                    deps.append(cls._ANY_LINK)
+                elif WType.is_array_name(value_type):
+                    element = WType.element_name(value_type)
+                    if element in object_names:
+                        deps.append(element)
+                elif value_type in object_names:
+                    deps.append(value_type)
+            links[row.name] = deps
+        level: dict[str, int] = {}
+        visiting: set[str] = set()
+
+        def depth(name: str) -> int:
+            cached = level.get(name)
+            if cached is not None:
+                return cached
+            if name in visiting:
+                return 0  # reference cycle — stop deepening this branch
+            visiting.add(name)
+            best = 0
+            for dep in links.get(name, ()):
+                if dep is None or dep == cls._ANY_LINK:
+                    best = max(best, 1)
+                else:
+                    best = max(best, depth(dep))
+            visiting.discard(name)
+            result = 1 + best
+            level[name] = result
+            return result
+
+        for name in links:
+            _ = depth(name)
+        return level
 
     @classmethod
     def _type_result(cls, name: str) -> Type:

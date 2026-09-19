@@ -118,13 +118,21 @@ class TypeView:
     color: str
     kind: str
     embedded: bool
+    level: int
     traits: list[str]
     enum_options: list[EnumOptionView]
     unit_parts: list[UnitPartView]
     props: list[PropView]
 
     @classmethod
-    def from_row(cls, type_: Type) -> Self:
+    def from_row(cls, type_: Type, level: int | None = None) -> Self:
+        # Level is derived from the whole type graph, so it's computed on
+        # demand when the caller didn't already batch it (see from_rows).
+        if level is None:
+            from nylium.api.shared import ApiShared
+            from nylium.tables.objects.types import types
+
+            level = ApiShared.reference_levels(list(types.all())).get(type_.name, 1)
         return cls(
             name=type_.name,
             plural_name=type_.plural_name,
@@ -132,6 +140,7 @@ class TypeView:
             color=type_.color,
             kind=type_.kind,
             embedded=type_.embedded,
+            level=level,
             traits=[trait.name for trait in type_.traits],
             enum_options=[
                 EnumOptionView.from_row(option) for option in type_.enum_options
@@ -139,6 +148,14 @@ class TypeView:
             unit_parts=[UnitPartView.from_row(part) for part in type_.unit_parts],
             props=[PropView.from_row(prop) for prop in type_.props],
         )
+
+    @classmethod
+    def from_rows(cls, rows: list[Type]) -> list[Self]:
+        """Build all type views with levels computed once over the graph."""
+        from nylium.api.shared import ApiShared
+
+        levels = ApiShared.reference_levels(rows)
+        return [cls.from_row(type_, levels.get(type_.name, 1)) for type_ in rows]
 
 
 @dataclass(config=_CONFIG)
