@@ -9,10 +9,10 @@ from uuid import UUID
 
 import sqlalchemy as sqla
 
-from nylium.database import Database, use_same_session
+from nylium.database import Database
 
 
-@use_same_session
+@Database.use_same_session
 def collect_range(
     prop_uuid: UUID, spec_name: str, lo: object, hi: object
 ) -> list[UUID]:

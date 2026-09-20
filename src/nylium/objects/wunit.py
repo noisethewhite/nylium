@@ -12,7 +12,7 @@ from __future__ import annotations
 from decimal import Decimal
 from uuid import UUID
 
-from nylium.database import commit_after_this, use_same_session
+from nylium.database import Database
 from nylium.objects.tables.unit_parts import unit_parts
 from nylium.tables.values import cells
 from nylium.tables.values.numeric_values import read_with_unit, write_with_unit
@@ -61,7 +61,7 @@ class WUnit:
         return Quantity(value=canonical, unit=value.unit)
 
     @classmethod
-    @use_same_session
+    @Database.use_same_session
     def read(
         cls, inst_uuid: UUID, prop: WProp, type_name: str
     ) -> Quantity | None:
@@ -90,7 +90,7 @@ class WUnit:
         return Quantity(value=display, unit=entered_unit)
 
     @classmethod
-    @commit_after_this
+    @Database.commit_after_this
     def write(
         cls, inst_uuid: UUID, prop: WProp, quantity: Quantity | None
     ) -> None:

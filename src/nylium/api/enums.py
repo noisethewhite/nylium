@@ -4,7 +4,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from nylium.api.shared import ApiShared
-from nylium.database import commit_after_this
+from nylium.database import Database
 from nylium.objects.tables import enum_options
 from nylium.tables.decor import type_decor
 from nylium.objects.tables.types import Type
@@ -14,7 +14,7 @@ from nylium.objects.wtype import WType
 
 class EnumsApi(ApiShared):
     @classmethod
-    @commit_after_this
+    @Database.commit_after_this
     def create_enum(
         cls,
         name: str,
@@ -41,7 +41,7 @@ class EnumsApi(ApiShared):
         return cls._type_result(final_name)
 
     @classmethod
-    @commit_after_this
+    @Database.commit_after_this
     def sync_enum_options(
         cls, name: str, items: list[tuple[UUID | None, str]]
     ) -> Type:

@@ -10,7 +10,7 @@ from uuid import UUID
 
 import sqlalchemy as sqla
 
-from nylium.database import Database, commit_after_this, use_same_session
+from nylium.database import Database
 from nylium.database.table import Row, Table
 from nylium.objects.rows.instance import Instance as Instance
 from nylium.objects.tables.table_instances import TABLE_Instances as TABLE_Instances
@@ -40,7 +40,7 @@ class Instances(Table[UUID, Instance]):
 
     __row__: ClassVar[type[Row]] = Instance
 
-    @commit_after_this
+    @Database.commit_after_this
     def create(
         self,
         uuid: UUID,
@@ -66,14 +66,14 @@ class Instances(Table[UUID, Instance]):
 instances = Instances()
 
 
-@use_same_session
+@Database.use_same_session
 def get(uuid: UUID) -> Instance | None:
     """The instance row, or None when the uuid is unknown."""
     row = Database.get(TABLE_Instances, uuid)
     return Instance(row) if row is not None else None
 
 
-@use_same_session
+@Database.use_same_session
 def delete_row(uuid: UUID) -> None:
     """Delete the instance row itself (caller handles value cleanup)."""
     row = Database.get(TABLE_Instances, uuid)
@@ -81,7 +81,7 @@ def delete_row(uuid: UUID) -> None:
         Database.delete(row)
 
 
-@use_same_session
+@Database.use_same_session
 def touch(uuid: UUID) -> None:
     """Bump modified_at after any prop write."""
     _ = Database.execute(
@@ -91,7 +91,7 @@ def touch(uuid: UUID) -> None:
     )
 
 
-@use_same_session
+@Database.use_same_session
 def owned_uuids(owner_object_uuid: UUID) -> list[UUID]:
     """Uuids of every embedded instance owned by the given object."""
     return list(
@@ -103,7 +103,7 @@ def owned_uuids(owner_object_uuid: UUID) -> list[UUID]:
     )
 
 
-@use_same_session
+@Database.use_same_session
 def existing_uuids(uuids: list[UUID]) -> set[UUID]:
     """The subset of ``uuids`` that are real instance rows (ADR-0019)."""
     if not uuids:
@@ -115,7 +115,7 @@ def existing_uuids(uuids: list[UUID]) -> set[UUID]:
     )
 
 
-@use_same_session
+@Database.use_same_session
 def uuids_of_kind(kind: str) -> list[UUID]:
     """Uuids of every instance whose type has the given kind (ADR-0019)."""
     return list(

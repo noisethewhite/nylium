@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import cast, override
 from uuid import UUID
 
-from nylium.database import commit_after_this, use_same_session
+from nylium.database import Database
 from nylium.objects.tables.instances import get as get_instance_row
 from nylium.objects.tables.instances import touch as touch_instance
 from nylium.tables.values import cells, instance_values
@@ -30,7 +30,7 @@ from nylium.objects.wobject.persistence import PersistenceMixin
 class AttrsMixin(PersistenceMixin):
     # --- attribute machinery ---
 
-    @use_same_session
+    @Database.use_same_session
     def _prop_and_type(self, key: str) -> tuple[WProp, str]:
         inst = get_instance_row(self._uuid)
         if inst is None:
@@ -43,7 +43,7 @@ class AttrsMixin(PersistenceMixin):
             raise AttributeError(f"{owner.name} has no prop {key!r}")
         return prop, prop.value_spec_name()
 
-    @use_same_session
+    @Database.use_same_session
     def __getattr__(self, key: str) -> StoredValue:
         prop, value_type = self._prop_and_type(key)
         scalar = WScalar.by_type_name(value_type)
@@ -64,7 +64,7 @@ class AttrsMixin(PersistenceMixin):
         return WTypeMeta.root().wrap(link.uuid)
 
     @override
-    @commit_after_this
+    @Database.commit_after_this
     def __setattr__(self, key: str, value: StoredValue) -> None:
         if key.startswith(PRIVATE_PREFIX):
             object.__setattr__(self, key, value)
@@ -109,7 +109,7 @@ class AttrsMixin(PersistenceMixin):
         self._touch()
 
     @override
-    @commit_after_this
+    @Database.commit_after_this
     def __delattr__(self, key: str) -> None:
         if key.startswith(PRIVATE_PREFIX):
             object.__delattr__(self, key)
@@ -143,6 +143,6 @@ class AttrsMixin(PersistenceMixin):
             instance_values.delete_row(link)
         self._touch()
 
-    @commit_after_this
+    @Database.commit_after_this
     def _touch(self) -> None:
         touch_instance(self._uuid)

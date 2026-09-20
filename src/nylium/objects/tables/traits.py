@@ -6,7 +6,7 @@ from uuid import UUID
 
 import sqlalchemy as sqla
 
-from nylium.database import Database, commit_after_this, use_same_session
+from nylium.database import Database
 from nylium.database.table import Row, Table
 from nylium.objects.tables.table_traits import TABLE_Traits as TABLE_Traits
 from nylium.objects.tables.table_type_traits import TABLE_TypeTraits as TABLE_TypeTraits
@@ -31,7 +31,7 @@ class Traits(Table[UUID, Trait]):
 
     __row__: ClassVar[type[Row]] = Trait
 
-    @commit_after_this
+    @Database.commit_after_this
     def create(self, name: str, color: str) -> Trait:
         from nylium.tables.decor import trait_decor
 
@@ -41,14 +41,14 @@ class Traits(Table[UUID, Trait]):
         _ = trait_decor.create(row.uuid, color)
         return Trait(row)
 
-    @commit_after_this
+    @Database.commit_after_this
     def delete(self, uuid: UUID) -> None:
         row = Database.get(TABLE_Traits, uuid)
         if row is not None:
             Database.delete(row)  # its props cascade
 
 
-@use_same_session
+@Database.use_same_session
 def uuid_by_name(name: str) -> UUID | None:
     """The trait uuid for a name, or None (ADR-0019: trait lookup)."""
     return Database.scalar(
@@ -56,7 +56,7 @@ def uuid_by_name(name: str) -> UUID | None:
     )
 
 
-@use_same_session
+@Database.use_same_session
 def name_of(uuid: UUID) -> str | None:
     """The trait's name by uuid, or None when the trait is gone (ADR-0019)."""
     row = Database.get(TABLE_Traits, uuid)

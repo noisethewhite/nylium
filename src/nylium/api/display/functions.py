@@ -7,7 +7,7 @@ from uuid import UUID
 
 from pydantic.dataclasses import dataclass
 
-from nylium.database import use_same_session
+from nylium.database import Database
 from nylium.objects.tables import instances
 from nylium.objects import WObject, WType
 from nylium.objects.wfunction import WFunction
@@ -50,7 +50,7 @@ class FunctionView:
     edges: list[FunctionEdgeView]
 
     @classmethod
-    @use_same_session
+    @Database.use_same_session
     def from_uuid(cls, uuid: UUID) -> Self | None:
         inst = instances.get(uuid)
         type_uuid = None if inst is None else inst.type_uuid

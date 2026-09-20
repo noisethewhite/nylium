@@ -24,7 +24,6 @@ from typing import ClassVar, Generic, TypeVar, cast, override
 import sqlalchemy as sqla
 
 from nylium.database import Database
-from nylium.database.databasemethod import use_same_session
 from nylium.database.row import Row as Row, mapper
 from nylium.database.sessioncontext import SessionContext
 
@@ -46,7 +45,7 @@ class Table(Generic[_K, _R], Mapping[_K, _R]):
     def _mapped(self) -> type[object]:
         return self.__row__.__table__
 
-    @use_same_session
+    @Database.use_same_session
     def __getitem__(self, key: _K) -> _R:
         row = Database.get(self._mapped, key)
         if row is None:

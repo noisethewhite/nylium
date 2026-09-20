@@ -12,12 +12,12 @@ from uuid import UUID, uuid4
 
 import sqlalchemy as sqla
 
-from nylium.database import Database, use_same_session
+from nylium.database import Database
 from nylium.tables.functions.function_edges import TABLE_FunctionEdges
 from nylium.tables.functions.function_nodes import TABLE_FunctionNodes
 
 
-@use_same_session
+@Database.use_same_session
 def nodes_of(function_uuid: UUID) -> list[TABLE_FunctionNodes]:
     """The function's DAG nodes, in layout order."""
     return list(
@@ -29,7 +29,7 @@ def nodes_of(function_uuid: UUID) -> list[TABLE_FunctionNodes]:
     )
 
 
-@use_same_session
+@Database.use_same_session
 def edges_of(function_uuid: UUID) -> list[TABLE_FunctionEdges]:
     """The function's dataflow edges."""
     return list(
@@ -41,7 +41,7 @@ def edges_of(function_uuid: UUID) -> list[TABLE_FunctionEdges]:
     )
 
 
-@use_same_session
+@Database.use_same_session
 def sync_graph(
     function_uuid: UUID,
     nodes: Sequence[tuple[UUID | None, str, int, Mapping[str, object]]],

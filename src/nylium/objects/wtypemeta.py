@@ -17,7 +17,7 @@ from collections.abc import Callable
 from typing import ClassVar, Protocol, TypeAlias, cast, get_args, get_origin
 from uuid import UUID
 
-from nylium.database import commit_after_this, use_same_session
+from nylium.database import Database
 from nylium.objects.tables.instances import get as instance_get
 from nylium.objects.tables.traits import uuid_by_name as trait_uuid_by_name
 from nylium.objects.tables.type_traits import is_attached
@@ -98,7 +98,7 @@ class WTypeMeta(type):
         return mcls._root
 
     @classmethod
-    @use_same_session
+    @Database.use_same_session
     def check_link(mcls, expected_name: str, value: object) -> None:
         root = mcls.root()
         if not isinstance(value, root):
@@ -124,7 +124,7 @@ class WTypeMeta(type):
             )
 
     @classmethod
-    @use_same_session
+    @Database.use_same_session
     def check_trait_link(mcls, trait_name: str, value: object) -> None:
         """ADR-0013: an Any<TraitName> prop accepts a link to any object
         whose *type* carries the trait. Embedded targets are rejected just
@@ -151,7 +151,7 @@ class WTypeMeta(type):
             )
 
     @classmethod
-    @commit_after_this
+    @Database.commit_after_this
     def _materialize(mcls, cls: type[WObjectShape], namespace: dict[str, object]) -> None:
         WScalar.ensure_builtins()
         owner = WType.ensure(cls.__name__)

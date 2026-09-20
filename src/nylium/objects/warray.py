@@ -15,7 +15,7 @@ from __future__ import annotations
 from typing import cast
 from uuid import UUID, uuid4
 
-from nylium.database import commit_after_this, use_same_session
+from nylium.database import Database
 from nylium.objects.tables import instances
 from nylium.tables.files import type_name_of as file_type_name_of
 from nylium.objects.tables.instances import delete_row as delete_instance_row, get as instance_get
@@ -39,12 +39,12 @@ ARRAY_INSTANCE_NAME = "array"
 
 class WArray:
     @classmethod
-    @use_same_session
+    @Database.use_same_session
     def read(cls, array_uuid: UUID, elem_type: str) -> list[StoredValue]:
         return [cls._unwrap(uuid, elem_type) for uuid in element_uuids_of(array_uuid)]
 
     @classmethod
-    @commit_after_this
+    @Database.commit_after_this
     def write(
         cls,
         owner_uuid: UUID,
@@ -62,7 +62,7 @@ class WArray:
         cls._fill(array_uuid, elem_type, values, owner_uuid, prop)
 
     @classmethod
-    @commit_after_this
+    @Database.commit_after_this
     def destroy(cls, array_uuid: UUID) -> None:
         """Delete the array instance and every box it owns, recursively."""
         cls._destroy_boxes(array_uuid)
@@ -72,7 +72,7 @@ class WArray:
     # --- internals ---
 
     @classmethod
-    @commit_after_this
+    @Database.commit_after_this
     def _fill(
         cls,
         array_uuid: UUID,
@@ -88,7 +88,7 @@ class WArray:
             )
 
     @classmethod
-    @commit_after_this
+    @Database.commit_after_this
     def _destroy_boxes(cls, array_uuid: UUID) -> None:
         box_uuids = element_uuids_of(array_uuid)
         # detach pointer rows first: FK array_values.value_uuid -> instances
@@ -98,7 +98,7 @@ class WArray:
             cls._destroy_box(box_uuid)
 
     @classmethod
-    @commit_after_this
+    @Database.commit_after_this
     def _destroy_box(cls, box_uuid: UUID) -> None:
         inst = instance_get(box_uuid)
         if inst is None:
@@ -121,7 +121,7 @@ class WArray:
         # user-type instance referenced from the array: not a box, keep it
 
     @classmethod
-    @commit_after_this
+    @Database.commit_after_this
     def _ensure_array_instance(
         cls, owner_uuid: UUID, prop: WProp, elem_type: str
     ) -> UUID:
@@ -133,7 +133,7 @@ class WArray:
         return array_uuid
 
     @classmethod
-    @commit_after_this
+    @Database.commit_after_this
     def _create_array_instance(cls, array_type_name: str) -> UUID:
         array_uuid = uuid4()
         array_type = WType.ensure(array_type_name)
@@ -141,7 +141,7 @@ class WArray:
         return array_uuid
 
     @classmethod
-    @use_same_session
+    @Database.use_same_session
     def _unwrap(cls, uuid: UUID, type_name: str) -> StoredValue:
         if WType.is_array_name(type_name):
             return cls.read(uuid, WType.element_name(type_name))
@@ -167,7 +167,7 @@ class WArray:
         return None if stored is None else scalar.from_storage(stored)
 
     @classmethod
-    @commit_after_this
+    @Database.commit_after_this
     def _box(
         cls,
         type_name: str,
@@ -235,7 +235,7 @@ class WArray:
         return box_uuid
 
     @classmethod
-    @commit_after_this
+    @Database.commit_after_this
     def _box_embedded(
         cls,
         embedded: WType,

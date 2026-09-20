@@ -9,7 +9,7 @@ from collections.abc import ItemsView
 from typing import cast, override
 from uuid import UUID
 
-from nylium.database import use_same_session
+from nylium.database import Database
 from nylium.objects.wprop import WProp
 from nylium.objects.wtype import WType
 from nylium.objects.wtypemeta import StoredValue, WTypeMeta
@@ -19,7 +19,7 @@ class FacadeMixin:
     _uuid: UUID
 
     @classmethod
-    @use_same_session
+    @Database.use_same_session
     def fields(cls) -> dict[str, str]:
         """prop key -> value spec name, e.g. {'tags': 'Array<String>'}.
         ADR-0013: the effective schema — attached traits' props included,

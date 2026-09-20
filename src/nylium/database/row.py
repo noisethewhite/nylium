@@ -23,7 +23,6 @@ import sqlalchemy as sqla
 from sqlalchemy.orm import Mapper
 
 from nylium.database import Database
-from nylium.database.databasemethod import commit_after_this
 
 _M = TypeVar("_M")
 
@@ -69,7 +68,7 @@ class Row:
     def __setitem__(self, name: str, value: object) -> None:
         setattr(self, name, value)
 
-    @commit_after_this
+    @Database.commit_after_this
     def persist(self, column: str, value: object) -> None:
         """Write one column through: UPDATE … SET column = value WHERE pk.
 

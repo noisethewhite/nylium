@@ -10,12 +10,12 @@ from uuid import UUID
 import sqlalchemy as sqla
 from sqlalchemy.orm import aliased
 
-from nylium.database import Database, use_same_session
+from nylium.database import Database
 from nylium.tables.values.array_values import TABLE_ArrayValues
 from nylium.tables.values.instance_values import TABLE_InstanceValues
 
 
-@use_same_session
+@Database.use_same_session
 def backlink_refs(target_uuid: UUID) -> list[tuple[UUID, str]]:
     """(owner uuid, owner type name) for every instance that points at
     ``target_uuid`` — directly through a link prop or through membership

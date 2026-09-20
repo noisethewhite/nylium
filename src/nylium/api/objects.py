@@ -7,7 +7,7 @@ from uuid import UUID
 
 from nylium.api.shared import ApiShared, NAME_PROP_KEY, PropInput
 from nylium.api.display import ObjectRef, ObjectView
-from nylium.database import commit_after_this, use_same_session
+from nylium.database import Database
 from nylium.objects.tables import instances
 from nylium.objects.wembedded import WEmbedded
 from nylium.objects.wobject import WObject
@@ -18,7 +18,7 @@ from nylium.objects.wtypemeta import WTypeMeta
 
 class ObjectsApi(ApiShared):
     @classmethod
-    @use_same_session
+    @Database.use_same_session
     def list_objects(cls, type_name: str) -> list[ObjectView]:
         owner = WType.by_name(type_name)
         if owner is None:
@@ -38,7 +38,7 @@ class ObjectsApi(ApiShared):
         return ObjectView.from_uuid(uuid)
 
     @classmethod
-    @use_same_session
+    @Database.use_same_session
     def export_markdown(cls, uuid: UUID) -> tuple[str, str] | None:
         """Render an object as a markdown document for download.
 
@@ -66,7 +66,7 @@ class ObjectsApi(ApiShared):
         return MarkdownRenderer(ref_label).render(view)
 
     @classmethod
-    @commit_after_this
+    @Database.commit_after_this
     def create_object(
         cls, type_name: str, props: dict[str, PropInput] | None = None
     ) -> ObjectView:
@@ -95,7 +95,7 @@ class ObjectsApi(ApiShared):
         return view
 
     @classmethod
-    @commit_after_this
+    @Database.commit_after_this
     def update_object(cls, uuid: UUID, props: dict[str, PropInput]) -> ObjectView:
         from nylium.server.errors import ValidationError
 
@@ -136,7 +136,7 @@ class ObjectsApi(ApiShared):
         return view
 
     @classmethod
-    @commit_after_this
+    @Database.commit_after_this
     def delete_object(cls, uuid: UUID) -> bool:
         from nylium.server.errors import ValidationError
 

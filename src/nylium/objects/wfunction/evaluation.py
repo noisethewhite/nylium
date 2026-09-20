@@ -9,7 +9,7 @@ from decimal import Decimal, InvalidOperation
 from typing import cast
 from uuid import UUID
 
-from nylium.database import use_same_session
+from nylium.database import Database
 from nylium.tables.functions import graph
 from nylium.tables.functions.function_edges import TABLE_FunctionEdges
 from nylium.objects.wscalar import ScalarPayload, WInteger, WString
@@ -32,7 +32,7 @@ from nylium.objects.wfunction.constants import (
 from nylium.objects.wfunction.validation import topo_sort
 
 
-@use_same_session
+@Database.use_same_session
 def evaluate(
     function_uuid: UUID, input_values: Mapping[str, object]
 ) -> ScalarPayload | None:

@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 
 import sqlalchemy as sqla
 
-from nylium.database import Database, commit_after_this, use_same_session
+from nylium.database import Database
 from nylium.database.table import Row, Table
 from nylium.objects.tables.props import TABLE_Props as TABLE_Props
 from nylium.objects.tables.table_types import TABLE_Types as TABLE_Types
@@ -34,7 +34,7 @@ class UnitParts(Table[UUID, UnitPart]):
 
     __row__: ClassVar[type[Row]] = UnitPart
 
-    @use_same_session
+    @Database.use_same_session
     def usage_count(self, unit_type_name: str, part_name: str | None = None) -> int:
         """Numeric values stored under this part (or, with None, any part
         of the unit). Values reference a part through their prop's
@@ -59,7 +59,7 @@ class UnitParts(Table[UUID, UnitPart]):
             or 0
         )
 
-    @commit_after_this
+    @Database.commit_after_this
     def sync(
         self,
         type_uuid: UUID,

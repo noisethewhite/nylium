@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import ClassVar
 from uuid import UUID
 
-from nylium.database import Database, commit_after_this
+from nylium.database import Database
 from nylium.database.table import Row, Table
 from nylium.objects.tables.table_types import TABLE_Types as TABLE_Types
 from nylium.objects.rows.type import Type as Type
@@ -21,7 +21,7 @@ class Types(Table[UUID, Type]):
 
     __row__: ClassVar[type[Row]] = Type
 
-    @commit_after_this
+    @Database.commit_after_this
     def create(
         self,
         name: str,
@@ -43,7 +43,7 @@ class Types(Table[UUID, Type]):
         _ = type_decor.create(row.uuid, plural_name, icon, None)
         return Type(row)
 
-    @commit_after_this
+    @Database.commit_after_this
     def delete(self, uuid: UUID) -> None:
         row = Database.get(TABLE_Types, uuid)
         if row is not None:

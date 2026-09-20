@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import cast
 from uuid import UUID, uuid4
 
-from nylium.database import commit_after_this, use_same_session
+from nylium.database import Database
 from nylium.objects.tables import instances
 from nylium.objects.tables.instances import (
     delete_row as delete_instance_row,
@@ -27,7 +27,7 @@ from nylium.objects.wobject.constants import INSTANCE_NAME_FORMAT, SHORT_UUID_LE
 class LifecycleMixin:
     _uuid: UUID
 
-    @commit_after_this
+    @Database.commit_after_this
     def __init__(self, _uuid: UUID | None = None, **props: StoredValue) -> None:
         # plain assignment: __setattr__ routes "_" names to object.__setattr__,
         # and the checker gets to see _uuid initialized
@@ -38,7 +38,7 @@ class LifecycleMixin:
         for key, value in props.items():
             setattr(self, key, value)
 
-    @commit_after_this
+    @Database.commit_after_this
     def _register(self) -> None:
         owner = WType.ensure(type(self).__name__)
         instances.create(
@@ -51,7 +51,7 @@ class LifecycleMixin:
         )
 
     @classmethod
-    @commit_after_this
+    @Database.commit_after_this
     def create_db_only(cls, type_name: str, props: dict[str, StoredValue]) -> UUID:
         """Types with no registered python class: bare instance row, then
         writes through the generic WObject wrapper — same validation."""
@@ -75,7 +75,7 @@ class LifecycleMixin:
     # --- retrieval ---
 
     @classmethod
-    @use_same_session
+    @Database.use_same_session
     def get(cls, uuid: UUID) -> WObjectShape | None:
         inst = get_instance_row(uuid)
         if inst is None:
@@ -96,7 +96,7 @@ class LifecycleMixin:
         raise TypeError(f"instance {uuid} is {actual_name}, not {cls.__name__}")
 
     @classmethod
-    @use_same_session
+    @Database.use_same_session
     def wrap(cls, uuid: UUID) -> WObjectShape:
         inst = get_instance_row(uuid)
         if inst is None:
@@ -113,7 +113,7 @@ class LifecycleMixin:
     def uuid(self) -> UUID:
         return self._uuid
 
-    @commit_after_this
+    @Database.commit_after_this
     def delete(self) -> None:
         for array_uuid in self._owned_array_uuids():
             WArray.destroy(array_uuid)

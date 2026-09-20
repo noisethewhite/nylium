@@ -8,7 +8,7 @@ from uuid import uuid4
 
 import sqlalchemy as sqla
 
-from nylium.database import Database, commit_after_this, use_same_session
+from nylium.database import Database
 from nylium.objects.tables import TABLE_Instances
 from nylium.objects.tables.types import TABLE_Types
 
@@ -20,7 +20,7 @@ class _Boom(Exception):
 def test_nested_write_rolls_back_on_outer_error():
     tuuid = uuid4()
 
-    @commit_after_this
+    @Database.commit_after_this
     def make_type():
         Database.session.add(
             TABLE_Types(uuid=tuuid, name="ProbeType")
@@ -28,9 +28,9 @@ def test_nested_write_rolls_back_on_outer_error():
 
     make_type()
 
-    @commit_after_this
+    @Database.commit_after_this
     def outer():
-        @commit_after_this
+        @Database.commit_after_this
         def register():
             Database.session.add(TABLE_Instances(uuid=uuid4(), type_uuid=tuuid, name="n", plural_name="ns"))
 
@@ -42,7 +42,7 @@ def test_nested_write_rolls_back_on_outer_error():
     except _Boom:
         pass
 
-    @use_same_session
+    @Database.use_same_session
     def count_instances():
         return Database.session.scalar(
             sqla.select(sqla.func.count()).select_from(TABLE_Instances)
@@ -54,7 +54,7 @@ def test_nested_write_rolls_back_on_outer_error():
 def test_outer_commit_persists_nested_write():
     tuuid = uuid4()
 
-    @commit_after_this
+    @Database.commit_after_this
     def make_type():
         Database.session.add(
             TABLE_Types(uuid=tuuid, name="ProbeType2")
@@ -62,9 +62,9 @@ def test_outer_commit_persists_nested_write():
 
     make_type()
 
-    @commit_after_this
+    @Database.commit_after_this
     def outer():
-        @commit_after_this
+        @Database.commit_after_this
         def register():
             Database.session.add(TABLE_Instances(uuid=uuid4(), type_uuid=tuuid, name="n", plural_name="ns"))
 
@@ -72,7 +72,7 @@ def test_outer_commit_persists_nested_write():
 
     outer()
 
-    @use_same_session
+    @Database.use_same_session
     def count_instances():
         return Database.session.scalar(
             sqla.select(sqla.func.count()).select_from(TABLE_Instances)

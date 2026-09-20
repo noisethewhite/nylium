@@ -11,7 +11,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, ClassVar
 from uuid import UUID
 
-from nylium.database import commit_after_this, use_same_session
+from nylium.database import Database
 from nylium.objects.tables import TABLE_Props
 from nylium.objects.tables.props import (
     SchemaItem as SchemaItem,
@@ -66,7 +66,7 @@ class WProp:
         concrete type."""
         return self._value_trait_uuid is not None
 
-    @use_same_session
+    @Database.use_same_session
     def value_trait_name(self) -> str:
         """The bound trait's name — only valid on trait-bound props."""
         if self._value_trait_uuid is None:
@@ -76,7 +76,7 @@ class WProp:
             raise RuntimeError(f"prop {self.key!r} has a dangling value trait")
         return name
 
-    @use_same_session
+    @Database.use_same_session
     def value_spec_name(self) -> str:
         """The wire-facing value spec: concrete type name, or
         ``Any<TraitName>`` for a trait-bound prop (ADR-0013)."""
@@ -85,18 +85,18 @@ class WProp:
         return self.value_type().name
 
     @classmethod
-    @use_same_session
+    @Database.use_same_session
     def by_key(cls, owner: "WType", key: str) -> "WProp | None":
         row = by_type_key(owner.uuid, key)
         return None if row is None else cls(row)
 
     @classmethod
-    @use_same_session
+    @Database.use_same_session
     def all_for(cls, owner: "WType") -> "list[WProp]":
         return [cls(row) for row in rows_of_type(owner.uuid)]
 
     @classmethod
-    @commit_after_this
+    @Database.commit_after_this
     def reorder(cls, owner: "WType", keys: list[str]) -> None:
         """Rewrite positions so props render in `keys` order. The list
         must be a permutation of the whole schema — partial orders would
@@ -109,7 +109,7 @@ class WProp:
         apply_positions(owner.uuid, keys)
 
     @classmethod
-    @commit_after_this
+    @Database.commit_after_this
     def sync_schema(
         cls, owner: "WType", items: list[SchemaItem]
     ) -> None:
@@ -123,7 +123,7 @@ class WProp:
         sync_owned(TABLE_Props.owner_type_uuid, "owner_type_uuid", owner.uuid, items)
 
     @classmethod
-    @commit_after_this
+    @Database.commit_after_this
     def sync_trait_schema(cls, trait_uuid: UUID, items: list[SchemaItem]) -> None:
         """Same full-draft semantics as sync_schema, but the owner is a
         trait (ADR-0013). Retype purges values exactly like type-owned
@@ -137,7 +137,7 @@ class WProp:
         _purge_values_for_instances(prop_uuid, inst_uuids)
 
     @classmethod
-    @commit_after_this
+    @Database.commit_after_this
     def ensure(
         cls, owner: "WType", key: str, value_type: "WType | None",
         position: int = 0, formula: str | None = None,
@@ -152,7 +152,7 @@ class WProp:
             )
         )
 
-    @use_same_session
+    @Database.use_same_session
     def value_type(self) -> "WType":
         from nylium.objects.wtype import WType
 
@@ -166,7 +166,7 @@ class WProp:
         return value_type
 
     @classmethod
-    @use_same_session
+    @Database.use_same_session
     def effective_for(cls, owner: "WType") -> "list[WProp]":
         """The *effective* schema: own props, then each attached trait's
         props in attach order (ADR-0013). Reads and renders use this;
@@ -177,7 +177,7 @@ class WProp:
         return result
 
     @classmethod
-    @use_same_session
+    @Database.use_same_session
     def effective_by_key(cls, owner: "WType", key: str) -> "WProp | None":
         """One prop of the effective schema by key: own props first, then
         attached traits in attach order (key collisions are rejected at

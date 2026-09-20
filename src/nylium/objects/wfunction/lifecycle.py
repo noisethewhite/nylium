@@ -3,7 +3,7 @@ Function<T, R> type with its pinned props, and the function-kind
 predicate."""
 from __future__ import annotations
 
-from nylium.database import commit_after_this
+from nylium.database import Database
 from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import WScalar, WString
 from nylium.objects.wtype import WType
@@ -15,7 +15,7 @@ def is_function(type_name: str) -> bool:
     return owner is not None and owner.is_function
 
 
-@commit_after_this
+@Database.commit_after_this
 def ensure_type(input_name: str, output_name: str) -> WType:
     """Materialize (or fetch) the parameterized Function<T, R> type with its
     one pinned prop `name` (String). `input_name` names the owner type the

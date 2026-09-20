@@ -5,7 +5,7 @@ from decimal import Decimal
 from uuid import UUID
 
 from nylium.api.shared import ApiShared
-from nylium.database import commit_after_this
+from nylium.database import Database
 from nylium.objects.tables import unit_parts
 from nylium.tables.decor import type_decor
 from nylium.objects.tables.types import Type
@@ -15,7 +15,7 @@ from nylium.objects.wtype import WType
 
 class UnitsApi(ApiShared):
     @classmethod
-    @commit_after_this
+    @Database.commit_after_this
     def create_unit(
         cls,
         name: str,
@@ -52,7 +52,7 @@ class UnitsApi(ApiShared):
         return cls._type_result(final_name)
 
     @classmethod
-    @commit_after_this
+    @Database.commit_after_this
     def sync_unit_parts(
         cls, name: str, items: list[tuple[UUID | None, str, Decimal, Decimal, bool]]
     ) -> Type:

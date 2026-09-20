@@ -9,7 +9,7 @@ from uuid import UUID
 
 import sqlalchemy as sqla
 
-from nylium.database import Database, commit_after_this
+from nylium.database import Database
 from nylium.database.table import Row, Table
 from nylium.tables.auth.auth_session import AuthSession as AuthSession
 from nylium.tables.auth.table_auth_sessions import TABLE_AuthSessions as TABLE_AuthSessions
@@ -20,7 +20,7 @@ class AuthSessions(Table[str, AuthSession]):
 
     __row__: ClassVar[type[Row]] = AuthSession
 
-    @commit_after_this
+    @Database.commit_after_this
     def create(self, user_uuid: UUID, token_hash: str, expires_at: datetime) -> None:
         Database.add(
             TABLE_AuthSessions(
@@ -28,13 +28,13 @@ class AuthSessions(Table[str, AuthSession]):
             )
         )
 
-    @commit_after_this
+    @Database.commit_after_this
     def delete(self, token_hash: str) -> None:
         row = Database.get(TABLE_AuthSessions, token_hash)
         if row is not None:
             Database.delete(row)
 
-    @commit_after_this
+    @Database.commit_after_this
     def purge_expired(self) -> None:
         _ = Database.execute(
             sqla.delete(TABLE_AuthSessions).where(

@@ -19,7 +19,7 @@ from __future__ import annotations
 from typing import cast
 from uuid import UUID, uuid4
 
-from nylium.database import commit_after_this, use_same_session
+from nylium.database import Database
 
 from nylium.objects.tables import instances
 from nylium.objects.tables.instances import get as instance_get
@@ -41,7 +41,7 @@ SHORT_UUID_LENGTH = 8
 
 class WEmbedded:
     @classmethod
-    @commit_after_this
+    @Database.commit_after_this
     def write(
         cls,
         owner_uuid: UUID,
@@ -76,7 +76,7 @@ class WEmbedded:
         cls._destroy_child(child_uuid)
 
     @classmethod
-    @commit_after_this
+    @Database.commit_after_this
     def destroy_children_of_prop(cls, prop_uuid: UUID) -> None:
         """Every child held through this prop, across all instances.
         Called from Api.sync_props before an embedded prop is deleted or
@@ -89,7 +89,7 @@ class WEmbedded:
             cls._destroy_child(child_uuid)
 
     @classmethod
-    @commit_after_this
+    @Database.commit_after_this
     def regenerate_names(cls, object_uuid: UUID) -> None:
         """Rewrite generated names of this object's embedded children
         (composition links and Array<Embedded> elements), then recurse —
@@ -128,7 +128,7 @@ class WEmbedded:
                 cls.regenerate_names(element_uuid)
 
     @classmethod
-    @use_same_session
+    @Database.use_same_session
     def generated_name(cls, owner_uuid: UUID, prop: WProp) -> str:
         """"<parent display name> → <prop key>". Falls back to the
         registry name (Type:shortuuid) while the parent's name prop is
@@ -150,7 +150,7 @@ class WEmbedded:
         return f"{base} {EMBEDDED_NAME_SEPARATOR} {prop.key}"
 
     @classmethod
-    @use_same_session
+    @Database.use_same_session
     def array_element_type(cls, value_type: WType) -> WType | None:
         """ADR-0021: the embedded element type when ``value_type`` names an
         Array<Embedded>, else None."""
@@ -167,7 +167,7 @@ class WEmbedded:
         return f"{cls.generated_name(owner_uuid, prop)} #{index + 1}"
 
     @classmethod
-    @commit_after_this
+    @Database.commit_after_this
     def create_array_element(
         cls,
         embedded: WType,
@@ -200,7 +200,7 @@ class WEmbedded:
     # --- internals ---
 
     @classmethod
-    @commit_after_this
+    @Database.commit_after_this
     def _create_child(cls, owner_uuid: UUID, prop: WProp) -> UUID:
         child_type = prop.value_type()
         child_uuid = uuid4()

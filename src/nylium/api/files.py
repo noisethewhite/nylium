@@ -4,7 +4,7 @@ from __future__ import annotations
 from uuid import UUID, uuid4
 
 from nylium.api.shared import ApiShared
-from nylium.database import commit_after_this, use_same_session
+from nylium.database import Database
 from nylium.tables import files
 from nylium.tables.files import File
 from nylium.objects.wfile import WFile
@@ -12,7 +12,7 @@ from nylium.objects.wfile import WFile
 
 class FilesApi(ApiShared):
     @classmethod
-    @commit_after_this
+    @Database.commit_after_this
     def create_file(
         cls, type_name: str, filename: str, mime: str, data: bytes
     ) -> File:
@@ -47,17 +47,17 @@ class FilesApi(ApiShared):
         return created
 
     @classmethod
-    @use_same_session
+    @Database.use_same_session
     def get_file(cls, uuid: UUID) -> File | None:
         return files.get(uuid)
 
     @classmethod
-    @use_same_session
+    @Database.use_same_session
     def list_files(cls) -> list[File]:
         return list(files.values())
 
     @classmethod
-    @commit_after_this
+    @Database.commit_after_this
     def rename_file(cls, uuid: UUID, name: str) -> File:
         """ADR-0008: rename is a display-name update — the uuid pointer is
         stable, so no reference ever breaks."""
@@ -72,7 +72,7 @@ class FilesApi(ApiShared):
         return view
 
     @classmethod
-    @commit_after_this
+    @Database.commit_after_this
     def delete_file(cls, uuid: UUID) -> bool:
         """ADR-0008: drop the files row and the blob. An Image used as an
         icon resets every referencing type to the default glyph."""

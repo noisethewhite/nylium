@@ -12,7 +12,7 @@ import sqlalchemy as sqla
 from sqlalchemy import ForeignKey, Integer
 from sqlalchemy.orm import Mapped, mapped_column
 
-from nylium.database import Database, use_same_session
+from nylium.database import Database
 from nylium.tables.base import reg
 
 
@@ -27,7 +27,7 @@ class TABLE_ArrayValues:
     value_uuid: Mapped[UUID] = mapped_column(nullable=False)
 
 
-@use_same_session
+@Database.use_same_session
 def delete_memberships(value_uuid: UUID) -> None:
     """Drop every array-membership row pointing at the given element uuid."""
     _ = Database.execute(
@@ -35,7 +35,7 @@ def delete_memberships(value_uuid: UUID) -> None:
     )
 
 
-@use_same_session
+@Database.use_same_session
 def element_uuids_of(array_uuid: UUID) -> list[UUID]:
     """Element uuids of one array, in index order (WArray.read relies on
     the ordering; the destroy path just wants the snapshot)."""
@@ -48,7 +48,7 @@ def element_uuids_of(array_uuid: UUID) -> list[UUID]:
     )
 
 
-@use_same_session
+@Database.use_same_session
 def add_element(array_uuid: UUID, index: int, value_uuid: UUID) -> None:
     """Append one element row (plain insert — _fill rewrites from empty)."""
     Database.add(
@@ -56,7 +56,7 @@ def add_element(array_uuid: UUID, index: int, value_uuid: UUID) -> None:
     )
 
 
-@use_same_session
+@Database.use_same_session
 def delete_elements_of(array_uuid: UUID) -> None:
     """Detach every element row of the array and flush — the FK
     array_values.value_uuid -> instances forbids deleting a box that is
@@ -67,7 +67,7 @@ def delete_elements_of(array_uuid: UUID) -> None:
     Database.flush()
 
 
-@use_same_session
+@Database.use_same_session
 def array_tag_rows(
     element_uuid: UUID, array_type_name: str, name_prop_key: str
 ) -> list[tuple[UUID, str, str, str | None, str]]:
