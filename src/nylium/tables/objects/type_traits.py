@@ -1,4 +1,8 @@
-"""The attach edges as a Mapping keyed by (type_uuid, trait_uuid)."""
+"""The attach edges as a Mapping keyed by (type_uuid, trait_uuid).
+
+The statement helpers used by the objects layer (ADR-0019) — attachment
+lookups — live here as classmethods of ``TypeTraits``.
+"""
 from __future__ import annotations
 
 from typing import ClassVar
@@ -32,31 +36,31 @@ class TypeTraits(Table[tuple[UUID, UUID], TypeTrait]):
         if row is not None:
             Database.delete(row)
 
-
-@Database.use_same_session
-def is_attached(type_uuid: UUID, trait_uuid: UUID | None) -> bool:
-    """True when (type_uuid, trait_uuid) is an attach edge (ADR-0019)."""
-    if trait_uuid is None:
-        return False
-    attached = Database.scalar(
-        sqla.select(TABLE_TypeTraits.type_uuid).where(
-            TABLE_TypeTraits.type_uuid == type_uuid,
-            TABLE_TypeTraits.trait_uuid == trait_uuid,
+    @classmethod
+    @Database.use_same_session
+    def is_attached(cls, type_uuid: UUID, trait_uuid: UUID | None) -> bool:
+        """True when (type_uuid, trait_uuid) is an attach edge (ADR-0019)."""
+        if trait_uuid is None:
+            return False
+        attached = Database.scalar(
+            sqla.select(TABLE_TypeTraits.type_uuid).where(
+                TABLE_TypeTraits.type_uuid == type_uuid,
+                TABLE_TypeTraits.trait_uuid == trait_uuid,
+            )
         )
-    )
-    return attached is not None
+        return attached is not None
 
-
-@Database.use_same_session
-def attached_trait_uuids(type_uuid: UUID) -> list[UUID]:
-    """Traits attached to the type, in attach order (ADR-0013/0019)."""
-    return list(
-        Database.scalars(
-            sqla.select(TABLE_TypeTraits.trait_uuid)
-            .where(TABLE_TypeTraits.type_uuid == type_uuid)
-            .order_by(TABLE_TypeTraits.position)
-        ).all()
-    )
+    @classmethod
+    @Database.use_same_session
+    def attached_trait_uuids(cls, type_uuid: UUID) -> list[UUID]:
+        """Traits attached to the type, in attach order (ADR-0013/0019)."""
+        return list(
+            Database.scalars(
+                sqla.select(TABLE_TypeTraits.trait_uuid)
+                .where(TABLE_TypeTraits.type_uuid == type_uuid)
+                .order_by(TABLE_TypeTraits.position)
+            ).all()
+        )
 
 
 type_traits = TypeTraits()

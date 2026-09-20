@@ -4,8 +4,6 @@ from __future__ import annotations
 from typing import ClassVar
 from uuid import UUID
 
-import sqlalchemy as sqla
-
 from nylium.database import Database
 from nylium.database.table import Row, Table
 from nylium.tables.decor.table_type_decor import TABLE_TypeDecor
@@ -31,16 +29,6 @@ class TypeDecors(Table[UUID, TypeDecor]):
         Database.add(row)
         Database.flush()
         return TypeDecor(row)
-
-
-@Database.use_same_session
-def reset_icons_referencing(icon_marker: str, default_glyph: str) -> None:
-    """Every type whose icon equals ``icon_marker`` falls back to the default
-    glyph (ADR-0006: an Image used as an icon may be deleted)."""
-    for decor_row in Database.scalars(
-        sqla.select(TABLE_TypeDecor).where(TABLE_TypeDecor.icon == icon_marker)
-    ).all():
-        decor_row.icon = default_glyph
 
 
 type_decor = TypeDecors()

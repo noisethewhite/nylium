@@ -18,7 +18,7 @@ else:
 from nylium.api.display import FunctionView, ObjectView
 from nylium.database import Database
 from nylium.tables.objects import props, types
-from nylium.tables.functions.instance_function_links import (
+from nylium.objects.wfunction.function_links import (
     delete_function_link,
     delete_links_to_function,
     instance_uuids_bound_to,
@@ -137,9 +137,9 @@ class FunctionsApi(_FunctionsBase):
         function-backed. Refuses a per-owner cross-function cycle."""
         from nylium.server.errors import ValidationError
 
-        from nylium.tables.objects.instances import get as instance_get
+        from nylium.tables.objects.instances import instances
 
-        inst = instance_get(inst_uuid)
+        inst = instances.get(inst_uuid)
         if inst is None:
             raise ValidationError(f"no object {inst_uuid}")
         owner = WType.by_uuid(inst.type_uuid)

@@ -13,19 +13,9 @@ from uuid import UUID
 
 from nylium.database import Database
 from nylium.tables.objects import TABLE_Props
-from nylium.tables.objects.props import (
-    SchemaItem as SchemaItem,
-    apply_positions,
-    by_trait_key,
-    by_type_key,
-    ensure_row,
-    purge_values_for_instances as _purge_values_for_instances,
-    rows_of_trait,
-    rows_of_type,
-    sync_owned,
-)
-from nylium.tables.objects.traits import name_of as trait_name_of
-from nylium.tables.objects.type_traits import attached_trait_uuids
+from nylium.tables.objects.props import Props, SchemaItem
+from nylium.tables.objects.traits import Traits
+from nylium.tables.objects.type_traits import TypeTraits
 
 if TYPE_CHECKING:
     from nylium.objects.wtype import WType
@@ -71,7 +61,7 @@ class WProp:
         """The bound trait's name — only valid on trait-bound props."""
         if self._value_trait_uuid is None:
             raise RuntimeError(f"prop {self.key!r} is not trait-bound")
-        name = trait_name_of(self._value_trait_uuid)
+        name = Traits.name_of(self._value_trait_uuid)
         if name is None:
             raise RuntimeError(f"prop {self.key!r} has a dangling value trait")
         return name
@@ -87,13 +77,13 @@ class WProp:
     @classmethod
     @Database.use_same_session
     def by_key(cls, owner: "WType", key: str) -> "WProp | None":
-        row = by_type_key(owner.uuid, key)
+        row = Props.by_type_key(owner.uuid, key)
         return None if row is None else cls(row)
 
     @classmethod
     @Database.use_same_session
     def all_for(cls, owner: "WType") -> "list[WProp]":
-        return [cls(row) for row in rows_of_type(owner.uuid)]
+        return [cls(row) for row in Props.rows_of_type(owner.uuid)]
 
     @classmethod
     @Database.commit_after_this
@@ -106,7 +96,7 @@ class WProp:
             raise ValueError(
                 f"prop order {keys!r} does not match {owner.name!r} schema"
             )
-        apply_positions(owner.uuid, keys)
+        Props.apply_positions(owner.uuid, keys)
 
     @classmethod
     @Database.commit_after_this
@@ -120,7 +110,7 @@ class WProp:
         old data rarely survives a type change, so every instance reads
         Null again. Deletes flush first so a freed key can be reused by a
         new prop in the same sync."""
-        sync_owned(TABLE_Props.owner_type_uuid, "owner_type_uuid", owner.uuid, items)
+        Props.sync_owned(TABLE_Props.owner_type_uuid, "owner_type_uuid", owner.uuid, items)
 
     @classmethod
     @Database.commit_after_this
@@ -128,13 +118,13 @@ class WProp:
         """Same full-draft semantics as sync_schema, but the owner is a
         trait (ADR-0013). Retype purges values exactly like type-owned
         props."""
-        sync_owned(TABLE_Props.owner_trait_uuid, "owner_trait_uuid", trait_uuid, items)
+        Props.sync_owned(TABLE_Props.owner_trait_uuid, "owner_trait_uuid", trait_uuid, items)
 
     @classmethod
     def purge_values_for_instances(cls, prop_uuid: UUID, inst_uuids: list[UUID]) -> None:
         """ADR-0013 detach: wipe this prop's values, but only on the given
         instances (the trait's other types keep theirs)."""
-        _purge_values_for_instances(prop_uuid, inst_uuids)
+        Props.purge_values_for_instances(prop_uuid, inst_uuids)
 
     @classmethod
     @Database.commit_after_this
@@ -146,7 +136,7 @@ class WProp:
     ) -> "WProp":
         value_type_uuid = None if value_type is None else value_type.uuid
         return cls(
-            ensure_row(
+            Props.ensure_row(
                 owner.uuid, key, value_type_uuid, value_trait_uuid, position,
                 formula, collect,
             )
@@ -172,8 +162,8 @@ class WProp:
         props in attach order (ADR-0013). Reads and renders use this;
         writes (sync_schema) stay own-only."""
         result = cls.all_for(owner)
-        for trait_uuid in attached_trait_uuids(owner.uuid):
-            result.extend(cls(row) for row in rows_of_trait(trait_uuid))
+        for trait_uuid in TypeTraits.attached_trait_uuids(owner.uuid):
+            result.extend(cls(row) for row in Props.rows_of_trait(trait_uuid))
         return result
 
     @classmethod
@@ -185,8 +175,8 @@ class WProp:
         own = cls.by_key(owner, key)
         if own is not None:
             return own
-        for trait_uuid in attached_trait_uuids(owner.uuid):
-            row = by_trait_key(trait_uuid, key)
+        for trait_uuid in TypeTraits.attached_trait_uuids(owner.uuid):
+            row = Props.by_trait_key(trait_uuid, key)
             if row is not None:
                 return cls(row)
         return None

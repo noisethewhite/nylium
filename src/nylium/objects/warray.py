@@ -17,17 +17,12 @@ from uuid import UUID, uuid4
 
 from nylium.database import Database
 from nylium.tables.objects import instances
-from nylium.tables.files import type_name_of as file_type_name_of
-from nylium.tables.objects.instances import delete_row as delete_instance_row, get as instance_get
-from nylium.tables.values.array_values import (
-    add_element,
-    delete_elements_of,
-    element_uuids_of,
-)
-from nylium.tables.values.instance_values import add_link, delete_links_to, link_for
+from nylium.tables.objects.instances import Instances
+from nylium.objects.warray_values import add_element, delete_elements_of, element_uuids_of
 from nylium.objects.wenum import WEnum
 from nylium.objects.wembedded import WEmbedded
-from nylium.objects.wfile import WFile
+from nylium.objects.wfile import WFile, type_name_of as file_type_name_of
+from nylium.objects.wlink import add_link, delete_links_to, link_for
 from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import VALUE_PROP_KEY, ScalarPayload, WScalar, WString
 from nylium.objects.wtype import WType
@@ -66,7 +61,7 @@ class WArray:
         """Delete the array instance and every box it owns, recursively."""
         cls._destroy_boxes(array_uuid)
         delete_links_to(array_uuid)
-        delete_instance_row(array_uuid)
+        Instances.delete_row(array_uuid)
 
     # --- internals ---
 
@@ -99,14 +94,14 @@ class WArray:
     @classmethod
     @Database.commit_after_this
     def _destroy_box(cls, box_uuid: UUID) -> None:
-        inst = instance_get(box_uuid)
+        inst = instances.get(box_uuid)
         if inst is None:
             return
         owner = WType.by_uuid(inst.type_uuid)
         if owner is None:
             raise RuntimeError(f"instance {box_uuid} has dangling type")
         if WScalar.is_scalar(owner.name):
-            delete_instance_row(box_uuid)  # its scalar values cascade on inst_uuid
+            Instances.delete_row(box_uuid)  # its scalar values cascade on inst_uuid
             return
         if WType.is_array_name(owner.name):
             cls.destroy(box_uuid)
@@ -153,7 +148,7 @@ class WArray:
             scalar = WString
         if scalar is None:
             return WTypeMeta.root().wrap(uuid)
-        inst = instance_get(uuid)
+        inst = instances.get(uuid)
         if inst is None:
             raise KeyError(f"no instance {uuid}")
         owner = WType.by_uuid(inst.type_uuid)

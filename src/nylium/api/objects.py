@@ -107,9 +107,7 @@ class ObjectsApi(ApiShared):
         type_name = instances[uuid].type_name
         normalized = cls._normalize_props(type_name, props)
         # ADR-0029: function-bound props are instance-level read-only.
-        from nylium.tables.functions.instance_function_links import (
-            function_links_of_instance,
-        )
+        from nylium.objects.wfunction.function_links import function_links_of_instance
 
         bound_prop_uuids = {prop_uuid for prop_uuid, _ in function_links_of_instance(uuid)}
         if bound_prop_uuids:

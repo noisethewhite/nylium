@@ -22,9 +22,8 @@ from uuid import UUID, uuid4
 from nylium.database import Database
 
 from nylium.tables.objects import instances
-from nylium.tables.objects.instances import get as instance_get
-from nylium.tables.values.array_values import element_uuids_of
-from nylium.tables.values.instance_values import add_link, link_for, linked_uuids_of
+from nylium.objects.warray_values import element_uuids_of
+from nylium.objects.wlink import add_link, link_for, linked_uuids_of
 from nylium.objects.wprop import WProp
 from nylium.scalars import String
 from nylium.objects.wtype import WType
@@ -95,7 +94,7 @@ class WEmbedded:
         grandchild names embed the child name. The instance graph is a
         tree (children are always created fresh), so the recursion
         terminates."""
-        inst = instance_get(object_uuid)
+        inst = instances.get(object_uuid)
         if inst is None:
             return
         owner = WType.by_uuid(inst.type_uuid)
@@ -133,7 +132,7 @@ class WEmbedded:
         registry name (Type:shortuuid) while the parent's name prop is
         still unset — a later name write regenerates it."""
         base: str | None = None
-        inst = instance_get(owner_uuid)
+        inst = instances.get(owner_uuid)
         if inst is not None:
             owner = WType.by_uuid(inst.type_uuid)
             if owner is not None:
@@ -227,7 +226,7 @@ class WEmbedded:
     @classmethod
     def _write_generated_name(cls, child_uuid: UUID, name: str) -> None:
         child = WTypeMeta.root().wrap(child_uuid)
-        inst = instance_get(child_uuid)
+        inst = instances.get(child_uuid)
         owner = WType.by_uuid(inst.type_uuid) if inst is not None else None
         if owner is None or WProp.by_key(owner, NAME_PROP_KEY) is None:
             return  # name-less embedded type (ADR-0027) keeps its registry name

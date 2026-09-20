@@ -2,8 +2,8 @@
 dispatch over prop value kinds (scalar, unit, enum, file, array, link,
 trait-bound, embedded) plus _prop_and_type resolution and _touch.
 
-ADR-0019: statements live in ``nylium.tables`` — no ``sqla`` / ``Database``
-imports here.
+ADR-0019 / ADR-0030: statements live in the ``nylium.objects`` helpers
+(wlink) — no ``sqla`` / ``Database`` imports here.
 """
 from __future__ import annotations
 
@@ -11,9 +11,8 @@ from typing import cast, override
 from uuid import UUID
 
 from nylium.database import Database
-from nylium.tables.objects.instances import get as get_instance_row
-from nylium.tables.objects.instances import touch as touch_instance
-from nylium.tables.values import instance_values
+from nylium.tables.objects.instances import Instances, instances
+from nylium.objects.wlink import delete_row
 from nylium.objects.warray import WArray
 from nylium.objects.wembedded import WEmbedded
 from nylium.objects.wenum import WEnum
@@ -32,7 +31,7 @@ class AttrsMixin(PersistenceMixin):
 
     @Database.use_same_session
     def _prop_and_type(self, key: str) -> tuple[WProp, str]:
-        inst = get_instance_row(self._uuid)
+        inst = instances.get(self._uuid)
         if inst is None:
             raise AttributeError(f"instance {self._uuid} does not exist")
         owner = WType.by_uuid(inst.type_uuid)
@@ -140,9 +139,9 @@ class AttrsMixin(PersistenceMixin):
         elif not prop.is_trait_bound and prop.value_type().is_embedded:
             WEmbedded.destroy(link.uuid)  # the child dies with the prop
         else:
-            instance_values.delete_row(link)
+            delete_row(link)
         self._touch()
 
     @Database.commit_after_this
     def _touch(self) -> None:
-        touch_instance(self._uuid)
+        Instances.touch(self._uuid)

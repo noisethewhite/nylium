@@ -18,7 +18,7 @@ from uuid import UUID
 
 from nylium.database import Database
 from nylium.tables.objects import instances
-from nylium.tables.functions.instance_function_links import function_uuid_for
+from nylium.objects.wfunction.function_links import function_uuid_for
 from nylium.objects.wobject import WObject
 from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import ScalarPayload

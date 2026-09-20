@@ -8,7 +8,8 @@ from nylium.database import Database
 from nylium.tables.objects import Trait, instances, props, traits, type_traits
 from nylium.tables.decor import trait_decor
 from nylium.tables.objects.types import Type, types
-from nylium.objects.wprop import SchemaItem, WProp
+from nylium.tables.objects.props import SchemaItem
+from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import WScalar
 from nylium.objects.wtype import WType
 

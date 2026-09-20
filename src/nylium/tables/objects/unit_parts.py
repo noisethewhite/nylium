@@ -20,19 +20,19 @@ from nylium.tables.values.numeric_values import TABLE_NumericValues as TABLE_Num
 # cycle. Parameterized-type resolution is a plain SQL select.
 
 
-def _parameterized_uuid(unit_type_name: str) -> UUID | None:
-    """The `Numeric<unit>` type row's uuid, or None when it doesn't exist."""
-    return Database.scalar(
-        sqla.select(TABLE_Types.uuid).where(
-            TABLE_Types.name == f"Numeric<{unit_type_name}>"
-        )
-    )
-
-
 class UnitParts(Table[UUID, UnitPart]):
     """The unit_parts table as a Mapping of writable parts."""
 
     __row__: ClassVar[type[Row]] = UnitPart
+
+    @classmethod
+    def _parameterized_uuid(cls, unit_type_name: str) -> UUID | None:
+        """The `Numeric<unit>` type row's uuid, or None when it doesn't exist."""
+        return Database.scalar(
+            sqla.select(TABLE_Types.uuid).where(
+                TABLE_Types.name == f"Numeric<{unit_type_name}>"
+            )
+        )
 
     @Database.use_same_session
     def usage_count(self, unit_type_name: str, part_name: str | None = None) -> int:
@@ -41,7 +41,7 @@ class UnitParts(Table[UUID, UnitPart]):
         parameterized type row (`Numeric<unit>`); the name convention
         lives on WType.unit_numeric_name and is repeated here because
         tables must not import the object layer."""
-        parameterized_uuid = _parameterized_uuid(unit_type_name)
+        parameterized_uuid = self._parameterized_uuid(unit_type_name)
         if parameterized_uuid is None:
             return 0
         conditions = [
@@ -91,7 +91,7 @@ class UnitParts(Table[UUID, UnitPart]):
                 part = UnitPart(row)
             else:
                 if part.name != name:
-                    parameterized_uuid = _parameterized_uuid(unit_type_name)
+                    parameterized_uuid = self._parameterized_uuid(unit_type_name)
                     if parameterized_uuid is not None:
                         _ = Database.execute(
                             sqla.update(TABLE_NumericValues)

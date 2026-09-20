@@ -11,7 +11,10 @@ from __future__ import annotations
 
 from uuid import UUID
 
+import sqlalchemy as sqla
+
 from nylium.database import Database
+from nylium.tables.decor.table_type_decor import TABLE_TypeDecor
 from nylium.tables.objects.types import Type, types
 from typing import ClassVar
 
@@ -193,3 +196,13 @@ class WType:
             return existing
         row = types.create(name, plural_name or f"{name}s", icon=icon, kind=kind, embedded=embedded)
         return cls(row)
+
+
+@Database.use_same_session
+def reset_icons_referencing(icon_marker: str, default_glyph: str) -> None:
+    """Every type whose icon equals ``icon_marker`` falls back to the default
+    glyph (ADR-0006: an Image used as an icon may be deleted)."""
+    for decor_row in Database.scalars(
+        sqla.select(TABLE_TypeDecor).where(TABLE_TypeDecor.icon == icon_marker)
+    ).all():
+        decor_row.icon = default_glyph

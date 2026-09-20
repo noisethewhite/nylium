@@ -18,9 +18,9 @@ from typing import ClassVar, Protocol, TypeAlias, cast, get_args, get_origin
 from uuid import UUID
 
 from nylium.database import Database
-from nylium.tables.objects.instances import get as instance_get
-from nylium.tables.objects.traits import uuid_by_name as trait_uuid_by_name
-from nylium.tables.objects.type_traits import is_attached
+from nylium.tables.objects.instances import instances
+from nylium.tables.objects.traits import Traits
+from nylium.tables.objects.type_traits import TypeTraits
 from nylium.objects.quantity import Quantity
 from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import ScalarPayload, WScalar
@@ -112,7 +112,7 @@ class WTypeMeta(type):
                     f"{expected_name} prop takes {expected_name}, got {type(value).__name__}"
                 )
             return
-        inst = instance_get(value.uuid)
+        inst = instances.get(value.uuid)
         actual = None if inst is None else WType.by_uuid(inst.type_uuid)
         if actual is None or actual.name != expected_name:
             raise TypeError(
@@ -134,7 +134,7 @@ class WTypeMeta(type):
             raise TypeError(
                 f"Any<{trait_name}> prop takes a WObject, got {type(value).__name__}"
             )
-        inst = instance_get(value.uuid)
+        inst = instances.get(value.uuid)
         actual = None if inst is None else WType.by_uuid(inst.type_uuid)
         if actual is None:
             raise TypeError(
@@ -144,8 +144,8 @@ class WTypeMeta(type):
             raise TypeError(
                 f"Any<{trait_name}> target {actual.name!r} is embedded (ADR-0004) — link it from its owner only"
             )
-        trait_uuid = trait_uuid_by_name(trait_name)
-        if not is_attached(actual.uuid, trait_uuid):
+        trait_uuid = Traits.uuid_by_name(trait_name)
+        if not TypeTraits.is_attached(actual.uuid, trait_uuid):
             raise TypeError(
                 f"Any<{trait_name}> prop takes an object with trait {trait_name!r}, got {actual.name!r}"
             )

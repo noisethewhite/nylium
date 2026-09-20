@@ -1,8 +1,8 @@
 """The props table as a Mapping of writable props (Table class + singleton).
 
-Also hosts the statement helpers used by the objects layer (ADR-0019):
-lookups by owner, position rewrites, the full-draft schema sync and the
-retype value purges (VALUE_TABLES).
+The statement helpers used by the objects layer (ADR-0019) — lookups by
+owner, position rewrites, the full-draft schema sync and the retype value
+purges (VALUE_TABLES) — live here as classmethods of ``Props``.
 """
 from __future__ import annotations
 
@@ -64,176 +64,178 @@ class Props(Table[UUID, Prop]):
 
     __row__: ClassVar[type[Row]] = Prop
 
-
-props = Props()
-
-
-@Database.use_same_session
-def by_type_key(owner_uuid: UUID, key: str) -> TABLE_Props | None:
-    """One type-owned prop row by key (live ORM row — callers may write)."""
-    return Database.scalar(
-        sqla.select(TABLE_Props).where(
-            TABLE_Props.owner_type_uuid == owner_uuid, TABLE_Props.key == key
-        )
-    )
-
-
-@Database.use_same_session
-def by_trait_key(trait_uuid: UUID, key: str) -> TABLE_Props | None:
-    """One trait-owned prop row by key (live ORM row — callers may write)."""
-    return Database.scalar(
-        sqla.select(TABLE_Props).where(
-            TABLE_Props.owner_trait_uuid == trait_uuid, TABLE_Props.key == key
-        )
-    )
-
-
-@Database.use_same_session
-def rows_of_type(owner_uuid: UUID) -> list[TABLE_Props]:
-    """All props owned by the type, in schema order."""
-    return list(
-        Database.scalars(
-            sqla.select(TABLE_Props)
-            .where(TABLE_Props.owner_type_uuid == owner_uuid)
-            .order_by(TABLE_Props.position)
-        ).all()
-    )
-
-
-@Database.use_same_session
-def rows_of_trait(trait_uuid: UUID) -> list[TABLE_Props]:
-    """All props owned by the trait, in schema order."""
-    return list(
-        Database.scalars(
-            sqla.select(TABLE_Props)
-            .where(TABLE_Props.owner_trait_uuid == trait_uuid)
-            .order_by(TABLE_Props.position)
-        ).all()
-    )
-
-
-@Database.use_same_session
-def apply_positions(owner_uuid: UUID, keys: list[str]) -> None:
-    """Rewrite positions so the type's props render in `keys` order.
-    `keys` must already be validated as a full-schema permutation."""
-    rows = {row.key: row for row in rows_of_type(owner_uuid)}
-    for position, key in enumerate(keys):
-        rows[key].position = position
-    Database.flush()
-
-
-@Database.use_same_session
-def ensure_row(
-    owner_uuid: UUID,
-    key: str,
-    value_type_uuid: UUID | None,
-    value_trait_uuid: UUID | None,
-    position: int,
-    formula: str | None,
-    collect: str | None,
-) -> TABLE_Props:
-    """Fetch-or-create one type-owned prop; an existing row is retyped /
-    repositioned in place (flushed by the surrounding transaction)."""
-    row = by_type_key(owner_uuid, key)
-    if row is not None:
-        row.value_type_uuid = value_type_uuid
-        row.value_trait_uuid = value_trait_uuid
-        row.position = position
-        row.formula = formula
-        row.collect = collect
-        return row
-    row = TABLE_Props(
-        uuid=uuid4(),
-        key=key,
-        owner_type_uuid=owner_uuid,
-        value_type_uuid=value_type_uuid,
-        value_trait_uuid=value_trait_uuid,
-        position=position,
-        formula=formula,
-        collect=collect,
-    )
-    Database.add(row)
-    Database.flush()
-    return row
-
-
-@Database.use_same_session
-def sync_owned(
-    owner_column: InstrumentedAttribute[UUID | None],
-    owner_column_name: str,
-    owner_uuid: UUID,
-    items: list[SchemaItem],
-) -> None:
-    """Apply a full schema draft against one owner column
-    (owner_type_uuid or owner_trait_uuid): rows whose uuid matches an
-    existing prop are renamed/retyped/repositioned in place, uuid-less
-    rows are created, props missing from the draft are deleted (their
-    values cascade). A changed value type purges the prop's values.
-    Deletes flush first so a freed key can be reused by a new prop in
-    the same sync."""
-    existing = {
-        row.uuid: row
-        for row in Database.scalars(
-            sqla.select(TABLE_Props).where(owner_column == owner_uuid)
-        )
-    }
-    kept = {uuid for uuid, _, _, _, _, _ in items if uuid is not None}
-    for stale_uuid, stale_row in existing.items():
-        if stale_uuid not in kept:
-            Database.delete(stale_row)
-    Database.flush()
-    for position, (
-        prop_uuid, key, value_type_uuid, value_trait_uuid, formula, collect
-    ) in enumerate(items):
-        if prop_uuid is None or prop_uuid not in existing:
-            row = TABLE_Props(
-                uuid=uuid4(),
-                key=key,
-                value_type_uuid=value_type_uuid,
-                value_trait_uuid=value_trait_uuid,
-                position=position,
-                formula=formula,
-                collect=collect,
+    @classmethod
+    @Database.use_same_session
+    def by_type_key(cls, owner_uuid: UUID, key: str) -> TABLE_Props | None:
+        """One type-owned prop row by key (live ORM row — callers may write)."""
+        return Database.scalar(
+            sqla.select(TABLE_Props).where(
+                TABLE_Props.owner_type_uuid == owner_uuid, TABLE_Props.key == key
             )
-            setattr(row, owner_column_name, owner_uuid)
-            Database.add(row)
-            continue
-        row = existing[prop_uuid]
-        if (
-            row.value_type_uuid != value_type_uuid
-            or row.value_trait_uuid != value_trait_uuid
-        ):
-            purge_values(prop_uuid)
+        )
+
+    @classmethod
+    @Database.use_same_session
+    def by_trait_key(cls, trait_uuid: UUID, key: str) -> TABLE_Props | None:
+        """One trait-owned prop row by key (live ORM row — callers may write)."""
+        return Database.scalar(
+            sqla.select(TABLE_Props).where(
+                TABLE_Props.owner_trait_uuid == trait_uuid, TABLE_Props.key == key
+            )
+        )
+
+    @classmethod
+    @Database.use_same_session
+    def rows_of_type(cls, owner_uuid: UUID) -> list[TABLE_Props]:
+        """All props owned by the type, in schema order."""
+        return list(
+            Database.scalars(
+                sqla.select(TABLE_Props)
+                .where(TABLE_Props.owner_type_uuid == owner_uuid)
+                .order_by(TABLE_Props.position)
+            ).all()
+        )
+
+    @classmethod
+    @Database.use_same_session
+    def rows_of_trait(cls, trait_uuid: UUID) -> list[TABLE_Props]:
+        """All props owned by the trait, in schema order."""
+        return list(
+            Database.scalars(
+                sqla.select(TABLE_Props)
+                .where(TABLE_Props.owner_trait_uuid == trait_uuid)
+                .order_by(TABLE_Props.position)
+            ).all()
+        )
+
+    @classmethod
+    @Database.use_same_session
+    def apply_positions(cls, owner_uuid: UUID, keys: list[str]) -> None:
+        """Rewrite positions so the type's props render in `keys` order.
+        `keys` must already be validated as a full-schema permutation."""
+        rows = {row.key: row for row in cls.rows_of_type(owner_uuid)}
+        for position, key in enumerate(keys):
+            rows[key].position = position
+        Database.flush()
+
+    @classmethod
+    @Database.use_same_session
+    def ensure_row(
+        cls,
+        owner_uuid: UUID,
+        key: str,
+        value_type_uuid: UUID | None,
+        value_trait_uuid: UUID | None,
+        position: int,
+        formula: str | None,
+        collect: str | None,
+    ) -> TABLE_Props:
+        """Fetch-or-create one type-owned prop; an existing row is retyped /
+        repositioned in place (flushed by the surrounding transaction)."""
+        row = cls.by_type_key(owner_uuid, key)
+        if row is not None:
             row.value_type_uuid = value_type_uuid
             row.value_trait_uuid = value_trait_uuid
-        row.key = key
-        row.position = position
-        row.formula = formula
-        row.collect = collect
-    Database.flush()
-
-
-@Database.use_same_session
-def purge_values(prop_uuid: UUID) -> None:
-    """Wipe the prop's values from every prop-keyed table (retype)."""
-    for table in VALUE_TABLES:
-        _ = Database.execute(
-            sqla.delete(table).where(table.prop_uuid == prop_uuid)
+            row.position = position
+            row.formula = formula
+            row.collect = collect
+            return row
+        row = TABLE_Props(
+            uuid=uuid4(),
+            key=key,
+            owner_type_uuid=owner_uuid,
+            value_type_uuid=value_type_uuid,
+            value_trait_uuid=value_trait_uuid,
+            position=position,
+            formula=formula,
+            collect=collect,
         )
-    Database.flush()
+        Database.add(row)
+        Database.flush()
+        return row
 
-
-@Database.use_same_session
-def purge_values_for_instances(prop_uuid: UUID, inst_uuids: list[UUID]) -> None:
-    """Wipe this prop's values, but only on the given instances (ADR-0013
-    detach: the trait's other types keep theirs)."""
-    if not inst_uuids:
-        return
-    for table in VALUE_TABLES:
-        _ = Database.execute(
-            sqla.delete(table).where(
-                table.prop_uuid == prop_uuid,
-                table.inst_uuid.in_(inst_uuids),
+    @classmethod
+    @Database.use_same_session
+    def sync_owned(
+        cls,
+        owner_column: InstrumentedAttribute[UUID | None],
+        owner_column_name: str,
+        owner_uuid: UUID,
+        items: list[SchemaItem],
+    ) -> None:
+        """Apply a full schema draft against one owner column
+        (owner_type_uuid or owner_trait_uuid): rows whose uuid matches an
+        existing prop are renamed/retyped/repositioned in place, uuid-less
+        rows are created, props missing from the draft are deleted (their
+        values cascade). A changed value type purges the prop's values.
+        Deletes flush first so a freed key can be reused by a new prop in
+        the same sync."""
+        existing = {
+            row.uuid: row
+            for row in Database.scalars(
+                sqla.select(TABLE_Props).where(owner_column == owner_uuid)
             )
-        )
-    Database.flush()
+        }
+        kept = {uuid for uuid, _, _, _, _, _ in items if uuid is not None}
+        for stale_uuid, stale_row in existing.items():
+            if stale_uuid not in kept:
+                Database.delete(stale_row)
+        Database.flush()
+        for position, (
+            prop_uuid, key, value_type_uuid, value_trait_uuid, formula, collect
+        ) in enumerate(items):
+            if prop_uuid is None or prop_uuid not in existing:
+                row = TABLE_Props(
+                    uuid=uuid4(),
+                    key=key,
+                    value_type_uuid=value_type_uuid,
+                    value_trait_uuid=value_trait_uuid,
+                    position=position,
+                    formula=formula,
+                    collect=collect,
+                )
+                setattr(row, owner_column_name, owner_uuid)
+                Database.add(row)
+                continue
+            row = existing[prop_uuid]
+            if (
+                row.value_type_uuid != value_type_uuid
+                or row.value_trait_uuid != value_trait_uuid
+            ):
+                cls.purge_values(prop_uuid)
+                row.value_type_uuid = value_type_uuid
+                row.value_trait_uuid = value_trait_uuid
+            row.key = key
+            row.position = position
+            row.formula = formula
+            row.collect = collect
+        Database.flush()
+
+    @classmethod
+    @Database.use_same_session
+    def purge_values(cls, prop_uuid: UUID) -> None:
+        """Wipe the prop's values from every prop-keyed table (retype)."""
+        for table in VALUE_TABLES:
+            _ = Database.execute(
+                sqla.delete(table).where(table.prop_uuid == prop_uuid)
+            )
+        Database.flush()
+
+    @classmethod
+    @Database.use_same_session
+    def purge_values_for_instances(cls, prop_uuid: UUID, inst_uuids: list[UUID]) -> None:
+        """Wipe this prop's values, but only on the given instances (ADR-0013
+        detach: the trait's other types keep theirs)."""
+        if not inst_uuids:
+            return
+        for table in VALUE_TABLES:
+            _ = Database.execute(
+                sqla.delete(table).where(
+                    table.prop_uuid == prop_uuid,
+                    table.inst_uuid.in_(inst_uuids),
+                )
+            )
+        Database.flush()
+
+
+props = Props()

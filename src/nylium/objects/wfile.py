@@ -10,8 +10,12 @@ from __future__ import annotations
 from pathlib import Path
 from uuid import UUID
 
+import sqlalchemy as sqla
+
 from nylium.database import Database
 from nylium.tables import files
+from nylium.tables.table_files import TABLE_Files
+from nylium.tables.values.file_values import TABLE_FileValues
 from typing import ClassVar
 
 
@@ -117,7 +121,7 @@ class WFile:
     def reset_icons_referencing(cls, image_uuid: UUID) -> None:
         """Deleting an Image used as an icon is allowed (ADR-0006): every
         type pointing at it falls back to the default glyph."""
-        from nylium.tables.decor.type_decors import reset_icons_referencing
+        from nylium.objects.wtype import reset_icons_referencing
 
         marker = f"{cls.ICON_IMAGE_PREFIX}{image_uuid}"
         reset_icons_referencing(marker, cls.DEFAULT_GLYPH)
@@ -136,8 +140,6 @@ class WFile:
     @classmethod
     @Database.use_same_session
     def image_file_exists(cls, uuid: UUID) -> bool:
-        from nylium.tables.files import type_name_of
-
         return type_name_of(uuid) == cls.TYPE_IMAGE
 
     @classmethod
@@ -146,6 +148,48 @@ class WFile:
         """Deleting a file also drops Array<File/Document/Image> members that
         pointed at it (ADR-0008) — mirrors WObject.delete's cleanup of array
         links, so no dangling files.uuid survives in an array."""
-        from nylium.tables.values.array_values import delete_memberships
+        from nylium.objects.warray_values import delete_memberships
 
         delete_memberships(uuid)
+
+
+# --- file statement helpers (ADR-0030 phase C: moved from tables/files.py
+# and tables/values/file_values.py) ---
+
+
+@Database.use_same_session
+def type_name_of(uuid: UUID) -> str | None:
+    """The stored type_name for a file uuid, or None (ADR-0019)."""
+    row = Database.get(TABLE_Files, uuid)
+    return None if row is None else row.type_name
+
+
+@Database.use_same_session
+def file_ref_for(inst_uuid: UUID, prop_uuid: UUID) -> UUID | None:
+    """The file uuid referenced by (owner instance, prop), or None."""
+    return Database.scalar(
+        sqla.select(TABLE_FileValues.file_uuid).where(
+            TABLE_FileValues.inst_uuid == inst_uuid,
+            TABLE_FileValues.prop_uuid == prop_uuid,
+        )
+    )
+
+
+@Database.use_same_session
+def write_ref(inst_uuid: UUID, prop_uuid: UUID, file_uuid: UUID | None) -> None:
+    """Set/clear the file reference of (owner instance, prop)."""
+    if file_uuid is None:
+        _ = Database.execute(
+            sqla.delete(TABLE_FileValues).where(
+                TABLE_FileValues.inst_uuid == inst_uuid,
+                TABLE_FileValues.prop_uuid == prop_uuid,
+            )
+        )
+        return
+    row = Database.get(TABLE_FileValues, (inst_uuid, prop_uuid))
+    if row is None:
+        Database.add(
+            TABLE_FileValues(inst_uuid=inst_uuid, prop_uuid=prop_uuid, file_uuid=file_uuid)
+        )
+        return
+    row.file_uuid = file_uuid

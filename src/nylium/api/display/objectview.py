@@ -10,11 +10,9 @@ from uuid import UUID
 from pydantic.dataclasses import dataclass
 
 from nylium.database import Database
-from nylium.tables.objects import instances
-from nylium.tables.objects.instances import existing_uuids
-from nylium.tables.values.array_values import array_tag_rows
-from nylium.tables.values.backlinks import backlink_refs
-from nylium.tables.values.collect_range import collect_range
+from nylium.tables.objects import Instances, instances
+from nylium.objects.warray_values import array_tag_rows, collect_range
+from nylium.objects.wlink import backlink_refs
 from nylium.objects import WObject, WType
 from nylium.objects.wtypemeta import StoredValue, WObjectShape
 from nylium.objects.monthday import MonthDay, MonthDayTime
@@ -94,9 +92,7 @@ class ObjectView:
         wrapper = WObject.wrap(uuid)
         # ADR-0029: function bindings are instance-level — load them once
         # and map prop_uuid -> function_uuid to avoid an N+1 per prop.
-        from nylium.tables.functions.instance_function_links import (
-            function_links_of_instance,
-        )
+        from nylium.objects.wfunction.function_links import function_links_of_instance
 
         bound = dict(function_links_of_instance(uuid))
         effective = list(WProp.effective_for(owner))
@@ -219,7 +215,7 @@ class ObjectView:
                 else cast(list[WObjectShape] | None, getattr(wrapper, array_key)) or []
             )
             existing: set[UUID] = (
-                existing_uuids([member.uuid for member in members]) if members else set()
+                Instances.existing_uuids([member.uuid for member in members]) if members else set()
             )
             wanted = {member for key, member in refs if key == array_key and member}
             rows: list[dict[str, Decimal | Quantity | None]] = []

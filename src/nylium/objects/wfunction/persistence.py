@@ -14,12 +14,11 @@ from collections.abc import Mapping, Sequence
 from uuid import UUID
 
 from nylium.database import Database
-from nylium.tables.functions import graph
+import nylium.objects.wfunction.graph as graph
 from nylium.tables.functions.function_edges import TABLE_FunctionEdges
 from nylium.tables.functions.function_nodes import TABLE_FunctionNodes
-from nylium.tables.functions.instance_function_links import function_links_of_instance
-from nylium.tables.objects.instances import get as instance_get
-from nylium.tables.objects.instances import uuids_of_kind
+from nylium.objects.wfunction.function_links import function_links_of_instance
+from nylium.tables.objects.instances import Instances, instances
 from nylium.objects.wprop import WProp
 from nylium.objects.wtype import WType
 from nylium.objects.wfunction.constants import NODE_GET_PROP, fail
@@ -41,7 +40,7 @@ def sync_graph(
 def _function_instance_uuids() -> list[UUID]:
     """Every function instance uuid (instances whose type kind is
     'function')."""
-    return uuids_of_kind(WType.KIND_FUNCTION)
+    return Instances.uuids_of_kind(WType.KIND_FUNCTION)
 
 
 @Database.use_same_session
@@ -56,7 +55,7 @@ def assert_no_dependency_cycle(inst_uuid: UUID) -> None:
     if not bindings:
         return
     # prop key -> prop_uuid on the owner (to map get_prop keys back)
-    inst = instance_get(inst_uuid)
+    inst = instances.get(inst_uuid)
     type_uuid = None if inst is None else inst.type_uuid
     if type_uuid is None:
         return

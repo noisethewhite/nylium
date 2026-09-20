@@ -10,7 +10,7 @@ from typing import cast
 from uuid import UUID
 
 from nylium.database import Database
-from nylium.tables.functions import graph
+import nylium.objects.wfunction.graph as graph
 from nylium.tables.functions.function_edges import TABLE_FunctionEdges
 from nylium.objects.wscalar import ScalarPayload, WInteger, WString
 from nylium.objects.wfunction.constants import (

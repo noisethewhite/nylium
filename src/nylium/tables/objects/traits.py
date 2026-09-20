@@ -1,4 +1,8 @@
-"""The traits table as a Mapping of writable traits (Table class + singleton)."""
+"""The traits table as a Mapping of writable traits (Table class + singleton).
+
+The statement helpers used by the objects layer (ADR-0019) — name lookups —
+live here as classmethods of ``Traits``.
+"""
 from __future__ import annotations
 
 from typing import ClassVar
@@ -47,20 +51,20 @@ class Traits(Table[UUID, Trait]):
         if row is not None:
             Database.delete(row)  # its props cascade
 
+    @classmethod
+    @Database.use_same_session
+    def uuid_by_name(cls, name: str) -> UUID | None:
+        """The trait uuid for a name, or None (ADR-0019: trait lookup)."""
+        return Database.scalar(
+            sqla.select(TABLE_Traits.uuid).where(TABLE_Traits.name == name)
+        )
 
-@Database.use_same_session
-def uuid_by_name(name: str) -> UUID | None:
-    """The trait uuid for a name, or None (ADR-0019: trait lookup)."""
-    return Database.scalar(
-        sqla.select(TABLE_Traits.uuid).where(TABLE_Traits.name == name)
-    )
-
-
-@Database.use_same_session
-def name_of(uuid: UUID) -> str | None:
-    """The trait's name by uuid, or None when the trait is gone (ADR-0019)."""
-    row = Database.get(TABLE_Traits, uuid)
-    return None if row is None else str(row.name)
+    @classmethod
+    @Database.use_same_session
+    def name_of(cls, uuid: UUID) -> str | None:
+        """The trait's name by uuid, or None when the trait is gone (ADR-0019)."""
+        row = Database.get(TABLE_Traits, uuid)
+        return None if row is None else str(row.name)
 
 
 traits = Traits()

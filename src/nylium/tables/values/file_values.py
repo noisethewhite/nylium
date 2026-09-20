@@ -3,14 +3,12 @@
 # instances.uuid — files are not objects. Keyed by (owner instance, prop):
 # one prop holds one file reference, and a file may be referenced from many
 # props (unlike instance_values, whose target-uuid PK forbids multi-ref).
-# Statement helpers live here too (ADR-0019).
+# The statement helpers moved to objects/wfile.py (ADR-0030 phase C).
 from uuid import UUID
 
-import sqlalchemy as sqla
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
 
-from nylium.database import Database
 from nylium.tables.base import reg
 from typing import ClassVar
 
@@ -28,34 +26,3 @@ class TABLE_FileValues:
     prop_uuid: Mapped[UUID] = mapped_column(
         ForeignKey("props.uuid", ondelete="CASCADE"), nullable=False, primary_key=True
     )
-
-
-@Database.use_same_session
-def file_ref_for(inst_uuid: UUID, prop_uuid: UUID) -> UUID | None:
-    """The file uuid referenced by (owner instance, prop), or None."""
-    return Database.scalar(
-        sqla.select(TABLE_FileValues.file_uuid).where(
-            TABLE_FileValues.inst_uuid == inst_uuid,
-            TABLE_FileValues.prop_uuid == prop_uuid,
-        )
-    )
-
-
-@Database.use_same_session
-def write_ref(inst_uuid: UUID, prop_uuid: UUID, file_uuid: UUID | None) -> None:
-    """Set/clear the file reference of (owner instance, prop)."""
-    if file_uuid is None:
-        _ = Database.execute(
-            sqla.delete(TABLE_FileValues).where(
-                TABLE_FileValues.inst_uuid == inst_uuid,
-                TABLE_FileValues.prop_uuid == prop_uuid,
-            )
-        )
-        return
-    row = Database.get(TABLE_FileValues, (inst_uuid, prop_uuid))
-    if row is None:
-        Database.add(
-            TABLE_FileValues(inst_uuid=inst_uuid, prop_uuid=prop_uuid, file_uuid=file_uuid)
-        )
-        return
-    row.file_uuid = file_uuid

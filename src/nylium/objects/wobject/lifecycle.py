@@ -1,8 +1,8 @@
 """WObject lifecycle: construction, registration, retrieval (get/wrap),
 uuid identity and the cascading delete.
 
-ADR-0019: statements live in ``nylium.tables`` — no ``sqla`` / ``Database``
-imports here.
+ADR-0019 / ADR-0030: statements live in the ``nylium.objects`` helpers
+(warray/wlink) — no ``sqla`` / ``Database`` imports here.
 """
 from __future__ import annotations
 
@@ -11,12 +11,9 @@ from uuid import UUID, uuid4
 
 from nylium.database import Database
 from nylium.tables.objects import instances
-from nylium.tables.objects.instances import (
-    delete_row as delete_instance_row,
-    get as get_instance_row,
-    owned_uuids,
-)
-from nylium.tables.values import array_values, instance_values
+from nylium.tables.objects.instances import Instances
+from nylium.objects.warray_values import delete_memberships
+from nylium.objects.wlink import array_link_uuids_of, delete_links_to
 from nylium.objects.warray import WArray
 from nylium.objects.wembedded import WEmbedded
 from nylium.objects.wtype import WType
@@ -77,7 +74,7 @@ class LifecycleMixin:
     @classmethod
     @Database.use_same_session
     def get(cls, uuid: UUID) -> WObjectShape | None:
-        inst = get_instance_row(uuid)
+        inst = instances.get(uuid)
         if inst is None:
             return None
         owner = WType.by_uuid(inst.type_uuid)
@@ -98,7 +95,7 @@ class LifecycleMixin:
     @classmethod
     @Database.use_same_session
     def wrap(cls, uuid: UUID) -> WObjectShape:
-        inst = get_instance_row(uuid)
+        inst = instances.get(uuid)
         if inst is None:
             raise KeyError(f"no instance {uuid}")
         owner = WType.by_uuid(inst.type_uuid)
@@ -119,15 +116,15 @@ class LifecycleMixin:
             WArray.destroy(array_uuid)
         for child_uuid in self._owned_embedded_uuids():
             WEmbedded.destroy(child_uuid)
-        instance_values.delete_links_to(self._uuid)
-        array_values.delete_memberships(self._uuid)
-        delete_instance_row(self._uuid)
+        delete_links_to(self._uuid)
+        delete_memberships(self._uuid)
+        Instances.delete_row(self._uuid)
 
     def _owned_embedded_uuids(self) -> list[UUID]:
         """TABLE_Instances held through embedded-typed props — composition
         children (ADR-0004), found via the owner_* read-index."""
-        return owned_uuids(self._uuid)
+        return Instances.owned_uuids(self._uuid)
 
     def _owned_array_uuids(self) -> list[UUID]:
         """Uuids of array-instance links held by this object."""
-        return instance_values.array_link_uuids_of(self._uuid)
+        return array_link_uuids_of(self._uuid)

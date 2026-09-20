@@ -40,7 +40,6 @@ from nylium.tables.objects.instances import (
     Instance,
     Instances,
     instances,
-    unique_plural_name,
 )
 
 __all__ = [
@@ -72,5 +71,4 @@ __all__ = [
     "Instance",
     "Instances",
     "instances",
-    "unique_plural_name",
 ]
