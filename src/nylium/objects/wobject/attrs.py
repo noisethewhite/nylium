@@ -11,8 +11,8 @@ from typing import cast, override
 from uuid import UUID
 
 from nylium.database import commit_after_this, use_same_session
-from nylium.tables.objects.instances import get as get_instance_row
-from nylium.tables.objects.instances import touch as touch_instance
+from nylium.objects.tables.instances import get as get_instance_row
+from nylium.objects.tables.instances import touch as touch_instance
 from nylium.tables.values import cells, instance_values
 from nylium.objects.warray import WArray
 from nylium.objects.wembedded import WEmbedded

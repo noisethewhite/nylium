@@ -9,9 +9,9 @@ from typing import ClassVar
 from uuid import UUID
 
 from nylium.database.table import Row
-from nylium.tables.objects.props import Prop, props
-from nylium.tables.objects.table_traits import TABLE_Traits
-from nylium.tables.objects.type_traits import type_traits
+from nylium.objects.tables.props import Prop, props
+from nylium.objects.tables.table_traits import TABLE_Traits
+from nylium.objects.tables.type_traits import type_traits
 
 
 class Trait(Row):
@@ -42,7 +42,7 @@ class Trait(Row):
     @property
     def attached(self) -> Generator[str, None, None]:
         """Names of types this trait is attached to, in attach order."""
-        from nylium.tables.objects.types import types
+        from nylium.objects.tables.types import types
 
         links = sorted(
             type_traits.where(trait_uuid=self.uuid), key=lambda link: link.position

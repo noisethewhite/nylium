@@ -5,9 +5,9 @@ from uuid import UUID
 
 from nylium.api.shared import ApiShared
 from nylium.database import commit_after_this, use_same_session
-from nylium.tables import Trait, instances, props, traits, type_traits
+from nylium.objects.tables import Trait, instances, props, traits, type_traits
 from nylium.tables.decor import trait_decor
-from nylium.tables.objects.types import Type, types
+from nylium.objects.tables.types import Type, types
 from nylium.objects.wprop import SchemaItem, WProp
 from nylium.objects.wscalar import WScalar
 from nylium.objects.wtype import WType

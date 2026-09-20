@@ -6,13 +6,13 @@ from uuid import UUID
 
 from nylium.database import Database, commit_after_this
 from nylium.database.table import Row, Table
-from nylium.tables.objects.table_types import TABLE_Types as TABLE_Types
-from nylium.tables.objects.type import Type as Type
+from nylium.objects.tables.table_types import TABLE_Types as TABLE_Types
+from nylium.objects.rows.type import Type as Type
 
 __all__ = ["TABLE_Types", "Type", "Types", "types"]
 
 # TABLE_Types lives in table_types.py (see that module's docstring) and is
-# re-exported here: `from nylium.tables.objects.types import TABLE_Types` keeps
+# re-exported here: `from nylium.objects.tables.types import TABLE_Types` keeps
 # working everywhere. `Type` is re-exported from type.py.
 
 

@@ -24,8 +24,8 @@ def backlink_refs(target_uuid: UUID) -> list[tuple[UUID, str]]:
     Table classes are imported lazily so this module stays cycle-free at
     load time (mirrors ``array_values.array_tag_rows``).
     """
-    from nylium.tables.objects.table_instances import TABLE_Instances
-    from nylium.tables.objects.table_types import TABLE_Types
+    from nylium.objects.tables.table_instances import TABLE_Instances
+    from nylium.objects.tables.table_types import TABLE_Types
 
     direct_types = aliased(TABLE_Types)
     direct = Database.execute(

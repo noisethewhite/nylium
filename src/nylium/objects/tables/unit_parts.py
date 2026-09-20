@@ -9,10 +9,10 @@ import sqlalchemy as sqla
 
 from nylium.database import Database, commit_after_this, use_same_session
 from nylium.database.table import Row, Table
-from nylium.tables.objects.props import TABLE_Props as TABLE_Props
-from nylium.tables.objects.table_types import TABLE_Types as TABLE_Types
-from nylium.tables.objects.table_unit_parts import TABLE_UnitParts as TABLE_UnitParts
-from nylium.tables.objects.unit_part import UnitPart as UnitPart
+from nylium.objects.tables.props import TABLE_Props as TABLE_Props
+from nylium.objects.tables.table_types import TABLE_Types as TABLE_Types
+from nylium.objects.tables.table_unit_parts import TABLE_UnitParts as TABLE_UnitParts
+from nylium.objects.rows.unit_part import UnitPart as UnitPart
 from nylium.tables.values.numeric_values import TABLE_NumericValues as TABLE_NumericValues
 
 # TABLE_Types comes from table_types.py, not types.py: types.py imports this

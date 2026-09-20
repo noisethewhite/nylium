@@ -16,9 +16,9 @@ from typing import cast
 from uuid import UUID, uuid4
 
 from nylium.database import commit_after_this, use_same_session
-from nylium.tables import instances
+from nylium.objects.tables import instances
 from nylium.tables.files import type_name_of as file_type_name_of
-from nylium.tables.objects.instances import delete_row as delete_instance_row, get as instance_get
+from nylium.objects.tables.instances import delete_row as delete_instance_row, get as instance_get
 from nylium.tables.values import cells
 from nylium.tables.values.array_values import (
     add_element,

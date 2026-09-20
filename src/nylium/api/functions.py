@@ -17,7 +17,7 @@ else:
     _FunctionsBase = ApiShared
 from nylium.api.display import FunctionView, ObjectView
 from nylium.database import commit_after_this, use_same_session
-from nylium.tables import props, types
+from nylium.objects.tables import props, types
 from nylium.tables.functions.instance_function_links import (
     delete_function_link,
     delete_links_to_function,
@@ -137,7 +137,7 @@ class FunctionsApi(_FunctionsBase):
         function-backed. Refuses a per-owner cross-function cycle."""
         from nylium.server.errors import ValidationError
 
-        from nylium.tables.objects.instances import get as instance_get
+        from nylium.objects.tables.instances import get as instance_get
 
         inst = instance_get(inst_uuid)
         if inst is None:

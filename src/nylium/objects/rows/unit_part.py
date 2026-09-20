@@ -9,7 +9,7 @@ from typing import ClassVar
 from uuid import UUID
 
 from nylium.database.table import Row
-from nylium.tables.objects.table_unit_parts import TABLE_UnitParts
+from nylium.objects.tables.table_unit_parts import TABLE_UnitParts
 
 
 class UnitPart(Row):

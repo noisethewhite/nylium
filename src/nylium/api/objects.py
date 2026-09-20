@@ -8,7 +8,7 @@ from uuid import UUID
 from nylium.api.shared import ApiShared, NAME_PROP_KEY, PropInput
 from nylium.api.display import ObjectRef, ObjectView
 from nylium.database import commit_after_this, use_same_session
-from nylium.tables import instances
+from nylium.objects.tables import instances
 from nylium.objects.wembedded import WEmbedded
 from nylium.objects.wobject import WObject
 from nylium.objects.wprop import WProp

@@ -13,7 +13,7 @@ from decimal import Decimal
 from uuid import UUID
 
 from nylium.database import commit_after_this, use_same_session
-from nylium.tables.objects.unit_parts import unit_parts
+from nylium.objects.tables.unit_parts import unit_parts
 from nylium.tables.values import cells
 from nylium.tables.values.numeric_values import read_with_unit, write_with_unit
 from nylium.objects.quantity import Quantity

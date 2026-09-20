@@ -9,8 +9,8 @@ from uuid import uuid4
 import sqlalchemy as sqla
 
 from nylium.database import Database, commit_after_this, use_same_session
-from nylium.tables import TABLE_Instances
-from nylium.tables.objects.types import TABLE_Types
+from nylium.objects.tables import TABLE_Instances
+from nylium.objects.tables.types import TABLE_Types
 
 
 class _Boom(Exception):

@@ -18,9 +18,9 @@ from typing import ClassVar, Protocol, TypeAlias, cast, get_args, get_origin
 from uuid import UUID
 
 from nylium.database import commit_after_this, use_same_session
-from nylium.tables.objects.instances import get as instance_get
-from nylium.tables.objects.traits import uuid_by_name as trait_uuid_by_name
-from nylium.tables.objects.type_traits import is_attached
+from nylium.objects.tables.instances import get as instance_get
+from nylium.objects.tables.traits import uuid_by_name as trait_uuid_by_name
+from nylium.objects.tables.type_traits import is_attached
 from nylium.objects.quantity import Quantity
 from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import ScalarPayload, WScalar

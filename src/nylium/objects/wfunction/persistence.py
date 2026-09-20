@@ -18,8 +18,8 @@ from nylium.tables.functions import graph
 from nylium.tables.functions.function_edges import TABLE_FunctionEdges
 from nylium.tables.functions.function_nodes import TABLE_FunctionNodes
 from nylium.tables.functions.instance_function_links import function_links_of_instance
-from nylium.tables.objects.instances import get as instance_get
-from nylium.tables.objects.instances import uuids_of_kind
+from nylium.objects.tables.instances import get as instance_get
+from nylium.objects.tables.instances import uuids_of_kind
 from nylium.objects.wprop import WProp
 from nylium.objects.wtype import WType
 from nylium.objects.wfunction.constants import NODE_GET_PROP, fail

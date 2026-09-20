@@ -6,7 +6,7 @@ from uuid import UUID
 import pytest
 
 from nylium.api import Api, ArrayValue, ScalarValue
-from nylium.tables.objects.types import Type
+from nylium.objects.tables.types import Type
 from nylium.server.errors import ValidationError
 
 

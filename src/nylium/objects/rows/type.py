@@ -9,11 +9,11 @@ from typing import TYPE_CHECKING, ClassVar
 from uuid import UUID
 
 from nylium.database.table import Row
-from nylium.tables.objects.enum_options import EnumOption, enum_options
-from nylium.tables.objects.props import Prop, props
-from nylium.tables.objects.traits import Trait, traits, type_traits
-from nylium.tables.objects.table_types import TABLE_Types
-from nylium.tables.objects.unit_parts import UnitPart, unit_parts
+from nylium.objects.tables.enum_options import EnumOption, enum_options
+from nylium.objects.tables.props import Prop, props
+from nylium.objects.tables.traits import Trait, traits, type_traits
+from nylium.objects.tables.table_types import TABLE_Types
+from nylium.objects.tables.unit_parts import UnitPart, unit_parts
 
 if TYPE_CHECKING:
     from nylium.tables.decor import TypeDecor

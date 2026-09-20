@@ -12,7 +12,7 @@ from typing import cast
 from uuid import UUID
 
 from nylium.database import use_same_session
-from nylium.tables.objects.enum_options import enum_options
+from nylium.objects.tables.enum_options import enum_options
 from nylium.tables.values import cells
 from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import WString

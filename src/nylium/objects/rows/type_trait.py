@@ -8,7 +8,7 @@ from typing import ClassVar
 from uuid import UUID
 
 from nylium.database.table import Row
-from nylium.tables.objects.table_type_traits import TABLE_TypeTraits
+from nylium.objects.tables.table_type_traits import TABLE_TypeTraits
 
 
 class TypeTrait(Row):

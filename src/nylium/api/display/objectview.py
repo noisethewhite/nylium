@@ -10,8 +10,8 @@ from uuid import UUID
 from pydantic.dataclasses import dataclass
 
 from nylium.database import use_same_session
-from nylium.tables import instances
-from nylium.tables.objects.instances import existing_uuids
+from nylium.objects.tables import instances
+from nylium.objects.tables.instances import existing_uuids
 from nylium.tables.values.array_values import array_tag_rows
 from nylium.tables.values.backlinks import backlink_refs
 from nylium.tables.values.collect_range import collect_range

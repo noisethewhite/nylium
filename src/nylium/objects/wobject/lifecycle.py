@@ -10,8 +10,8 @@ from typing import cast
 from uuid import UUID, uuid4
 
 from nylium.database import commit_after_this, use_same_session
-from nylium.tables import instances
-from nylium.tables.objects.instances import (
+from nylium.objects.tables import instances
+from nylium.objects.tables.instances import (
     delete_row as delete_instance_row,
     get as get_instance_row,
     owned_uuids,

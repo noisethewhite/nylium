@@ -1,22 +1,11 @@
-# Tables live in submodules by concern: objects/ (domain-object tables:
-# types, instances, props, enum/unit params), values/ (prop-value tables),
-# auth/ (users, credentials, sessions, tokens), functions/ (function graph);
-# base.py and files.py stay at the package root. This package keeps the flat
-# import surface for the mapped classes, named TABLE_<Name>. The `types`
-# store (ADR-0010) is the public entry point for type access; TABLE_Types is
-# imported explicitly where a SQL join needs the mapped class.
+# Tables live in submodules by concern: values/ (prop-value tables),
+# auth/ (users, credentials, sessions, tokens), functions/ (function graph),
+# decor/ (type/trait decorators); base.py and files.py stay at the package
+# root. This package keeps the flat import surface for the mapped classes,
+# named TABLE_<Name>. The domain-object tables (types, instances, props,
+# enum/unit params) moved to nylium.objects.tables / nylium.objects.rows
+# (ADR-0019 domain/object split) — import those from there.
 from nylium.tables.base import reg
-from nylium.tables.objects.types import types
-from nylium.tables.objects.props import TABLE_Props, props
-from nylium.tables.objects.traits import (
-    TABLE_Traits,
-    TABLE_TypeTraits,
-    Trait,
-    Traits,
-    traits,
-    type_traits,
-)
-from nylium.tables.objects.instances import TABLE_Instances, instances
 from nylium.tables.values.string_values import TABLE_StringValues
 from nylium.tables.values.integer_values import TABLE_IntegerValues
 from nylium.tables.values.numeric_values import TABLE_NumericValues
@@ -26,8 +15,6 @@ from nylium.tables.values.date_values import TABLE_DateValues
 from nylium.tables.values.time_values import TABLE_TimeValues
 from nylium.tables.values.monthday_values import TABLE_MonthDayValues
 from nylium.tables.values.monthdaytime_values import TABLE_MonthDayTimeValues
-from nylium.tables.objects.enum_options import TABLE_EnumOptions, enum_options
-from nylium.tables.objects.unit_parts import TABLE_UnitParts, unit_parts
 from nylium.tables.values.instance_values import TABLE_InstanceValues
 from nylium.tables.values.array_values import TABLE_ArrayValues
 from nylium.tables.auth.auth_users import AuthUser, auth_users
@@ -49,20 +36,7 @@ from nylium.tables.functions.instance_function_links import TABLE_InstanceFuncti
 
 __all__ = [
     "reg",
-    "types",
-    "instances",
-    "props",
-    "traits",
-    "type_traits",
-    "Trait",
-    "Traits",
-    "TABLE_Traits",
-    "TABLE_TypeTraits",
     "files",
-    "enum_options",
-    "unit_parts",
-    "TABLE_Props",
-    "TABLE_Instances",
     "TABLE_StringValues",
     "TABLE_IntegerValues",
     "TABLE_NumericValues",
@@ -72,8 +46,6 @@ __all__ = [
     "TABLE_TimeValues",
     "TABLE_MonthDayValues",
     "TABLE_MonthDayTimeValues",
-    "TABLE_EnumOptions",
-    "TABLE_UnitParts",
     "TABLE_InstanceValues",
     "TABLE_ArrayValues",
     "AuthUser",

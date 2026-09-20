@@ -7,8 +7,8 @@ from uuid import UUID
 
 from nylium.api.display import ObjectRef
 from nylium.database import use_same_session
-from nylium.tables import Trait, traits
-from nylium.tables.objects.types import Type, types
+from nylium.objects.tables import Trait, traits
+from nylium.objects.tables.types import Type, types
 from nylium.objects.wembedded import EMBEDDED_NAME_SEPARATOR
 from nylium.objects.wenum import WEnum
 from nylium.objects.wfile import WFile

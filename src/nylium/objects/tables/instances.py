@@ -12,9 +12,9 @@ import sqlalchemy as sqla
 
 from nylium.database import Database, commit_after_this, use_same_session
 from nylium.database.table import Row, Table
-from nylium.tables.objects.instance import Instance as Instance
-from nylium.tables.objects.table_instances import TABLE_Instances as TABLE_Instances
-from nylium.tables.objects.table_types import TABLE_Types
+from nylium.objects.rows.instance import Instance as Instance
+from nylium.objects.tables.table_instances import TABLE_Instances as TABLE_Instances
+from nylium.objects.tables.table_types import TABLE_Types
 
 
 def unique_plural_name(uuid: UUID, name: str, plural_name: str | None = None) -> str:

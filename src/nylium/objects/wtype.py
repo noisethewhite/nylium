@@ -12,7 +12,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from nylium.database import commit_after_this, use_same_session
-from nylium.tables.objects.types import Type, types
+from nylium.objects.tables.types import Type, types
 from typing import ClassVar
 
 
