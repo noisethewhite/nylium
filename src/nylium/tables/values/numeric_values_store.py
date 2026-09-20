@@ -1,18 +1,22 @@
-"""Numeric cell wrapper — TABLE_NumericValues, incl. unit-aware cells."""
+"""Numeric values store — read/write/clear a numeric cell, incl. the
+unit-aware read/write (ADR-0031)."""
 from __future__ import annotations
 
 from decimal import Decimal
-from typing import final
+from typing import ClassVar
 from uuid import UUID
 
 from nylium.database import Database
-from nylium.scalars.base import Scalar
+from nylium.database.table import Row
+from nylium.rows.values.numeric_value import NumericValue
 from nylium.tables.values.numeric_values import TABLE_NumericValues
+from nylium.tables.values.scalar_values import ScalarValuesTable
 
 
-@final
-class Numeric(Scalar):
-    TABLE = TABLE_NumericValues
+class NumericValues(ScalarValuesTable[NumericValue]):
+    """The numeric_values table as a store of writable numeric cells."""
+
+    __row__: ClassVar[type[Row]] = NumericValue
 
     @classmethod
     @Database.use_same_session
@@ -41,3 +45,6 @@ class Numeric(Scalar):
             return
         row.value = value
         row.unit = unit
+
+
+numeric_values = NumericValues()

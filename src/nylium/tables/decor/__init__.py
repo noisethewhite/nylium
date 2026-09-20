@@ -8,10 +8,10 @@ writes both rows in one commit; deletes cascade through the FK.
 from __future__ import annotations
 
 from nylium.tables.decor.table_type_decor import TABLE_TypeDecor
-from nylium.tables.decor.type_decor import TypeDecor
+from nylium.rows.decor.type_decor import TypeDecor
 from nylium.tables.decor.type_decors import TypeDecors, type_decor
 from nylium.tables.decor.table_trait_decor import TABLE_TraitDecor
-from nylium.tables.decor.trait_decor import TraitDecor
+from nylium.rows.decor.trait_decor import TraitDecor
 from nylium.tables.decor.trait_decors import TraitDecors, trait_decor
 
 __all__ = [

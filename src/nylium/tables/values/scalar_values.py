@@ -1,24 +1,24 @@
-"""Scalar cell wrappers — the value-side read/write/clear statements for
-the nine scalar ``*Values`` tables (excluding instance/array/file links).
+"""Generic value-side read/write/clear for the nine scalar ``*Values``
+tables (ADR-0031): one shared store base, nine thin subclasses.
 
-This is a verbatim port of the former ``tables.values.cells`` functions:
-each subclass owns one storage table (``TABLE``) and the cell statements
-that used to take the table as a free parameter now read it off ``cls``.
+Composite PK ``(inst_uuid, prop_uuid)``. Writes go through explicit
+insert/update because ``Row.persist`` stays single-PK-only. Each
+``WScalar`` marker binds ``SCALAR`` to its store subclass; each store
+subclass binds ``__row__`` to its snapshot Row.
 
-The wrappers operate on RAW storage values; storage <-> python conversion
-stays with the ``WScalar`` markers in the objects layer (``to_storage`` /
-``from_storage``). A scalar marker reaches its wrapper through
-``WScalar.SCALAR`` — that mapping is the ADR-0030 ``TABLE <-> scalars`` link.
+This module imports no ``nylium.objects`` code — the objects layer
+reaches down into the stores, never the reverse.
 """
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import ClassVar, cast
+from typing import ClassVar, Generic, TypeVar, cast
 from uuid import UUID
 
 import sqlalchemy as sqla
 
 from nylium.database import Database
+from nylium.database.table import Row, Table
 from nylium.tables.values.boolean_values import TABLE_BooleanValues
 from nylium.tables.values.date_values import TABLE_DateValues
 from nylium.tables.values.datetime_values import TABLE_DatetimeValues
@@ -41,31 +41,43 @@ ScalarCellsTable = (
     | TABLE_MonthDayTimeValues
 )
 
+_R = TypeVar("_R", bound=Row)
 
-class Scalar:
-    """Base scalar cell wrapper. ``TABLE`` is the mapped ``*Values`` class."""
 
-    TABLE: ClassVar[type[ScalarCellsTable]]
+class ScalarValuesTable(Table[tuple[UUID, UUID], _R], Generic[_R]):
+    """Shared store shape for the nine scalar value tables.
+
+    ``read`` / ``write`` / ``clear`` operate on RAW storage values; the
+    storage <-> python conversion stays with the ``WScalar`` markers
+    (``to_storage`` / ``from_storage``).
+    """
+
+    __row__: ClassVar[type[Row]]
+
+    @classmethod
+    def _table(cls) -> type[ScalarCellsTable]:
+        return cast("type[ScalarCellsTable]", cls.__row__.__table__)
 
     @classmethod
     @Database.use_same_session
     def read(cls, inst_uuid: UUID, prop_uuid: UUID) -> object:
         """Raw stored value, or None when the cell is absent."""
-        row = Database.get(cls.TABLE, (inst_uuid, prop_uuid))
+        row = Database.get(cls._table(), (inst_uuid, prop_uuid))
         return None if row is None else row.value
 
     @classmethod
     @Database.use_same_session
     def write(cls, inst_uuid: UUID, prop_uuid: UUID, value: object) -> None:
         """Upsert one cell (insert or update in place)."""
-        row = Database.get(cls.TABLE, (inst_uuid, prop_uuid))
+        table = cls._table()
+        row = Database.get(table, (inst_uuid, prop_uuid))
         if row is None:
-            ctor = cast("Callable[..., ScalarCellsTable]", cls.TABLE)
+            ctor = cast("Callable[..., ScalarCellsTable]", table)
             Database.add(ctor(inst_uuid=inst_uuid, prop_uuid=prop_uuid, value=value))
             return
         _ = Database.execute(
-            sqla.update(cls.TABLE)
-            .where(cls.TABLE.inst_uuid == inst_uuid, cls.TABLE.prop_uuid == prop_uuid)
+            sqla.update(table)
+            .where(table.inst_uuid == inst_uuid, table.prop_uuid == prop_uuid)
             .values(value=value)
         )
 
@@ -73,7 +85,7 @@ class Scalar:
     @Database.use_same_session
     def clear(cls, inst_uuid: UUID, prop_uuid: UUID) -> bool:
         """Delete the row if present; True when a row was actually deleted."""
-        row = Database.get(cls.TABLE, (inst_uuid, prop_uuid))
+        row = Database.get(cls._table(), (inst_uuid, prop_uuid))
         if row is None:
             return False
         Database.delete(row)

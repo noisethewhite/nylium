@@ -14,10 +14,11 @@ from collections.abc import Mapping, Sequence
 from uuid import UUID
 
 from nylium.database import Database
-import nylium.objects.wfunction.graph as graph
+from nylium.tables.functions.function_edges_store import FunctionEdges
+from nylium.tables.functions.function_nodes_store import FunctionNodes
+from nylium.tables.functions.instance_function_links_store import InstanceFunctionLinks
 from nylium.tables.functions.function_edges import TABLE_FunctionEdges
 from nylium.tables.functions.function_nodes import TABLE_FunctionNodes
-from nylium.objects.wfunction.function_links import function_links_of_instance
 from nylium.tables.objects.instances import Instances, instances
 from nylium.objects.wprop import WProp
 from nylium.objects.wtype import WType
@@ -33,7 +34,7 @@ def sync_graph(
     """Replace the function's DAG. `nodes` items are
     (uuid | None, kind, position, config); None uuid creates. `edges`
     items are (from_node_uuid, from_port, to_node_uuid, to_port)."""
-    graph.sync_graph(function_uuid, nodes, edges)
+    FunctionNodes.sync_graph(function_uuid, nodes, edges)
 
 
 @Database.use_same_session
@@ -51,7 +52,7 @@ def assert_no_dependency_cycle(inst_uuid: UUID) -> None:
     prop that B computes on the same owner. A cycle would recurse forever
     at read time. Run on bind and on function DAG save."""
     # prop_uuid -> function_uuid bound on this owner
-    bindings = {prop_uuid: fn_uuid for prop_uuid, fn_uuid in function_links_of_instance(inst_uuid)}
+    bindings = {prop_uuid: fn_uuid for prop_uuid, fn_uuid in InstanceFunctionLinks.function_links_of_instance(inst_uuid)}
     if not bindings:
         return
     # prop key -> prop_uuid on the owner (to map get_prop keys back)
@@ -66,7 +67,7 @@ def assert_no_dependency_cycle(inst_uuid: UUID) -> None:
 
     deps: dict[UUID, set[UUID]] = {fn_uuid: set() for fn_uuid in bindings.values()}
     for fn_uuid in bindings.values():
-        for node in graph.nodes_of(fn_uuid):
+        for node in FunctionNodes.nodes_of(fn_uuid):
             if node.kind != NODE_GET_PROP:
                 continue
             key = node.config.get("key")
@@ -105,12 +106,12 @@ def _assert_acyclic(deps: Mapping[UUID, set[UUID]]) -> None:
 
 @Database.use_same_session
 def nodes(function_uuid: UUID) -> list[TABLE_FunctionNodes]:
-    return graph.nodes_of(function_uuid)
+    return FunctionNodes.nodes_of(function_uuid)
 
 
 @Database.use_same_session
 def edges(function_uuid: UUID) -> list[TABLE_FunctionEdges]:
-    return graph.edges_of(function_uuid)
+    return FunctionEdges.edges_of(function_uuid)
 
 
 @Database.use_same_session

@@ -11,7 +11,7 @@ import sqlalchemy as sqla
 
 from nylium.database import Database
 from nylium.database.table import Row, Table
-from nylium.tables.auth.auth_session import AuthSession as AuthSession
+from nylium.rows.auth.auth_session import AuthSession as AuthSession
 from nylium.tables.auth.table_auth_sessions import TABLE_AuthSessions as TABLE_AuthSessions
 
 

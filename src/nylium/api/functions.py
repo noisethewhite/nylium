@@ -18,12 +18,7 @@ else:
 from nylium.api.display import FunctionView, ObjectView
 from nylium.database import Database
 from nylium.tables.objects import props, types
-from nylium.objects.wfunction.function_links import (
-    delete_function_link,
-    delete_links_to_function,
-    instance_uuids_bound_to,
-    merge_function_link,
-)
+from nylium.tables.functions.instance_function_links_store import InstanceFunctionLinks
 from nylium.objects.wformula import Formula
 from nylium.objects.wfunction import WFunction
 from nylium.objects.wprop import WProp
@@ -109,7 +104,7 @@ class FunctionsApi(_FunctionsBase):
         )
         _ = cls.update_object(uuid, {NAME_PROP_KEY: name})
         WFunction.sync_graph(uuid, nodes, edges)
-        for owner_uuid in instance_uuids_bound_to(uuid):
+        for owner_uuid in InstanceFunctionLinks.instance_uuids_bound_to(uuid):
             WFunction.assert_no_dependency_cycle(owner_uuid)
         result = FunctionView.from_uuid(uuid)
         if result is None:
@@ -123,7 +118,7 @@ class FunctionsApi(_FunctionsBase):
             return False
         # unbind every (owner, prop) computed through it first, then drop
         # the object (graph + links cascade on the FK)
-        delete_links_to_function(uuid)
+        InstanceFunctionLinks.delete_links_to_function(uuid)
         return cls.delete_object(uuid)
 
     @classmethod
@@ -177,9 +172,9 @@ class FunctionsApi(_FunctionsBase):
                 f"prop {prop_key!r} is a collect prop — it cannot run a function"
             )
         if function_uuid is None:
-            delete_function_link(inst_uuid, prop.uuid)
+            InstanceFunctionLinks.delete_function_link(inst_uuid, prop.uuid)
         else:
-            merge_function_link(inst_uuid, prop.uuid, function_uuid)
+            InstanceFunctionLinks.merge_function_link(inst_uuid, prop.uuid, function_uuid)
         WFunction.assert_no_dependency_cycle(inst_uuid)
         view = ObjectView.from_uuid(inst_uuid)
         if view is None:

@@ -18,11 +18,11 @@ from uuid import UUID, uuid4
 from nylium.database import Database
 from nylium.tables.objects import instances
 from nylium.tables.objects.instances import Instances
-from nylium.objects.warray_values import add_element, delete_elements_of, element_uuids_of
+from nylium.tables.values.array_values_store import ArrayValues
 from nylium.objects.wenum import WEnum
 from nylium.objects.wembedded import WEmbedded
 from nylium.objects.wfile import WFile, type_name_of as file_type_name_of
-from nylium.objects.wlink import add_link, delete_links_to, link_for
+from nylium.tables.values.instance_values_store import InstanceValues
 from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import VALUE_PROP_KEY, ScalarPayload, WScalar, WString
 from nylium.objects.wtype import WType
@@ -35,7 +35,7 @@ class WArray:
     @classmethod
     @Database.use_same_session
     def read(cls, array_uuid: UUID, elem_type: str) -> list[StoredValue]:
-        return [cls._unwrap(uuid, elem_type) for uuid in element_uuids_of(array_uuid)]
+        return [cls._unwrap(uuid, elem_type) for uuid in ArrayValues.element_uuids_of(array_uuid)]
 
     @classmethod
     @Database.commit_after_this
@@ -48,7 +48,7 @@ class WArray:
     ) -> None:
         if values is None:
             # None unsets the prop: destroy the array instance (and its boxes)
-            link = link_for(owner_uuid, prop.uuid)
+            link = InstanceValues.link_for(owner_uuid, prop.uuid)
             if link is not None:
                 cls.destroy(link.uuid)
             return
@@ -60,7 +60,7 @@ class WArray:
     def destroy(cls, array_uuid: UUID) -> None:
         """Delete the array instance and every box it owns, recursively."""
         cls._destroy_boxes(array_uuid)
-        delete_links_to(array_uuid)
+        InstanceValues.delete_links_to(array_uuid)
         Instances.delete_row(array_uuid)
 
     # --- internals ---
@@ -77,17 +77,17 @@ class WArray:
     ) -> None:
         cls._destroy_boxes(array_uuid)
         for index, item in enumerate(values):
-            add_element(
+            ArrayValues.add_element(
                 array_uuid, index, cls._box(elem_type, item, array_uuid, owner_uuid, prop, index)
             )
 
     @classmethod
     @Database.commit_after_this
     def _destroy_boxes(cls, array_uuid: UUID) -> None:
-        box_uuids = element_uuids_of(array_uuid)
+        box_uuids = ArrayValues.element_uuids_of(array_uuid)
         # detach pointer rows first: FK array_values.value_uuid -> instances
         # forbids deleting a box that is still referenced
-        delete_elements_of(array_uuid)
+        ArrayValues.delete_elements_of(array_uuid)
         for box_uuid in box_uuids:
             cls._destroy_box(box_uuid)
 
@@ -119,11 +119,11 @@ class WArray:
     def _ensure_array_instance(
         cls, owner_uuid: UUID, prop: WProp, elem_type: str
     ) -> UUID:
-        link = link_for(owner_uuid, prop.uuid)
+        link = InstanceValues.link_for(owner_uuid, prop.uuid)
         if link is not None:
             return link.uuid
         array_uuid = cls._create_array_instance(WType.array_name(elem_type))
-        add_link(array_uuid, prop.uuid, owner_uuid)
+        InstanceValues.add_link(array_uuid, prop.uuid, owner_uuid)
         return array_uuid
 
     @classmethod

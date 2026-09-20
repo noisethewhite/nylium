@@ -22,10 +22,10 @@ from uuid import UUID, uuid4
 from nylium.database import Database
 
 from nylium.tables.objects import instances
-from nylium.objects.warray_values import element_uuids_of
-from nylium.objects.wlink import add_link, link_for, linked_uuids_of
+from nylium.tables.values.array_values_store import ArrayValues
+from nylium.tables.values.instance_values_store import InstanceValues
 from nylium.objects.wprop import WProp
-from nylium.scalars import String
+from nylium.tables.values.string_values_store import StringValues
 from nylium.objects.wtype import WType
 from nylium.objects.wtypemeta import StoredValue, WTypeMeta
 
@@ -49,7 +49,7 @@ class WEmbedded:
         """Create-or-update the child from a props draft; None deletes it.
         The draft maps prop key -> value, exactly like an object write.
         Caller-supplied `name` values are ignored — names are generated."""
-        link = link_for(owner_uuid, prop.uuid)
+        link = InstanceValues.link_for(owner_uuid, prop.uuid)
         if draft is None:
             if link is not None:
                 cls._destroy_child(link.uuid)
@@ -82,7 +82,7 @@ class WEmbedded:
         instances orphan. For an Array<Embedded> prop the link rows point
         at the array instances; deleting one cascades (via its own
         lifecycle) to the composed elements."""
-        child_uuids = linked_uuids_of(prop_uuid)
+        child_uuids = InstanceValues.linked_uuids_of(prop_uuid)
         for child_uuid in child_uuids:
             cls._destroy_child(child_uuid)
 
@@ -105,7 +105,7 @@ class WEmbedded:
                 continue
             value_type = prop.value_type()
             if value_type.is_embedded:
-                link = link_for(object_uuid, prop.uuid)
+                link = InstanceValues.link_for(object_uuid, prop.uuid)
                 if link is None:
                     continue
                 cls._write_generated_name(link.uuid, cls.generated_name(object_uuid, prop))
@@ -116,10 +116,10 @@ class WEmbedded:
             # instance, not the parent — regenerate each in index order.
             if cls.array_element_type(value_type) is None:
                 continue
-            array_link = link_for(object_uuid, prop.uuid)
+            array_link = InstanceValues.link_for(object_uuid, prop.uuid)
             if array_link is None:
                 continue
-            for index, element_uuid in enumerate(element_uuids_of(array_link.uuid)):
+            for index, element_uuid in enumerate(ArrayValues.element_uuids_of(array_link.uuid)):
                 cls._write_generated_name(
                     element_uuid, cls.array_element_name(object_uuid, prop, index)
                 )
@@ -139,7 +139,7 @@ class WEmbedded:
                 name_prop = WProp.by_key(owner, NAME_PROP_KEY)
                 if name_prop is not None:
                     base = cast(
-                        str | None, String.read(owner_uuid, name_prop.uuid)
+                        str | None, StringValues.read(owner_uuid, name_prop.uuid)
                     )
             if not base:
                 base = inst.name
@@ -212,7 +212,7 @@ class WEmbedded:
             owner_object_uuid=owner_uuid,
             owner_prop_uuid=prop.uuid,
         )
-        add_link(child_uuid, prop.uuid, owner_uuid)
+        InstanceValues.add_link(child_uuid, prop.uuid, owner_uuid)
         return child_uuid
 
     @classmethod

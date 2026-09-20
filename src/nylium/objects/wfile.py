@@ -148,9 +148,9 @@ class WFile:
         """Deleting a file also drops Array<File/Document/Image> members that
         pointed at it (ADR-0008) — mirrors WObject.delete's cleanup of array
         links, so no dangling files.uuid survives in an array."""
-        from nylium.objects.warray_values import delete_memberships
+        from nylium.tables.values.array_values_store import ArrayValues
 
-        delete_memberships(uuid)
+        ArrayValues.delete_memberships(uuid)
 
 
 # --- file statement helpers (ADR-0030 phase C: moved from tables/files.py

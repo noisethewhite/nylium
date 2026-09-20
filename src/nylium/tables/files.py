@@ -8,7 +8,7 @@ from uuid import UUID
 
 from nylium.database import Database
 from nylium.database.table import Row, Table
-from nylium.tables.file import File as File
+from nylium.rows.file import File as File
 from nylium.tables.table_files import TABLE_Files as TABLE_Files
 
 

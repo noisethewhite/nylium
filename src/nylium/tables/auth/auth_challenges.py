@@ -11,7 +11,7 @@ import sqlalchemy as sqla
 
 from nylium.database import Database
 from nylium.database.table import Row, Table
-from nylium.tables.auth.auth_challenge import AuthChallenge as AuthChallenge
+from nylium.rows.auth.auth_challenge import AuthChallenge as AuthChallenge
 from nylium.tables.auth.table_auth_challenges import TABLE_AuthChallenges as TABLE_AuthChallenges
 
 

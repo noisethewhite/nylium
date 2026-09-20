@@ -12,8 +12,8 @@ from uuid import UUID, uuid4
 from nylium.database import Database
 from nylium.tables.objects import instances
 from nylium.tables.objects.instances import Instances
-from nylium.objects.warray_values import delete_memberships
-from nylium.objects.wlink import array_link_uuids_of, delete_links_to
+from nylium.tables.values.array_values_store import ArrayValues
+from nylium.tables.values.instance_values_store import InstanceValues
 from nylium.objects.warray import WArray
 from nylium.objects.wembedded import WEmbedded
 from nylium.objects.wtype import WType
@@ -116,8 +116,8 @@ class LifecycleMixin:
             WArray.destroy(array_uuid)
         for child_uuid in self._owned_embedded_uuids():
             WEmbedded.destroy(child_uuid)
-        delete_links_to(self._uuid)
-        delete_memberships(self._uuid)
+        InstanceValues.delete_links_to(self._uuid)
+        ArrayValues.delete_memberships(self._uuid)
         Instances.delete_row(self._uuid)
 
     def _owned_embedded_uuids(self) -> list[UUID]:
@@ -127,4 +127,4 @@ class LifecycleMixin:
 
     def _owned_array_uuids(self) -> list[UUID]:
         """Uuids of array-instance links held by this object."""
-        return array_link_uuids_of(self._uuid)
+        return InstanceValues.array_link_uuids_of(self._uuid)

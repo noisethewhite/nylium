@@ -8,7 +8,7 @@ from uuid import UUID
 
 from nylium.database import Database
 from nylium.database.table import Row, Table
-from nylium.tables.auth.api_token import ApiToken as ApiToken
+from nylium.rows.auth.api_token import ApiToken as ApiToken
 from nylium.tables.auth.table_api_tokens import TABLE_ApiTokens as TABLE_ApiTokens
 
 

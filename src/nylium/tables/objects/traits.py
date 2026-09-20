@@ -14,8 +14,8 @@ from nylium.database import Database
 from nylium.database.table import Row, Table
 from nylium.tables.objects.table_traits import TABLE_Traits as TABLE_Traits
 from nylium.tables.objects.table_type_traits import TABLE_TypeTraits as TABLE_TypeTraits
-from nylium.tables.objects.trait import Trait as Trait
-from nylium.tables.objects.type_trait import TypeTrait as TypeTrait
+from nylium.rows.objects.trait import Trait as Trait
+from nylium.rows.objects.type_trait import TypeTrait as TypeTrait
 from nylium.tables.objects.type_traits import TypeTraits as TypeTraits, type_traits
 
 __all__ = [

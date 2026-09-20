@@ -7,7 +7,7 @@ from uuid import UUID
 from nylium.database import Database
 from nylium.database.table import Row, Table
 from nylium.tables.objects.table_types import TABLE_Types as TABLE_Types
-from nylium.tables.objects.type import Type as Type
+from nylium.rows.objects.type import Type as Type
 
 __all__ = ["TABLE_Types", "Type", "Types", "types"]
 

@@ -3,18 +3,19 @@
 # enum_options of the value type. Shared by WObject attribute access
 # and WArray boxing so both enforce the same membership rule.
 #
-# ADR-0019: all storage statements go through `nylium.scalars.String`
-# (the String cell wrapper) — no Database/sql knowledge here.
+# ADR-0019: all storage statements go through `StringValues`
+# (the string_values store) — no Database/sql knowledge here.
 from __future__ import annotations
 
 from typing import cast
 from uuid import UUID
 
+from nylium.tables.values.string_values_store import StringValues
+
 from nylium.database import Database
 from nylium.tables.objects.enum_options import enum_options
 from nylium.objects.wprop import WProp
 from nylium.objects.wtype import WType
-from nylium.scalars import String
 from nylium.server.errors import ValidationError
 
 
@@ -43,12 +44,12 @@ class WEnum:
     @classmethod
     @Database.use_same_session
     def read(cls, inst_uuid: UUID, prop: WProp) -> str | None:
-        return cast(str | None, String.read(inst_uuid, prop.uuid))
+        return cast(str | None, StringValues.read(inst_uuid, prop.uuid))
 
     @classmethod
     @Database.use_same_session
     def write(cls, inst_uuid: UUID, prop: WProp, value: str | None) -> None:
         if value is None:
-            _ = String.clear(inst_uuid, prop.uuid)
+            _ = StringValues.clear(inst_uuid, prop.uuid)
             return
-        String.write(inst_uuid, prop.uuid, value)
+        StringValues.write(inst_uuid, prop.uuid, value)

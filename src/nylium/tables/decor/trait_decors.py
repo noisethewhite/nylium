@@ -7,7 +7,7 @@ from uuid import UUID
 from nylium.database import Database
 from nylium.database.table import Row, Table
 from nylium.tables.decor.table_trait_decor import TABLE_TraitDecor
-from nylium.tables.decor.trait_decor import TraitDecor
+from nylium.rows.decor.trait_decor import TraitDecor
 
 
 class TraitDecors(Table[UUID, TraitDecor]):

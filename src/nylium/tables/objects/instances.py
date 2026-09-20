@@ -15,7 +15,7 @@ import sqlalchemy as sqla
 
 from nylium.database import Database
 from nylium.database.table import Row, Table
-from nylium.tables.objects.instance import Instance as Instance
+from nylium.rows.objects.instance import Instance as Instance
 from nylium.tables.objects.table_instances import TABLE_Instances as TABLE_Instances
 from nylium.tables.objects.table_types import TABLE_Types
 

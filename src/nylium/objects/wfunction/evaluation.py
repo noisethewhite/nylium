@@ -10,7 +10,8 @@ from typing import cast
 from uuid import UUID
 
 from nylium.database import Database
-import nylium.objects.wfunction.graph as graph
+from nylium.tables.functions.function_edges_store import FunctionEdges
+from nylium.tables.functions.function_nodes_store import FunctionNodes
 from nylium.tables.functions.function_edges import TABLE_FunctionEdges
 from nylium.objects.wscalar import ScalarPayload, WInteger, WString
 from nylium.objects.wfunction.constants import (
@@ -40,8 +41,8 @@ def evaluate(
     prop-key -> value mapping). Returns the sink's value, or None on a
     div-by-zero / missing input. No DB reads of the input — the caller
     hands the data in."""
-    nodes = graph.nodes_of(function_uuid)
-    edges = graph.edges_of(function_uuid)
+    nodes = FunctionNodes.nodes_of(function_uuid)
+    edges = FunctionEdges.edges_of(function_uuid)
     node_uuids = {u.uuid for u in nodes}
     kinds = {u.uuid: u.kind for u in nodes}
     configs = {u.uuid: cast(Mapping[str, object], u.config) for u in nodes}

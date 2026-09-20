@@ -18,7 +18,7 @@ from uuid import UUID
 
 from nylium.database import Database
 from nylium.tables.objects import instances
-from nylium.objects.wfunction.function_links import function_uuid_for
+from nylium.tables.functions.instance_function_links_store import InstanceFunctionLinks
 from nylium.objects.wobject import WObject
 from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import ScalarPayload
@@ -59,7 +59,7 @@ def _materialize_owner(inst_uuid: UUID, visiting: frozenset[UUID]) -> dict[str, 
         return {}
     result: dict[str, object] = {}
     for prop in WProp.effective_for(owner):
-        bound = function_uuid_for(inst_uuid, prop.uuid)
+        bound = InstanceFunctionLinks.function_uuid_for(inst_uuid, prop.uuid)
         if bound is not None:
             result[prop.key] = _evaluate_for(inst_uuid, bound, visiting)
         else:

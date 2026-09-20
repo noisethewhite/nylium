@@ -11,8 +11,8 @@ from pydantic.dataclasses import dataclass
 
 from nylium.database import Database
 from nylium.tables.objects import Instances, instances
-from nylium.objects.warray_values import array_tag_rows, collect_range
-from nylium.objects.wlink import backlink_refs
+from nylium.tables.values.array_values_store import ArrayValues
+from nylium.tables.values.instance_values_store import InstanceValues
 from nylium.objects import WObject, WType
 from nylium.objects.wtypemeta import StoredValue, WObjectShape
 from nylium.objects.monthday import MonthDay, MonthDayTime
@@ -92,9 +92,9 @@ class ObjectView:
         wrapper = WObject.wrap(uuid)
         # ADR-0029: function bindings are instance-level — load them once
         # and map prop_uuid -> function_uuid to avoid an N+1 per prop.
-        from nylium.objects.wfunction.function_links import function_links_of_instance
+        from nylium.tables.functions.instance_function_links_store import InstanceFunctionLinks
 
-        bound = dict(function_links_of_instance(uuid))
+        bound = dict(InstanceFunctionLinks.function_links_of_instance(uuid))
         effective = list(WProp.effective_for(owner))
         props = {
             prop.key: cls._eval_function(uuid, bound[prop.uuid])
@@ -131,7 +131,7 @@ class ObjectView:
         query per direction, no N+1."""
         return [
             ObjectRef(uuid=owner_uuid, type_name=type_name)
-            for owner_uuid, type_name in backlink_refs(uuid)
+            for owner_uuid, type_name in InstanceValues.backlink_refs(uuid)
         ]
 
     @classmethod
@@ -141,7 +141,7 @@ class ObjectView:
         ``Array<type_name>`` prop whose stored array contains this object
         becomes one tag ``<owner display name> → <prop key>``. One query,
         no N+1."""
-        rows = array_tag_rows(uuid, WType.array_name(type_name), NAME_PROP_KEY)
+        rows = ArrayValues.array_tag_rows(uuid, WType.array_name(type_name), NAME_PROP_KEY)
         tags: list[TagView] = []
         for owner_uuid, prop_key, registry_name, display_name, color in rows:
             display_name = display_name or registry_name
@@ -268,7 +268,7 @@ class ObjectView:
         hi = _comparable(cast(StoredValue, getattr(wrapper, "to")))
         if member_prop is None or lo is None or hi is None:
             return []
-        return collect_range(member_prop.uuid, member_prop.value_spec_name(), lo, hi)
+        return ArrayValues.collect_range(member_prop.uuid, member_prop.value_spec_name(), lo, hi)
 
     @classmethod
     @Database.use_same_session

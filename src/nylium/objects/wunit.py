@@ -17,7 +17,7 @@ from nylium.objects.quantity import Quantity
 from nylium.tables.objects.unit_parts import unit_parts
 from nylium.objects.wprop import WProp
 from nylium.objects.wtype import WType
-from nylium.scalars import Numeric
+from nylium.tables.values.numeric_values_store import NumericValues
 from nylium.server.errors import ValidationError
 
 
@@ -63,7 +63,7 @@ class WUnit:
     def read(
         cls, inst_uuid: UUID, prop: WProp, type_name: str
     ) -> Quantity | None:
-        stored = Numeric.read_with_unit(inst_uuid, prop.uuid)
+        stored = NumericValues.read_with_unit(inst_uuid, prop.uuid)
         if stored is None:
             return None
         canonical, entered_unit = stored
@@ -93,9 +93,9 @@ class WUnit:
         cls, inst_uuid: UUID, prop: WProp, quantity: Quantity | None
     ) -> None:
         if quantity is None:
-            _ = Numeric.clear(inst_uuid, prop.uuid)
+            _ = NumericValues.clear(inst_uuid, prop.uuid)
             return
-        Numeric.write_with_unit(inst_uuid, prop.uuid, quantity.value, quantity.unit)
+        NumericValues.write_with_unit(inst_uuid, prop.uuid, quantity.value, quantity.unit)
 
     # --- internals ---
 

@@ -18,12 +18,12 @@ from uuid import UUID
 from pydantic import ConfigDict
 from pydantic.dataclasses import dataclass
 
-from nylium.tables.file import File
-from nylium.tables.objects.enum_option import EnumOption
-from nylium.tables.objects.prop import Prop
-from nylium.tables.objects.trait import Trait
-from nylium.tables.objects.type import Type
-from nylium.tables.objects.unit_part import UnitPart
+from nylium.rows.file import File
+from nylium.rows.objects.enum_option import EnumOption
+from nylium.rows.objects.prop import Prop
+from nylium.rows.objects.trait import Trait
+from nylium.rows.objects.type import Type
+from nylium.rows.objects.unit_part import UnitPart
 
 _CONFIG = ConfigDict(strict=True)
 

@@ -8,7 +8,7 @@ from uuid import UUID
 
 from nylium.database import Database
 from nylium.database.table import Row, Table
-from nylium.tables.auth.auth_user import AuthUser as AuthUser
+from nylium.rows.auth.auth_user import AuthUser as AuthUser
 from nylium.tables.auth.table_auth_users import TABLE_AuthUsers as TABLE_AuthUsers
 
 
