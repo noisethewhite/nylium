@@ -23,7 +23,7 @@ import sqlalchemy as sqla
 from sqlalchemy.orm import Mapper
 
 from nylium.database import Database
-from nylium.database.databasemethod import databasemethod
+from nylium.database.databasemethod import commit_after_this
 
 _M = TypeVar("_M")
 
@@ -69,12 +69,12 @@ class Row:
     def __setitem__(self, name: str, value: object) -> None:
         setattr(self, name, value)
 
-    @databasemethod(commit=True)
+    @commit_after_this
     def persist(self, column: str, value: object) -> None:
         """Write one column through: UPDATE … SET column = value WHERE pk.
 
-        ``commit=True`` joins the owner-commits-once semantics: nested
-        writes inside an outer databasemethod share its session and commit
+        ``commit_after_this`` joins the owner-commits-once semantics: nested
+        writes inside an outer session share its session and commit
         once at the boundary, so a multi-field edit stays atomic.
         """
         columns = mapper(self.__table__).columns

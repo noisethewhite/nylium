@@ -13,7 +13,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from uuid import UUID
 
-from nylium.database import databasemethod
+from nylium.database import commit_after_this, use_same_session
 from nylium.tables.functions import graph
 from nylium.tables.functions.function_edges import TABLE_FunctionEdges
 from nylium.tables.functions.function_nodes import TABLE_FunctionNodes
@@ -25,7 +25,7 @@ from nylium.objects.wtype import WType
 from nylium.objects.wfunction.constants import NODE_GET_PROP, fail
 
 
-@databasemethod(commit=True)
+@commit_after_this
 def sync_graph(
     function_uuid: UUID,
     nodes: Sequence[tuple[UUID | None, str, int, Mapping[str, object]]],
@@ -37,14 +37,14 @@ def sync_graph(
     graph.sync_graph(function_uuid, nodes, edges)
 
 
-@databasemethod(commit=False)
+@use_same_session
 def _function_instance_uuids() -> list[UUID]:
     """Every function instance uuid (instances whose type kind is
     'function')."""
     return uuids_of_kind(WType.KIND_FUNCTION)
 
 
-@databasemethod(commit=False)
+@use_same_session
 def assert_no_dependency_cycle(inst_uuid: UUID) -> None:
     """ADR-0029 local cycle check: within one owner, build the function
     dependency graph and refuse a back-edge. Function A (bound to prop P)
@@ -104,16 +104,16 @@ def _assert_acyclic(deps: Mapping[UUID, set[UUID]]) -> None:
 # --- public readers (for the FunctionView render) ---
 
 
-@databasemethod(commit=False)
+@use_same_session
 def nodes(function_uuid: UUID) -> list[TABLE_FunctionNodes]:
     return graph.nodes_of(function_uuid)
 
 
-@databasemethod(commit=False)
+@use_same_session
 def edges(function_uuid: UUID) -> list[TABLE_FunctionEdges]:
     return graph.edges_of(function_uuid)
 
 
-@databasemethod(commit=False)
+@use_same_session
 def instance_uuids() -> list[UUID]:
     return _function_instance_uuids()

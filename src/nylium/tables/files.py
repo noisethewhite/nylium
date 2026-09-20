@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import ClassVar
 from uuid import UUID
 
-from nylium.database import Database, databasemethod
+from nylium.database import Database, commit_after_this, use_same_session
 from nylium.database.table import Row, Table
 from nylium.tables.file import File as File
 from nylium.tables.table_files import TABLE_Files as TABLE_Files
@@ -17,7 +17,7 @@ class Files(Table[UUID, File]):
 
     __row__: ClassVar[type[Row]] = File
 
-    @databasemethod(commit=True)
+    @commit_after_this
     def create(
         self,
         uuid: UUID,
@@ -37,14 +37,14 @@ class Files(Table[UUID, File]):
         Database.flush()
         return File(row)
 
-    @databasemethod(commit=True)
+    @commit_after_this
     def delete(self, uuid: UUID) -> None:
         row = Database.get(TABLE_Files, uuid)
         if row is not None:
             Database.delete(row)
 
 
-@databasemethod(commit=False)
+@use_same_session
 def type_name_of(uuid: UUID) -> str | None:
     """The stored type_name for a file uuid, or None (ADR-0019)."""
     row = Database.get(TABLE_Files, uuid)

@@ -7,7 +7,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from uuid import UUID
 
-from nylium.database import databasemethod
+from nylium.database import use_same_session
 from nylium.objects.wfunction.constants import NodeType, fail
 from nylium.objects.wfunction.typing import (
     NODE_ARITY,
@@ -16,7 +16,7 @@ from nylium.objects.wfunction.typing import (
 )
 
 
-@databasemethod(commit=False)
+@use_same_session
 def validate_graph(
     nodes: list[tuple[UUID, str, Mapping[str, object]]],
     edges: list[tuple[UUID, int, UUID, int]],

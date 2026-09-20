@@ -9,7 +9,7 @@ from uuid import UUID
 
 import sqlalchemy as sqla
 
-from nylium.database import Database, databasemethod
+from nylium.database import Database, commit_after_this
 from nylium.database.table import Row, Table
 from nylium.tables.auth.auth_challenge import AuthChallenge as AuthChallenge
 from nylium.tables.auth.table_auth_challenges import TABLE_AuthChallenges as TABLE_AuthChallenges
@@ -27,7 +27,7 @@ class AuthChallenges(Table[bytes, AuthChallenge]):
     REGISTER_KIND: ClassVar[str] = "register"
     LOGIN_KIND: ClassVar[str] = "login"
 
-    @databasemethod(commit=True)
+    @commit_after_this
     def issue(
         self, challenge: bytes, kind: str, user_uuid: UUID | None, ttl_seconds: int
     ) -> None:
@@ -42,7 +42,7 @@ class AuthChallenges(Table[bytes, AuthChallenge]):
             )
         )
 
-    @databasemethod(commit=True)
+    @commit_after_this
     def consume(self, challenge: bytes, kind: str) -> tuple[bool, UUID | None]:
         """Pop a challenge row: valid only if it exists, matches the
         ceremony kind and has not expired. One use, then gone.
@@ -61,7 +61,7 @@ class AuthChallenges(Table[bytes, AuthChallenge]):
             return False, None
         return True, user_uuid
 
-    @databasemethod(commit=True)
+    @commit_after_this
     def purge_expired(self) -> None:
         _ = Database.execute(
             sqla.delete(TABLE_AuthChallenges).where(

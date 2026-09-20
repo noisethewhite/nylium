@@ -10,7 +10,7 @@ from __future__ import annotations
 from pathlib import Path
 from uuid import UUID
 
-from nylium.database import databasemethod
+from nylium.database import commit_after_this, use_same_session
 from nylium.tables import files
 from typing import ClassVar
 
@@ -82,7 +82,7 @@ class WFile:
         return type_name == cls.TYPE_FILE
 
     @classmethod
-    @databasemethod(commit=True)
+    @commit_after_this
     def ensure_builtins(cls) -> None:
         from nylium.objects.wtype import WType
 
@@ -90,7 +90,7 @@ class WFile:
             _ = WType.ensure(name, icon=cls.ICONS[name], kind=WType.KIND_FILE)
 
     @classmethod
-    @databasemethod(commit=False)
+    @use_same_session
     def sweep_orphans(cls) -> None:
         """Crash-window cleanup: blobs on disk with no files row are
         deleted. Runs on boot; every survivor is logged."""
@@ -113,7 +113,7 @@ class WFile:
             path.unlink()
 
     @classmethod
-    @databasemethod(commit=False)
+    @use_same_session
     def reset_icons_referencing(cls, image_uuid: UUID) -> None:
         """Deleting an Image used as an icon is allowed (ADR-0006): every
         type pointing at it falls back to the default glyph."""
@@ -134,14 +134,14 @@ class WFile:
             return None
 
     @classmethod
-    @databasemethod(commit=False)
+    @use_same_session
     def image_file_exists(cls, uuid: UUID) -> bool:
         from nylium.tables.files import type_name_of
 
         return type_name_of(uuid) == cls.TYPE_IMAGE
 
     @classmethod
-    @databasemethod(commit=False)
+    @use_same_session
     def clear_array_refs(cls, uuid: UUID) -> None:
         """Deleting a file also drops Array<File/Document/Image> members that
         pointed at it (ADR-0008) — mirrors WObject.delete's cleanup of array

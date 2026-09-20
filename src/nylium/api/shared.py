@@ -6,7 +6,7 @@ from typing import ClassVar, TypeAlias, cast
 from uuid import UUID
 
 from nylium.api.display import ObjectRef
-from nylium.database import databasemethod
+from nylium.database import use_same_session
 from nylium.tables import Trait, traits
 from nylium.tables.objects.types import Type, types
 from nylium.objects.wembedded import EMBEDDED_NAME_SEPARATOR
@@ -191,7 +191,7 @@ class ApiShared:
         return cls._ensure_value_type(name).uuid, None
 
     @classmethod
-    @databasemethod(commit=False)
+    @use_same_session
     def _normalize_props(
         cls, type_name: str, prop_specs: dict[str, PropInput]
     ) -> dict[str, StoredValue]:

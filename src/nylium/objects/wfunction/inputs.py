@@ -16,7 +16,7 @@ from __future__ import annotations
 from typing import cast
 from uuid import UUID
 
-from nylium.database import databasemethod
+from nylium.database import use_same_session
 from nylium.tables import instances
 from nylium.tables.functions.instance_function_links import function_uuid_for
 from nylium.objects.wobject import WObject
@@ -26,7 +26,7 @@ from nylium.objects.wtype import WType
 from nylium.objects.wfunction.evaluation import evaluate
 
 
-@databasemethod(commit=False)
+@use_same_session
 def evaluate_for(inst_uuid: UUID, function_uuid: UUID) -> ScalarPayload | None:
     """Fold the function over the owner's sibling props — the read-time
     entry point for rendering a function-backed prop (ADR-0029)."""
@@ -41,7 +41,7 @@ def _evaluate_for(
     return evaluate(function_uuid, _materialize_owner(inst_uuid, visiting | {function_uuid}))
 
 
-@databasemethod(commit=False)
+@use_same_session
 def materialize_owner(inst_uuid: UUID) -> dict[str, object]:
     """Project the owner object's sibling props to a prop-key -> value
     mapping. A function-backed sibling is resolved recursively."""

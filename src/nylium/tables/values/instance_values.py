@@ -11,7 +11,7 @@ from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
 from typing import ClassVar
 
-from nylium.database import Database, databasemethod
+from nylium.database import Database, use_same_session
 from nylium.tables.base import reg
 
 
@@ -30,7 +30,7 @@ class TABLE_InstanceValues:
     )
 
 
-@databasemethod(commit=False)
+@use_same_session
 def link_for(inst_uuid: UUID, prop_uuid: UUID) -> TABLE_InstanceValues | None:
     """The link row held by (owner instance, prop), or None."""
     return Database.scalar(
@@ -41,7 +41,7 @@ def link_for(inst_uuid: UUID, prop_uuid: UUID) -> TABLE_InstanceValues | None:
     )
 
 
-@databasemethod(commit=False)
+@use_same_session
 def merge_link(uuid: UUID, prop_uuid: UUID, inst_uuid: UUID) -> None:
     """Insert-or-replace the link row for (owner, prop) — the composite
     pk — pointing at the given target uuid (ADR-0028)."""
@@ -50,13 +50,13 @@ def merge_link(uuid: UUID, prop_uuid: UUID, inst_uuid: UUID) -> None:
     )
 
 
-@databasemethod(commit=False)
+@use_same_session
 def delete_row(row: TABLE_InstanceValues) -> None:
     """Delete the given link row (already fetched by the caller)."""
     Database.delete(row)
 
 
-@databasemethod(commit=False)
+@use_same_session
 def delete_links_to(uuid: UUID) -> None:
     """Delete every link row whose target is the given instance uuid."""
     _ = Database.execute(
@@ -64,7 +64,7 @@ def delete_links_to(uuid: UUID) -> None:
     )
 
 
-@databasemethod(commit=False)
+@use_same_session
 def linked_uuids_of(prop_uuid: UUID) -> list[UUID]:
     """Uuids of every instance linked through the given prop, across all
     owners — the sweep list before an embedded prop is deleted or retyped."""
@@ -77,7 +77,7 @@ def linked_uuids_of(prop_uuid: UUID) -> list[UUID]:
     )
 
 
-@databasemethod(commit=False)
+@use_same_session
 def add_link(uuid: UUID, prop_uuid: UUID, inst_uuid: UUID) -> None:
     """Insert a brand-new link row and flush — the embedded child is a fresh
     uuid4, so this must stay a plain insert (merge would mask a uuid
@@ -89,7 +89,7 @@ def add_link(uuid: UUID, prop_uuid: UUID, inst_uuid: UUID) -> None:
     Database.flush()
 
 
-@databasemethod(commit=False)
+@use_same_session
 def array_link_uuids_of(owner_inst_uuid: UUID) -> list[UUID]:
     """Uuids of array-instance links held by the given owner."""
     from nylium.tables.objects.table_props import TABLE_Props

@@ -9,7 +9,7 @@ from uuid import UUID
 
 from pydantic.dataclasses import dataclass
 
-from nylium.database import databasemethod
+from nylium.database import use_same_session
 from nylium.tables import instances
 from nylium.tables.objects.instances import existing_uuids
 from nylium.tables.values.array_values import array_tag_rows
@@ -82,7 +82,7 @@ class ObjectView:
     function_bindings: dict[str, UUID] = field(default_factory=dict)
 
     @classmethod
-    @databasemethod(commit=False)
+    @use_same_session
     def from_uuid(cls, uuid: UUID) -> Self | None:
         inst = instances.get(uuid)
         type_uuid = None if inst is None else inst.type_uuid
@@ -128,7 +128,7 @@ class ObjectView:
         )
 
     @classmethod
-    @databasemethod(commit=False)
+    @use_same_session
     def _backlinks_for(cls, uuid: UUID) -> list[ObjectRef]:
         """ADR-0020: reverse-projection of incoming links — every owner
         pointing at this object through a link prop or an array. One
@@ -139,7 +139,7 @@ class ObjectView:
         ]
 
     @classmethod
-    @databasemethod(commit=False)
+    @use_same_session
     def _tags_for(cls, uuid: UUID, type_name: str) -> list[TagView]:
         """ADR-0005: reverse-projection of array membership. Every
         ``Array<type_name>`` prop whose stored array contains this object
@@ -162,7 +162,7 @@ class ObjectView:
         return tags
 
     @classmethod
-    @databasemethod(commit=False)
+    @use_same_session
     def _eval_function(cls, inst_uuid: UUID, function_uuid: UUID) -> ScalarValue:
         """ADR-0029 read-time evaluation: fold the function's DAG over the
         owner's sibling props. A div-by-zero / missing input renders empty."""
@@ -170,7 +170,7 @@ class ObjectView:
         return ScalarValue(value=value)
 
     @classmethod
-    @databasemethod(commit=False)
+    @use_same_session
     def _eval_formula(cls, wrapper: WObjectShape, owner: WType, prop: WProp) -> ScalarValue:
         """ADR-0005/0022/0023 read-time evaluation: fold the stored formula
         over the live rows of the arrays it references, the owner's sibling
@@ -256,7 +256,7 @@ class ObjectView:
         return None if isinstance(value, str) else value
 
     @classmethod
-    @databasemethod(commit=False)
+    @use_same_session
     def _collect_uuids(cls, wrapper: WObjectShape, prop: WProp) -> list[UUID]:
         """ADR-0025: the derived member uuids of a collect prop — one reverse
         range query over the target type's member prop, bounded by the owner's
@@ -275,7 +275,7 @@ class ObjectView:
         return collect_range(member_prop.uuid, member_prop.value_spec_name(), lo, hi)
 
     @classmethod
-    @databasemethod(commit=False)
+    @use_same_session
     def _render_collect(cls, wrapper: WObjectShape, prop: WProp) -> ArrayValue:
         """ADR-0025: render a collect prop as an array of refs to the derived
         members (same shape as a stored Array<T> of standalone objects)."""
@@ -288,7 +288,7 @@ class ObjectView:
         )
 
     @classmethod
-    @databasemethod(commit=False)
+    @use_same_session
     def _render_prop(cls, value: StoredValue, type_name: str) -> PropValue:
         """The declared prop type disambiguates None: an unset scalar,
         an unset link and an unset array are three different views."""

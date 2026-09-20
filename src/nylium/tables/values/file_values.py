@@ -10,7 +10,7 @@ import sqlalchemy as sqla
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
 
-from nylium.database import Database, databasemethod
+from nylium.database import Database, use_same_session
 from nylium.tables.base import reg
 from typing import ClassVar
 
@@ -30,7 +30,7 @@ class TABLE_FileValues:
     )
 
 
-@databasemethod(commit=False)
+@use_same_session
 def file_ref_for(inst_uuid: UUID, prop_uuid: UUID) -> UUID | None:
     """The file uuid referenced by (owner instance, prop), or None."""
     return Database.scalar(
@@ -41,7 +41,7 @@ def file_ref_for(inst_uuid: UUID, prop_uuid: UUID) -> UUID | None:
     )
 
 
-@databasemethod(commit=False)
+@use_same_session
 def write_ref(inst_uuid: UUID, prop_uuid: UUID, file_uuid: UUID | None) -> None:
     """Set/clear the file reference of (owner instance, prop)."""
     if file_uuid is None:

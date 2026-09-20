@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 else:
     _FunctionsBase = ApiShared
 from nylium.api.display import FunctionView, ObjectView
-from nylium.database import databasemethod
+from nylium.database import commit_after_this, use_same_session
 from nylium.tables import props, types
 from nylium.tables.functions.instance_function_links import (
     delete_function_link,
@@ -33,18 +33,18 @@ from nylium.objects.wtype import WType
 
 class FunctionsApi(_FunctionsBase):
     @classmethod
-    @databasemethod(commit=False)
+    @use_same_session
     def list_functions(cls) -> list[FunctionView]:
         views = [FunctionView.from_uuid(uuid) for uuid in WFunction.instance_uuids()]
         return [view for view in views if view is not None]
 
     @classmethod
-    @databasemethod(commit=False)
+    @use_same_session
     def get_function(cls, uuid: UUID) -> FunctionView | None:
         return FunctionView.from_uuid(uuid)
 
     @classmethod
-    @databasemethod(commit=True)
+    @commit_after_this
     def create_function(
         cls,
         input_type: str,
@@ -81,7 +81,7 @@ class FunctionsApi(_FunctionsBase):
         return result
 
     @classmethod
-    @databasemethod(commit=True)
+    @commit_after_this
     def update_function(
         cls,
         uuid: UUID,
@@ -117,7 +117,7 @@ class FunctionsApi(_FunctionsBase):
         return result
 
     @classmethod
-    @databasemethod(commit=True)
+    @commit_after_this
     def delete_function(cls, uuid: UUID) -> bool:
         if FunctionView.from_uuid(uuid) is None:
             return False
@@ -127,7 +127,7 @@ class FunctionsApi(_FunctionsBase):
         return cls.delete_object(uuid)
 
     @classmethod
-    @databasemethod(commit=True)
+    @commit_after_this
     def set_instance_prop_function(
         cls, inst_uuid: UUID, prop_key: str, function_uuid: UUID | None
     ) -> ObjectView:

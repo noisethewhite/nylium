@@ -20,7 +20,7 @@ class SessionContext:
     def owns_session(self) -> bool:
         """True when this context created the session (the outermost call).
 
-        Only the owner commits — nested databasemethod calls share the owner's
+        Only the owner commits — nested session calls share the owner's
         session and let it commit once at the end, so a failure mid-operation
         rolls back atomically instead of leaving a half-written object.
         """

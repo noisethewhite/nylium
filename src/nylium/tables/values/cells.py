@@ -10,7 +10,7 @@ from uuid import UUID
 
 import sqlalchemy as sqla
 
-from nylium.database import Database, databasemethod
+from nylium.database import Database, use_same_session
 from nylium.tables.values.boolean_values import TABLE_BooleanValues
 from nylium.tables.values.date_values import TABLE_DateValues
 from nylium.tables.values.datetime_values import TABLE_DatetimeValues
@@ -34,7 +34,7 @@ ScalarCellsTable = (
 )
 
 
-@databasemethod(commit=False)
+@use_same_session
 def read(table: type[ScalarCellsTable], inst_uuid: UUID, prop_uuid: UUID) -> object:
     """Raw stored value, or None when the cell is absent.
 
@@ -45,7 +45,7 @@ def read(table: type[ScalarCellsTable], inst_uuid: UUID, prop_uuid: UUID) -> obj
     return None if row is None else row.value
 
 
-@databasemethod(commit=False)
+@use_same_session
 def write(
     table: type[ScalarCellsTable], inst_uuid: UUID, prop_uuid: UUID, value: object
 ) -> None:
@@ -62,7 +62,7 @@ def write(
     )
 
 
-@databasemethod(commit=False)
+@use_same_session
 def clear(table: type[ScalarCellsTable], inst_uuid: UUID, prop_uuid: UUID) -> bool:
     """Delete the row if present (attribute deletion at the object layer).
 

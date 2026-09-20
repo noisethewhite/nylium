@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from nylium.api.functions import FunctionsApi as _SchemaBase
 else:
     _SchemaBase = ApiShared
-from nylium.database import databasemethod
+from nylium.database import commit_after_this
 from nylium.tables import instances, props
 from nylium.tables.objects.types import Type
 from nylium.objects.wembedded import WEmbedded
@@ -23,7 +23,7 @@ from nylium.objects.wtype import WType
 
 class SchemaApi(_SchemaBase):
     @classmethod
-    @databasemethod(commit=True)
+    @commit_after_this
     def reorder_props(cls, type_name: str, keys: list[str]) -> Type:
         """Persist a new prop order; keys must cover the whole schema and
         keep the `name` prop first (see NAME_PROP_KEY)."""
@@ -47,7 +47,7 @@ class SchemaApi(_SchemaBase):
         return cls._type_result(type_name)
 
     @classmethod
-    @databasemethod(commit=True)
+    @commit_after_this
     def sync_props(
         cls,
         type_name: str,

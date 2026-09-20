@@ -4,7 +4,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from nylium.api.shared import ApiShared
-from nylium.database import databasemethod
+from nylium.database import commit_after_this, use_same_session
 from nylium.tables import Trait, instances, props, traits, type_traits
 from nylium.tables.decor import trait_decor
 from nylium.tables.objects.types import Type, types
@@ -15,17 +15,17 @@ from nylium.objects.wtype import WType
 
 class TraitsApi(ApiShared):
     @classmethod
-    @databasemethod(commit=False)
+    @use_same_session
     def list_traits(cls) -> list[Trait]:
         return list(traits.all())
 
     @classmethod
-    @databasemethod(commit=False)
+    @use_same_session
     def get_trait(cls, name: str) -> Trait | None:
         return next(traits.where(name=name), None)
 
     @classmethod
-    @databasemethod(commit=True)
+    @commit_after_this
     def create_trait(
         cls, name: str, color: str, props: dict[str, str] | None = None
     ) -> Trait:
@@ -61,7 +61,7 @@ class TraitsApi(ApiShared):
         return cls._trait_result(final_name)
 
     @classmethod
-    @databasemethod(commit=True)
+    @commit_after_this
     def sync_trait(
         cls,
         name: str,
@@ -124,7 +124,7 @@ class TraitsApi(ApiShared):
         return cls._trait_result(final_name)
 
     @classmethod
-    @databasemethod(commit=True)
+    @commit_after_this
     def delete_trait(cls, name: str) -> bool:
         """Refuses while the trait is attached to any type or used as an
         Any<> bound — the error names the dependents."""
@@ -160,7 +160,7 @@ class TraitsApi(ApiShared):
         return True
 
     @classmethod
-    @databasemethod(commit=True)
+    @commit_after_this
     def attach_trait(cls, type_name: str, trait_name: str) -> Type:
         """Attach a trait to a user type. Prop keys must not collide with
         the type's current effective schema."""
@@ -188,7 +188,7 @@ class TraitsApi(ApiShared):
         return cls._type_result(type_name)
 
     @classmethod
-    @databasemethod(commit=True)
+    @commit_after_this
     def detach_trait(cls, type_name: str, trait_name: str) -> Type:
         """Detach a trait; the trait prop values of this type's instances
         are purged (the trait itself and its other types keep theirs)."""

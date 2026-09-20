@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from nylium.database import databasemethod
+from nylium.database import commit_after_this, use_same_session
 from nylium.tables.objects.types import Type, types
 from typing import ClassVar
 
@@ -151,19 +151,19 @@ class WType:
     # --- row access ---
 
     @classmethod
-    @databasemethod(commit=False)
+    @use_same_session
     def by_name(cls, name: str) -> "WType | None":
         row = next(types.where(name=name), None)
         return None if row is None else cls(row)
 
     @classmethod
-    @databasemethod(commit=False)
+    @use_same_session
     def by_uuid(cls, uuid: UUID) -> "WType | None":
         row = types.get(uuid)
         return None if row is None else cls(row)
 
     @classmethod
-    @databasemethod(commit=True)
+    @commit_after_this
     def ensure(
         cls,
         name: str,

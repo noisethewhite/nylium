@@ -12,7 +12,7 @@ from uuid import UUID, uuid4
 import sqlalchemy as sqla
 from sqlalchemy.orm import InstrumentedAttribute, Mapped
 
-from nylium.database import Database, databasemethod
+from nylium.database import Database, use_same_session
 from nylium.database.table import Row, Table
 from nylium.tables.objects.prop import Prop as Prop
 from nylium.tables.objects.table_props import TABLE_Props as TABLE_Props
@@ -68,7 +68,7 @@ class Props(Table[UUID, Prop]):
 props = Props()
 
 
-@databasemethod(commit=False)
+@use_same_session
 def by_type_key(owner_uuid: UUID, key: str) -> TABLE_Props | None:
     """One type-owned prop row by key (live ORM row — callers may write)."""
     return Database.scalar(
@@ -78,7 +78,7 @@ def by_type_key(owner_uuid: UUID, key: str) -> TABLE_Props | None:
     )
 
 
-@databasemethod(commit=False)
+@use_same_session
 def by_trait_key(trait_uuid: UUID, key: str) -> TABLE_Props | None:
     """One trait-owned prop row by key (live ORM row — callers may write)."""
     return Database.scalar(
@@ -88,7 +88,7 @@ def by_trait_key(trait_uuid: UUID, key: str) -> TABLE_Props | None:
     )
 
 
-@databasemethod(commit=False)
+@use_same_session
 def rows_of_type(owner_uuid: UUID) -> list[TABLE_Props]:
     """All props owned by the type, in schema order."""
     return list(
@@ -100,7 +100,7 @@ def rows_of_type(owner_uuid: UUID) -> list[TABLE_Props]:
     )
 
 
-@databasemethod(commit=False)
+@use_same_session
 def rows_of_trait(trait_uuid: UUID) -> list[TABLE_Props]:
     """All props owned by the trait, in schema order."""
     return list(
@@ -112,7 +112,7 @@ def rows_of_trait(trait_uuid: UUID) -> list[TABLE_Props]:
     )
 
 
-@databasemethod(commit=False)
+@use_same_session
 def apply_positions(owner_uuid: UUID, keys: list[str]) -> None:
     """Rewrite positions so the type's props render in `keys` order.
     `keys` must already be validated as a full-schema permutation."""
@@ -122,7 +122,7 @@ def apply_positions(owner_uuid: UUID, keys: list[str]) -> None:
     Database.flush()
 
 
-@databasemethod(commit=False)
+@use_same_session
 def ensure_row(
     owner_uuid: UUID,
     key: str,
@@ -157,7 +157,7 @@ def ensure_row(
     return row
 
 
-@databasemethod(commit=False)
+@use_same_session
 def sync_owned(
     owner_column: InstrumentedAttribute[UUID | None],
     owner_column_name: str,
@@ -213,7 +213,7 @@ def sync_owned(
     Database.flush()
 
 
-@databasemethod(commit=False)
+@use_same_session
 def purge_values(prop_uuid: UUID) -> None:
     """Wipe the prop's values from every prop-keyed table (retype)."""
     for table in VALUE_TABLES:
@@ -223,7 +223,7 @@ def purge_values(prop_uuid: UUID) -> None:
     Database.flush()
 
 
-@databasemethod(commit=False)
+@use_same_session
 def purge_values_for_instances(prop_uuid: UUID, inst_uuids: list[UUID]) -> None:
     """Wipe this prop's values, but only on the given instances (ADR-0013
     detach: the trait's other types keep theirs)."""

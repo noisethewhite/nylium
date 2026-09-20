@@ -11,7 +11,7 @@ from __future__ import annotations
 from typing import cast
 from uuid import UUID
 
-from nylium.database import databasemethod
+from nylium.database import use_same_session
 from nylium.tables.objects.enum_options import enum_options
 from nylium.tables.values import cells
 from nylium.objects.wprop import WProp
@@ -43,12 +43,12 @@ class WEnum:
         return value
 
     @classmethod
-    @databasemethod(commit=False)
+    @use_same_session
     def read(cls, inst_uuid: UUID, prop: WProp) -> str | None:
         return cast(str | None, cells.read(WString.TABLE, inst_uuid, prop.uuid))
 
     @classmethod
-    @databasemethod(commit=False)
+    @use_same_session
     def write(cls, inst_uuid: UUID, prop: WProp, value: str | None) -> None:
         if value is None:
             _ = cells.clear(WString.TABLE, inst_uuid, prop.uuid)

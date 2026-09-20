@@ -6,7 +6,7 @@ from uuid import UUID
 
 import sqlalchemy as sqla
 
-from nylium.database import Database, databasemethod
+from nylium.database import Database, commit_after_this, use_same_session
 from nylium.database.table import Row, Table
 from nylium.tables.decor.table_type_decor import TABLE_TypeDecor
 from nylium.tables.decor.type_decor import TypeDecor
@@ -17,7 +17,7 @@ class TypeDecors(Table[UUID, TypeDecor]):
 
     __row__: ClassVar[type[Row]] = TypeDecor
 
-    @databasemethod(commit=True)
+    @commit_after_this
     def create(
         self, uuid: UUID, plural_name: str, icon: str | None, color: str | None
     ) -> TypeDecor:
@@ -33,7 +33,7 @@ class TypeDecors(Table[UUID, TypeDecor]):
         return TypeDecor(row)
 
 
-@databasemethod(commit=False)
+@use_same_session
 def reset_icons_referencing(icon_marker: str, default_glyph: str) -> None:
     """Every type whose icon equals ``icon_marker`` falls back to the default
     glyph (ADR-0006: an Image used as an icon may be deleted)."""

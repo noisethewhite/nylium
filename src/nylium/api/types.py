@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from nylium.api.functions import FunctionsApi as _TypesBase
 else:
     _TypesBase = ApiShared
-from nylium.database import databasemethod
+from nylium.database import commit_after_this, use_same_session
 from nylium.tables import instances, props
 from nylium.tables.decor import type_decor
 from nylium.tables.objects.types import Type, types
@@ -21,17 +21,17 @@ from nylium.objects.wtype import WType
 
 class TypesApi(_TypesBase):
     @classmethod
-    @databasemethod(commit=False)
+    @use_same_session
     def list_types(cls) -> list[Type]:
         return list(types.all())
 
     @classmethod
-    @databasemethod(commit=False)
+    @use_same_session
     def get_type(cls, name: str) -> Type | None:
         return next(types.where(name=name), None)
 
     @classmethod
-    @databasemethod(commit=True)
+    @commit_after_this
     def create_type(
         cls,
         name: str,
@@ -118,7 +118,7 @@ class TypesApi(_TypesBase):
         return cls._type_result(name)
 
     @classmethod
-    @databasemethod(commit=True)
+    @commit_after_this
     def rename_type(
         cls,
         name: str,
@@ -170,7 +170,7 @@ class TypesApi(_TypesBase):
         return cls._type_result(final_name)
 
     @classmethod
-    @databasemethod(commit=True)
+    @commit_after_this
     def delete_type(cls, name: str) -> bool:
         """Refuses while instances exist; other types referencing this one
         as a prop value type are stopped by the FK, on purpose."""

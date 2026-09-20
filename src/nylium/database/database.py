@@ -28,7 +28,7 @@ class Database(metaclass=_DatabaseMeta):
     The statement proxies below are verbatim delegations — they exist so
     the tables layer writes ``Database.get(...)`` instead of reaching
     through ``Database.session``. Commit stays a unit-of-work concern of
-    ``@databasemethod`` (the outermost call commits once, atomically);
+    ``@commit_after_this`` (the outermost call commits once, atomically);
     statements never commit individually.
     """
 

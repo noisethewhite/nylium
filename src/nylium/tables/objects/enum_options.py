@@ -9,7 +9,7 @@ from uuid import UUID, uuid4
 
 import sqlalchemy as sqla
 
-from nylium.database import Database, databasemethod
+from nylium.database import Database, commit_after_this, use_same_session
 from nylium.database.table import Row, Table
 from nylium.tables.objects.enum_option import EnumOption as EnumOption
 from nylium.tables.objects.props import TABLE_Props as TABLE_Props
@@ -22,7 +22,7 @@ class EnumOptions(Table[UUID, EnumOption]):
 
     __row__: ClassVar[type[Row]] = EnumOption
 
-    @databasemethod(commit=False)
+    @use_same_session
     def count_usage(self, type_uuid: UUID, value: str) -> int:
         """How many stored prop values currently equal this option."""
         return int(
@@ -38,7 +38,7 @@ class EnumOptions(Table[UUID, EnumOption]):
             or 0
         )
 
-    @databasemethod(commit=True)
+    @commit_after_this
     def sync(self, type_uuid: UUID, items: list[tuple[UUID | None, str]]) -> None:
         """Apply the editor's full option draft, mirroring Props.sync_schema:
         a matching uuid renames the option in place (the rename rewrites

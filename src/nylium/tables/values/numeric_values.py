@@ -4,7 +4,7 @@ from uuid import UUID
 from sqlalchemy import ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from nylium.database import Database, databasemethod
+from nylium.database import Database, use_same_session
 from nylium.tables.base import reg
 from typing import ClassVar
 
@@ -27,7 +27,7 @@ class TABLE_NumericValues:
 
 # ADR-0019: unit-aware cell statements for `Numeric<Unit>` props — the
 # generic cells helpers cover `value` only, the `unit` column lives here.
-@databasemethod(commit=False)
+@use_same_session
 def read_with_unit(inst_uuid: UUID, prop_uuid: UUID) -> tuple[Decimal, str | None] | None:
     """Stored (canonical magnitude, entered unit part name) pair, or None."""
     row = Database.get(TABLE_NumericValues, (inst_uuid, prop_uuid))
@@ -36,7 +36,7 @@ def read_with_unit(inst_uuid: UUID, prop_uuid: UUID) -> tuple[Decimal, str | Non
     return row.value, row.unit
 
 
-@databasemethod(commit=False)
+@use_same_session
 def write_with_unit(
     inst_uuid: UUID, prop_uuid: UUID, value: Decimal, unit: str | None
 ) -> None:
