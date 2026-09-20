@@ -3,9 +3,8 @@
 # enum_options of the value type. Shared by WObject attribute access
 # and WArray boxing so both enforce the same membership rule.
 #
-# ADR-0019: all storage statements go through `tables.values.cells`
-# (via the objects-layer table alias WString.TABLE) — no Database/sql
-# knowledge here.
+# ADR-0019: all storage statements go through `nylium.scalars.String`
+# (the String cell wrapper) — no Database/sql knowledge here.
 from __future__ import annotations
 
 from typing import cast
@@ -13,10 +12,9 @@ from uuid import UUID
 
 from nylium.database import Database
 from nylium.objects.tables.enum_options import enum_options
-from nylium.tables.values import cells
 from nylium.objects.wprop import WProp
-from nylium.objects.wscalar import WString
 from nylium.objects.wtype import WType
+from nylium.scalars import String
 from nylium.server.errors import ValidationError
 
 
@@ -45,12 +43,12 @@ class WEnum:
     @classmethod
     @Database.use_same_session
     def read(cls, inst_uuid: UUID, prop: WProp) -> str | None:
-        return cast(str | None, cells.read(WString.TABLE, inst_uuid, prop.uuid))
+        return cast(str | None, String.read(inst_uuid, prop.uuid))
 
     @classmethod
     @Database.use_same_session
     def write(cls, inst_uuid: UUID, prop: WProp, value: str | None) -> None:
         if value is None:
-            _ = cells.clear(WString.TABLE, inst_uuid, prop.uuid)
+            _ = String.clear(inst_uuid, prop.uuid)
             return
-        cells.write(WString.TABLE, inst_uuid, prop.uuid, value)
+        String.write(inst_uuid, prop.uuid, value)

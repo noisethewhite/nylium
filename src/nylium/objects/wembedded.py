@@ -23,11 +23,10 @@ from nylium.database import Database
 
 from nylium.objects.tables import instances
 from nylium.objects.tables.instances import get as instance_get
-from nylium.tables.values import cells
 from nylium.tables.values.array_values import element_uuids_of
 from nylium.tables.values.instance_values import add_link, link_for, linked_uuids_of
 from nylium.objects.wprop import WProp
-from nylium.objects.wscalar import WString
+from nylium.scalars import String
 from nylium.objects.wtype import WType
 from nylium.objects.wtypemeta import StoredValue, WTypeMeta
 
@@ -141,7 +140,7 @@ class WEmbedded:
                 name_prop = WProp.by_key(owner, NAME_PROP_KEY)
                 if name_prop is not None:
                     base = cast(
-                        str | None, cells.read(WString.TABLE, owner_uuid, name_prop.uuid)
+                        str | None, String.read(owner_uuid, name_prop.uuid)
                     )
             if not base:
                 base = inst.name

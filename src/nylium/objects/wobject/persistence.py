@@ -14,7 +14,7 @@ from uuid import UUID
 from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import ScalarPayload, WScalar
 from nylium.objects.wtypemeta import WObjectShape
-from nylium.tables.values import cells, file_values, instance_values
+from nylium.tables.values import file_values, instance_values
 from nylium.tables.values.instance_values import TABLE_InstanceValues
 
 
@@ -35,9 +35,9 @@ class PersistenceMixin:
         # clearing a scalar removes the row — a NULL row violates the
         # table's NOT NULL constraint and reads back as None anyway
         if value is None:
-            _ = cells.clear(scalar.TABLE, self._uuid, prop.uuid)
+            _ = scalar.SCALAR.clear(self._uuid, prop.uuid)
             return
-        cells.write(scalar.TABLE, self._uuid, prop.uuid, scalar.to_storage(value))
+        scalar.SCALAR.write(self._uuid, prop.uuid, scalar.to_storage(value))
 
     def _write_link(self, prop: WProp, value: WObjectShape) -> None:
         instance_values.merge_link(value.uuid, prop.uuid, self._uuid)

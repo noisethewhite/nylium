@@ -19,7 +19,6 @@ from nylium.database import Database
 from nylium.objects.tables import instances
 from nylium.tables.files import type_name_of as file_type_name_of
 from nylium.objects.tables.instances import delete_row as delete_instance_row, get as instance_get
-from nylium.tables.values import cells
 from nylium.tables.values.array_values import (
     add_element,
     delete_elements_of,
@@ -163,7 +162,7 @@ class WArray:
         value_prop = WProp.by_key(owner, VALUE_PROP_KEY)
         if value_prop is None:
             raise RuntimeError(f"scalar type {type_name} lost its 'value' prop")
-        stored = cells.read(scalar.TABLE, uuid, value_prop.uuid)
+        stored = scalar.SCALAR.read(uuid, value_prop.uuid)
         return None if stored is None else scalar.from_storage(stored)
 
     @classmethod
@@ -226,8 +225,7 @@ class WArray:
         value_prop = WProp.by_key(owner, VALUE_PROP_KEY)
         if value_prop is None:
             raise RuntimeError(f"scalar type {type_name} lost its 'value' prop")
-        cells.write(
-            scalar.TABLE,
+        scalar.SCALAR.write(
             box_uuid,
             value_prop.uuid,
             scalar.to_storage(cast(ScalarPayload, value)),

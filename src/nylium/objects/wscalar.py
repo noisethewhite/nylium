@@ -31,6 +31,19 @@ from nylium.tables import (
     TABLE_TimeValues,
 )
 from nylium.objects.monthday import MonthDay, MonthDayTime
+from nylium.scalars import (
+    Boolean,
+    Color,
+    Date,
+    Datetime,
+    Integer,
+    MonthDay as MonthDayCell,
+    MonthDayTime as MonthDayTimeCell,
+    Numeric,
+    Scalar,
+    String,
+    Time,
+)
 
 VALUE_PROP_KEY = "value"
 
@@ -45,6 +58,8 @@ class WScalar:
     TYPE_NAME: ClassVar[str]
     PYTHON_TYPE: ClassVar[type[ScalarPayload]]
     TABLE: ClassVar[type[ScalarTable]]
+    # The value-side cell wrapper (nylium.scalars) backing this marker
+    SCALAR: ClassVar[type[Scalar]]
     # Material Symbols name, rendered gray and immutable for builtins
     ICON: ClassVar[str]
 
@@ -118,6 +133,7 @@ class WString(WScalar):
     TYPE_NAME = "String"
     PYTHON_TYPE = str
     TABLE = TABLE_StringValues
+    SCALAR = String
     ICON = "text_fields"
 
 
@@ -126,6 +142,7 @@ class WInteger(WScalar):
     TYPE_NAME = "Integer"
     PYTHON_TYPE = int
     TABLE = TABLE_IntegerValues
+    SCALAR = Integer
     ICON = "tag"
 
 
@@ -134,6 +151,7 @@ class WNumeric(WScalar):
     TYPE_NAME = "Numeric"
     PYTHON_TYPE = Decimal
     TABLE = TABLE_NumericValues
+    SCALAR = Numeric
     ICON = "percent"
 
 
@@ -142,6 +160,7 @@ class WBoolean(WScalar):
     TYPE_NAME = "Boolean"
     PYTHON_TYPE = bool
     TABLE = TABLE_BooleanValues
+    SCALAR = Boolean
     ICON = "toggle_on"
 
 
@@ -150,6 +169,7 @@ class WDatetime(WScalar):
     TYPE_NAME = "Datetime"
     PYTHON_TYPE = datetime
     TABLE = TABLE_DatetimeValues
+    SCALAR = Datetime
     ICON = "calendar_clock"
 
 
@@ -158,6 +178,7 @@ class WDate(WScalar):
     TYPE_NAME = "Date"
     PYTHON_TYPE = date
     TABLE = TABLE_DateValues
+    SCALAR = Date
     ICON = "calendar_month"
 
 
@@ -166,6 +187,7 @@ class WTime(WScalar):
     TYPE_NAME = "Time"
     PYTHON_TYPE = time
     TABLE = TABLE_TimeValues
+    SCALAR = Time
     ICON = "schedule"
 
 
@@ -177,6 +199,7 @@ class WColor(WScalar):
     TYPE_NAME = "Color"
     PYTHON_TYPE = str
     TABLE = TABLE_StringValues
+    SCALAR = Color
     ICON = "palette"
 
     HEX_RE: ClassVar[re.Pattern[str]] = re.compile(r"^#[0-9A-Fa-f]{6}$")
@@ -209,6 +232,7 @@ class WMonthDay(WScalar):
     TYPE_NAME = "MonthDay"
     PYTHON_TYPE = MonthDay
     TABLE = TABLE_MonthDayValues
+    SCALAR = MonthDayCell
     ICON = "calendar_today"
 
     @override
@@ -229,6 +253,7 @@ class WMonthDayTime(WScalar):
     TYPE_NAME = "MonthDayTime"
     PYTHON_TYPE = MonthDayTime
     TABLE = TABLE_MonthDayTimeValues
+    SCALAR = MonthDayTimeCell
     ICON = "alarm"
 
     @override

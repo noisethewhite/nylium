@@ -13,7 +13,7 @@ from uuid import UUID
 from nylium.database import Database
 from nylium.objects.tables.instances import get as get_instance_row
 from nylium.objects.tables.instances import touch as touch_instance
-from nylium.tables.values import cells, instance_values
+from nylium.tables.values import instance_values
 from nylium.objects.warray import WArray
 from nylium.objects.wembedded import WEmbedded
 from nylium.objects.wenum import WEnum
@@ -48,7 +48,7 @@ class AttrsMixin(PersistenceMixin):
         prop, value_type = self._prop_and_type(key)
         scalar = WScalar.by_type_name(value_type)
         if scalar is not None:
-            stored = cells.read(scalar.TABLE, self._uuid, prop.uuid)
+            stored = scalar.SCALAR.read(self._uuid, prop.uuid)
             return None if stored is None else scalar.from_storage(stored)
         if WType.unit_param_of(value_type) is not None:
             return WUnit.read(self._uuid, prop, value_type)
@@ -117,7 +117,7 @@ class AttrsMixin(PersistenceMixin):
         prop, value_type = self._prop_and_type(key)
         scalar = WScalar.by_type_name(value_type)
         if scalar is not None:
-            if cells.clear(scalar.TABLE, self._uuid, prop.uuid):
+            if scalar.SCALAR.clear(self._uuid, prop.uuid):
                 self._touch()
             return
         if WType.unit_param_of(value_type) is not None:
