@@ -11,7 +11,7 @@ from typing import cast
 from uuid import UUID
 
 from nylium.database import Database
-from nylium.objects.tables.enum_options import enum_options
+from nylium.tables.objects.enum_options import enum_options
 from nylium.objects.wprop import WProp
 from nylium.objects.wtype import WType
 from nylium.scalars import String

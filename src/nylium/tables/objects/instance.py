@@ -9,8 +9,8 @@ from typing import ClassVar
 from uuid import UUID
 
 from nylium.database.table import Row
-from nylium.objects.tables.table_instances import TABLE_Instances
-from nylium.objects.tables.types import types
+from nylium.tables.objects.table_instances import TABLE_Instances
+from nylium.tables.objects.types import types
 
 
 class Instance(Row):

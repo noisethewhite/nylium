@@ -82,9 +82,9 @@ def array_tag_rows(
     from sqlalchemy.orm import aliased
 
     from nylium.tables.decor.table_type_decor import TABLE_TypeDecor
-    from nylium.objects.tables.table_instances import TABLE_Instances
-    from nylium.objects.tables.table_props import TABLE_Props
-    from nylium.objects.tables.table_types import TABLE_Types
+    from nylium.tables.objects.table_instances import TABLE_Instances
+    from nylium.tables.objects.table_props import TABLE_Props
+    from nylium.tables.objects.table_types import TABLE_Types
     from nylium.tables.values.instance_values import TABLE_InstanceValues
     from nylium.tables.values.string_values import TABLE_StringValues
 

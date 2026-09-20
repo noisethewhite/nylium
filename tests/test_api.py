@@ -12,7 +12,7 @@ from nylium.api import (
     RefValue,
     ScalarValue,
 )
-from nylium.objects.tables.types import Type
+from nylium.tables.objects.types import Type
 from nylium.objects import WInteger, WObject, WString
 from nylium.server.errors import ValidationError
 

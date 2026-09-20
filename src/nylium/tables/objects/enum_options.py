@@ -11,9 +11,9 @@ import sqlalchemy as sqla
 
 from nylium.database import Database
 from nylium.database.table import Row, Table
-from nylium.objects.rows.enum_option import EnumOption as EnumOption
-from nylium.objects.tables.props import TABLE_Props as TABLE_Props
-from nylium.objects.tables.table_enum_options import TABLE_EnumOptions as TABLE_EnumOptions
+from nylium.tables.objects.enum_option import EnumOption as EnumOption
+from nylium.tables.objects.props import TABLE_Props as TABLE_Props
+from nylium.tables.objects.table_enum_options import TABLE_EnumOptions as TABLE_EnumOptions
 from nylium.tables.values.string_values import TABLE_StringValues as TABLE_StringValues
 
 

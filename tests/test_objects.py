@@ -8,7 +8,7 @@ import sqlalchemy as sqla
 from sqlalchemy.orm import Session
 
 from nylium.database import Database
-from nylium.objects.tables import TABLE_Instances
+from nylium.tables.objects import TABLE_Instances
 from nylium.objects import WInteger, WObject, WString
 
 

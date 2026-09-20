@@ -14,7 +14,7 @@ from uuid import UUID
 
 from nylium.database import Database
 from nylium.objects.quantity import Quantity
-from nylium.objects.tables.unit_parts import unit_parts
+from nylium.tables.objects.unit_parts import unit_parts
 from nylium.objects.wprop import WProp
 from nylium.objects.wtype import WType
 from nylium.scalars import Numeric

@@ -14,8 +14,8 @@ from sqlalchemy.orm import InstrumentedAttribute, Mapped
 
 from nylium.database import Database
 from nylium.database.table import Row, Table
-from nylium.objects.rows.prop import Prop as Prop
-from nylium.objects.tables.table_props import TABLE_Props as TABLE_Props
+from nylium.tables.objects.prop import Prop as Prop
+from nylium.tables.objects.table_props import TABLE_Props as TABLE_Props
 from nylium.tables.values.boolean_values import TABLE_BooleanValues
 from nylium.tables.values.date_values import TABLE_DateValues
 from nylium.tables.values.datetime_values import TABLE_DatetimeValues

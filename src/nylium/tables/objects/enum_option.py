@@ -8,7 +8,7 @@ from typing import ClassVar
 from uuid import UUID
 
 from nylium.database.table import Row
-from nylium.objects.tables.table_enum_options import TABLE_EnumOptions
+from nylium.tables.objects.table_enum_options import TABLE_EnumOptions
 
 
 class EnumOption(Row):

@@ -12,8 +12,8 @@ if TYPE_CHECKING:
 else:
     _SchemaBase = ApiShared
 from nylium.database import Database
-from nylium.objects.tables import instances, props
-from nylium.objects.tables.types import Type
+from nylium.tables.objects import instances, props
+from nylium.tables.objects.types import Type
 from nylium.objects.wembedded import WEmbedded
 from nylium.objects.wformula import Formula
 from nylium.objects.wprop import WProp

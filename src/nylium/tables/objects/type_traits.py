@@ -8,8 +8,8 @@ import sqlalchemy as sqla
 
 from nylium.database import Database
 from nylium.database.table import Row, Table
-from nylium.objects.tables.table_type_traits import TABLE_TypeTraits
-from nylium.objects.rows.type_trait import TypeTrait
+from nylium.tables.objects.table_type_traits import TABLE_TypeTraits
+from nylium.tables.objects.type_trait import TypeTrait
 
 
 class TypeTraits(Table[tuple[UUID, UUID], TypeTrait]):

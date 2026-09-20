@@ -2,7 +2,7 @@
 
 Owns the prop-level semantics (snapshots, effective schema across
 attached traits); every statement lives in
-``nylium.objects.tables.props`` / ``traits`` / ``type_traits`` (ADR-0019).
+``nylium.tables.objects.props`` / ``traits`` / ``type_traits`` (ADR-0019).
 WType deliberately does not import WProp, so the dependency direction is
 wprop -> wtype and nothing cycles.
 """
@@ -12,8 +12,8 @@ from typing import TYPE_CHECKING, ClassVar
 from uuid import UUID
 
 from nylium.database import Database
-from nylium.objects.tables import TABLE_Props
-from nylium.objects.tables.props import (
+from nylium.tables.objects import TABLE_Props
+from nylium.tables.objects.props import (
     SchemaItem as SchemaItem,
     apply_positions,
     by_trait_key,
@@ -24,8 +24,8 @@ from nylium.objects.tables.props import (
     rows_of_type,
     sync_owned,
 )
-from nylium.objects.tables.traits import name_of as trait_name_of
-from nylium.objects.tables.type_traits import attached_trait_uuids
+from nylium.tables.objects.traits import name_of as trait_name_of
+from nylium.tables.objects.type_traits import attached_trait_uuids
 
 if TYPE_CHECKING:
     from nylium.objects.wtype import WType
