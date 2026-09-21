@@ -1,2 +1,10 @@
-"""Shim over ``nylium.table_rows.functions`` (ADR-0033)."""
-from nylium.table_rows.functions import *  # noqa: F401,F403
+"""Mapped Row classes."""
+from nylium.rows.functions.function_edge import FunctionEdge
+from nylium.rows.functions.function_node import FunctionNode
+from nylium.rows.functions.instance_function_link import InstanceFunctionLink
+
+__all__ = [
+    'FunctionEdge',
+    'FunctionNode',
+    'InstanceFunctionLink',
+]

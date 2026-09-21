@@ -21,34 +21,31 @@ from nylium.database import Database
 from nylium.database.row import mapper
 from nylium.database.table import Row
 from nylium.objects.scalar_type_names import DATE, DATETIME, INTEGER
-from nylium.table_rows.decor import trait_decor, type_decor
-from nylium.table_rows.decor.type_decor import TypeDecor
-from nylium.table_rows.objects import (
-    EnumOption,
-    Instance,
-    Prop,
-    Type,
-    UnitPart,
-    enum_options,
-    props,
-    traits,
-    type_traits,
-    types,
-    unit_parts,
-)
-from nylium.table_rows.values import (
-    ArrayValue,
-    BooleanValue,
-    DateValue,
-    DatetimeValue,
-    InstanceValue,
-    IntegerValue,
-    MonthDayTimeValue,
-    MonthDayValue,
-    NumericValue,
-    StringValue,
-    TimeValue,
-)
+from nylium.tables.decor.trait_decors import trait_decor
+from nylium.tables.decor.type_decors import type_decor
+from nylium.rows.decor.type_decor import TypeDecor
+from nylium.rows.objects.enum_option import EnumOption
+from nylium.rows.objects.instance import Instance
+from nylium.rows.objects.prop import Prop
+from nylium.rows.objects.type import Type
+from nylium.rows.objects.unit_part import UnitPart
+from nylium.tables.objects.enum_options import enum_options
+from nylium.tables.objects.props import props
+from nylium.tables.objects.traits import traits
+from nylium.tables.objects.type_traits import type_traits
+from nylium.tables.objects.types import types
+from nylium.tables.objects.unit_parts import unit_parts
+from nylium.rows.values.array_value import ArrayValue
+from nylium.rows.values.boolean_value import BooleanValue
+from nylium.rows.values.date_value import DateValue
+from nylium.rows.values.datetime_value import DatetimeValue
+from nylium.rows.values.instance_value import InstanceValue
+from nylium.rows.values.integer_value import IntegerValue
+from nylium.rows.values.month_day_time_value import MonthDayTimeValue
+from nylium.rows.values.month_day_value import MonthDayValue
+from nylium.rows.values.numeric_value import NumericValue
+from nylium.rows.values.string_value import StringValue
+from nylium.rows.values.time_value import TimeValue
 
 # --- schema navigation (was Row properties) ---
 

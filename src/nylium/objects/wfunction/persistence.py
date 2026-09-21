@@ -14,14 +14,12 @@ from collections.abc import Mapping, Sequence
 from uuid import UUID
 
 from nylium.database import Database
-from nylium.table_rows.functions import (
-    FunctionEdge,
-    FunctionEdges,
-    FunctionNode,
-    FunctionNodes,
-    InstanceFunctionLinks,
-)
-from nylium.table_rows.objects import instances
+from nylium.rows.functions.function_edge import FunctionEdge
+from nylium.rows.functions.function_node import FunctionNode
+from nylium.tables.functions.function_edges import FunctionEdges
+from nylium.tables.functions.function_nodes import FunctionNodes
+from nylium.tables.functions.instance_function_links import InstanceFunctionLinks
+from nylium.tables.objects.instances import instances
 from nylium.objects.navigation import instance_uuids_of_kind
 from nylium.objects.wprop import WProp
 from nylium.objects.wtype import WType

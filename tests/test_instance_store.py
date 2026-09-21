@@ -11,8 +11,8 @@ import pytest
 
 from nylium.api import Api
 from nylium.objects.navigation import type_name_of
-from nylium.table_rows.objects import instances
-from nylium.table_rows.objects import types
+from nylium.tables.objects.instances import instances
+from nylium.tables.objects.types import types
 
 
 def _seed_type() -> UUID:

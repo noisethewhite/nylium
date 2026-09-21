@@ -1,2 +1,13 @@
-"""Shim over ``nylium.table_rows.functions`` (ADR-0033)."""
-from nylium.table_rows.functions import *  # noqa: F401,F403
+"""Table stores."""
+from nylium.tables.functions.function_edges import FunctionEdges, function_edges
+from nylium.tables.functions.function_nodes import FunctionNodes, function_nodes
+from nylium.tables.functions.instance_function_links import InstanceFunctionLinks, instance_function_links
+
+__all__ = [
+    'FunctionEdges',
+    'function_edges',
+    'FunctionNodes',
+    'function_nodes',
+    'InstanceFunctionLinks',
+    'instance_function_links',
+]

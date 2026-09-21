@@ -33,26 +33,24 @@ from nylium.objects.scalar_type_names import (
     STRING,
     TIME,
 )
-from nylium.table_rows.values import (
-    BooleanValue,
-    BooleanValues,
-    DateValue,
-    DateValues,
-    DatetimeValue,
-    DatetimeValues,
-    IntegerValue,
-    IntegerValues,
-    MonthDayTimeValue,
-    MonthDayTimeValues,
-    MonthDayValue,
-    MonthDayValues,
-    NumericValue,
-    NumericValues,
-    StringValue,
-    StringValues,
-    TimeValue,
-    TimeValues,
-)
+from nylium.rows.values.boolean_value import BooleanValue
+from nylium.rows.values.date_value import DateValue
+from nylium.rows.values.datetime_value import DatetimeValue
+from nylium.rows.values.integer_value import IntegerValue
+from nylium.rows.values.month_day_time_value import MonthDayTimeValue
+from nylium.rows.values.month_day_value import MonthDayValue
+from nylium.rows.values.numeric_value import NumericValue
+from nylium.rows.values.string_value import StringValue
+from nylium.rows.values.time_value import TimeValue
+from nylium.tables.values.boolean_values import BooleanValues
+from nylium.tables.values.date_values import DateValues
+from nylium.tables.values.datetime_values import DatetimeValues
+from nylium.tables.values.integer_values import IntegerValues
+from nylium.tables.values.month_day_time_values import MonthDayTimeValues
+from nylium.tables.values.month_day_values import MonthDayValues
+from nylium.tables.values.numeric_values import NumericValues
+from nylium.tables.values.string_values import StringValues
+from nylium.tables.values.time_values import TimeValues
 
 VALUE_PROP_KEY = "value"
 

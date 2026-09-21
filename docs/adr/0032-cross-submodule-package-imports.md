@@ -1,6 +1,6 @@
 # ADR-0032: Cross-submodule imports go through the package, not the file
 
-- Status: proposed
+- Status: superseded by ADR-0033 for the SQL persistence layer
 - Date: 2026-09-20
 
 ## Context

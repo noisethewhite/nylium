@@ -4,17 +4,19 @@ A ``Table`` is ``Mapping[K, Row]`` over one mapped class: ``table[key]``
 SELECTs and returns the Row (which is now itself the mapped dataclass),
 ``table.where(**eq)`` is the single reverse-lookup every table answers
 with, and ``table.all()`` is ``where()`` with no criteria. Concrete
-tables live next to their Row in ``nylium/table_rows/`` and add only real
-business operations (``create``/``sync``/``delete``); SQLAlchemy never
-leaves this module and those.
+tables live in ``nylium/tables/`` and add only real business operations
+(``create``/``sync``/``delete``); their mapped dataclasses live in
+``nylium/rows/``. SQLAlchemy never leaves this module, ``row.py``,
+``registry.py``, and those two packages.
 
 ``Row`` (the mapped dataclass) lives in ``row.py``; it is re-exported
 here so ``from nylium.database.table import Row`` keeps working at every
-existing import site.
+existing import site. The shared SQLAlchemy registry lives in
+``nylium.database.registry`` so rows never import the tables package.
 
-This module imports no ``nylium.tables`` / ``nylium.table_rows`` code —
-importing a table's package reaches back for ``Row`` / ``Table`` (an
-import cycle).
+This module imports no ``nylium.tables`` / ``nylium.rows`` code —
+importing a table or row package reaches back for ``Row`` / ``Table``,
+which would be an import cycle.
 """
 from __future__ import annotations
 

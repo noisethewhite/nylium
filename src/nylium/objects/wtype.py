@@ -12,8 +12,9 @@ from __future__ import annotations
 from uuid import UUID
 
 from nylium.database import Database
-from nylium.table_rows.decor import type_decor
-from nylium.table_rows.objects import Type, types
+from nylium.tables.decor.type_decors import type_decor
+from nylium.rows.objects.type import Type
+from nylium.tables.objects.types import types
 from typing import ClassVar
 
 

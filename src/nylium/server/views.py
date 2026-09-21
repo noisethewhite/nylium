@@ -18,8 +18,12 @@ from uuid import UUID
 from pydantic import ConfigDict
 from pydantic.dataclasses import dataclass
 
-from nylium.table_rows import File
-from nylium.rows.objects import EnumOption, Prop, Trait, Type, UnitPart
+from nylium.rows.file import File
+from nylium.rows.objects.enum_option import EnumOption
+from nylium.rows.objects.prop import Prop
+from nylium.rows.objects.trait import Trait
+from nylium.rows.objects.type import Type
+from nylium.rows.objects.unit_part import UnitPart
 from nylium.objects.navigation import (
     effective_props,
     prop_owner_trait,
@@ -140,7 +144,7 @@ class TypeView:
         # demand when the caller didn't already batch it (see from_rows).
         if level is None:
             from nylium.api.shared import ApiShared
-            from nylium.table_rows.objects import types
+            from nylium.tables.objects.types import types
 
             level = ApiShared.reference_levels(list(types.all())).get(type_.name, 1)
         return cls(

@@ -13,7 +13,7 @@ from nylium.api import (
     RefValue,
     ScalarValue,
 )
-from nylium.table_rows.objects import Type
+from nylium.rows.objects.type import Type
 from nylium.objects import WInteger, WObject, WString
 from nylium.objects.navigation import (
     effective_props,

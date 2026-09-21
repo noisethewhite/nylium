@@ -10,7 +10,7 @@ from uuid import UUID
 from pydantic.dataclasses import dataclass
 
 from nylium.database import Database
-from nylium.tables.objects import Instances, instances
+from nylium.tables.objects.instances import Instances, instances
 from nylium.objects.navigation import (
     array_tag_rows,
     backlink_refs,
@@ -96,7 +96,7 @@ class ObjectView:
         wrapper = WObject.wrap(uuid)
         # ADR-0029: function bindings are instance-level — load them once
         # and map prop_uuid -> function_uuid to avoid an N+1 per prop.
-        from nylium.table_rows.functions import InstanceFunctionLinks
+        from nylium.tables.functions.instance_function_links import InstanceFunctionLinks
 
         bound = dict(InstanceFunctionLinks.function_links_of_instance(uuid))
         effective = list(WProp.effective_for(owner))

@@ -17,7 +17,10 @@ from nylium.objects.navigation import (
     purge_prop_values,
     purge_prop_values_for_instances as _purge_prop_values_for_instances,
 )
-from nylium.table_rows.objects import Prop, Props, SchemaItem, Traits, TypeTraits
+from nylium.rows.objects.prop import Prop, SchemaItem
+from nylium.tables.objects.props import Props
+from nylium.tables.objects.traits import Traits
+from nylium.tables.objects.type_traits import TypeTraits
 
 if TYPE_CHECKING:
     from nylium.objects.wtype import WType

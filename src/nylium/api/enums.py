@@ -6,8 +6,8 @@ from uuid import UUID
 from nylium.api.shared import ApiShared
 from nylium.database import Database
 from nylium.objects.navigation import sync_enum_options as _sync_enum_options
-from nylium.tables.decor import type_decor
-from nylium.tables.objects import Type
+from nylium.tables.decor.type_decors import type_decor
+from nylium.rows.objects.type import Type
 from nylium.objects.wscalar import WColor
 from nylium.objects.wtype import WType
 

@@ -1,2 +1,8 @@
-"""Shim over ``nylium.table_rows.decor`` (ADR-0033)."""
-from nylium.table_rows.decor import *  # noqa: F401,F403
+"""Mapped Row classes."""
+from nylium.rows.decor.trait_decor import TraitDecor
+from nylium.rows.decor.type_decor import TypeDecor
+
+__all__ = [
+    'TraitDecor',
+    'TypeDecor',
+]
