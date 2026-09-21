@@ -8,7 +8,7 @@ import pytest
 
 from nylium.api import Api, ScalarValue
 from nylium.objects.navigation import effective_props, type_unit_parts
-from nylium.rows.objects.type import Type
+from nylium.data.rows.objects.type import Type
 from nylium.objects.quantity import Quantity
 from nylium.server.errors import ValidationError
 

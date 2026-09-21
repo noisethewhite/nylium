@@ -11,9 +11,9 @@ from uuid import UUID, uuid4
 
 from nylium.database import Database
 from nylium.objects.navigation import array_link_uuids_of
-from nylium.tables.objects.instances import Instances, instances
-from nylium.tables.values.array_values import ArrayValues
-from nylium.tables.values.instance_values import InstanceValues
+from nylium.data.tables.objects.instances import Instances, instances
+from nylium.data.tables.values.array_values import ArrayValues
+from nylium.data.tables.values.instance_values import InstanceValues
 from nylium.objects.warray import WArray
 from nylium.objects.wembedded import WEmbedded
 from nylium.objects.wtype import WType

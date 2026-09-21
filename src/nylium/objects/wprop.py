@@ -2,7 +2,7 @@
 
 Owns the prop-level semantics (snapshots, effective schema across
 attached traits); every statement lives in
-``nylium.tables.objects.props`` / ``traits`` / ``type_traits`` (ADR-0019).
+``nylium.data.tables.objects.props`` / ``traits`` / ``type_traits`` (ADR-0019).
 WType deliberately does not import WProp, so the dependency direction is
 wprop -> wtype and nothing cycles.
 """
@@ -17,10 +17,10 @@ from nylium.objects.navigation import (
     purge_prop_values,
     purge_prop_values_for_instances as _purge_prop_values_for_instances,
 )
-from nylium.rows.objects.prop import Prop, SchemaItem
-from nylium.tables.objects.props import Props
-from nylium.tables.objects.traits import Traits
-from nylium.tables.objects.type_traits import TypeTraits
+from nylium.data.rows.objects.prop import Prop, SchemaItem
+from nylium.data.tables.objects.props import Props
+from nylium.data.tables.objects.traits import Traits
+from nylium.data.tables.objects.type_traits import TypeTraits
 
 if TYPE_CHECKING:
     from nylium.objects.wtype import WType

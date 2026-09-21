@@ -14,10 +14,10 @@ from uuid import UUID
 
 from nylium.database import Database
 from nylium.objects.quantity import Quantity
-from nylium.tables.objects.unit_parts import unit_parts
+from nylium.data.tables.objects.unit_parts import unit_parts
 from nylium.objects.wprop import WProp
 from nylium.objects.wtype import WType
-from nylium.tables.values.numeric_values import NumericValues
+from nylium.data.tables.values.numeric_values import NumericValues
 from nylium.server.errors import ValidationError
 
 

@@ -14,7 +14,7 @@ here so ``from nylium.database.table import Row`` keeps working at every
 existing import site. The shared SQLAlchemy registry lives in
 ``nylium.database.registry`` so rows never import the tables package.
 
-This module imports no ``nylium.tables`` / ``nylium.rows`` code —
+This module imports no ``nylium.data.tables`` / ``nylium.data.rows`` code —
 importing a table or row package reaches back for ``Row`` / ``Table``,
 which would be an import cycle.
 """

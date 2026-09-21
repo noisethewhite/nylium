@@ -5,15 +5,15 @@ from uuid import UUID
 
 from nylium.api.shared import ApiShared
 from nylium.database import Database
-from nylium.rows.objects.trait import Trait
-from nylium.tables.objects.instances import instances
-from nylium.tables.objects.props import props
-from nylium.tables.objects.traits import traits
-from nylium.tables.objects.type_traits import type_traits
-from nylium.tables.decor.trait_decors import trait_decor
-from nylium.rows.objects.prop import SchemaItem
-from nylium.rows.objects.type import Type
-from nylium.tables.objects.types import types
+from nylium.data.rows.objects.trait import Trait
+from nylium.data.tables.objects.instances import instances
+from nylium.data.tables.objects.props import props
+from nylium.data.tables.objects.traits import traits
+from nylium.data.tables.objects.type_traits import type_traits
+from nylium.data.tables.decor.trait_decors import trait_decor
+from nylium.data.rows.objects.prop import SchemaItem
+from nylium.data.rows.objects.type import Type
+from nylium.data.tables.objects.types import types
 from nylium.objects.navigation import trait_color, trait_props
 from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import WScalar

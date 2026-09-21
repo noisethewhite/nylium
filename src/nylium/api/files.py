@@ -5,8 +5,8 @@ from uuid import UUID, uuid4
 
 from nylium.api.shared import ApiShared
 from nylium.database import Database
-from nylium.rows.file import File
-from nylium.tables.files import files
+from nylium.data.rows.file import File
+from nylium.data.tables.files import files
 from nylium.objects.wfile import WFile
 
 

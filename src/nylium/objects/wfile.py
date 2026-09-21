@@ -11,7 +11,7 @@ from pathlib import Path
 from uuid import UUID
 
 from nylium.database import Database
-from nylium.tables.files import files
+from nylium.data.tables.files import files
 from typing import ClassVar
 
 
@@ -117,7 +117,7 @@ class WFile:
     def reset_icons_referencing(cls, image_uuid: UUID) -> None:
         """Deleting an Image used as an icon is allowed (ADR-0006): every
         type pointing at it falls back to the default glyph."""
-        from nylium.tables.decor.type_decors import TypeDecors
+        from nylium.data.tables.decor.type_decors import TypeDecors
 
         marker = f"{cls.ICON_IMAGE_PREFIX}{image_uuid}"
         TypeDecors.reset_icons_referencing(marker, cls.DEFAULT_GLYPH)
@@ -144,6 +144,6 @@ class WFile:
         """Deleting a file also drops Array<File/Document/Image> members that
         pointed at it (ADR-0008) — mirrors WObject.delete's cleanup of array
         links, so no dangling files.uuid survives in an array."""
-        from nylium.tables.values.array_values import ArrayValues
+        from nylium.data.tables.values.array_values import ArrayValues
 
         ArrayValues.delete_memberships(uuid)

@@ -15,9 +15,9 @@ from uuid import UUID
 from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import ScalarPayload, WScalar
 from nylium.objects.wtypemeta import WObjectShape
-from nylium.rows.values.instance_value import InstanceValue
-from nylium.tables.values.file_values import FileValues
-from nylium.tables.values.instance_values import InstanceValues
+from nylium.data.rows.values.instance_value import InstanceValue
+from nylium.data.tables.values.file_values import FileValues
+from nylium.data.tables.values.instance_values import InstanceValues
 
 
 class PersistenceMixin:

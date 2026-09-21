@@ -10,7 +10,7 @@ from uuid import UUID, uuid4
 import pytest
 
 from nylium.api import Api
-from nylium.tables.objects.types import types
+from nylium.data.tables.objects.types import types
 
 
 def _seed() -> UUID:
@@ -56,7 +56,7 @@ def test_iter_len_all():
 
 
 def test_update_and_delete():
-    from nylium.tables.decor.type_decors import type_decor
+    from nylium.data.tables.decor.type_decors import type_decor
 
     uuid = _seed()
     row = types[uuid]

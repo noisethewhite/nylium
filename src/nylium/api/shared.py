@@ -7,10 +7,10 @@ from uuid import UUID
 
 from nylium.api.display import ObjectRef
 from nylium.database import Database
-from nylium.rows.objects.trait import Trait
-from nylium.tables.objects.traits import traits
-from nylium.rows.objects.type import Type
-from nylium.tables.objects.types import types
+from nylium.data.rows.objects.trait import Trait
+from nylium.data.tables.objects.traits import traits
+from nylium.data.rows.objects.type import Type
+from nylium.data.tables.objects.types import types
 from nylium.objects.wembedded import EMBEDDED_NAME_SEPARATOR
 from nylium.objects.wenum import WEnum
 from nylium.objects.wfile import WFile

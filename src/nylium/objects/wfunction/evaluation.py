@@ -10,9 +10,9 @@ from typing import cast
 from uuid import UUID
 
 from nylium.database import Database
-from nylium.rows.functions.function_edge import FunctionEdge
-from nylium.tables.functions.function_edges import FunctionEdges
-from nylium.tables.functions.function_nodes import FunctionNodes
+from nylium.data.rows.functions.function_edge import FunctionEdge
+from nylium.data.tables.functions.function_edges import FunctionEdges
+from nylium.data.tables.functions.function_nodes import FunctionNodes
 from nylium.objects.wscalar import ScalarPayload, WInteger, WString
 from nylium.objects.wfunction.constants import (
     NODE_ADD,

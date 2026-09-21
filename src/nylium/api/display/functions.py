@@ -8,7 +8,7 @@ from uuid import UUID
 from pydantic.dataclasses import dataclass
 
 from nylium.database import Database
-from nylium.tables.objects.instances import instances
+from nylium.data.tables.objects.instances import instances
 from nylium.objects import WObject, WType
 from nylium.objects.wfunction import WFunction
 from nylium.api.display.values import CONFIG, NAME_PROP_KEY

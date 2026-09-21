@@ -33,24 +33,24 @@ from nylium.objects.scalar_type_names import (
     STRING,
     TIME,
 )
-from nylium.rows.values.boolean_value import BooleanValue
-from nylium.rows.values.date_value import DateValue
-from nylium.rows.values.datetime_value import DatetimeValue
-from nylium.rows.values.integer_value import IntegerValue
-from nylium.rows.values.month_day_time_value import MonthDayTimeValue
-from nylium.rows.values.month_day_value import MonthDayValue
-from nylium.rows.values.numeric_value import NumericValue
-from nylium.rows.values.string_value import StringValue
-from nylium.rows.values.time_value import TimeValue
-from nylium.tables.values.boolean_values import BooleanValues
-from nylium.tables.values.date_values import DateValues
-from nylium.tables.values.datetime_values import DatetimeValues
-from nylium.tables.values.integer_values import IntegerValues
-from nylium.tables.values.month_day_time_values import MonthDayTimeValues
-from nylium.tables.values.month_day_values import MonthDayValues
-from nylium.tables.values.numeric_values import NumericValues
-from nylium.tables.values.string_values import StringValues
-from nylium.tables.values.time_values import TimeValues
+from nylium.data.rows.values.boolean_value import BooleanValue
+from nylium.data.rows.values.date_value import DateValue
+from nylium.data.rows.values.datetime_value import DatetimeValue
+from nylium.data.rows.values.integer_value import IntegerValue
+from nylium.data.rows.values.month_day_time_value import MonthDayTimeValue
+from nylium.data.rows.values.month_day_value import MonthDayValue
+from nylium.data.rows.values.numeric_value import NumericValue
+from nylium.data.rows.values.string_value import StringValue
+from nylium.data.rows.values.time_value import TimeValue
+from nylium.data.tables.values.boolean_values import BooleanValues
+from nylium.data.tables.values.date_values import DateValues
+from nylium.data.tables.values.datetime_values import DatetimeValues
+from nylium.data.tables.values.integer_values import IntegerValues
+from nylium.data.tables.values.month_day_time_values import MonthDayTimeValues
+from nylium.data.tables.values.month_day_values import MonthDayValues
+from nylium.data.tables.values.numeric_values import NumericValues
+from nylium.data.tables.values.string_values import StringValues
+from nylium.data.tables.values.time_values import TimeValues
 
 VALUE_PROP_KEY = "value"
 
@@ -76,7 +76,7 @@ class WScalar:
     TYPE_NAME: ClassVar[str]
     PYTHON_TYPE: ClassVar[type[ScalarPayload]]
     TABLE: ClassVar[type[ScalarTable]]
-    # The value-side cell store (nylium.tables.values) backing this marker
+    # The value-side cell store (nylium.data.tables.values) backing this marker
     SCALAR: ClassVar[type[_ScalarStore]]
     # Material Symbols name, rendered gray and immutable for builtins
     ICON: ClassVar[str]
