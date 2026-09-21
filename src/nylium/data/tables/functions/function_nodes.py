@@ -9,6 +9,7 @@ from nylium.database import Database
 from nylium.database.row import mapper
 from nylium.database.table import Row, Table
 from nylium.data.rows.functions.function_node import FunctionNode
+from nylium.data.rows.functions.function_edge import FunctionEdge
 
 class FunctionNodes(Table[UUID, FunctionNode]):
     """The function_nodes table as a store of DAG nodes (and DAG sync)."""
@@ -35,7 +36,6 @@ class FunctionNodes(Table[UUID, FunctionNode]):
         nodes: Sequence[tuple[UUID | None, str, int, Mapping[str, object]]],
         edges: Sequence[tuple[UUID, int, UUID, int]],
     ) -> None:
-        from nylium.data.rows.functions.function_edge import FunctionEdge
 
         existing_nodes = cls.nodes_of(function_uuid)
         existing_uuids = {n.uuid for n in existing_nodes}

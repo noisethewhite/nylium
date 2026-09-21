@@ -7,6 +7,7 @@ from typing import NoReturn, TypeAlias
 
 from nylium.objects.wscalar import WInteger, WNumeric
 from nylium.objects.wtype import WType
+from nylium.server.errors import ValidationError
 
 # The closed set of node operations. The `kind` string is validated
 # against this set at save time.
@@ -36,7 +37,6 @@ NUMERIC_SCALARS = frozenset({WInteger.TYPE_NAME, WNumeric.TYPE_NAME})
 
 
 def fail(message: str) -> NoReturn:
-    from nylium.server.errors import ValidationError
 
     raise ValidationError(message)
 

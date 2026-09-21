@@ -19,6 +19,7 @@ from nylium.data.tables.objects.types import types
 from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import WColor, WScalar, WString
 from nylium.objects.wtype import WType
+from nylium.server.errors import ValidationError
 
 
 class TypesApi(_TypesBase):
@@ -54,7 +55,6 @@ class TypesApi(_TypesBase):
         prop must be Numeric (or Integer for a bare COUNT). collects maps
         prop key -> collect member key (ADR-0025)."""
         # lazy: a module-level import would circle api -> server -> api
-        from nylium.server.errors import ValidationError
 
         props = dict(props or {})
         formulas = dict(formulas or {})
@@ -131,7 +131,6 @@ class TypesApi(_TypesBase):
     ) -> Type:
         """Edit a user type's identity: name, plural form, icon, color.
         Builtins and array types (no plural form) are immutable."""  # noqa: E501
-        from nylium.server.errors import ValidationError
 
         owner = WType.by_name(name)
         if owner is None:
@@ -176,7 +175,6 @@ class TypesApi(_TypesBase):
     def delete_type(cls, name: str) -> bool:
         """Refuses while instances exist; other types referencing this one
         as a prop value type are stopped by the FK, on purpose."""
-        from nylium.server.errors import ValidationError
 
         owner = WType.by_name(name)
         if owner is None:

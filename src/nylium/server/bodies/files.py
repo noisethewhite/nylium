@@ -13,6 +13,7 @@ from nylium.api.api import Api
 from nylium.server.bodies.shared import BODY_CONFIG, PATH_PARAMS, resolve_route_hints
 from nylium.server.errors import NotFoundError
 from nylium.server.views import FileView, StorageStats
+from nylium.objects.wfile import WFile
 
 
 @dataclass(config=BODY_CONFIG)
@@ -83,7 +84,6 @@ class FileUuidRequest:
 
     @classmethod
     def route_download(cls, request: Annotated["FileUuidRequest", PATH_PARAMS]) -> FileResponse:
-        from nylium.objects.wfile import WFile
 
         file = Api.get_file(request.file_uuid)
         if file is None:

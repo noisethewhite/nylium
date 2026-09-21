@@ -21,6 +21,7 @@ from nylium.objects.wformula.serialization import ast_to_dict, dict_to_ast
 from nylium.objects.quantity import Quantity
 from nylium.objects.wscalar import WInteger, WNumeric, WString
 from nylium.objects.wtype import WType
+from nylium.server.errors import ValidationError
 
 
 def _calls(node: Expr) -> Iterator[Call]:
@@ -108,7 +109,6 @@ class Formula:
         resolve_member_type: Callable[[str], Sequence[tuple[str, str]] | None],
         is_string_like: Callable[[str], bool] | None = None,
     ) -> None:
-        from nylium.server.errors import ValidationError
 
         ast = cls.parse(formula)
         owner = dict(owner_type_props)

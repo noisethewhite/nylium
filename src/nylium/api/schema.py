@@ -20,6 +20,7 @@ from nylium.objects.wformula import Formula
 from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import WString
 from nylium.objects.wtype import WType
+from nylium.server.errors import ValidationError
 
 
 class SchemaApi(_SchemaBase):
@@ -28,7 +29,6 @@ class SchemaApi(_SchemaBase):
     def reorder_props(cls, type_name: str, keys: list[str]) -> Type:
         """Persist a new prop order; keys must cover the whole schema and
         keep the `name` prop first (see NAME_PROP_KEY)."""
-        from nylium.server.errors import ValidationError
 
         owner = WType.by_name(type_name)
         if owner is None:
@@ -63,7 +63,6 @@ class SchemaApi(_SchemaBase):
         prop must keep its uuid, its key, its String type and the first
         position. A formula (ADR-0005) must be Numeric, or Integer for a
         bare COUNT. collects maps prop key -> collect member key (ADR-0025)."""
-        from nylium.server.errors import ValidationError
 
         owner = WType.by_name(type_name)
         if owner is None:

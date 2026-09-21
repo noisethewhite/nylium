@@ -20,6 +20,7 @@ from nylium.objects.wscalar import WColor, WScalar
 from nylium.objects.wtype import WType
 from nylium.objects.wtypemeta import StoredValue
 from nylium.objects.navigation import effective_props, prop_value_type_name
+from nylium.server.errors import ValidationError
 
 # What callers may hand in for a prop: stored values, plus links as
 # UUID/ObjectRef (resolved to WObject here), plus a props draft for
@@ -155,7 +156,6 @@ class ApiShared:
         Beyond WType.ensure this validates the parameterized forms:
         `Numeric<Unit>` needs an existing unit type, and a bare unit type
         name is meaningless as a prop type — the parameter is mandatory."""
-        from nylium.server.errors import ValidationError
 
         unit_param = WType.unit_param_of(name)
         if unit_param is not None:
@@ -179,7 +179,6 @@ class ApiShared:
         `Any<TraitName>`. Returns (value_type_uuid, value_trait_uuid) —
         exactly one of the two. Any<> is a top-level form only in v1:
         nested inside Array<…>/Numeric<…> it is refused."""
-        from nylium.server.errors import ValidationError
 
         trait_name = WType.any_trait_of(name)
         if trait_name is not None:
@@ -211,13 +210,11 @@ class ApiShared:
         result: dict[str, StoredValue] = {}
         for key, value in prop_specs.items():
             if key in formula_readonly:
-                from nylium.server.errors import ValidationError
 
                 raise ValidationError(
                     f"prop {key!r} of {type_name!r} is computed by a formula — it is read-only"
                 )
             if key in collect_readonly:
-                from nylium.server.errors import ValidationError
 
                 raise ValidationError(
                     f"prop {key!r} of {type_name!r} is computed by collect — it is read-only"
@@ -289,13 +286,11 @@ class ApiShared:
             collect_readonly = {p.key for p in resolved_props if p.collect is not None}
             for child_key in value:
                 if child_key in formula_readonly:
-                    from nylium.server.errors import ValidationError
 
                     raise ValidationError(
                         f"prop {child_key!r} of {type_name!r} is computed by a formula — it is read-only"
                     )
                 if child_key in collect_readonly:
-                    from nylium.server.errors import ValidationError
 
                     raise ValidationError(
                         f"prop {child_key!r} of {type_name!r} is computed by collect — it is read-only"
@@ -316,7 +311,6 @@ class ApiShared:
     def _check_color(cls, color: str) -> None:
         """ADR-0005: type colors are stored as #RRGGBB hex; anything else
         (including the legacy named palette) is rejected at the boundary."""
-        from nylium.server.errors import ValidationError
 
         if not WColor.HEX_RE.fullmatch(color):
             raise ValidationError(f"color must be #RRGGBB hex, got {color!r}")
@@ -325,8 +319,6 @@ class ApiShared:
     def _check_icon(cls, icon: str) -> None:
         """ADR-0006: an icon is either a Material glyph name or
         `img:<uuid>` pointing at a live Image instance."""
-        from nylium.objects.wfile import WFile
-        from nylium.server.errors import ValidationError
 
         image_uuid = WFile.parse_icon_image(icon)
         if image_uuid is None:
@@ -340,7 +332,6 @@ class ApiShared:
     def _check_reserved_name(cls, value: str, what: str) -> None:
         """The → separator of generated embedded names is reserved, so a
         generated name can never collide with a user-typed one."""
-        from nylium.server.errors import ValidationError
 
         if EMBEDDED_NAME_SEPARATOR in value:
             raise ValidationError(

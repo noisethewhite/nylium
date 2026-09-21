@@ -51,6 +51,8 @@ from nylium.data.tables.values.month_day_values import MonthDayValues
 from nylium.data.tables.values.numeric_values import NumericValues
 from nylium.data.tables.values.string_values import StringValues
 from nylium.data.tables.values.time_values import TimeValues
+from nylium.objects.wprop import WProp
+from nylium.objects.wtype import WType
 
 VALUE_PROP_KEY = "value"
 
@@ -138,8 +140,6 @@ class WScalar:
     @classmethod
     @Database.commit_after_this
     def ensure_builtins(cls) -> None:
-        from nylium.objects.wprop import WProp
-        from nylium.objects.wtype import WType
 
         for scalar in cls.all():
             type_row = WType.ensure(scalar.TYPE_NAME, icon=scalar.ICON)

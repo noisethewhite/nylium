@@ -21,6 +21,7 @@ from nylium.data.rows.objects.prop import Prop, SchemaItem
 from nylium.data.tables.objects.props import Props
 from nylium.data.tables.objects.traits import Traits
 from nylium.data.tables.objects.type_traits import TypeTraits
+from nylium.objects.wtype import WType
 
 if TYPE_CHECKING:
     from nylium.objects.wtype import WType
@@ -153,7 +154,6 @@ class WProp:
 
     @Database.use_same_session
     def value_type(self) -> "WType":
-        from nylium.objects.wtype import WType
 
         if self._value_type_uuid is None:
             raise RuntimeError(

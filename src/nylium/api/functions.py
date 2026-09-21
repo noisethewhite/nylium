@@ -25,6 +25,8 @@ from nylium.objects.wfunction import WFunction
 from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import WDate, WDatetime, WInteger, WNumeric, WString
 from nylium.objects.wtype import WType
+from nylium.server.errors import ValidationError
+from nylium.data.tables.objects.instances import instances
 
 
 class FunctionsApi(_FunctionsBase):
@@ -55,7 +57,6 @@ class FunctionsApi(_FunctionsBase):
         `nodes` items are (uuid, kind, position, config) — client-generated
         uuids so edges can reference them; `edges` items are
         (from_node_uuid, from_port, to_node_uuid, to_port)."""
-        from nylium.server.errors import ValidationError
 
         if not name.strip():
             raise ValidationError("function name must not be empty")
@@ -89,7 +90,6 @@ class FunctionsApi(_FunctionsBase):
         declared input/output types are fixed (they parameterize the type);
         only the graph and name change here. After the graph lands, re-run
         the per-owner cycle check on every object binding this function."""
-        from nylium.server.errors import ValidationError
 
         if not name.strip():
             raise ValidationError("function name must not be empty")
@@ -131,9 +131,7 @@ class FunctionsApi(_FunctionsBase):
         object (None unbinds). The function's output type must equal the
         prop's value type; a formula- or collect-backed prop cannot become
         function-backed. Refuses a per-owner cross-function cycle."""
-        from nylium.server.errors import ValidationError
 
-        from nylium.data.tables.objects.instances import instances
 
         inst = instances.get(inst_uuid)
         if inst is None:
@@ -261,7 +259,6 @@ class FunctionsApi(_FunctionsBase):
     ) -> None:
         """Validate a prop's formula (ADR-0005) against the owner schema.
         A formula prop must be Numeric — or Integer for a bare COUNT."""
-        from nylium.server.errors import ValidationError
 
         if formula is None:
             return
@@ -309,7 +306,6 @@ class FunctionsApi(_FunctionsBase):
         """ADR-0025: a collect prop is an Array<T> whose element type T has an
         ordered scalar member named by `collect`; the owner must define
         `from`/`to` props of exactly that value spec."""
-        from nylium.server.errors import ValidationError
 
         if collect is None:
             return

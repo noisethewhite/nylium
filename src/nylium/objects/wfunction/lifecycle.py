@@ -8,6 +8,7 @@ from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import WScalar, WString
 from nylium.objects.wtype import WType
 from nylium.objects.wfunction.constants import NAME_PROP_KEY
+from nylium.server.errors import ValidationError
 
 
 def is_function(type_name: str) -> bool:
@@ -22,7 +23,6 @@ def ensure_type(input_name: str, output_name: str) -> WType:
     function reads sibling props from (ADR-0029); `output_name` must name a
     scalar. The function carries no `input` link — its input is resolved at
     read time from the object it is bound into."""
-    from nylium.server.errors import ValidationError
 
     if WScalar.by_type_name(output_name) is None:
         raise ValidationError(

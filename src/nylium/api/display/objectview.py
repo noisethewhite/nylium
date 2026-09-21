@@ -39,6 +39,7 @@ from nylium.api.display.values import (
     RefValue,
     ScalarValue,
 )
+from nylium.data.tables.functions.instance_function_links import InstanceFunctionLinks
 
 
 def _sibling_cell(value: StoredValue) -> Decimal | Quantity | str | None:
@@ -96,7 +97,6 @@ class ObjectView:
         wrapper = WObject.wrap(uuid)
         # ADR-0029: function bindings are instance-level — load them once
         # and map prop_uuid -> function_uuid to avoid an N+1 per prop.
-        from nylium.data.tables.functions.instance_function_links import InstanceFunctionLinks
 
         bound = dict(InstanceFunctionLinks.function_links_of_instance(uuid))
         effective = list(WProp.effective_for(owner))

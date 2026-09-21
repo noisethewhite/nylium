@@ -38,6 +38,8 @@ from nylium.objects.navigation import (
     type_trait_names,
     type_unit_parts,
 )
+from nylium.api.shared import ApiShared
+from nylium.data.tables.objects.types import types
 
 _CONFIG = ConfigDict(strict=True)
 
@@ -143,8 +145,6 @@ class TypeView:
         # Level is derived from the whole type graph, so it's computed on
         # demand when the caller didn't already batch it (see from_rows).
         if level is None:
-            from nylium.api.shared import ApiShared
-            from nylium.data.tables.objects.types import types
 
             level = ApiShared.reference_levels(list(types.all())).get(type_.name, 1)
         return cls(
@@ -167,7 +167,6 @@ class TypeView:
     @classmethod
     def from_rows(cls, rows: list[Type]) -> list[Self]:
         """Build all type views with levels computed once over the graph."""
-        from nylium.api.shared import ApiShared
 
         levels = ApiShared.reference_levels(rows)
         return [cls.from_row(type_, levels.get(type_.name, 1)) for type_ in rows]

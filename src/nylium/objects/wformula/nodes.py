@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import NoReturn, TypeAlias
+from nylium.server.errors import ValidationError
 
 
 @dataclass(frozen=True)
@@ -77,6 +78,5 @@ def error(message: str, pos: int) -> NoReturn:
     """Raise a ValidationError with the character offset attached. The
     import is lazy — objects/ importing server/ eagerly would cycle via
     server.app -> routes -> api -> objects."""
-    from nylium.server.errors import ValidationError
 
     raise ValidationError(f"{message} at position {pos} in formula")

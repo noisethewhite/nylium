@@ -13,6 +13,13 @@ from fastapi.testclient import TestClient
 
 from nylium.objects.wscalar import WColor
 from nylium.server import NyliumApp
+from nylium.objects.wfile import WFile
+from nylium.api import Api
+import secrets
+from nylium.auth.sessions import sessions
+from nylium.data.tables.auth.auth_credentials import auth_credentials
+from nylium.data.tables.auth.auth_users import auth_users
+from uuid import uuid4
 
 
 class dsl:
@@ -266,7 +273,6 @@ def test_delete_flows(auth_client: TestClient) -> None:
 
 
 def test_file_types_immutable_over_http(auth_client: TestClient) -> None:
-    from nylium.objects.wfile import WFile
 
     WFile.ensure_builtins()
     assert auth_client.delete("/api/types/File").status_code == 422
@@ -361,19 +367,13 @@ def test_error_body_shape(auth_client: TestClient) -> None:
 def test_unexpected_error_is_500_json(
     auth_client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from nylium.api import Api
 
     def boom(name: str) -> None:
         raise RuntimeError("boom")
 
     # ServerErrorMiddleware always re-raises after answering, so this
     # check needs a client that doesn't escalate server exceptions.
-    import secrets
 
-    from nylium.auth.sessions import sessions
-    from nylium.data.tables.auth.auth_credentials import auth_credentials
-    from nylium.data.tables.auth.auth_users import auth_users
-    from nylium.server import NyliumApp
 
     user = auth_users.create("boom-owner")
     auth_credentials.create(user.uuid, secrets.token_bytes(32), b"pk", 0, "")
@@ -799,7 +799,6 @@ def test_files_over_http(auth_client: TestClient) -> None:
     """Upload/download roundtrip over the wire (ADR-0008): builtin file
     types are boot-seeded by NyliumApp.create, blobs live under the
     test FILES_DIR, delete cascades to disk."""
-    from nylium.objects.wfile import WFile
 
     png = b"\x89PNG\r\n\x1a\n" + b"\x00" * 16
 
@@ -851,7 +850,6 @@ def test_files_over_http(auth_client: TestClient) -> None:
     assert auth_client.get(f"/api/files/{obj['uuid']}").status_code == 404
 
     # unknown uuid is a 404, not a 500
-    from uuid import uuid4
 
     assert auth_client.get(f"/api/files/{uuid4()}").status_code == 404
 
@@ -871,7 +869,6 @@ def test_img_icon_over_http(auth_client: TestClient) -> None:
     created = dsl.create_type(auth_client, "Book", {"name": "String"}, icon=icon)
     assert created["icon"] == icon
 
-    from uuid import uuid4
 
     dead = auth_client.post(
         "/api/types",
@@ -896,7 +893,6 @@ def _function_draft(input_type, output_type, name, nodes, edges):
 
 
 def test_function_lifecycle_over_http(auth_client: TestClient) -> None:
-    from uuid import uuid4
 
     dsl.create_type(
         auth_client,
@@ -969,7 +965,6 @@ def test_function_lifecycle_over_http(auth_client: TestClient) -> None:
 
 
 def test_function_validation_over_http(auth_client: TestClient) -> None:
-    from uuid import uuid4
 
     dsl.create_type(
         auth_client,

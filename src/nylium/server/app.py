@@ -20,6 +20,7 @@ from nylium.server.migrations import migrations
 from nylium.server.static import StaticSpa
 from nylium.system.environment import Environment
 from typing import ClassVar
+from nylium.objects.wscalar import WColor
 
 
 class NyliumApp:
@@ -101,7 +102,6 @@ class NyliumApp:
         values. Idempotent — hex values never match a palette key. Runs
         before _migrate_decor so the decor backfill copies hex values;
         a no-op once types.color has moved to type_decor (ADR-0014)."""
-        from nylium.objects.wscalar import WColor
 
         has_column = connection.execute(
             text(migrations.statement("type_colors/001_has_column.sql"))

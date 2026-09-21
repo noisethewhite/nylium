@@ -6,6 +6,7 @@ from uuid import UUID
 from nylium.database import Database
 from nylium.database.table import Row, Table
 from nylium.data.rows.objects.type import Type
+from nylium.data.tables.decor.type_decors import type_decor
 
 class Types(Table[UUID, Type]):
     """The types table as a Mapping of writable types."""
@@ -21,7 +22,6 @@ class Types(Table[UUID, Type]):
         kind: str | None = None,
         embedded: bool | None = None,
     ) -> Type:
-        from nylium.data.tables.decor.type_decors import type_decor
 
         row = Type(name=name)
         if kind is not None:

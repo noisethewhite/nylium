@@ -8,6 +8,7 @@ from nylium.database import Database
 from nylium.database.row import mapper
 from nylium.database.table import Row, Table
 from nylium.data.rows.objects.trait import Trait
+from nylium.data.tables.decor.trait_decors import trait_decor
 
 class Traits(Table[UUID, Trait]):
     """The traits table as a Mapping of writable traits."""
@@ -16,7 +17,6 @@ class Traits(Table[UUID, Trait]):
 
     @Database.commit_after_this
     def create(self, name: str, color: str) -> Trait:
-        from nylium.data.tables.decor.trait_decors import trait_decor
 
         row = Trait(name=name)
         Database.add(row)

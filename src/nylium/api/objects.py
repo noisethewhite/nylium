@@ -15,6 +15,9 @@ from nylium.objects.wobject import WObject
 from nylium.objects.wprop import WProp
 from nylium.objects.wtype import WType
 from nylium.objects.wtypemeta import WTypeMeta
+from nylium.api.markdown import MarkdownRenderer
+from nylium.server.errors import ValidationError
+from nylium.data.tables.functions.instance_function_links import InstanceFunctionLinks
 
 
 class ObjectsApi(ApiShared):
@@ -48,7 +51,6 @@ class ObjectsApi(ApiShared):
         expanded recursively (a graph is not a tree). Returns
         (filename, content) or None when the object does not exist.
         """
-        from nylium.api.markdown import MarkdownRenderer
 
         view = ObjectView.from_uuid(uuid)
         if view is None:
@@ -71,7 +73,6 @@ class ObjectsApi(ApiShared):
     def create_object(
         cls, type_name: str, props: dict[str, PropInput] | None = None
     ) -> ObjectView:
-        from nylium.server.errors import ValidationError
 
         owner = WType.by_name(type_name)
         if owner is not None and owner.is_embedded:
@@ -98,7 +99,6 @@ class ObjectsApi(ApiShared):
     @classmethod
     @Database.commit_after_this
     def update_object(cls, uuid: UUID, props: dict[str, PropInput]) -> ObjectView:
-        from nylium.server.errors import ValidationError
 
         if instances[uuid].owner_object_uuid is not None:
             raise ValidationError(
@@ -108,7 +108,6 @@ class ObjectsApi(ApiShared):
         type_name = type_name_of(instances[uuid].type_uuid)
         normalized = cls._normalize_props(type_name, props)
         # ADR-0029: function-bound props are instance-level read-only.
-        from nylium.data.tables.functions.instance_function_links import InstanceFunctionLinks
 
         bound_prop_uuids = {prop_uuid for prop_uuid, _ in InstanceFunctionLinks.function_links_of_instance(uuid)}
         if bound_prop_uuids:
@@ -137,7 +136,6 @@ class ObjectsApi(ApiShared):
     @classmethod
     @Database.commit_after_this
     def delete_object(cls, uuid: UUID) -> bool:
-        from nylium.server.errors import ValidationError
 
         inst = instances.get(uuid)
         if inst is None:

@@ -10,6 +10,9 @@ from nylium.api import Api
 from nylium.objects.navigation import type_icon
 from nylium.objects.wfile import WFile
 from nylium.server.errors import ValidationError
+from uuid import uuid4
+from nylium.api.display import ObjectRef, RefValue
+from nylium.api.display import ArrayValue
 
 PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 16
 PDF = b"%PDF-1.4 fake\n"
@@ -106,7 +109,6 @@ def test_img_icon_validates_against_live_image():
 
 
 def test_img_icon_rejects_dead_uuid():
-    from uuid import uuid4
 
     with pytest.raises(ValidationError):
         Api.create_type("Book", {"name": "String"}, "Books", icon=f"{WFile.ICON_IMAGE_PREFIX}{uuid4()}")
@@ -141,7 +143,6 @@ def test_sweep_orphans_removes_untracked_blobs():
 def test_file_prop_on_object_roundtrip():
     """ADR-0008: a user type holds a File/Image prop; the value is a
     files.uuid reference — stable across rename, cleared on delete."""
-    from nylium.api.display import ObjectRef, RefValue
 
     _ = Api.create_type("Artwork", {"name": "String", "cover": "Image"}, "Artworks")
     cover = upload("Image", "cover.png", "image/png", PNG)
@@ -174,7 +175,6 @@ def test_file_prop_writes_plain_uuid():
     _ = Api.create_type("Artwork", {"name": "String", "cover": "Image"}, "Artworks")
     cover = upload("Image", "cover.png", "image/png", PNG)
     obj = Api.create_object("Artwork", {"name": "Mona", "cover": cover.uuid})
-    from nylium.api.display import ObjectRef, RefValue
 
     assert obj.props["cover"] == RefValue(
         ref=ObjectRef(uuid=cover.uuid, type_name="Image")
@@ -184,7 +184,6 @@ def test_file_prop_writes_plain_uuid():
 def test_array_of_image_stores_file_uuids():
     """ADR-0008: Array<Image> members are files.uuid, not box instances —
     the array stores the file pointer directly."""
-    from nylium.api.display import ArrayValue, ObjectRef, RefValue
 
     _ = Api.create_type(
         "Gallery", {"name": "String", "shots": "Array<Image>"}, "Galleries"

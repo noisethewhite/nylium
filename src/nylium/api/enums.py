@@ -10,6 +10,7 @@ from nylium.data.tables.decor.type_decors import type_decor
 from nylium.data.rows.objects.type import Type
 from nylium.objects.wscalar import WColor
 from nylium.objects.wtype import WType
+from nylium.server.errors import ValidationError
 
 
 class EnumsApi(ApiShared):
@@ -25,7 +26,6 @@ class EnumsApi(ApiShared):
         """A string enum is a type with kind='enum': no props, values
         live in string_values, options live in enum_options. Options
         here seed the initial list in order."""
-        from nylium.server.errors import ValidationError
 
         final_name = name.strip()
         if not final_name:
@@ -48,7 +48,6 @@ class EnumsApi(ApiShared):
         """Apply the enum editor's full option draft at once: matching
         uuid renames the option (propagating to stored values), None
         creates, absent options are deleted unless still in use."""
-        from nylium.server.errors import ValidationError
 
         owner = WType.by_name(name)
         if owner is None:

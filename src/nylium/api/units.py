@@ -15,6 +15,7 @@ from nylium.data.tables.decor.type_decors import type_decor
 from nylium.data.rows.objects.type import Type
 from nylium.objects.wscalar import WColor
 from nylium.objects.wtype import WType
+from nylium.server.errors import ValidationError
 
 
 class UnitsApi(ApiShared):
@@ -32,7 +33,6 @@ class UnitsApi(ApiShared):
         unit_parts. The base part has identity conversion (multiplier 1,
         offset 0); secondaries are (name, multiplier, offset) with the
         affine convention base = (entered - offset) / multiplier."""
-        from nylium.server.errors import ValidationError
 
         final_name = name.strip()
         if not final_name:
@@ -66,7 +66,6 @@ class UnitsApi(ApiShared):
         one part is the base; switching the base is refused while any
         value exists — stored magnitudes are canonical, reinterpreting
         them would silently corrupt data."""
-        from nylium.server.errors import ValidationError
 
         owner = WType.by_name(name)
         if owner is None:
@@ -93,7 +92,6 @@ class UnitsApi(ApiShared):
     def _validate_unit_draft(
         cls, items: list[tuple[UUID | None, str, Decimal, Decimal, bool]]
     ) -> None:
-        from nylium.server.errors import ValidationError
 
         bases = [name for _, name, _, _, is_base in items if is_base]
         if len(bases) != 1:

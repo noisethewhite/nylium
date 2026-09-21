@@ -12,6 +12,7 @@ from decimal import Decimal, InvalidOperation
 from typing import TypeAlias, cast
 
 from nylium.objects.wformula.nodes import BinOp, Call, Expr, If, Neg, Number, Ref
+from nylium.server.errors import ValidationError
 
 # The wire shape of a formula AST node (ADR-0026). Values are `str` for
 # literals/ops/keys, `list` for a Call path, or a nested `AstNode`.
@@ -19,7 +20,6 @@ AstNode: TypeAlias = dict[str, object]
 
 
 def _invalid(message: str) -> Exception:
-    from nylium.server.errors import ValidationError
 
     return ValidationError(message)
 

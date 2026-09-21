@@ -8,6 +8,9 @@ from nylium.database import Database
 from nylium.data.rows.file import File
 from nylium.data.tables.files import files
 from nylium.objects.wfile import WFile
+from nylium.server.errors import ValidationError
+import shutil
+from nylium.database import database_size_bytes
 
 
 class FilesApi(ApiShared):
@@ -19,7 +22,6 @@ class FilesApi(ApiShared):
         """Atomic upload (ADR-0008): one transaction writes the `files` row,
         then the blob lands on disk last. If the disk write fails the
         transaction rolls back — no half-created pointer."""
-        from nylium.server.errors import ValidationError
 
         if not WFile.is_file_type(type_name):
             raise ValidationError(
@@ -61,7 +63,6 @@ class FilesApi(ApiShared):
     def rename_file(cls, uuid: UUID, name: str) -> File:
         """ADR-0008: rename is a display-name update — the uuid pointer is
         stable, so no reference ever breaks."""
-        from nylium.server.errors import ValidationError
 
         if not name.strip():
             raise ValidationError("filename must not be empty")
@@ -91,10 +92,7 @@ class FilesApi(ApiShared):
         """Disk usage of the volume that holds the blob store, plus
         nylium's own footprint (database + blobs). Read-only, no session
         needed — the size query goes through the engine directly."""
-        import shutil
 
-        from nylium.database import database_size_bytes
-        from nylium.objects.wfile import WFile
 
         storage = WFile.storage_dir()
         usage = shutil.disk_usage(storage)

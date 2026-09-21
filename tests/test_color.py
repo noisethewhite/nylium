@@ -10,6 +10,8 @@ from nylium.objects.navigation import type_color, type_icon
 from nylium.objects.wscalar import WColor
 from nylium.server import NyliumApp
 from nylium.server.errors import ValidationError
+from sqlalchemy import text
+from nylium.database import Database
 
 
 def test_color_is_a_registered_builtin():
@@ -69,9 +71,7 @@ def test_named_palette_rejected_at_api_boundary(create):
 
 
 def test_legacy_named_colors_migrate_to_hex():
-    from sqlalchemy import text
 
-    from nylium.database import Database
 
     _ = Api.create_type("Old", {"name": "String"}, "Olds", color="#123456")
     # simulate a pre-ADR-0014 database: decor row absent, legacy columns

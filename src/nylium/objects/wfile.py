@@ -13,6 +13,11 @@ from uuid import UUID
 from nylium.database import Database
 from nylium.data.tables.files import files
 from typing import ClassVar
+from nylium.system.environment import Environment
+from nylium.objects.wtype import WType
+import logging
+from nylium.data.tables.decor.type_decors import TypeDecors
+from nylium.data.tables.values.array_values import ArrayValues
 
 
 class WFile:
@@ -57,7 +62,6 @@ class WFile:
 
     @classmethod
     def storage_dir(cls) -> Path:
-        from nylium.system.environment import Environment
 
         path = Path(Environment.files_dir)
         path.mkdir(parents=True, exist_ok=True)
@@ -84,7 +88,6 @@ class WFile:
     @classmethod
     @Database.commit_after_this
     def ensure_builtins(cls) -> None:
-        from nylium.objects.wtype import WType
 
         for name in cls.TYPE_NAMES:
             _ = WType.ensure(name, icon=cls.ICONS[name], kind=WType.KIND_FILE)
@@ -94,7 +97,6 @@ class WFile:
     def sweep_orphans(cls) -> None:
         """Crash-window cleanup: blobs on disk with no files row are
         deleted. Runs on boot; every survivor is logged."""
-        import logging
 
         live = {str(uuid) for uuid in files}
         for blob in cls.storage_dir().iterdir():
@@ -117,7 +119,6 @@ class WFile:
     def reset_icons_referencing(cls, image_uuid: UUID) -> None:
         """Deleting an Image used as an icon is allowed (ADR-0006): every
         type pointing at it falls back to the default glyph."""
-        from nylium.data.tables.decor.type_decors import TypeDecors
 
         marker = f"{cls.ICON_IMAGE_PREFIX}{image_uuid}"
         TypeDecors.reset_icons_referencing(marker, cls.DEFAULT_GLYPH)
@@ -144,6 +145,5 @@ class WFile:
         """Deleting a file also drops Array<File/Document/Image> members that
         pointed at it (ADR-0008) — mirrors WObject.delete's cleanup of array
         links, so no dangling files.uuid survives in an array."""
-        from nylium.data.tables.values.array_values import ArrayValues
 
         ArrayValues.delete_memberships(uuid)

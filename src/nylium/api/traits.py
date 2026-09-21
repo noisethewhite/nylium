@@ -18,6 +18,7 @@ from nylium.objects.navigation import trait_color, trait_props
 from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import WScalar
 from nylium.objects.wtype import WType
+from nylium.server.errors import ValidationError
 
 
 class TraitsApi(ApiShared):
@@ -40,7 +41,6 @@ class TraitsApi(ApiShared):
         Any<TraitName>). Dict order becomes the display order. Traits v1
         have no name prop and no formulas — they're prop bundles, not
         types."""
-        from nylium.server.errors import ValidationError
 
         final_name = name.strip()
         if not final_name:
@@ -81,7 +81,6 @@ class TraitsApi(ApiShared):
         — traits v1 have no formulas, so the fourth element must be None.
         A retype/deleted prop purges values of every attached type's
         instances (inside sync_trait_schema)."""
-        from nylium.server.errors import ValidationError
 
         row = next(traits.where(name=name), None)
         if row is None:
@@ -171,7 +170,6 @@ class TraitsApi(ApiShared):
     def attach_trait(cls, type_name: str, trait_name: str) -> Type:
         """Attach a trait to a user type. Prop keys must not collide with
         the type's current effective schema."""
-        from nylium.server.errors import ValidationError
 
         owner = WType.by_name(type_name)
         if owner is None:
