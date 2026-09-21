@@ -7,6 +7,7 @@ from __future__ import annotations
 import pytest
 
 from nylium.api import Api
+from nylium.objects.navigation import type_icon
 from nylium.objects.wfile import WFile
 from nylium.server.errors import ValidationError
 
@@ -101,7 +102,7 @@ def test_img_icon_validates_against_live_image():
     view = upload("Image", "icon.png", "image/png", PNG)
     icon = f"{WFile.ICON_IMAGE_PREFIX}{view.uuid}"
     created = Api.create_type("Book", {"name": "String"}, "Books", icon=icon)
-    assert created.icon == icon
+    assert type_icon(created.uuid) == icon
 
 
 def test_img_icon_rejects_dead_uuid():
@@ -121,11 +122,11 @@ def test_deleting_icon_image_resets_type_icon():
     view = upload("Image", "icon.png", "image/png", PNG)
     icon = f"{WFile.ICON_IMAGE_PREFIX}{view.uuid}"
     created = Api.create_type("Book", {"name": "String"}, "Books", icon=icon)
-    assert created.icon == icon
+    assert type_icon(created.uuid) == icon
     assert Api.delete_file(view.uuid)
     reloaded = Api.get_type("Book")
     assert reloaded is not None
-    assert reloaded.icon == WFile.DEFAULT_GLYPH
+    assert type_icon(reloaded.uuid) == WFile.DEFAULT_GLYPH
 
 
 def test_sweep_orphans_removes_untracked_blobs():

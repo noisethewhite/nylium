@@ -12,19 +12,21 @@ from typing import TYPE_CHECKING, ClassVar
 from uuid import UUID
 
 from nylium.database import Database
-from nylium.tables.objects import TABLE_Props
-from nylium.tables.objects.props import Props, SchemaItem
-from nylium.tables.objects.traits import Traits
-from nylium.tables.objects.type_traits import TypeTraits
+from nylium.database.row import mapper
+from nylium.objects.navigation import (
+    purge_prop_values,
+    purge_prop_values_for_instances as _purge_prop_values_for_instances,
+)
+from nylium.table_rows.objects import Prop, Props, SchemaItem, Traits, TypeTraits
 
 if TYPE_CHECKING:
     from nylium.objects.wtype import WType
 
 
 class WProp:
-    ROW: ClassVar[type[TABLE_Props]] = TABLE_Props
+    ROW: ClassVar[type[Prop]] = Prop
 
-    def __init__(self, row: TABLE_Props):
+    def __init__(self, row: Prop):
         # snapshot for reads (session-independent); writes re-fetch their
         # rows inside the tables layer (ADR-0019)
         self._uuid: UUID = row.uuid
@@ -110,7 +112,9 @@ class WProp:
         old data rarely survives a type change, so every instance reads
         Null again. Deletes flush first so a freed key can be reused by a
         new prop in the same sync."""
-        Props.sync_owned(TABLE_Props.owner_type_uuid, "owner_type_uuid", owner.uuid, items)
+        retyped = Props.sync_owned(mapper(Prop).columns.owner_type_uuid, "owner_type_uuid", owner.uuid, items)
+        for prop_uuid in retyped:
+            purge_prop_values(prop_uuid)
 
     @classmethod
     @Database.commit_after_this
@@ -118,13 +122,15 @@ class WProp:
         """Same full-draft semantics as sync_schema, but the owner is a
         trait (ADR-0013). Retype purges values exactly like type-owned
         props."""
-        Props.sync_owned(TABLE_Props.owner_trait_uuid, "owner_trait_uuid", trait_uuid, items)
+        retyped = Props.sync_owned(mapper(Prop).columns.owner_trait_uuid, "owner_trait_uuid", trait_uuid, items)
+        for prop_uuid in retyped:
+            purge_prop_values(prop_uuid)
 
     @classmethod
     def purge_values_for_instances(cls, prop_uuid: UUID, inst_uuids: list[UUID]) -> None:
         """ADR-0013 detach: wipe this prop's values, but only on the given
         instances (the trait's other types keep theirs)."""
-        Props.purge_values_for_instances(prop_uuid, inst_uuids)
+        _purge_prop_values_for_instances(prop_uuid, inst_uuids)
 
     @classmethod
     @Database.commit_after_this

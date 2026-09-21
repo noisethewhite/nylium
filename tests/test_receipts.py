@@ -8,6 +8,7 @@ from decimal import Decimal
 
 from nylium.api import Api
 from nylium.api.display import ArrayValue, EmbeddedValue, ObjectRef, RefValue, ScalarValue
+from nylium.objects.navigation import effective_props
 from nylium.objects.quantity import Quantity
 from nylium.server.codec import PropCodec
 from nylium.server.views import TypeView
@@ -41,7 +42,7 @@ def _receipt_schema():
 def test_receipt_item_embedded_without_name():
     item_view = _receipt_schema()
     # no `name` prop — the embedded type is name-less (ADR-0027)
-    assert [prop.key for prop in item_view.props] == [
+    assert [prop.key for prop in effective_props(item_view.uuid)] == [
         "product",
         "price",
         "quantity",

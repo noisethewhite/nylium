@@ -7,8 +7,8 @@ WObject wrappers or SQLAlchemy rows to callers: everything in and out
 is a domain object, a UUID, or a plain python value. Writes go through
 the WObject layer, so all type validation applies here too.
 
-Table access lives on the table classes themselves (Types/TABLE_Instances/
-TABLE_Props helpers); this file only orchestrates and adapts caller input.
+Table access lives on the table classes themselves (Types/Instances/
+Props helpers); this file only orchestrates and adapts caller input.
 
 ADR-0015: the facade is a thin aggregator — every domain lives in its own
 mixin module (one class per file), all sharing ApiShared invariants. The

@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from nylium.tables import api_tokens
-from nylium.tables.auth.api_tokens import ApiToken
+from nylium.tables.auth import ApiToken
 from typing import ClassVar
 
 

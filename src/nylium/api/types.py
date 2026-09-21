@@ -13,7 +13,7 @@ else:
 from nylium.database import Database
 from nylium.tables.objects import instances, props
 from nylium.tables.decor import type_decor
-from nylium.tables.objects.types import Type, types
+from nylium.tables.objects import Type, types
 from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import WColor, WScalar, WString
 from nylium.objects.wtype import WType

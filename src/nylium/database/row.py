@@ -1,33 +1,29 @@
-"""The ``Row`` snapshot type — one writable row of a mapped table.
+"""The ``Row`` type — one mapped dataclass row (ADR-0033).
 
-A ``Row`` is a dataclass-flavoured snapshot of one mapped row: the
-constructor copies every column out of the SQLAlchemy object, attribute
-and item access read the snapshot, and assignment (``row.name = x`` or
-``row["name"] = x``) writes through to the database with an UPDATE.
-The primary key is identity: set at creation, never written through.
+A ``Row`` IS the mapped dataclass: each concrete Row subclass is decorated
+``@reg.mapped_as_dataclass`` and carries its own ``mapped_column`` schema.
+There is no separate ``TABLE_*`` raw mapping and no explicit write-through
+UPDATE — attribute writes go through SQLAlchemy's change tracking and are
+flushed/committed by the caller's transaction context.
 
-``mapper`` is the shared ``TypeVar``-generic wrapper around
-``sqlalchemy.inspect`` that both ``Row`` and ``Table`` use to reach a
-mapped class's columns. It lives here so ``Table`` can import it without
-an import cycle.
-
-This module imports no ``nylium.tables`` code — importing a table's
-package triggers ``tables/__init__``, which reaches back for ``Row`` /
-``Table`` (an import cycle).
+``mapper`` is the shared generic wrapper around ``sqlalchemy.inspect``.
 """
 from __future__ import annotations
 
-from typing import ClassVar, TypeVar, cast, override
+from typing import TypeVar, cast
+
+from typing_extensions import override
 
 import sqlalchemy as sqla
-from sqlalchemy.orm import Mapper
+from sqlalchemy.orm import InstanceState, Mapper
 
-from nylium.database import Database
+from nylium.database.sessioncontext import SessionContext
 
 _M = TypeVar("_M")
 
 
 def mapper(mapped: type[_M]) -> Mapper[_M]:
+    """SQLAlchemy's ``inspect``, narrowed to ``Mapper`` (with a clear error)."""
     inspected = sqla.inspect(mapped)
     if not isinstance(inspected, Mapper):
         raise TypeError(f"{mapped!r} is not a mapped class")
@@ -35,32 +31,18 @@ def mapper(mapped: type[_M]) -> Mapper[_M]:
 
 
 class Row:
-    """A writable snapshot of one mapped row.
+    """A mapped dataclass snapshot.
 
-    Subclasses set ``__table__`` to their mapped class and annotate the
-    columns for typing (``name: str``); the values themselves are plain
-    instance attributes copied in by the constructor.
+    Subclasses are ``@reg.mapped_as_dataclass`` dataclasses that declare
+    their own schema. ``row["name"]`` reads, ``row["name"] = value`` writes
+    through SQLAlchemy change tracking (flushed/committed by the caller's
+    transaction context).
     """
-
-    __table__: ClassVar[type[object]]
-
-    def __init__(self, row: object) -> None:
-        columns = mapper(type(row)).columns
-        for column in columns:
-            object.__setattr__(self, column.name, getattr(row, column.name))
 
     @classmethod
     def pk_name(cls) -> str:
-        """The PK column name (``uuid`` for most, ``token_hash`` /
-        ``challenge`` in auth), read off the mapped class."""
-        return cast(str, mapper(cls.__table__).primary_key[0].name)
-
-    @override
-    def __setattr__(self, name: str, value: object) -> None:
-        object.__setattr__(self, name, value)
-        columns = mapper(self.__table__).columns
-        if name in columns and name != self.pk_name():
-            self.persist(name, value)
+        """The single primary-key column name (used for Mapping iteration)."""
+        return cast(str, mapper(cls).primary_key[0].name)
 
     def __getitem__(self, name: str) -> object:
         return cast(object, getattr(self, name))
@@ -68,19 +50,27 @@ class Row:
     def __setitem__(self, name: str, value: object) -> None:
         setattr(self, name, value)
 
-    @Database.commit_after_this
-    def persist(self, column: str, value: object) -> None:
-        """Write one column through: UPDATE … SET column = value WHERE pk.
+    @override
+    def __setattr__(self, name: str, value: object) -> None:
+        super().__setattr__(name, value)
+        self._autopersist()
 
-        ``commit_after_this`` joins the owner-commits-once semantics: nested
-        writes inside an outer session share its session and commit
-        once at the boundary, so a multi-field edit stays atomic.
+    def _autopersist(self) -> None:
+        """ADR-0010: a standalone attribute write persists itself.
+
+        Inside an ambient session (``use_same_session`` /
+        ``commit_after_this``) the write stays a dirty mark and the
+        session owner commits once at the end. Only a row written with NO
+        ambient session merges + commits on its own — this is what makes
+        ``row.name = "x"`` outside any decorator durable, without the
+        premature commits that plagued the old per-write persist.
         """
-        columns = mapper(self.__table__).columns
-        pk = self.pk_name()
-        pk_value = cast(object, getattr(self, pk))
-        _ = Database.execute(
-            sqla.update(self.__table__)
-            .where(columns[pk] == pk_value)
-            .values({column: value})
-        )
+        if SessionContext.has_session():
+            return
+        state = cast("InstanceState[object]", sqla.inspect(self))
+        if not (state.persistent or state.detached):
+            return  # transient/pending: construction, not a write
+        with SessionContext():
+            session = SessionContext.get_session()
+            _ = session.merge(self)
+            session.commit()

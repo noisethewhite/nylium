@@ -6,6 +6,7 @@ import pytest
 
 from nylium.api import Api, ScalarValue
 from nylium.objects import WScalar
+from nylium.objects.navigation import type_color, type_icon
 from nylium.objects.wscalar import WColor
 from nylium.server import NyliumApp
 from nylium.server.errors import ValidationError
@@ -15,7 +16,7 @@ def test_color_is_a_registered_builtin():
     _ = Api.create_type("T", {"name": "String"}, "Ts")  # seeds builtins
     view = Api.get_type("Color")
     assert view is not None
-    assert (view.icon, view.color) == ("palette", WColor.DEFAULT)
+    assert (type_icon(view.uuid), type_color(view.uuid)) == ("palette", WColor.DEFAULT)
 
 
 @pytest.mark.parametrize(
@@ -91,10 +92,10 @@ def test_legacy_named_colors_migrate_to_hex():
 
     migrated = Api.get_type("Old")
     assert migrated is not None
-    assert migrated.color == WColor.LEGACY_PALETTE["red"]
+    assert type_color(migrated.uuid) == WColor.LEGACY_PALETTE["red"]
 
     # idempotent — a second run leaves hex values alone
     NyliumApp._migrate_schema()
     again = Api.get_type("Old")
     assert again is not None
-    assert again.color == WColor.LEGACY_PALETTE["red"]
+    assert type_color(again.uuid) == WColor.LEGACY_PALETTE["red"]

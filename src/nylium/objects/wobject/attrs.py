@@ -11,8 +11,8 @@ from typing import cast, override
 from uuid import UUID
 
 from nylium.database import Database
-from nylium.tables.objects.instances import Instances, instances
-from nylium.tables.values.instance_values_store import InstanceValues
+from nylium.tables.objects import Instances, instances
+from nylium.tables.values import InstanceValues
 from nylium.objects.warray import WArray
 from nylium.objects.wembedded import WEmbedded
 from nylium.objects.wenum import WEnum

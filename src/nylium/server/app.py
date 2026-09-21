@@ -11,7 +11,7 @@ from nylium.auth.guard import require_user
 from nylium.auth.routes import auth_routes
 from nylium.auth.token_routes import token_routes
 from nylium.database import Database
-from nylium.tables import reg
+from nylium.tables.base import reg
 from nylium.objects.wfile import WFile
 from nylium.objects.wscalar import WScalar
 import nylium.server.bodies as bodies

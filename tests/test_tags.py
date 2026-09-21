@@ -6,6 +6,7 @@ in test_http.py."""
 from uuid import UUID
 
 from nylium.api import Api, TagView
+from nylium.objects.navigation import effective_props, prop_value_type_name
 from nylium.objects.wscalar import WColor
 
 
@@ -149,10 +150,10 @@ def test_renaming_prop_key_renames_tag():
         (
             prop.uuid,
             "items" if prop.key == "books" else prop.key,
-            prop.value_type,
+            prop_value_type_name(prop),
             prop.formula,
         )
-        for prop in view.props
+        for prop in effective_props(view.uuid)
     ]
     _ = Api.sync_props("Shelf", items)
 

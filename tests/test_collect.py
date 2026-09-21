@@ -50,9 +50,9 @@ def _expense(name, day, amount):
 
 def test_collect_derives_range_and_total():
     period_type({"expenses": "date"}, {"total": "SUM(expenses.amount)"})
-    e1 = _expense("a", 10, "10")
+    _expense("a", 10, "10")
     e2 = _expense("b", 15, "20")
-    e3 = _expense("c", 20, "30")
+    _expense("c", 20, "30")
     period = Api.create_object(
         "Period", {"name": "P", "from": date(2026, 9, 12), "to": date(2026, 9, 16)}
     )

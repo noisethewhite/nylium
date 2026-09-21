@@ -2,16 +2,17 @@
 
 ``instances`` behaves like ``Mapping[UUID, Instance]``: ``instances[uuid]``,
 ``instances.get``, ``uuid in instances``. Reverse lookups go through
-``instances.where(type_uuid=t)``; joined fields hang on the row
-(``Instance.type_name``).
+``instances.where(type_uuid=t)``; cross-table reads go through
+``objects.navigation`` (ADR-0033).
 """
 from uuid import UUID, uuid4
 
 import pytest
 
 from nylium.api import Api
-from nylium.tables.objects.instances import instances
-from nylium.tables.objects.types import types
+from nylium.objects.navigation import type_name_of
+from nylium.table_rows.objects import instances
+from nylium.table_rows.objects import types
 
 
 def _seed_type() -> UUID:
@@ -49,7 +50,7 @@ def test_domain_reads():
     t = _seed_type()
     u = _seed_instance(t)
     assert instances[u].name == "instance-1"
-    assert instances[u].type_name == "T"
+    assert type_name_of(instances[u].type_uuid) == "T"
     assert u in instances
     assert uuid4() not in instances
     assert instances.get(u) is not None

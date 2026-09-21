@@ -10,7 +10,7 @@ from uuid import UUID, uuid4
 import pytest
 
 from nylium.api import Api
-from nylium.tables.objects.types import types
+from nylium.table_rows.objects import types
 
 
 def _seed() -> UUID:
@@ -66,8 +66,8 @@ def test_update_and_delete():
     decor.icon = "inventory_2"
     decor.color = "#112233"
     assert types[uuid].name == "T2"
-    assert types[uuid].plural_name == "T2s"
-    assert types[uuid].color == "#112233"
+    assert type_decor[uuid].plural_name == "T2s"
+    assert type_decor[uuid].color == "#112233"
 
     types.delete(uuid)  # its props + decor cascade via FK ondelete
     assert types.get(uuid) is None

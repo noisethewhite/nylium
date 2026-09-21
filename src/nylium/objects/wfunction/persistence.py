@@ -14,12 +14,15 @@ from collections.abc import Mapping, Sequence
 from uuid import UUID
 
 from nylium.database import Database
-from nylium.tables.functions.function_edges_store import FunctionEdges
-from nylium.tables.functions.function_nodes_store import FunctionNodes
-from nylium.tables.functions.instance_function_links_store import InstanceFunctionLinks
-from nylium.tables.functions.function_edges import TABLE_FunctionEdges
-from nylium.tables.functions.function_nodes import TABLE_FunctionNodes
-from nylium.tables.objects.instances import Instances, instances
+from nylium.table_rows.functions import (
+    FunctionEdge,
+    FunctionEdges,
+    FunctionNode,
+    FunctionNodes,
+    InstanceFunctionLinks,
+)
+from nylium.table_rows.objects import instances
+from nylium.objects.navigation import instance_uuids_of_kind
 from nylium.objects.wprop import WProp
 from nylium.objects.wtype import WType
 from nylium.objects.wfunction.constants import NODE_GET_PROP, fail
@@ -41,7 +44,7 @@ def sync_graph(
 def _function_instance_uuids() -> list[UUID]:
     """Every function instance uuid (instances whose type kind is
     'function')."""
-    return Instances.uuids_of_kind(WType.KIND_FUNCTION)
+    return instance_uuids_of_kind(WType.KIND_FUNCTION)
 
 
 @Database.use_same_session
@@ -105,12 +108,12 @@ def _assert_acyclic(deps: Mapping[UUID, set[UUID]]) -> None:
 
 
 @Database.use_same_session
-def nodes(function_uuid: UUID) -> list[TABLE_FunctionNodes]:
+def nodes(function_uuid: UUID) -> list[FunctionNode]:
     return FunctionNodes.nodes_of(function_uuid)
 
 
 @Database.use_same_session
-def edges(function_uuid: UUID) -> list[TABLE_FunctionEdges]:
+def edges(function_uuid: UUID) -> list[FunctionEdge]:
     return FunctionEdges.edges_of(function_uuid)
 
 

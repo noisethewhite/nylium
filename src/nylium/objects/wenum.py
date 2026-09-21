@@ -10,10 +10,10 @@ from __future__ import annotations
 from typing import cast
 from uuid import UUID
 
-from nylium.tables.values.string_values_store import StringValues
+from nylium.tables.values import StringValues
 
 from nylium.database import Database
-from nylium.tables.objects.enum_options import enum_options
+from nylium.tables.objects import enum_options
 from nylium.objects.wprop import WProp
 from nylium.objects.wtype import WType
 from nylium.server.errors import ValidationError

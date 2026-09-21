@@ -18,7 +18,7 @@ else:
 from nylium.api.display import FunctionView, ObjectView
 from nylium.database import Database
 from nylium.tables.objects import props, types
-from nylium.tables.functions.instance_function_links_store import InstanceFunctionLinks
+from nylium.tables.functions import InstanceFunctionLinks
 from nylium.objects.wformula import Formula
 from nylium.objects.wfunction import WFunction
 from nylium.objects.wprop import WProp
@@ -132,7 +132,7 @@ class FunctionsApi(_FunctionsBase):
         function-backed. Refuses a per-owner cross-function cycle."""
         from nylium.server.errors import ValidationError
 
-        from nylium.tables.objects.instances import instances
+        from nylium.table_rows.objects import instances
 
         inst = instances.get(inst_uuid)
         if inst is None:
@@ -175,6 +175,7 @@ class FunctionsApi(_FunctionsBase):
             InstanceFunctionLinks.delete_function_link(inst_uuid, prop.uuid)
         else:
             InstanceFunctionLinks.merge_function_link(inst_uuid, prop.uuid, function_uuid)
+        Database.flush()  # publish the pending link before the cycle check reads it
         WFunction.assert_no_dependency_cycle(inst_uuid)
         view = ObjectView.from_uuid(inst_uuid)
         if view is None:

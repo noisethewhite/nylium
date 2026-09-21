@@ -1,20 +1,20 @@
 """The ``Table`` Mapping — the read/reverse-lookup half of the SQL seam.
 
 A ``Table`` is ``Mapping[K, Row]`` over one mapped class: ``table[key]``
-SELECTs and constructs the Row, ``table.where(**eq)`` is the single
-reverse-lookup every table answers with, and ``table.all()`` is
-``where()`` with no criteria. Concrete tables live next to their mapped
-class in ``nylium/tables/`` and add only real business operations
-(``create``/``sync``/``delete``); SQLAlchemy never leaves this module and
-those.
+SELECTs and returns the Row (which is now itself the mapped dataclass),
+``table.where(**eq)`` is the single reverse-lookup every table answers
+with, and ``table.all()`` is ``where()`` with no criteria. Concrete
+tables live next to their Row in ``nylium/table_rows/`` and add only real
+business operations (``create``/``sync``/``delete``); SQLAlchemy never
+leaves this module and those.
 
-``Row`` (the writable snapshot) lives in ``row.py``; it is re-exported
+``Row`` (the mapped dataclass) lives in ``row.py``; it is re-exported
 here so ``from nylium.database.table import Row`` keeps working at every
 existing import site.
 
-This module imports no ``nylium.tables`` code — importing a table's
-package triggers ``tables/__init__``, which reaches back for ``Row`` /
-``Table`` (an import cycle).
+This module imports no ``nylium.tables`` / ``nylium.table_rows`` code —
+importing a table's package reaches back for ``Row`` / ``Table`` (an
+import cycle).
 """
 from __future__ import annotations
 
@@ -34,23 +34,23 @@ _R = TypeVar("_R", bound="Row")
 class Table(Generic[_K, _R], Mapping[_K, _R]):
     """The ``Mapping[K, Row]`` shape of a table.
 
-    Subclasses set ``__row__`` to their concrete Row type. ``_K`` is the
-    PK type: ``UUID`` for domain tables, ``str``/``bytes`` for the auth
-    session/challenge tables.
+    Subclasses set ``__row__`` to their concrete Row type (which is itself
+    the mapped dataclass). ``_K`` is the PK type: ``UUID`` for domain
+    tables, ``str``/``bytes`` for the auth session/challenge tables.
     """
 
     __row__: ClassVar[type[Row]]
 
     @property
     def _mapped(self) -> type[object]:
-        return self.__row__.__table__
+        return self.__row__
 
     @Database.use_same_session
     def __getitem__(self, key: _K) -> _R:
         row = Database.get(self._mapped, key)
         if row is None:
             raise KeyError(key)
-        return cast(_R, self.__row__(row))
+        return cast(_R, row)
 
     @override
     def __iter__(self) -> Iterator[_K]:
@@ -77,12 +77,9 @@ class Table(Generic[_K, _R], Mapping[_K, _R]):
         strands a live connection.
         """
         with SessionContext():
-            rows = [
-                self.__row__(row)
-                for row in Database.scalars(
-                    sqla.select(self._mapped).filter_by(**eq)
-                )
-            ]
+            rows = list(
+                Database.scalars(sqla.select(self._mapped).filter_by(**eq))
+            )
         yield from cast("list[_R]", rows)
 
     def all(self) -> Generator[_R, None, None]:

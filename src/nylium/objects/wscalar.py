@@ -20,34 +20,46 @@ from typing import ClassVar, Protocol, cast, final, override
 from uuid import UUID
 
 from nylium.database import Database
-from nylium.tables import (
-    TABLE_BooleanValues,
-    TABLE_DateValues,
-    TABLE_DatetimeValues,
-    TABLE_IntegerValues,
-    TABLE_MonthDayTimeValues,
-    TABLE_MonthDayValues,
-    TABLE_NumericValues,
-    TABLE_StringValues,
-    TABLE_TimeValues,
-)
 from nylium.objects.monthday import MonthDay, MonthDayTime
-from nylium.tables.values.boolean_values_store import BooleanValues
-from nylium.tables.values.date_values_store import DateValues
-from nylium.tables.values.datetime_values_store import DatetimeValues
-from nylium.tables.values.integer_values_store import IntegerValues
-from nylium.tables.values.monthday_values_store import MonthDayValues
-from nylium.tables.values.monthdaytime_values_store import MonthDayTimeValues
-from nylium.tables.values.numeric_values_store import NumericValues
-from nylium.tables.values.string_values_store import StringValues
-from nylium.tables.values.time_values_store import TimeValues
+from nylium.objects.scalar_type_names import (
+    BOOLEAN,
+    COLOR,
+    DATE,
+    DATETIME,
+    INTEGER,
+    MONTH_DAY,
+    MONTH_DAY_TIME,
+    NUMERIC,
+    STRING,
+    TIME,
+)
+from nylium.table_rows.values import (
+    BooleanValue,
+    BooleanValues,
+    DateValue,
+    DateValues,
+    DatetimeValue,
+    DatetimeValues,
+    IntegerValue,
+    IntegerValues,
+    MonthDayTimeValue,
+    MonthDayTimeValues,
+    MonthDayValue,
+    MonthDayValues,
+    NumericValue,
+    NumericValues,
+    StringValue,
+    StringValues,
+    TimeValue,
+    TimeValues,
+)
 
 VALUE_PROP_KEY = "value"
 
 ScalarPayload = str | int | Decimal | bool | datetime | date | time | MonthDay | MonthDayTime
 ScalarTable = (
-    TABLE_StringValues | TABLE_IntegerValues | TABLE_NumericValues | TABLE_BooleanValues | TABLE_DatetimeValues
-    | TABLE_DateValues | TABLE_TimeValues | TABLE_MonthDayValues | TABLE_MonthDayTimeValues
+    StringValue | IntegerValue | NumericValue | BooleanValue | DatetimeValue
+    | DateValue | TimeValue | MonthDayValue | MonthDayTimeValue
 )
 
 
@@ -138,63 +150,63 @@ class WScalar:
 
 @final
 class WString(WScalar):
-    TYPE_NAME = "String"
+    TYPE_NAME = STRING
     PYTHON_TYPE = str
-    TABLE = TABLE_StringValues
+    TABLE = StringValue
     SCALAR = StringValues
     ICON = "text_fields"
 
 
 @final
 class WInteger(WScalar):
-    TYPE_NAME = "Integer"
+    TYPE_NAME = INTEGER
     PYTHON_TYPE = int
-    TABLE = TABLE_IntegerValues
+    TABLE = IntegerValue
     SCALAR = IntegerValues
     ICON = "tag"
 
 
 @final
 class WNumeric(WScalar):
-    TYPE_NAME = "Numeric"
+    TYPE_NAME = NUMERIC
     PYTHON_TYPE = Decimal
-    TABLE = TABLE_NumericValues
+    TABLE = NumericValue
     SCALAR = NumericValues
     ICON = "percent"
 
 
 @final
 class WBoolean(WScalar):
-    TYPE_NAME = "Boolean"
+    TYPE_NAME = BOOLEAN
     PYTHON_TYPE = bool
-    TABLE = TABLE_BooleanValues
+    TABLE = BooleanValue
     SCALAR = BooleanValues
     ICON = "toggle_on"
 
 
 @final
 class WDatetime(WScalar):
-    TYPE_NAME = "Datetime"
+    TYPE_NAME = DATETIME
     PYTHON_TYPE = datetime
-    TABLE = TABLE_DatetimeValues
+    TABLE = DatetimeValue
     SCALAR = DatetimeValues
     ICON = "calendar_clock"
 
 
 @final
 class WDate(WScalar):
-    TYPE_NAME = "Date"
+    TYPE_NAME = DATE
     PYTHON_TYPE = date
-    TABLE = TABLE_DateValues
+    TABLE = DateValue
     SCALAR = DateValues
     ICON = "calendar_month"
 
 
 @final
 class WTime(WScalar):
-    TYPE_NAME = "Time"
+    TYPE_NAME = TIME
     PYTHON_TYPE = time
-    TABLE = TABLE_TimeValues
+    TABLE = TimeValue
     SCALAR = TimeValues
     ICON = "schedule"
 
@@ -202,11 +214,11 @@ class WTime(WScalar):
 @final
 class WColor(WScalar):
     """3-byte RGB hex ``#RRGGBB`` (ADR-0005): first-class scalar and the
-    backing type of type/icon/tag colors. Stored in TABLE_StringValues."""
+    backing type of type/icon/tag colors. Stored in StringValue."""
 
-    TYPE_NAME = "Color"
+    TYPE_NAME = COLOR
     PYTHON_TYPE = str
-    TABLE = TABLE_StringValues
+    TABLE = StringValue
     SCALAR = StringValues
     ICON = "palette"
 
@@ -237,9 +249,9 @@ class WColor(WScalar):
 class WMonthDay(WScalar):
     """Month/day without a year, stored as its "MM-DD" stamp."""
 
-    TYPE_NAME = "MonthDay"
+    TYPE_NAME = MONTH_DAY
     PYTHON_TYPE = MonthDay
-    TABLE = TABLE_MonthDayValues
+    TABLE = MonthDayValue
     SCALAR = MonthDayValues
     ICON = "calendar_today"
 
@@ -258,9 +270,9 @@ class WMonthDay(WScalar):
 class WMonthDayTime(WScalar):
     """Month/day plus wall-clock time, stored as "MM-DDTHH:MM"."""
 
-    TYPE_NAME = "MonthDayTime"
+    TYPE_NAME = MONTH_DAY_TIME
     PYTHON_TYPE = MonthDayTime
-    TABLE = TABLE_MonthDayTimeValues
+    TABLE = MonthDayTimeValue
     SCALAR = MonthDayTimeValues
     ICON = "alarm"
 

@@ -8,7 +8,7 @@ from uuid import UUID
 from nylium.api.display import ObjectRef
 from nylium.database import Database
 from nylium.tables.objects import Trait, traits
-from nylium.tables.objects.types import Type, types
+from nylium.tables.objects import Type, types
 from nylium.objects.wembedded import EMBEDDED_NAME_SEPARATOR
 from nylium.objects.wenum import WEnum
 from nylium.objects.wfile import WFile
@@ -17,6 +17,7 @@ from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import WColor, WScalar
 from nylium.objects.wtype import WType
 from nylium.objects.wtypemeta import StoredValue
+from nylium.objects.navigation import effective_props, prop_value_type_name
 
 # What callers may hand in for a prop: stored values, plus links as
 # UUID/ObjectRef (resolved to WObject here), plus a props draft for
@@ -40,10 +41,10 @@ class ApiShared:
         owner = types.get(owner_type_uuid)
         if owner is None:
             raise KeyError(f"type <gone> has no prop {key!r}")
-        prop = next((p for p in owner.props if p.key == key), None)
+        prop = next((p for p in effective_props(owner_type_uuid) if p.key == key), None)
         if prop is None:
             raise KeyError(f"type {owner.name!r} has no prop {key!r}")
-        return prop.value_type
+        return prop_value_type_name(prop)
 
     @classmethod
     def _is_builtin_type(cls, owner: WType) -> bool:
@@ -94,8 +95,8 @@ class ApiShared:
             if row.name not in object_names:
                 continue
             deps: list[str | None] = []
-            for prop in row.props:
-                value_type = prop.value_type
+            for prop in effective_props(row.uuid):
+                value_type = prop_value_type_name(prop)
                 if WType.is_any_name(value_type):
                     deps.append(cls._ANY_LINK)
                 elif WType.is_array_name(value_type):
@@ -202,7 +203,7 @@ class ApiShared:
             raise KeyError(f"no type {type_name!r}")
         # ADR-0013: the effective schema — attached traits' props are
         # writable through the object editor like the type's own
-        owner_props = list(owner_type_row.props)
+        owner_props = effective_props(owner_type_row.uuid)
         formula_readonly = {p.key for p in owner_props if p.formula is not None}
         collect_readonly = {p.key for p in owner_props if p.collect is not None}
         result: dict[str, StoredValue] = {}

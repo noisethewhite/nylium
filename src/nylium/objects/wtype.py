@@ -11,11 +11,9 @@ from __future__ import annotations
 
 from uuid import UUID
 
-import sqlalchemy as sqla
-
 from nylium.database import Database
-from nylium.tables.decor.table_type_decor import TABLE_TypeDecor
-from nylium.tables.objects.types import Type, types
+from nylium.table_rows.decor import type_decor
+from nylium.table_rows.objects import Type, types
 from typing import ClassVar
 
 
@@ -32,12 +30,14 @@ class WType:
 
     def __init__(self, row: Type):
         # snapshot, not a live row: reads must not depend on the session
-        # that fetched the row still being open
+        # that fetched the row still being open. Decor is a 1:1 side table
+        # (ADR-0014) — one lookup, not a Row navigation property.
+        decor = type_decor[row.uuid]
         self._uuid: UUID = row.uuid
         self._name: str = row.name
-        self._plural_name: str = row.plural_name
-        self._icon: str = row.icon
-        self._color: str = row.color
+        self._plural_name: str = decor.plural_name
+        self._icon: str = decor.icon
+        self._color: str = decor.color
         self._kind: str = row.kind
         self._embedded: bool = row.embedded
 
@@ -190,19 +190,7 @@ class WType:
                 )
             # builtins re-ensure on every boot: keep their icon canonical
             if icon is not None and existing.icon != icon:
-                from nylium.tables.decor import type_decor
-
                 type_decor[existing.uuid].icon = icon
             return existing
         row = types.create(name, plural_name or f"{name}s", icon=icon, kind=kind, embedded=embedded)
         return cls(row)
-
-
-@Database.use_same_session
-def reset_icons_referencing(icon_marker: str, default_glyph: str) -> None:
-    """Every type whose icon equals ``icon_marker`` falls back to the default
-    glyph (ADR-0006: an Image used as an icon may be deleted)."""
-    for decor_row in Database.scalars(
-        sqla.select(TABLE_TypeDecor).where(TABLE_TypeDecor.icon == icon_marker)
-    ).all():
-        decor_row.icon = default_glyph

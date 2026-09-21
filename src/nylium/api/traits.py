@@ -7,8 +7,8 @@ from nylium.api.shared import ApiShared
 from nylium.database import Database
 from nylium.tables.objects import Trait, instances, props, traits, type_traits
 from nylium.tables.decor import trait_decor
-from nylium.tables.objects.types import Type, types
-from nylium.tables.objects.props import SchemaItem
+from nylium.tables.objects import SchemaItem, Type, types
+from nylium.objects.navigation import trait_color, trait_props
 from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import WScalar
 from nylium.objects.wtype import WType
@@ -91,7 +91,7 @@ class TraitsApi(ApiShared):
         collision = next(traits.where(name=final_name), None)
         if collision is not None and collision.uuid != row.uuid:
             raise ValueError(f"trait {final_name!r} already exists")
-        final_color = row.color if color is None else color
+        final_color = trait_color(row.uuid) if color is None else color
         if color is not None:
             cls._check_color(color)
         if items is not None:
@@ -179,7 +179,7 @@ class TraitsApi(ApiShared):
         if any(link.trait_uuid == trait.uuid for link in links):
             raise ValueError(f"trait {trait_name!r} is already attached to {type_name!r}")
         taken = {p.key for p in WProp.effective_for(owner)}
-        collisions = sorted({p.key for p in trait.props} & taken)
+        collisions = sorted({p.key for p in trait_props(trait.uuid)} & taken)
         if collisions:
             raise ValidationError(
                 f"prop keys {collisions!r} of trait {trait_name!r} collide with {type_name!r}"

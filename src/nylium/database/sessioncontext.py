@@ -27,6 +27,11 @@ class SessionContext:
         return self._token is not None
 
     @staticmethod
+    def has_session() -> bool:
+        """True when an ambient session exists (``get_session`` is safe)."""
+        return _session.get() is not None
+
+    @staticmethod
     def get_session() -> Session:
         result = _session.get()
         if result is None:

@@ -15,9 +15,7 @@ from uuid import UUID
 from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import ScalarPayload, WScalar
 from nylium.objects.wtypemeta import WObjectShape
-from nylium.tables.values.file_values_store import FileValues
-from nylium.tables.values.instance_values_store import InstanceValues
-from nylium.tables.values.instance_values import TABLE_InstanceValues
+from nylium.table_rows.values import FileValues, InstanceValue, InstanceValues
 
 
 class PersistenceMixin:
@@ -25,7 +23,7 @@ class PersistenceMixin:
 
     _uuid: UUID
 
-    def _link(self, prop: WProp) -> TABLE_InstanceValues | None:
+    def _link(self, prop: WProp) -> InstanceValue | None:
         return InstanceValues.link_for(self._uuid, prop.uuid)
 
     def _file_ref(self, prop: WProp) -> UUID | None:

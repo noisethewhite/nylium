@@ -1,5 +1,6 @@
 """Api facade: CRUD over types and objects, view-shaped returns.
 Classes live inside tests — see test_objects.py for why."""
+from collections.abc import Iterable
 from uuid import UUID
 
 import pytest
@@ -12,8 +13,15 @@ from nylium.api import (
     RefValue,
     ScalarValue,
 )
-from nylium.tables.objects.types import Type
+from nylium.table_rows.objects import Type
 from nylium.objects import WInteger, WObject, WString
+from nylium.objects.navigation import (
+    effective_props,
+    prop_value_type_name,
+    type_color,
+    type_icon,
+    type_plural_name,
+)
 from nylium.server.errors import ValidationError
 
 
@@ -33,7 +41,9 @@ def test_type_listing():
     assert "Person" in views
     person = views["Person"]
     assert isinstance(person, Type)
-    props = {prop.key: prop.value_type for prop in person.props}
+    props = {
+        prop.key: prop_value_type_name(prop) for prop in effective_props(person.uuid)
+    }
     assert props["name"] == "String"
     assert props["tags"] == "Array<String>"
 
@@ -85,7 +95,7 @@ def test_links_and_arrays_render_as_views():
 def test_db_only_type_created_through_api():
     view = Api.create_type("Note", {"name": "String", "body": "String"}, "Notes")
     assert view.name == "Note"
-    assert view.plural_name == "Notes"
+    assert type_plural_name(view.uuid) == "Notes"
 
     note = Api.create_object("Note", {"body": "hello"})
     assert note.props["body"] == ScalarValue(value="hello")
@@ -117,10 +127,10 @@ def test_delete_type_when_empty():
 def test_reorder_props_roundtrip():
     _ = person_class()
     view = Api.reorder_props("Person", ["name", "tags", "age", "friend"])
-    assert [prop.key for prop in view.props] == ["name", "tags", "age", "friend"]
+    assert [prop.key for prop in effective_props(view.uuid)] == ["name", "tags", "age", "friend"]
     reloaded = Api.get_type("Person")
     assert reloaded is not None
-    assert [prop.key for prop in reloaded.props] == ["name", "tags", "age", "friend"]
+    assert [prop.key for prop in effective_props(reloaded.uuid)] == ["name", "tags", "age", "friend"]
 
 
 def test_reorder_props_keeps_name_first():
@@ -159,22 +169,23 @@ def note_type():
 PropDraft = list[tuple[UUID | None, str, str, str | None]]
 
 
-def draft_items(view, drop=(), rename=None, retype=None, add=()) -> PropDraft:
+def draft_items(view, drop: Iterable[str] = (), rename: dict[str, str] | None = None, retype: dict[str, str] | None = None, add: Iterable[tuple[str, str]] = ()) -> PropDraft:
     """Build a sync_props draft from a view: drop/rename/retype by key,
     then append (key, value type) additions."""
     rename = rename or {}
     retype = retype or {}
-    items = [
+    items: PropDraft = [
         (
             prop.uuid,
             rename.get(prop.key, prop.key),
-            retype.get(prop.key, prop.value_type),
+            retype.get(prop.key, prop_value_type_name(prop)),
             prop.formula,
         )
-        for prop in view.props
+        for prop in effective_props(view.uuid)
         if prop.key not in drop
     ]
-    return items + [(None, key, value_type, None) for key, value_type in add]
+    additions: PropDraft = [(None, key, value_type, None) for key, value_type in add]
+    return items + additions
 
 
 def test_sync_props_add_and_delete():
@@ -183,7 +194,7 @@ def test_sync_props_add_and_delete():
     synced = Api.sync_props(
         "Note", draft_items(view, drop=("body",), add=[("mood", "String")])
     )
-    assert [prop.key for prop in synced.props] == ["name", "priority", "mood"]
+    assert [prop.key for prop in effective_props(synced.uuid)] == ["name", "priority", "mood"]
     reloaded = Api.get_object(note.uuid)
     assert reloaded is not None
     assert "body" not in reloaded.props
@@ -194,7 +205,7 @@ def test_sync_props_rename_keeps_values():
     view = note_type()
     note = Api.create_object("Note", {"name": "n1", "body": "hello"})
     synced = Api.sync_props("Note", draft_items(view, rename={"body": "text"}))
-    assert [prop.key for prop in synced.props] == ["name", "text", "priority"]
+    assert [prop.key for prop in effective_props(synced.uuid)] == ["name", "text", "priority"]
     reloaded = Api.get_object(note.uuid)
     assert reloaded is not None
     assert reloaded.props["text"] == ScalarValue(value="hello")
@@ -204,7 +215,9 @@ def test_sync_props_retype_purges_values():
     view = note_type()
     note = Api.create_object("Note", {"name": "n1", "priority": 5})
     synced = Api.sync_props("Note", draft_items(view, retype={"priority": "String"}))
-    assert {p.key: p.value_type for p in synced.props}["priority"] == "String"
+    assert {
+        p.key: prop_value_type_name(p) for p in effective_props(synced.uuid)
+    }["priority"] == "String"
     reloaded = Api.get_object(note.uuid)
     assert reloaded is not None
     assert reloaded.props["priority"] == ScalarValue(value=None)
@@ -222,7 +235,7 @@ def test_sync_props_keeps_name_pinned():
 
 def test_sync_props_rejects_bad_drafts():
     view = note_type()
-    body = next(prop for prop in view.props if prop.key == "body")
+    body = next(prop for prop in effective_props(view.uuid) if prop.key == "body")
     with pytest.raises(ValidationError):
         Api.sync_props("Note", draft_items(view, add=[("body", "String")]))
     with pytest.raises(ValidationError):
@@ -238,7 +251,7 @@ def test_rename_type_roundtrip():
     _ = note_type()
     note = Api.create_object("Note", {"name": "n1"})
     renamed = Api.rename_type("Note", "Memo", "Memos")
-    assert renamed.name == "Memo" and renamed.plural_name == "Memos"
+    assert renamed.name == "Memo" and type_plural_name(renamed.uuid) == "Memos"
     reloaded = Api.get_object(note.uuid)
     assert reloaded is not None and reloaded.type_name == "Memo"
     assert Api.get_type("Note") is None
@@ -261,13 +274,17 @@ def test_type_icon_and_color():
     view = Api.create_type(
         "Tagged", {"name": "String"}, "Tagged", icon="star", color="#e5534b"
     )
-    assert (view.icon, view.color) == ("star", "#e5534b")
+    assert (type_icon(view.uuid), type_color(view.uuid)) == ("star", "#e5534b")
     plain = Api.create_type("Plain", {"name": "String"}, "Plains")
-    assert (plain.icon, plain.color) == ("inventory_2", "#9e9e9e")
+    assert (type_icon(plain.uuid), type_color(plain.uuid)) == ("inventory_2", "#9e9e9e")
     updated = Api.rename_type("Tagged", icon="heart", color="#e275ad")
-    assert (updated.name, updated.icon, updated.color) == ("Tagged", "heart", "#e275ad")
+    assert (updated.name, type_icon(updated.uuid), type_color(updated.uuid)) == (
+        "Tagged",
+        "heart",
+        "#e275ad",
+    )
     builtin = Api.get_type("String")
     assert builtin is not None
-    assert (builtin.icon, builtin.color) == ("text_fields", "#9e9e9e")
+    assert (type_icon(builtin.uuid), type_color(builtin.uuid)) == ("text_fields", "#9e9e9e")
     with pytest.raises(ValidationError):
         Api.rename_type("String", icon="x")

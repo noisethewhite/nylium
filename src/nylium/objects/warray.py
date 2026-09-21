@@ -16,13 +16,12 @@ from typing import cast
 from uuid import UUID, uuid4
 
 from nylium.database import Database
-from nylium.tables.objects import instances
-from nylium.tables.objects.instances import Instances
-from nylium.tables.values.array_values_store import ArrayValues
+from nylium.table_rows import files
+from nylium.tables.objects import Instances, instances
+from nylium.tables.values import ArrayValues, InstanceValues
 from nylium.objects.wenum import WEnum
 from nylium.objects.wembedded import WEmbedded
-from nylium.objects.wfile import WFile, type_name_of as file_type_name_of
-from nylium.tables.values.instance_values_store import InstanceValues
+from nylium.objects.wfile import WFile
 from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import VALUE_PROP_KEY, ScalarPayload, WScalar, WString
 from nylium.objects.wtype import WType
@@ -195,7 +194,7 @@ class WArray:
                     raise TypeError(
                         f"{type_name} element takes a files.uuid, got {type(value).__name__}"
                     )
-                if file_type_name_of(value) is None:
+                if files.type_name_of(value) is None:
                     raise TypeError(f"{type_name} element references missing file {value}")
                 return value
             if WEnum.is_enum(type_name):

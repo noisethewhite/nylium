@@ -18,12 +18,22 @@ from uuid import UUID
 from pydantic import ConfigDict
 from pydantic.dataclasses import dataclass
 
-from nylium.rows.file import File
-from nylium.rows.objects.enum_option import EnumOption
-from nylium.rows.objects.prop import Prop
-from nylium.rows.objects.trait import Trait
-from nylium.rows.objects.type import Type
-from nylium.rows.objects.unit_part import UnitPart
+from nylium.table_rows import File
+from nylium.rows.objects import EnumOption, Prop, Trait, Type, UnitPart
+from nylium.objects.navigation import (
+    effective_props,
+    prop_owner_trait,
+    prop_value_type_name,
+    trait_attached_names,
+    trait_color,
+    trait_props,
+    type_color,
+    type_enum_options,
+    type_icon,
+    type_plural_name,
+    type_trait_names,
+    type_unit_parts,
+)
 
 _CONFIG = ConfigDict(strict=True)
 
@@ -42,11 +52,11 @@ class PropView:
 
     @classmethod
     def from_row(cls, prop: Prop) -> Self:
-        owner_trait = prop.owner_trait
+        owner_trait = prop_owner_trait(prop)
         return cls(
             uuid=prop.uuid,
             key=prop.key,
-            value_type=prop.value_type,
+            value_type=prop_value_type_name(prop),
             formula=prop.formula,
             collect=prop.collect,
             trait=None if owner_trait is None else owner_trait[0],
@@ -102,9 +112,9 @@ class TraitView:
     def from_row(cls, trait: Trait) -> Self:
         return cls(
             name=trait.name,
-            color=trait.color,
-            props=[PropView.from_row(prop) for prop in trait.props],
-            attached=list(trait.attached),
+            color=trait_color(trait.uuid),
+            props=[PropView.from_row(prop) for prop in trait_props(trait.uuid)],
+            attached=list(trait_attached_names(trait.uuid)),
         )
 
 
@@ -130,23 +140,24 @@ class TypeView:
         # demand when the caller didn't already batch it (see from_rows).
         if level is None:
             from nylium.api.shared import ApiShared
-            from nylium.tables.objects.types import types
+            from nylium.table_rows.objects import types
 
             level = ApiShared.reference_levels(list(types.all())).get(type_.name, 1)
         return cls(
             name=type_.name,
-            plural_name=type_.plural_name,
-            icon=type_.icon,
-            color=type_.color,
+            plural_name=type_plural_name(type_.uuid),
+            icon=type_icon(type_.uuid),
+            color=type_color(type_.uuid),
             kind=type_.kind,
             embedded=type_.embedded,
             level=level,
-            traits=[trait.name for trait in type_.traits],
+            traits=type_trait_names(type_.uuid),
             enum_options=[
-                EnumOptionView.from_row(option) for option in type_.enum_options
+                EnumOptionView.from_row(option)
+                for option in type_enum_options(type_.uuid)
             ],
-            unit_parts=[UnitPartView.from_row(part) for part in type_.unit_parts],
-            props=[PropView.from_row(prop) for prop in type_.props],
+            unit_parts=[UnitPartView.from_row(part) for part in type_unit_parts(type_.uuid)],
+            props=[PropView.from_row(prop) for prop in effective_props(type_.uuid)],
         )
 
     @classmethod

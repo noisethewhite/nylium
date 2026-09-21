@@ -10,9 +10,7 @@ from typing import cast
 from uuid import UUID
 
 from nylium.database import Database
-from nylium.tables.functions.function_edges_store import FunctionEdges
-from nylium.tables.functions.function_nodes_store import FunctionNodes
-from nylium.tables.functions.function_edges import TABLE_FunctionEdges
+from nylium.table_rows.functions import FunctionEdge, FunctionEdges, FunctionNodes
 from nylium.objects.wscalar import ScalarPayload, WInteger, WString
 from nylium.objects.wfunction.constants import (
     NODE_ADD,
@@ -71,7 +69,7 @@ def evaluate(
     return cast(ScalarPayload | None, values[sink])
 
 
-def _is_sink(node_uuid: UUID, edges: Iterable[TABLE_FunctionEdges]) -> bool:
+def _is_sink(node_uuid: UUID, edges: Iterable[FunctionEdge]) -> bool:
     return all(edge.from_node_uuid != node_uuid for edge in edges)
 
 

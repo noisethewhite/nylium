@@ -18,9 +18,7 @@ from typing import ClassVar, Protocol, TypeAlias, cast, get_args, get_origin
 from uuid import UUID
 
 from nylium.database import Database
-from nylium.tables.objects.instances import instances
-from nylium.tables.objects.traits import Traits
-from nylium.tables.objects.type_traits import TypeTraits
+from nylium.tables.objects import Traits, TypeTraits, instances
 from nylium.objects.quantity import Quantity
 from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import ScalarPayload, WScalar

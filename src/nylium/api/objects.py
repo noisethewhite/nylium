@@ -8,6 +8,7 @@ from uuid import UUID
 from nylium.api.shared import ApiShared, NAME_PROP_KEY, PropInput
 from nylium.api.display import ObjectRef, ObjectView
 from nylium.database import Database
+from nylium.objects.navigation import type_name_of
 from nylium.tables.objects import instances
 from nylium.objects.wembedded import WEmbedded
 from nylium.objects.wobject import WObject
@@ -104,10 +105,10 @@ class ObjectsApi(ApiShared):
                 "embedded objects are edited through their owner — write the embedded prop on the parent instead"
             )
         wrapper = WObject.wrap(uuid)
-        type_name = instances[uuid].type_name
+        type_name = type_name_of(instances[uuid].type_uuid)
         normalized = cls._normalize_props(type_name, props)
         # ADR-0029: function-bound props are instance-level read-only.
-        from nylium.tables.functions.instance_function_links_store import InstanceFunctionLinks
+        from nylium.table_rows.functions import InstanceFunctionLinks
 
         bound_prop_uuids = {prop_uuid for prop_uuid, _ in InstanceFunctionLinks.function_links_of_instance(uuid)}
         if bound_prop_uuids:

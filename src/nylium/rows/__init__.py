@@ -1,8 +1,6 @@
-"""Row snapshots (ADR-0031).
+"""Shim over ``nylium.table_rows`` (ADR-0033).
 
-Each Row is a typed, writable snapshot of one ``TABLE_*`` row. The Row
-classes live here, mirroring the ``tables`` package layout; the mapped
-``TABLE_*`` classes and their ``Table`` stores stay in ``nylium.tables``.
-Import a Row by its module (``nylium.rows.objects.type.Type``) or from the
-matching store module, which re-exports it (``nylium.tables.objects.types.Type``).
+``rows`` is a thin re-export shim; the real Row (mapped dataclass) + Table
+store pairs live in ``table_rows``, one file per table.
 """
+from nylium.table_rows import *  # noqa: F401,F403

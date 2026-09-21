@@ -18,8 +18,7 @@ from fastapi.responses import JSONResponse
 from nylium.auth.guard import require_cookie_user
 from nylium.auth.tokens import tokens
 from nylium.tables import api_tokens
-from nylium.tables.auth.api_tokens import ApiToken
-from nylium.tables.auth.auth_users import AuthUser
+from nylium.tables.auth import ApiToken, AuthUser
 from nylium.server.errors import ValidationError
 
 
