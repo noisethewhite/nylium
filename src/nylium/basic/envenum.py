@@ -1,18 +1,20 @@
 from __future__ import annotations
-from typing import Self
+from typing import Self, ClassVar
 from enum import StrEnum, EnumMeta
 import os
 import dotenv
 
 from nylium.basic.namedstring import NamedString
+from nylium.basic.smartoverride import smartoverride
 
 class EnvEnum_Meta(EnumMeta):
-    _dotenv_loaded: bool = False
+    _dotenv_loaded: ClassVar[bool] = False
 
-    def load_dotenv(cls) -> None:
-        if not cls._dotenv_loaded:
+    @smartoverride(EnumMeta.__new__)
+    def __new__(mcls) -> None:
+        if not mcls._dotenv_loaded:
             _ = dotenv.load_dotenv()
-            cls._dotenv_loaded = True
+            mcls._dotenv_loaded = True
 
 
 class EnvEnum(StrEnum, metaclass=EnvEnum_Meta):
@@ -21,7 +23,6 @@ class EnvEnum(StrEnum, metaclass=EnvEnum_Meta):
         return ""
 
     def __get__(self, instance: Self | None, owner: type[Self]) -> NamedString:
-        type(self).load_dotenv()
         value = NamedString(self.value, os.environ.get(self) or self._default())
         if not value:
             missing = [
