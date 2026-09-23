@@ -21,10 +21,10 @@ from uuid import UUID, uuid4
 
 from nylium.database import Database
 
-from nylium.data.tables.objects.instances import instances
-from nylium.data.tables.values.array_values import ArrayValues
-from nylium.data.tables.values.instance_values import InstanceValues
-from nylium.data.tables.values.string_values import StringValues
+from nylium.data.tables import instances
+from nylium.data.tables import ArrayValues
+from nylium.data.tables import InstanceValues
+from nylium.data.tables import StringValues
 from nylium.objects.wprop import WProp
 from nylium.objects.wtype import WType
 from nylium.objects.wtypemeta import StoredValue, WTypeMeta

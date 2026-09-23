@@ -33,24 +33,24 @@ from nylium.objects.scalar_type_names import (
     STRING,
     TIME,
 )
-from nylium.data.rows.values.boolean_value import BooleanValue
-from nylium.data.rows.values.date_value import DateValue
-from nylium.data.rows.values.datetime_value import DatetimeValue
-from nylium.data.rows.values.integer_value import IntegerValue
-from nylium.data.rows.values.month_day_time_value import MonthDayTimeValue
-from nylium.data.rows.values.month_day_value import MonthDayValue
-from nylium.data.rows.values.numeric_value import NumericValue
-from nylium.data.rows.values.string_value import StringValue
-from nylium.data.rows.values.time_value import TimeValue
-from nylium.data.tables.values.boolean_values import BooleanValues
-from nylium.data.tables.values.date_values import DateValues
-from nylium.data.tables.values.datetime_values import DatetimeValues
-from nylium.data.tables.values.integer_values import IntegerValues
-from nylium.data.tables.values.month_day_time_values import MonthDayTimeValues
-from nylium.data.tables.values.month_day_values import MonthDayValues
-from nylium.data.tables.values.numeric_values import NumericValues
-from nylium.data.tables.values.string_values import StringValues
-from nylium.data.tables.values.time_values import TimeValues
+from nylium.data.rows import BooleanValue
+from nylium.data.rows import DateValue
+from nylium.data.rows import DatetimeValue
+from nylium.data.rows import IntegerValue
+from nylium.data.rows import MonthDayTimeValue
+from nylium.data.rows import MonthDayValue
+from nylium.data.rows import NumericValue
+from nylium.data.rows import StringValue
+from nylium.data.rows import TimeValue
+from nylium.data.tables import BooleanValues
+from nylium.data.tables import DateValues
+from nylium.data.tables import DatetimeValues
+from nylium.data.tables import IntegerValues
+from nylium.data.tables import MonthDayTimeValues
+from nylium.data.tables import MonthDayValues
+from nylium.data.tables import NumericValues
+from nylium.data.tables import StringValues
+from nylium.data.tables import TimeValues
 from nylium.objects.wprop import WProp
 from nylium.objects.wtype import WType
 

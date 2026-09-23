@@ -8,7 +8,7 @@ import sqlalchemy as sqla
 from nylium.database import Database
 from nylium.database.row import mapper
 from nylium.database.table import Row, Table
-from nylium.data.rows.auth.auth_challenge import AuthChallenge
+from nylium.data.rows import AuthChallenge
 
 class AuthChallenges(Table[bytes, AuthChallenge]):
     """The auth_challenges table as a Mapping keyed by challenge bytes."""

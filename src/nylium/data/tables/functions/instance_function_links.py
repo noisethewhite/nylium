@@ -7,7 +7,7 @@ import sqlalchemy as sqla
 from nylium.database import Database
 from nylium.database.row import mapper
 from nylium.database.table import Row, Table
-from nylium.data.rows.functions.instance_function_link import InstanceFunctionLink
+from nylium.data.rows import InstanceFunctionLink
 
 class InstanceFunctionLinks(Table[tuple[UUID, UUID], InstanceFunctionLink]):
     """The instance_function_links table as a store of function bindings."""

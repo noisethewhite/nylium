@@ -8,7 +8,7 @@ import sqlalchemy as sqla
 from nylium.database import Database
 from nylium.database.row import mapper
 from nylium.database.table import Row, Table
-from nylium.data.rows.auth.auth_session import AuthSession
+from nylium.data.rows import AuthSession
 
 class AuthSessions(Table[str, AuthSession]):
     """The auth_sessions table as a Mapping keyed by token hash."""

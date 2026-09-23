@@ -12,8 +12,8 @@ import secrets
 from datetime import datetime, timezone
 from uuid import UUID
 
-from nylium.data.tables.auth.api_tokens import api_tokens
-from nylium.data.rows.auth.api_token import ApiToken
+from nylium.data.tables import api_tokens
+from nylium.data.rows import ApiToken
 from typing import ClassVar
 
 

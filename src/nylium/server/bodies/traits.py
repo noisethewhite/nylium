@@ -9,10 +9,12 @@ from uuid import UUID
 from fastapi.responses import Response
 from pydantic.dataclasses import dataclass
 from nylium.api.api import Api
+from nylium.api.shared import ApiShared
 from nylium.objects.wscalar import WColor
+from nylium.objects.wtrait import TraitView
+from nylium.objects.wtypeview import TypeView
 from nylium.server.bodies.shared import BODY_CONFIG, PATH_PARAMS, resolve_route_hints
 from nylium.server.errors import NotFoundError
-from nylium.server.views import TraitView, TypeView
 
 
 @dataclass(config=BODY_CONFIG)
@@ -95,7 +97,7 @@ class TraitAttachBody:
 
     @classmethod
     def route(cls, name: str, body: "TraitAttachBody") -> TypeView:
-        return TypeView.from_row(Api.attach_trait(name, body.trait))
+        return ApiShared.type_view(Api.attach_trait(name, body.trait))
 
 
 @plain_dataclass
@@ -107,7 +109,7 @@ class DetachTraitRequest:
 
     @classmethod
     def route(cls, request: Annotated["DetachTraitRequest", PATH_PARAMS]) -> TypeView:
-        return TypeView.from_row(Api.detach_trait(request.name, request.trait))
+        return ApiShared.type_view(Api.detach_trait(request.name, request.trait))
 
 
 resolve_route_hints(sys.modules[__name__])

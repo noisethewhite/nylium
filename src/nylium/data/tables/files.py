@@ -5,7 +5,7 @@ from typing import ClassVar
 from uuid import UUID
 from nylium.database import Database
 from nylium.database.table import Row, Table
-from nylium.data.rows.file import File
+from nylium.data.rows import File
 
 class Files(Table[UUID, File]):
     """The files table as a Mapping of writable files."""

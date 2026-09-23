@@ -5,7 +5,7 @@ from typing import ClassVar
 from uuid import UUID
 from nylium.database import Database
 from nylium.database.table import Row, Table
-from nylium.data.rows.auth.auth_user import AuthUser
+from nylium.data.rows import AuthUser
 
 class AuthUsers(Table[UUID, AuthUser]):
     """The auth_users table as a Mapping of writable users."""

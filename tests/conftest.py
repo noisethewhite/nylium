@@ -10,8 +10,8 @@ from fastapi.testclient import TestClient
 from nylium.system import Environment
 from nylium.database import Database
 from nylium.database.registry import reg
-from nylium.data.tables.auth.auth_credentials import auth_credentials
-from nylium.data.tables.auth.auth_users import auth_users
+from nylium.data.tables import auth_credentials
+from nylium.data.tables import auth_users
 from nylium.auth.sessions import sessions
 from nylium.server import NyliumApp
 

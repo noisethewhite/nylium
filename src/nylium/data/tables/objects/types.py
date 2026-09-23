@@ -5,8 +5,8 @@ from typing import ClassVar
 from uuid import UUID
 from nylium.database import Database
 from nylium.database.table import Row, Table
-from nylium.data.rows.objects.type import Type
-from nylium.data.tables.decor.type_decors import type_decor
+from nylium.data.rows import Type
+from nylium.data.tables.decor import type_decor
 
 class Types(Table[UUID, Type]):
     """The types table as a Mapping of writable types."""

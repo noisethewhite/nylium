@@ -11,8 +11,7 @@ from nylium.objects.navigation import type_icon
 from nylium.objects.wfile import WFile
 from nylium.server.errors import ValidationError
 from uuid import uuid4
-from nylium.api.display import ObjectRef, RefValue
-from nylium.api.display import ArrayValue
+from nylium.objects.wobject import ArrayValue, ObjectRef, RefValue
 
 PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 16
 PDF = b"%PDF-1.4 fake\n"

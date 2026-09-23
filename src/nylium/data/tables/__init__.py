@@ -1,36 +1,36 @@
 """Table stores and the shared SQLAlchemy registry compatibility export."""
 from nylium.database.registry import reg as reg
 from nylium.data.tables.files import Files, files
-from nylium.data.tables.auth.api_tokens import ApiTokens, api_tokens
-from nylium.data.tables.auth.auth_challenges import AuthChallenges, auth_challenges
-from nylium.data.tables.auth.auth_credentials import AuthCredentials, auth_credentials
-from nylium.data.tables.auth.auth_sessions import AuthSessions, auth_sessions
-from nylium.data.tables.auth.auth_users import AuthUsers, auth_users
-from nylium.data.tables.decor.trait_decors import TraitDecors, trait_decor
-from nylium.data.tables.decor.type_decors import TypeDecors, type_decor
-from nylium.data.tables.functions.function_edges import FunctionEdges, function_edges
-from nylium.data.tables.functions.function_nodes import FunctionNodes, function_nodes
-from nylium.data.tables.functions.instance_function_links import InstanceFunctionLinks, instance_function_links
-from nylium.data.tables.objects.enum_options import EnumOptions, enum_options
-from nylium.data.tables.objects.instances import Instances, instances
-from nylium.data.tables.objects.props import Props, props
-from nylium.data.tables.objects.traits import Traits, traits
-from nylium.data.tables.objects.type_traits import TypeTraits, type_traits
-from nylium.data.tables.objects.types import Types, types
-from nylium.data.tables.objects.unit_parts import UnitParts, unit_parts
-from nylium.data.tables.values.array_values import ArrayValues, array_values
-from nylium.data.tables.values.boolean_values import BooleanValues, boolean_values
-from nylium.data.tables.values.date_values import DateValues, date_values
-from nylium.data.tables.values.datetime_values import DatetimeValues, datetime_values
-from nylium.data.tables.values.file_values import FileValues, file_values
-from nylium.data.tables.values.instance_values import InstanceValues, instance_values
-from nylium.data.tables.values.integer_values import IntegerValues, integer_values
-from nylium.data.tables.values.month_day_time_values import MonthDayTimeValues, monthdaytime_values
-from nylium.data.tables.values.month_day_values import MonthDayValues, monthday_values
-from nylium.data.tables.values.numeric_values import NumericValues, numeric_values
-from nylium.data.tables.values.scalar_values_table import ScalarValuesTable
-from nylium.data.tables.values.string_values import StringValues, string_values
-from nylium.data.tables.values.time_values import TimeValues, time_values
+from nylium.data.tables.auth import ApiTokens, api_tokens
+from nylium.data.tables.auth import AuthChallenges, auth_challenges
+from nylium.data.tables.auth import AuthCredentials, auth_credentials
+from nylium.data.tables.auth import AuthSessions, auth_sessions
+from nylium.data.tables.auth import AuthUsers, auth_users
+from nylium.data.tables.decor import TraitDecors, trait_decor
+from nylium.data.tables.decor import TypeDecors, type_decor
+from nylium.data.tables.functions import FunctionEdges, function_edges
+from nylium.data.tables.functions import FunctionNodes, function_nodes
+from nylium.data.tables.functions import InstanceFunctionLinks, instance_function_links
+from nylium.data.tables.objects import EnumOptions, enum_options
+from nylium.data.tables.objects import Instances, instances
+from nylium.data.tables.objects import Props, props
+from nylium.data.tables.objects import Traits, traits
+from nylium.data.tables.objects import TypeTraits, type_traits
+from nylium.data.tables.objects import Types, types
+from nylium.data.tables.objects import UnitParts, unit_parts
+from nylium.data.tables.values import ArrayValues, array_values
+from nylium.data.tables.values import BooleanValues, boolean_values
+from nylium.data.tables.values import DateValues, date_values
+from nylium.data.tables.values import DatetimeValues, datetime_values
+from nylium.data.tables.values import FileValues, file_values
+from nylium.data.tables.values import InstanceValues, instance_values
+from nylium.data.tables.values import IntegerValues, integer_values
+from nylium.data.tables.values import MonthDayTimeValues, monthdaytime_values
+from nylium.data.tables.values import MonthDayValues, monthday_values
+from nylium.data.tables.values import NumericValues, numeric_values
+from nylium.data.tables.values import ScalarValuesTable
+from nylium.data.tables.values import StringValues, string_values
+from nylium.data.tables.values import TimeValues, time_values
 
 __all__ = [
     'reg',

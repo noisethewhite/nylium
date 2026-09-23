@@ -7,7 +7,7 @@ import sqlalchemy as sqla
 from nylium.database import Database
 from nylium.database.row import Row, mapper
 from nylium.database.table import Table
-from nylium.data.rows.values.array_value import ArrayValue
+from nylium.data.rows import ArrayValue
 
 class ArrayValues(Table[tuple[UUID, int], ArrayValue]):
     """The array_values table as a store of element rows."""

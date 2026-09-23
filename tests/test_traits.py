@@ -11,7 +11,8 @@ from nylium.objects.navigation import (
     type_trait_names,
 )
 from nylium.server.errors import ValidationError
-from nylium.server.views import PropView, TraitView
+from nylium.objects.wprop import PropView
+from nylium.objects.wtrait import TraitView
 
 
 def stamped_trait(color: str = "#3a7d5c"):

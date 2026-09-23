@@ -10,14 +10,15 @@ from uuid import UUID
 from pydantic.dataclasses import dataclass
 
 from nylium.database import Database
-from nylium.data.tables.objects.instances import Instances, instances
+from nylium.data.tables import Instances, instances
 from nylium.objects.navigation import (
     array_tag_rows,
     backlink_refs,
     collect_range,
     type_name_of,
 )
-from nylium.objects import WObject, WType
+from nylium.objects.wobject.object import WObject
+from nylium.objects.wtype import WType
 from nylium.objects.wtypemeta import StoredValue, WObjectShape
 from nylium.objects.monthday import MonthDay, MonthDayTime
 from nylium.objects.quantity import Quantity
@@ -25,11 +26,11 @@ from nylium.objects.wembedded import EMBEDDED_NAME_SEPARATOR
 from nylium.objects.wenum import WEnum
 from nylium.objects.wfile import WFile
 from nylium.objects.wformula import Formula
-from nylium.objects.wfunction import WFunction
+from nylium.objects.wfunction.function import WFunction
 from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import ScalarPayload, WInteger, WScalar
-from nylium.api.display.tags import TagView
-from nylium.api.display.values import (
+from nylium.objects.wobject.tags import TagView
+from nylium.objects.wobject.values import (
     CONFIG,
     NAME_PROP_KEY,
     ArrayValue,
@@ -39,7 +40,7 @@ from nylium.api.display.values import (
     RefValue,
     ScalarValue,
 )
-from nylium.data.tables.functions.instance_function_links import InstanceFunctionLinks
+from nylium.data.tables import InstanceFunctionLinks
 
 
 def _sibling_cell(value: StoredValue) -> Decimal | Quantity | str | None:

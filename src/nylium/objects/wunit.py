@@ -10,14 +10,19 @@ with NULL unit — magnitude is canonical by definition.
 from __future__ import annotations
 
 from decimal import Decimal
+from typing import Self
 from uuid import UUID
+
+from pydantic import ConfigDict
+from pydantic.dataclasses import dataclass
 
 from nylium.database import Database
 from nylium.objects.quantity import Quantity
-from nylium.data.tables.objects.unit_parts import unit_parts
+from nylium.data.rows import UnitPart
+from nylium.data.tables import unit_parts
 from nylium.objects.wprop import WProp
 from nylium.objects.wtype import WType
-from nylium.data.tables.values.numeric_values import NumericValues
+from nylium.data.tables import NumericValues
 from nylium.server.errors import ValidationError
 
 
@@ -114,3 +119,29 @@ class WUnit:
         if not isinstance(raw, Decimal):
             raise RuntimeError(f"unit part factor {raw!r} is not a Decimal")
         return raw
+
+
+_VIEW_CONFIG = ConfigDict(strict=True)
+
+
+@dataclass(config=_VIEW_CONFIG)
+class UnitPartView:
+    """One unit part (contracts.ts UnitPartView) — the wire projection,
+    kept next to the domain facade it renders. Decimals cross as strings
+    in pydantic JSON mode, losslessly."""
+
+    uuid: UUID
+    name: str
+    multiplier: Decimal
+    offset: Decimal
+    is_base: bool
+
+    @classmethod
+    def from_row(cls, part: UnitPart) -> Self:
+        return cls(
+            uuid=part.uuid,
+            name=part.name,
+            multiplier=part.multiplier,
+            offset=part.offset,
+            is_base=part.is_base,
+        )

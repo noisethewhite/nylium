@@ -10,9 +10,9 @@ from nylium.objects.navigation import (
     sync_unit_parts as _sync_unit_parts,
     unit_part_usage,
 )
-from nylium.data.tables.objects.unit_parts import unit_parts
-from nylium.data.tables.decor.type_decors import type_decor
-from nylium.data.rows.objects.type import Type
+from nylium.data.tables import unit_parts
+from nylium.data.tables import type_decor
+from nylium.data.rows import Type
 from nylium.objects.wscalar import WColor
 from nylium.objects.wtype import WType
 from nylium.server.errors import ValidationError

@@ -8,8 +8,8 @@ import sqlalchemy as sqla
 from nylium.database import Database
 from nylium.database.row import mapper
 from nylium.database.table import Row, Table
-from nylium.data.rows.functions.function_node import FunctionNode
-from nylium.data.rows.functions.function_edge import FunctionEdge
+from nylium.data.rows import FunctionNode
+from nylium.data.rows import FunctionEdge
 
 class FunctionNodes(Table[UUID, FunctionNode]):
     """The function_nodes table as a store of DAG nodes (and DAG sync)."""

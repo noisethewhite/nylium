@@ -8,19 +8,24 @@ wprop -> wtype and nothing cycles.
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, Self
 from uuid import UUID
+
+from pydantic import ConfigDict
+from pydantic.dataclasses import dataclass
 
 from nylium.database import Database
 from nylium.database.row import mapper
 from nylium.objects.navigation import (
+    prop_owner_trait,
+    prop_value_type_name,
     purge_prop_values,
     purge_prop_values_for_instances as _purge_prop_values_for_instances,
 )
-from nylium.data.rows.objects.prop import Prop, SchemaItem
-from nylium.data.tables.objects.props import Props
-from nylium.data.tables.objects.traits import Traits
-from nylium.data.tables.objects.type_traits import TypeTraits
+from nylium.data.rows import Prop, SchemaItem
+from nylium.data.tables import Props
+from nylium.data.tables import Traits
+from nylium.data.tables import TypeTraits
 from nylium.objects.wtype import WType
 
 if TYPE_CHECKING:
@@ -189,3 +194,33 @@ class WProp:
             if row is not None:
                 return cls(row)
         return None
+
+
+_VIEW_CONFIG = ConfigDict(strict=True)
+
+
+@dataclass(config=_VIEW_CONFIG)
+class PropView:
+    """One prop of a type's effective schema (contracts.ts PropView) —
+    the wire projection, kept next to the domain facade it renders."""
+
+    uuid: UUID
+    key: str
+    value_type: str
+    formula: str | None
+    collect: str | None
+    trait: str | None
+    trait_color: str | None
+
+    @classmethod
+    def from_row(cls, prop: Prop) -> Self:
+        owner_trait = prop_owner_trait(prop)
+        return cls(
+            uuid=prop.uuid,
+            key=prop.key,
+            value_type=prop_value_type_name(prop),
+            formula=prop.formula,
+            collect=prop.collect,
+            trait=None if owner_trait is None else owner_trait[0],
+            trait_color=None if owner_trait is None else owner_trait[1],
+        )

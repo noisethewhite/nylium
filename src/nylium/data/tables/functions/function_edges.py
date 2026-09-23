@@ -7,7 +7,7 @@ import sqlalchemy as sqla
 from nylium.database import Database
 from nylium.database.row import mapper
 from nylium.database.table import Row, Table
-from nylium.data.rows.functions.function_edge import FunctionEdge
+from nylium.data.rows import FunctionEdge
 
 class FunctionEdges(Table[UUID, FunctionEdge]):
     """The function_edges table as a store of DAG edges."""

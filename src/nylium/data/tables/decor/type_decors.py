@@ -7,7 +7,7 @@ import sqlalchemy as sqla
 from nylium.database import Database
 from nylium.database.row import mapper
 from nylium.database.table import Row, Table
-from nylium.data.rows.decor.type_decor import TypeDecor
+from nylium.data.rows import TypeDecor
 
 class TypeDecors(Table[UUID, TypeDecor]):
     """The type_decor table as a Mapping keyed by the type's uuid."""

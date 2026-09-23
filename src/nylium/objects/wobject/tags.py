@@ -6,7 +6,7 @@ from uuid import UUID
 
 from pydantic.dataclasses import dataclass
 
-from nylium.api.display.values import CONFIG
+from nylium.objects.wobject.values import CONFIG
 
 
 @dataclass(config=CONFIG)

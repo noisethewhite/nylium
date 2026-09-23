@@ -6,10 +6,11 @@ from typing import cast
 from uuid import UUID
 
 from nylium.api.shared import ApiShared, NAME_PROP_KEY, PropInput
-from nylium.api.display import ObjectRef, ObjectView
+from nylium.objects.wobject import ObjectView
+from nylium.objects.wobject import ObjectRef
 from nylium.database import Database
 from nylium.objects.navigation import type_name_of
-from nylium.data.tables.objects.instances import instances
+from nylium.data.tables import instances
 from nylium.objects.wembedded import WEmbedded
 from nylium.objects.wobject import WObject
 from nylium.objects.wprop import WProp
@@ -17,7 +18,7 @@ from nylium.objects.wtype import WType
 from nylium.objects.wtypemeta import WTypeMeta
 from nylium.api.markdown import MarkdownRenderer
 from nylium.server.errors import ValidationError
-from nylium.data.tables.functions.instance_function_links import InstanceFunctionLinks
+from nylium.data.tables import InstanceFunctionLinks
 
 
 class ObjectsApi(ApiShared):

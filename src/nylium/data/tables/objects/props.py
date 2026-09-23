@@ -7,8 +7,8 @@ import sqlalchemy as sqla
 from nylium.database import Database
 from nylium.database.row import mapper
 from nylium.database.table import Row, Table
-from nylium.data.rows.objects.prop import Prop
-from nylium.data.rows.objects.prop import SchemaItem
+from nylium.data.rows import Prop
+from nylium.data.rows import SchemaItem
 
 class Props(Table[UUID, Prop]):
     """The props table as a Mapping of writable props.

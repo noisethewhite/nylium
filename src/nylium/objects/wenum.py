@@ -7,13 +7,17 @@
 # (the string_values store) — no Database/sql knowledge here.
 from __future__ import annotations
 
-from typing import cast
+from typing import Self, cast
 from uuid import UUID
 
-from nylium.data.tables.values.string_values import StringValues
+from pydantic import ConfigDict
+from pydantic.dataclasses import dataclass
+
+from nylium.data.tables import StringValues
 
 from nylium.database import Database
-from nylium.data.tables.objects.enum_options import enum_options
+from nylium.data.rows import EnumOption
+from nylium.data.tables import enum_options
 from nylium.objects.wprop import WProp
 from nylium.objects.wtype import WType
 from nylium.server.errors import ValidationError
@@ -53,3 +57,19 @@ class WEnum:
             _ = StringValues.clear(inst_uuid, prop.uuid)
             return
         StringValues.write(inst_uuid, prop.uuid, value)
+
+
+_VIEW_CONFIG = ConfigDict(strict=True)
+
+
+@dataclass(config=_VIEW_CONFIG)
+class EnumOptionView:
+    """One enum option (contracts.ts EnumOptionView) — the wire
+    projection, kept next to the domain facade it renders."""
+
+    uuid: UUID
+    value: str
+
+    @classmethod
+    def from_row(cls, option: EnumOption) -> Self:
+        return cls(uuid=option.uuid, value=option.value)

@@ -11,7 +11,7 @@ stateless-фасад = concern-модули + @final класс со staticmetho
 биндингом. Мелкие семейства (wscalar, monthday, quantity) остаются
 одним файлом.
 """
-from nylium.objects.wobject import WObject
+from nylium.objects.wobject.object import WObject
 from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import (
     WBoolean,

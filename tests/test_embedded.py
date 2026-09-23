@@ -9,7 +9,7 @@ import pytest
 
 from nylium.api import Api, ArrayValue, EmbeddedValue, ScalarValue
 from nylium.objects.navigation import effective_props, prop_value_type_name
-from nylium.data.rows.objects.type import Type
+from nylium.data.rows import Type
 from nylium.server.errors import ValidationError
 
 

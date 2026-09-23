@@ -12,7 +12,8 @@ The surface is composed from single-concern modules (ADR-0018):
 constants (node vocabulary), typing (arity/output rules), validation
 (DAG checks), evaluation (the pure interpreter), inputs (owner-sibling
 materialization), persistence (graph + local cycle check) and lifecycle
-(type creation).
+(type creation). views holds the FunctionView/node/edge wire DTOs —
+imported after WFunction, since objectview pulls this package mid-init.
 
 No ``eval``, no third-party deps — each node kind is a closed, hand
 written operation, so the arbitrary-code surface is structurally shut.
@@ -20,7 +21,15 @@ written operation, so the arbitrary-code surface is structurally shut.
 from __future__ import annotations
 
 from nylium.objects.wfunction.function import WFunction
+from nylium.objects.wfunction.views import (
+    FunctionEdgeView,
+    FunctionNodeView,
+    FunctionView,
+)
 
 __all__ = [
+    "FunctionEdgeView",
+    "FunctionNodeView",
+    "FunctionView",
     "WFunction",
 ]

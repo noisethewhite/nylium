@@ -7,11 +7,17 @@ a true many-to-one link (ADR-0028), not the old 1-target-1-owner keying."""
 from decimal import Decimal
 
 from nylium.api import Api
-from nylium.api.display import ArrayValue, EmbeddedValue, ObjectRef, RefValue, ScalarValue
+from nylium.objects.wobject import (
+    ArrayValue,
+    EmbeddedValue,
+    ObjectRef,
+    RefValue,
+    ScalarValue,
+)
 from nylium.objects.navigation import effective_props
 from nylium.objects.quantity import Quantity
 from nylium.server.codec import PropCodec
-from nylium.server.views import TypeView
+from nylium.api.shared import ApiShared
 
 
 def _currency() -> None:
@@ -56,7 +62,7 @@ def test_reference_levels_include_embedded_types():
     `lines: Array<ReceiptItem>`). Embedded types are full nodes — a bug in
     the old frontend computation dropped them, flattening everything to 1."""
     _receipt_schema()
-    views = TypeView.from_rows(Api.list_types())
+    views = ApiShared.type_views(Api.list_types())
     by_name = {view.name: view.level for view in views}
     assert by_name["Product"] == 1
     assert by_name["ReceiptItem"] == 2

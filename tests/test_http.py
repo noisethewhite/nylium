@@ -17,8 +17,8 @@ from nylium.objects.wfile import WFile
 from nylium.api import Api
 import secrets
 from nylium.auth.sessions import sessions
-from nylium.data.tables.auth.auth_credentials import auth_credentials
-from nylium.data.tables.auth.auth_users import auth_users
+from nylium.data.tables import auth_credentials
+from nylium.data.tables import auth_users
 from uuid import uuid4
 
 

@@ -7,7 +7,7 @@ import sqlalchemy as sqla
 from nylium.database import Database
 from nylium.database.row import mapper
 from nylium.database.table import Row, Table
-from nylium.data.rows.objects.type_trait import TypeTrait
+from nylium.data.rows import TypeTrait
 
 class TypeTraits(Table[tuple[UUID, UUID], TypeTrait]):
     """The attach edges as a Mapping keyed by (type_uuid, trait_uuid)."""

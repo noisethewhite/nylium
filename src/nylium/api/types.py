@@ -11,11 +11,11 @@ if TYPE_CHECKING:
 else:
     _TypesBase = ApiShared
 from nylium.database import Database
-from nylium.data.tables.objects.instances import instances
-from nylium.data.tables.objects.props import props
-from nylium.data.tables.decor.type_decors import type_decor
-from nylium.data.rows.objects.type import Type
-from nylium.data.tables.objects.types import types
+from nylium.data.tables import instances
+from nylium.data.tables import props
+from nylium.data.tables import type_decor
+from nylium.data.rows import Type
+from nylium.data.tables import types
 from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import WColor, WScalar, WString
 from nylium.objects.wtype import WType

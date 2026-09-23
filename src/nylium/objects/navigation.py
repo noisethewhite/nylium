@@ -21,31 +21,31 @@ from nylium.database import Database
 from nylium.database.row import mapper
 from nylium.database.table import Row
 from nylium.objects.scalar_type_names import DATE, DATETIME, INTEGER
-from nylium.data.tables.decor.trait_decors import trait_decor
-from nylium.data.tables.decor.type_decors import type_decor
-from nylium.data.rows.decor.type_decor import TypeDecor
-from nylium.data.rows.objects.enum_option import EnumOption
-from nylium.data.rows.objects.instance import Instance
-from nylium.data.rows.objects.prop import Prop
-from nylium.data.rows.objects.type import Type
-from nylium.data.rows.objects.unit_part import UnitPart
-from nylium.data.tables.objects.enum_options import enum_options
-from nylium.data.tables.objects.props import props
-from nylium.data.tables.objects.traits import traits
-from nylium.data.tables.objects.type_traits import type_traits
-from nylium.data.tables.objects.types import types
-from nylium.data.tables.objects.unit_parts import unit_parts
-from nylium.data.rows.values.array_value import ArrayValue
-from nylium.data.rows.values.boolean_value import BooleanValue
-from nylium.data.rows.values.date_value import DateValue
-from nylium.data.rows.values.datetime_value import DatetimeValue
-from nylium.data.rows.values.instance_value import InstanceValue
-from nylium.data.rows.values.integer_value import IntegerValue
-from nylium.data.rows.values.month_day_time_value import MonthDayTimeValue
-from nylium.data.rows.values.month_day_value import MonthDayValue
-from nylium.data.rows.values.numeric_value import NumericValue
-from nylium.data.rows.values.string_value import StringValue
-from nylium.data.rows.values.time_value import TimeValue
+from nylium.data.tables import trait_decor
+from nylium.data.tables import type_decor
+from nylium.data.rows import TypeDecor
+from nylium.data.rows import EnumOption
+from nylium.data.rows import Instance
+from nylium.data.rows import Prop
+from nylium.data.rows import Type
+from nylium.data.rows import UnitPart
+from nylium.data.tables import enum_options
+from nylium.data.tables import props
+from nylium.data.tables import traits
+from nylium.data.tables import type_traits
+from nylium.data.tables import types
+from nylium.data.tables import unit_parts
+from nylium.data.rows import ArrayValue
+from nylium.data.rows import BooleanValue
+from nylium.data.rows import DateValue
+from nylium.data.rows import DatetimeValue
+from nylium.data.rows import InstanceValue
+from nylium.data.rows import IntegerValue
+from nylium.data.rows import MonthDayTimeValue
+from nylium.data.rows import MonthDayValue
+from nylium.data.rows import NumericValue
+from nylium.data.rows import StringValue
+from nylium.data.rows import TimeValue
 
 # --- schema navigation (was Row properties) ---
 

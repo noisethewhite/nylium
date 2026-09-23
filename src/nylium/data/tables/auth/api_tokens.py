@@ -5,7 +5,7 @@ from typing import ClassVar
 from uuid import UUID
 from nylium.database import Database
 from nylium.database.table import Row, Table
-from nylium.data.rows.auth.api_token import ApiToken
+from nylium.data.rows import ApiToken
 
 class ApiTokens(Table[UUID, ApiToken]):
     """The api_tokens table as a Mapping of writable tokens."""

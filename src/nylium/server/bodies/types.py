@@ -10,10 +10,11 @@ from uuid import UUID
 from fastapi.responses import Response
 from pydantic.dataclasses import dataclass
 from nylium.api.api import Api
+from nylium.api.shared import ApiShared
 from nylium.objects.wscalar import WColor
+from nylium.objects.wtypeview import TypeView
 from nylium.server.bodies.shared import BODY_CONFIG, PATH_PARAMS, resolve_route_hints
 from nylium.server.errors import NotFoundError
-from nylium.server.views import TypeView
 
 
 @dataclass(config=BODY_CONFIG)
@@ -36,7 +37,7 @@ class CreateTypeBody:
 
     @classmethod
     def route(cls, body: "CreateTypeBody") -> TypeView:
-        return TypeView.from_row(
+        return ApiShared.type_view(
             Api.create_type(
                 body.name,
                 body.props,
@@ -61,7 +62,7 @@ class CreateEnumBody:
 
     @classmethod
     def route(cls, body: "CreateEnumBody") -> TypeView:
-        return TypeView.from_row(
+        return ApiShared.type_view(
             Api.create_enum(body.name, body.options, body.icon, body.color)
         )
 
@@ -84,7 +85,7 @@ class SyncEnumOptionsBody:
 
     @classmethod
     def route(cls, name: str, body: "SyncEnumOptionsBody") -> TypeView:
-        return TypeView.from_row(
+        return ApiShared.type_view(
             Api.sync_enum_options(
                 name, [(item.uuid, item.value) for item in body.options]
             )
@@ -113,7 +114,7 @@ class CreateUnitBody:
 
     @classmethod
     def route(cls, body: "CreateUnitBody") -> TypeView:
-        return TypeView.from_row(
+        return ApiShared.type_view(
             Api.create_unit(
                 body.name,
                 body.base,
@@ -148,7 +149,7 @@ class SyncUnitPartsBody:
 
     @classmethod
     def route(cls, name: str, body: "SyncUnitPartsBody") -> TypeView:
-        return TypeView.from_row(
+        return ApiShared.type_view(
             Api.sync_unit_parts(
                 name,
                 [
@@ -167,7 +168,7 @@ class ReorderPropsBody:
 
     @classmethod
     def route(cls, name: str, body: "ReorderPropsBody") -> TypeView:
-        return TypeView.from_row(Api.reorder_props(name, body.keys))
+        return ApiShared.type_view(Api.reorder_props(name, body.keys))
 
 
 @dataclass(config=BODY_CONFIG)
@@ -192,7 +193,7 @@ class SyncPropsBody:
 
     @classmethod
     def route(cls, name: str, body: "SyncPropsBody") -> TypeView:
-        return TypeView.from_row(
+        return ApiShared.type_view(
             Api.sync_props(
                 name,
                 [(item.uuid, item.key, item.value_type, item.formula) for item in body.props],
@@ -212,7 +213,7 @@ class UpdateTypeBody:
 
     @classmethod
     def route(cls, name: str, body: "UpdateTypeBody") -> TypeView:
-        return TypeView.from_row(
+        return ApiShared.type_view(
             Api.rename_type(name, body.name, body.plural_name, body.icon, body.color)
         )
 
@@ -228,7 +229,7 @@ class TypeNameRequest:
         type_ = Api.get_type(request.name)
         if type_ is None:
             raise NotFoundError(f"no type {request.name!r}")
-        return TypeView.from_row(type_)
+        return ApiShared.type_view(type_)
 
     @classmethod
     def route_delete(cls, request: Annotated["TypeNameRequest", PATH_PARAMS]) -> Response:
@@ -243,7 +244,7 @@ class ListTypesRequest:
 
     @classmethod
     def route(cls, _request: Annotated["ListTypesRequest", PATH_PARAMS]) -> list[TypeView]:
-        return TypeView.from_rows(Api.list_types())
+        return ApiShared.type_views(Api.list_types())
 
 
 resolve_route_hints(sys.modules[__name__])

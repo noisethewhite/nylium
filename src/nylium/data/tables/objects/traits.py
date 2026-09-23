@@ -7,8 +7,8 @@ import sqlalchemy as sqla
 from nylium.database import Database
 from nylium.database.row import mapper
 from nylium.database.table import Row, Table
-from nylium.data.rows.objects.trait import Trait
-from nylium.data.tables.decor.trait_decors import trait_decor
+from nylium.data.rows import Trait
+from nylium.data.tables.decor import trait_decor
 
 class Traits(Table[UUID, Trait]):
     """The traits table as a Mapping of writable traits."""

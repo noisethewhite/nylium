@@ -8,16 +8,20 @@ the stable pointer and never changes on rename.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import ClassVar, Self
 from uuid import UUID
 
+from pydantic import ConfigDict
+from pydantic.dataclasses import dataclass
+
 from nylium.database import Database
-from nylium.data.tables.files import files
-from typing import ClassVar
+from nylium.data.rows import File
+from nylium.data.tables import files
 from nylium.system.environment import Environment
 from nylium.objects.wtype import WType
 import logging
-from nylium.data.tables.decor.type_decors import TypeDecors
-from nylium.data.tables.values.array_values import ArrayValues
+from nylium.data.tables import TypeDecors
+from nylium.data.tables import ArrayValues
 
 
 class WFile:
@@ -147,3 +151,38 @@ class WFile:
         links, so no dangling files.uuid survives in an array."""
 
         ArrayValues.delete_memberships(uuid)
+
+
+_VIEW_CONFIG = ConfigDict(strict=True)
+
+
+@dataclass(config=_VIEW_CONFIG)
+class FileView:
+    """One stored file's metadata (contracts.ts FileView) — the wire
+    projection, kept next to the domain facade it renders."""
+
+    uuid: UUID
+    type_name: str
+    name: str
+    mime: str
+    size_bytes: int
+
+    @classmethod
+    def from_row(cls, file: File) -> Self:
+        return cls(
+            uuid=file.uuid,
+            type_name=file.type_name,
+            name=file.name,
+            mime=file.mime,
+            size_bytes=file.size_bytes,
+        )
+
+
+@dataclass(config=_VIEW_CONFIG)
+class StorageStats:
+    """Disk usage of the blob-store volume plus nylium's own footprint."""
+
+    total_bytes: int
+    used_bytes: int
+    free_bytes: int
+    nylium_bytes: int

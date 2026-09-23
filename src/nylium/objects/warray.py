@@ -16,10 +16,10 @@ from typing import cast
 from uuid import UUID, uuid4
 
 from nylium.database import Database
-from nylium.data.tables.files import files
-from nylium.data.tables.objects.instances import Instances, instances
-from nylium.data.tables.values.array_values import ArrayValues
-from nylium.data.tables.values.instance_values import InstanceValues
+from nylium.data.tables import files
+from nylium.data.tables import Instances, instances
+from nylium.data.tables import ArrayValues
+from nylium.data.tables import InstanceValues
 from nylium.objects.wenum import WEnum
 from nylium.objects.wembedded import WEmbedded
 from nylium.objects.wfile import WFile

@@ -15,18 +15,19 @@ if TYPE_CHECKING:
     from nylium.api.objects import ObjectsApi as _FunctionsBase
 else:
     _FunctionsBase = ApiShared
-from nylium.api.display import FunctionView, ObjectView
+from nylium.objects.wfunction import FunctionView
+from nylium.objects.wobject import ObjectView
 from nylium.database import Database
-from nylium.data.tables.objects.props import props
-from nylium.data.tables.objects.types import types
-from nylium.data.tables.functions.instance_function_links import InstanceFunctionLinks
+from nylium.data.tables import props
+from nylium.data.tables import types
+from nylium.data.tables import InstanceFunctionLinks
 from nylium.objects.wformula import Formula
 from nylium.objects.wfunction import WFunction
 from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import WDate, WDatetime, WInteger, WNumeric, WString
 from nylium.objects.wtype import WType
 from nylium.server.errors import ValidationError
-from nylium.data.tables.objects.instances import instances
+from nylium.data.tables import instances
 
 
 class FunctionsApi(_FunctionsBase):

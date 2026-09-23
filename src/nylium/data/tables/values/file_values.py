@@ -7,7 +7,7 @@ import sqlalchemy as sqla
 from nylium.database import Database
 from nylium.database.row import Row, mapper
 from nylium.database.table import Table
-from nylium.data.rows.values.file_value import FileValue
+from nylium.data.rows import FileValue
 
 class FileValues(Table[tuple[UUID, UUID], FileValue]):
     """The file_values table as a store of file-reference rows."""

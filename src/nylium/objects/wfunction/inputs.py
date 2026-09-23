@@ -17,9 +17,9 @@ from typing import cast
 from uuid import UUID
 
 from nylium.database import Database
-from nylium.data.tables.objects.instances import instances
-from nylium.data.tables.functions.instance_function_links import InstanceFunctionLinks
-from nylium.objects.wobject import WObject
+from nylium.data.tables import instances
+from nylium.data.tables import InstanceFunctionLinks
+from nylium.objects.wobject.object import WObject
 from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import ScalarPayload
 from nylium.objects.wtype import WType

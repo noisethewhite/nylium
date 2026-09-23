@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import ClassVar
 from nylium.database.table import Row
 from nylium.data.tables.values.scalar_values_table import ScalarValuesTable
-from nylium.data.rows.values.month_day_value import MonthDayValue
+from nylium.data.rows import MonthDayValue
 
 class MonthDayValues(ScalarValuesTable[MonthDayValue]):
     """The monthday_values table as a store of writable monthday cells."""

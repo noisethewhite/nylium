@@ -7,7 +7,7 @@ import sqlalchemy as sqla
 from nylium.database import Database
 from nylium.database.row import mapper
 from nylium.database.table import Row, Table
-from nylium.data.rows.objects.instance import Instance
+from nylium.data.rows import Instance
 
 class Instances(Table[UUID, Instance]):
     """The instances table as a Mapping of writable instances."""

@@ -7,7 +7,7 @@ from uuid import UUID
 from nylium.database import Database
 from nylium.database.table import Row
 from nylium.data.tables.values.scalar_values_table import ScalarValuesTable
-from nylium.data.rows.values.numeric_value import NumericValue
+from nylium.data.rows import NumericValue
 
 class NumericValues(ScalarValuesTable[NumericValue]):
     """The numeric_values table as a store of writable numeric cells."""

@@ -6,9 +6,9 @@ import secrets
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
-from nylium.data.tables.auth.auth_sessions import auth_sessions
-from nylium.data.tables.auth.auth_users import auth_users
-from nylium.data.rows.auth.auth_user import AuthUser
+from nylium.data.tables import auth_sessions
+from nylium.data.tables import auth_users
+from nylium.data.rows import AuthUser
 from typing import ClassVar
 
 

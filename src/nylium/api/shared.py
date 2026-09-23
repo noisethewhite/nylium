@@ -5,20 +5,21 @@ from __future__ import annotations
 from typing import ClassVar, TypeAlias, cast
 from uuid import UUID
 
-from nylium.api.display import ObjectRef
 from nylium.database import Database
-from nylium.data.rows.objects.trait import Trait
-from nylium.data.tables.objects.traits import traits
-from nylium.data.rows.objects.type import Type
-from nylium.data.tables.objects.types import types
+from nylium.data.rows import Trait
+from nylium.data.tables import traits
+from nylium.data.rows import Type
+from nylium.data.tables import types
 from nylium.objects.wembedded import EMBEDDED_NAME_SEPARATOR
 from nylium.objects.wenum import WEnum
 from nylium.objects.wfile import WFile
 from nylium.objects.wobject import WObject
+from nylium.objects.wobject import ObjectRef
 from nylium.objects.wprop import WProp
 from nylium.objects.wscalar import WColor, WScalar
 from nylium.objects.wtype import WType
 from nylium.objects.wtypemeta import StoredValue
+from nylium.objects.wtypeview import TypeView
 from nylium.objects.navigation import effective_props, prop_value_type_name
 from nylium.server.errors import ValidationError
 
@@ -133,6 +134,20 @@ class ApiShared:
         for name in links:
             _ = depth(name)
         return level
+
+    @classmethod
+    def type_view(cls, type_: Type) -> TypeView:
+        """One TypeView with the level computed over the whole type graph —
+        the single-row counterpart of `type_views`."""
+        return TypeView.from_row(
+            type_, cls.reference_levels(list(types.all())).get(type_.name, 1)
+        )
+
+    @classmethod
+    def type_views(cls, rows: list[Type]) -> list[TypeView]:
+        """All type views with levels computed once over the graph."""
+        levels = cls.reference_levels(rows)
+        return [TypeView.from_row(type_, levels.get(type_.name, 1)) for type_ in rows]
 
     @classmethod
     def _type_result(cls, name: str) -> Type:
