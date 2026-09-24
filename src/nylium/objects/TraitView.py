@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import Self
 
-from pydantic import ConfigDict
+from nylium.Constants import Constants
 from pydantic.dataclasses import dataclass
 
 from nylium.data.rows import Trait
@@ -16,10 +16,9 @@ from nylium.objects.navigation import (
 )
 from nylium.objects.PropView import PropView
 
-_CONFIG = ConfigDict(strict=True)
 
 
-@dataclass(config=_CONFIG)
+@dataclass(config=Constants.Pydantic.VIEW_CONFIG)
 class TraitView:
     """One trait with its own props and reverse attach list
     (contracts.ts TraitView)."""

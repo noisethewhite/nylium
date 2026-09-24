@@ -5,13 +5,12 @@ from uuid import UUID
 from pydantic.dataclasses import dataclass
 from nylium.objects.navigation import prop_owner_trait
 from nylium.objects.navigation import prop_value_type_name
-from pydantic import ConfigDict
+from nylium.Constants import Constants
 
 
-_VIEW_CONFIG = ConfigDict(strict=True)
 
 
-@dataclass(config=_VIEW_CONFIG)
+@dataclass(config=Constants.Pydantic.VIEW_CONFIG)
 class PropView:
     """One prop of a type's effective schema (contracts.ts PropView) —
     the wire projection, kept next to the domain facade it renders."""

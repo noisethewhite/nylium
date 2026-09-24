@@ -4,13 +4,12 @@ from typing import Self
 from uuid import UUID
 from nylium.data.rows import UnitPart
 from pydantic.dataclasses import dataclass
-from pydantic import ConfigDict
+from nylium.Constants import Constants
 
 
-_VIEW_CONFIG = ConfigDict(strict=True)
 
 
-@dataclass(config=_VIEW_CONFIG)
+@dataclass(config=Constants.Pydantic.VIEW_CONFIG)
 class UnitPartView:
     """One unit part (contracts.ts UnitPartView) — the wire projection,
     kept next to the domain facade it renders. Decimals cross as strings

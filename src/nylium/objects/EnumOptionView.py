@@ -3,13 +3,12 @@ from nylium.data.rows import EnumOption
 from typing import Self
 from uuid import UUID
 from pydantic.dataclasses import dataclass
-from pydantic import ConfigDict
+from nylium.Constants import Constants
 
 
-_VIEW_CONFIG = ConfigDict(strict=True)
 
 
-@dataclass(config=_VIEW_CONFIG)
+@dataclass(config=Constants.Pydantic.VIEW_CONFIG)
 class EnumOptionView:
     """One enum option (contracts.ts EnumOptionView) — the wire
     projection, kept next to the domain facade it renders."""

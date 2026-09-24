@@ -1,12 +1,11 @@
 from __future__ import annotations
 from pydantic.dataclasses import dataclass
-from pydantic import ConfigDict
+from nylium.Constants import Constants
 
 
-_VIEW_CONFIG = ConfigDict(strict=True)
 
 
-@dataclass(config=_VIEW_CONFIG)
+@dataclass(config=Constants.Pydantic.VIEW_CONFIG)
 class StorageStats:
     """Disk usage of the blob-store volume plus nylium's own footprint."""
 

@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from typing import Self
 
-from pydantic import ConfigDict
+from nylium.Constants import Constants
 from pydantic.dataclasses import dataclass
 
 from nylium.data.rows import Type
@@ -29,10 +29,9 @@ from nylium.objects.EnumOptionView import EnumOptionView
 from nylium.objects.PropView import PropView
 from nylium.objects.UnitPartView import UnitPartView
 
-_CONFIG = ConfigDict(strict=True)
 
 
-@dataclass(config=_CONFIG)
+@dataclass(config=Constants.Pydantic.VIEW_CONFIG)
 class TypeView:
     """One type with its effective schema (contracts.ts TypeView)."""
 
