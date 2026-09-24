@@ -5,8 +5,11 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-from nylium.objects.nyprop import NyProp
-from nylium.objects.nyscalar import NyInteger, NyNumeric, NyScalar, NyString
+from nylium.objects.NyProp import NyProp
+from nylium.objects.NyInteger import NyInteger
+from nylium.objects.NyNumeric import NyNumeric
+from nylium.objects.NyScalar import NyScalar
+from nylium.objects.NyString import NyString
 from nylium.objects.NyType import NyType
 from nylium.objects.nyfunction.constants import (
     NODE_ADD,

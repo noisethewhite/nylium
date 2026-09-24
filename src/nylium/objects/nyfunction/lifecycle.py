@@ -4,11 +4,12 @@ predicate."""
 from __future__ import annotations
 
 from nylium.database import Database
-from nylium.objects.nyprop import NyProp
-from nylium.objects.nyscalar import NyScalar, NyString
+from nylium.objects.NyProp import NyProp
+from nylium.objects.NyScalar import NyScalar
+from nylium.objects.NyString import NyString
 from nylium.objects.NyType import NyType
 from nylium.objects.nyfunction.constants import NAME_PROP_KEY
-from nylium.server.errors import ValidationError
+from nylium.server.ValidationError import ValidationError
 
 
 def is_function(type_name: str) -> bool:

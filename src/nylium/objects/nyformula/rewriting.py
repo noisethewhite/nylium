@@ -7,7 +7,13 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-from nylium.objects.nyformula.nodes import BinOp, Call, Expr, If, Neg, Number, Ref
+from nylium.objects.nyformula.BinOp import BinOp
+from nylium.objects.nyformula.Call import Call
+from nylium.objects.nyformula.If import If
+from nylium.objects.nyformula.Neg import Neg
+from nylium.objects.nyformula.Number import Number
+from nylium.objects.nyformula.Ref import Ref
+from nylium.objects.nyformula.nodes import Expr
 
 
 def render(node: Expr) -> str:

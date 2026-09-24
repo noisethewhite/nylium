@@ -1,5 +1,5 @@
 from __future__ import annotations
-from .envenum import EnvEnum
+from nylium.basic.EnvEnum import EnvEnum
 from .LocalCtxVar import LocalCtxVar
 
 

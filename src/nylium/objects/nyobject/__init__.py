@@ -34,16 +34,13 @@ from nylium.objects.nyobject.constants import (
     SHORT_UUID_LENGTH,
 )
 from nylium.objects.nyobject.NyObject import NyObject
-from nylium.objects.nyobject.values import (
-    CONFIG,
-    NAME_PROP_KEY,
-    ArrayValue,
-    EmbeddedValue,
-    ObjectRef,
-    PropValue,
-    RefValue,
-    ScalarValue,
-)
+from nylium.objects.nyobject.ArrayValue import ArrayValue
+from nylium.objects.nyobject.EmbeddedValue import EmbeddedValue
+from nylium.objects.nyobject.ObjectRef import ObjectRef
+from nylium.objects.nyobject.RefValue import RefValue
+from nylium.objects.nyobject.ScalarValue import ScalarValue
+from nylium.objects.nyobject.shared import CONFIG, NAME_PROP_KEY
+from nylium.objects.nyobject.values import PropValue
 from nylium.objects.nyobject.TagView import TagView
 from nylium.objects.nyobject.ObjectView import ObjectView
 

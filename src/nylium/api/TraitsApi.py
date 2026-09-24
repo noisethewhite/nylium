@@ -15,10 +15,10 @@ from nylium.data.rows import SchemaItem
 from nylium.data.rows import Type
 from nylium.data.tables import types
 from nylium.objects.navigation import trait_color, trait_props
-from nylium.objects.nyprop import NyProp
-from nylium.objects.nyscalar import NyScalar
+from nylium.objects.NyProp import NyProp
+from nylium.objects.NyScalar import NyScalar
 from nylium.objects.NyType import NyType
-from nylium.server.errors import ValidationError
+from nylium.server.ValidationError import ValidationError
 
 
 class TraitsApi(ApiShared):

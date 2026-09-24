@@ -17,17 +17,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from decimal import Decimal
 
-from nylium.objects.nyformula.nodes import (
-    FUNCTIONS,
-    BinOp,
-    Call,
-    Expr,
-    If,
-    Neg,
-    Number,
-    Ref,
-    error,
-)
+from nylium.objects.nyformula.BinOp import BinOp
+from nylium.objects.nyformula.Call import Call
+from nylium.objects.nyformula.If import If
+from nylium.objects.nyformula.Neg import Neg
+from nylium.objects.nyformula.Number import Number
+from nylium.objects.nyformula.Ref import Ref
+from nylium.objects.nyformula.nodes import FUNCTIONS, Expr, error
 
 
 @dataclass(frozen=True)

@@ -7,66 +7,26 @@ nodes → parsing → formula → evaluation/rewriting.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
-from decimal import Decimal
 from typing import NoReturn, TypeAlias
-from nylium.server.errors import ValidationError
+from nylium.server.ValidationError import ValidationError
+from nylium.objects.nyformula.BinOp import BinOp
+from nylium.objects.nyformula.Call import Call
+from nylium.objects.nyformula.If import If
+from nylium.objects.nyformula.Neg import Neg
+from nylium.objects.nyformula.Number import Number
+from nylium.objects.nyformula.Ref import Ref
 
 
-@dataclass(frozen=True)
-class Number:
-    """A numeric literal."""
-
-    value: Decimal
 
 
-@dataclass(frozen=True)
-class BinOp:
-    """A binary arithmetic node; ``op`` is one of ``+ - * /``."""
-
-    op: str
-    left: Expr
-    right: Expr
 
 
-@dataclass(frozen=True)
-class Neg:
-    """Unary minus."""
-
-    operand: Expr
 
 
-@dataclass(frozen=True)
-class Ref:
-    """A sibling-prop reference (ADR-0022): a bare identifier naming
-    another prop of the same owner. Evaluates to the sibling's stored
-    scalar value (0 when unset)."""
-
-    key: str
 
 
-@dataclass(frozen=True)
-class Call:
-    """A reduction over an array prop. ``func`` is the uppercase name;
-    ``path`` is ``(array_key,)`` for a bare COUNT, else
-    ``(array_key, member_key)``."""
-
-    func: str
-    path: tuple[str, ...]
 
 
-@dataclass(frozen=True)
-class If:
-    """A conditional (ADR-0024): fold to ``then`` when the owner's ``prop``
-    compares true against ``value`` with ``op`` (``==`` or ``!=``), else
-    ``else_``. ``value`` keeps the literal exactly as written — quoted for
-    a string, bare for a number."""
-
-    prop: str
-    op: str
-    value: str
-    then: Expr
-    else_: Expr
 
 
 Expr: TypeAlias = Number | BinOp | Neg | Call | Ref | If
@@ -75,8 +35,6 @@ FUNCTIONS: frozenset[str] = frozenset({"SUM", "AVERAGE", "COUNT", "MIN", "MAX"})
 
 
 def error(message: str, pos: int) -> NoReturn:
-    """Raise a ValidationError with the character offset attached. The
-    import is lazy — objects/ importing server/ eagerly would cycle via
-    server.app -> routes -> api -> objects."""
+    """Raise a ValidationError with the character offset attached."""
 
     raise ValidationError(f"{message} at position {pos} in formula")

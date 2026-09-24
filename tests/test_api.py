@@ -22,7 +22,7 @@ from nylium.objects.navigation import (
     type_icon,
     type_plural_name,
 )
-from nylium.server.errors import ValidationError
+from nylium.server.ValidationError import ValidationError
 
 
 def person_class() -> type[NyObject]:

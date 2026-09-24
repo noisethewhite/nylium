@@ -19,27 +19,28 @@ from nylium.objects.navigation import (
 )
 from nylium.objects.nyobject.NyObject import NyObject
 from nylium.objects.NyType import NyType
-from nylium.objects.nytypemeta import StoredValue, NyObjectShape
-from nylium.objects.monthday import MonthDay, MonthDayTime
+from nylium.objects.NyObjectShape import NyObjectShape
+from nylium.objects.NyTypeMeta import StoredValue
+from nylium.objects.MonthDay import MonthDay
+from nylium.objects.MonthDayTime import MonthDayTime
 from nylium.objects.Quantity import Quantity
 from nylium.objects.NyEmbedded import EMBEDDED_NAME_SEPARATOR
-from nylium.objects.nyenum import NyEnum
-from nylium.objects.nyfile import NyFile
+from nylium.objects.NyEnum import NyEnum
+from nylium.objects.NyFile import NyFile
 from nylium.objects.nyformula import Formula
 from nylium.objects.nyfunction.NyFunction import NyFunction
-from nylium.objects.nyprop import NyProp
-from nylium.objects.nyscalar import ScalarPayload, NyInteger, NyScalar
+from nylium.objects.NyProp import NyProp
+from nylium.objects.NyInteger import NyInteger
+from nylium.objects.NyScalar import NyScalar
+from nylium.objects.nyscalar import ScalarPayload
 from nylium.objects.nyobject.TagView import TagView
-from nylium.objects.nyobject.values import (
-    CONFIG,
-    NAME_PROP_KEY,
-    ArrayValue,
-    EmbeddedValue,
-    ObjectRef,
-    PropValue,
-    RefValue,
-    ScalarValue,
-)
+from nylium.objects.nyobject.ArrayValue import ArrayValue
+from nylium.objects.nyobject.EmbeddedValue import EmbeddedValue
+from nylium.objects.nyobject.ObjectRef import ObjectRef
+from nylium.objects.nyobject.RefValue import RefValue
+from nylium.objects.nyobject.ScalarValue import ScalarValue
+from nylium.objects.nyobject.shared import CONFIG, NAME_PROP_KEY
+from nylium.objects.nyobject.values import PropValue
 from nylium.data.tables import InstanceFunctionLinks
 
 

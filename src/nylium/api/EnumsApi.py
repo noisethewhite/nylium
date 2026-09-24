@@ -8,9 +8,9 @@ from nylium.database import Database
 from nylium.objects.navigation import sync_enum_options as _sync_enum_options
 from nylium.data.tables import type_decor
 from nylium.data.rows import Type
-from nylium.objects.nyscalar import NyColor
+from nylium.objects.NyColor import NyColor
 from nylium.objects.NyType import NyType
-from nylium.server.errors import ValidationError
+from nylium.server.ValidationError import ValidationError
 
 
 class EnumsApi(ApiShared):

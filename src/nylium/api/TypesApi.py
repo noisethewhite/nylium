@@ -16,10 +16,12 @@ from nylium.data.tables import props
 from nylium.data.tables import type_decor
 from nylium.data.rows import Type
 from nylium.data.tables import types
-from nylium.objects.nyprop import NyProp
-from nylium.objects.nyscalar import NyColor, NyScalar, NyString
+from nylium.objects.NyProp import NyProp
+from nylium.objects.NyColor import NyColor
+from nylium.objects.NyScalar import NyScalar
+from nylium.objects.NyString import NyString
 from nylium.objects.NyType import NyType
-from nylium.server.errors import ValidationError
+from nylium.server.ValidationError import ValidationError
 
 
 class TypesApi(_TypesBase):

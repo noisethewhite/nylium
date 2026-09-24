@@ -12,9 +12,10 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from nylium.objects.nyprop import NyProp
-from nylium.objects.nyscalar import ScalarPayload, NyScalar
-from nylium.objects.nytypemeta import NyObjectShape
+from nylium.objects.NyProp import NyProp
+from nylium.objects.NyScalar import NyScalar
+from nylium.objects.nyscalar import ScalarPayload
+from nylium.objects.NyObjectShape import NyObjectShape
 from nylium.data.rows import InstanceValue
 from nylium.data.tables import FileValues
 from nylium.data.tables import InstanceValues

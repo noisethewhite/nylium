@@ -5,9 +5,10 @@ from __future__ import annotations
 
 from typing import NoReturn, TypeAlias
 
-from nylium.objects.nyscalar import NyInteger, NyNumeric
+from nylium.objects.NyInteger import NyInteger
+from nylium.objects.NyNumeric import NyNumeric
 from nylium.objects.NyType import NyType
-from nylium.server.errors import ValidationError
+from nylium.server.ValidationError import ValidationError
 
 # The closed set of node operations. The `kind` string is validated
 # against this set at save time.

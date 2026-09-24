@@ -21,41 +21,23 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic_core import ErrorDetails
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from nylium.server.ApiError import ApiError
+from nylium.server.ConflictError import ConflictError
+from nylium.server.NotFoundError import NotFoundError
+from nylium.server.UnauthorizedError import UnauthorizedError
+from nylium.server.ValidationError import ValidationError
 
 _logger = logging.getLogger(__name__)
 
 
-class ApiError(Exception):
-    """Base domain error; subclasses pin a status code and wire code."""
-
-    STATUS: ClassVar[int] = 500
-    CODE: ClassVar[str] = "internal"
-
-    message: str
-
-    def __init__(self, message: str) -> None:
-        super().__init__(message)
-        self.message = message
 
 
-class NotFoundError(ApiError):
-    STATUS: ClassVar[int] = 404
-    CODE: ClassVar[str] = "not_found"
 
 
-class ConflictError(ApiError):
-    STATUS: ClassVar[int] = 409
-    CODE: ClassVar[str] = "conflict"
 
 
-class ValidationError(ApiError):
-    STATUS: ClassVar[int] = 422
-    CODE: ClassVar[str] = "validation"
 
 
-class UnauthorizedError(ApiError):
-    STATUS: ClassVar[int] = 401
-    CODE: ClassVar[str] = "unauthorized"
 
 
 class errors:

@@ -15,13 +15,15 @@ from nylium.data.tables import Instances, instances
 from nylium.data.tables import InstanceValues
 from nylium.objects.NyArray import NyArray
 from nylium.objects.NyEmbedded import NyEmbedded
-from nylium.objects.nyenum import NyEnum
-from nylium.objects.nyfile import NyFile
-from nylium.objects.nyprop import NyProp
-from nylium.objects.nyscalar import ScalarPayload, NyScalar
+from nylium.objects.NyEnum import NyEnum
+from nylium.objects.NyFile import NyFile
+from nylium.objects.NyProp import NyProp
+from nylium.objects.NyScalar import NyScalar
+from nylium.objects.nyscalar import ScalarPayload
 from nylium.objects.NyType import NyType
-from nylium.objects.nytypemeta import StoredValue, NyObjectShape, NyTypeMeta
-from nylium.objects.nyunit import NyUnit
+from nylium.objects.NyObjectShape import NyObjectShape
+from nylium.objects.NyTypeMeta import StoredValue, NyTypeMeta
+from nylium.objects.NyUnit import NyUnit
 from nylium.objects.nyobject.constants import PRIVATE_PREFIX
 from nylium.objects.nyobject.PersistenceMixin import PersistenceMixin
 

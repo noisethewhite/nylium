@@ -20,13 +20,16 @@ from nylium.data.tables import files
 from nylium.data.tables import Instances, instances
 from nylium.data.tables import ArrayValues
 from nylium.data.tables import InstanceValues
-from nylium.objects.nyenum import NyEnum
+from nylium.objects.NyEnum import NyEnum
 from nylium.objects.NyEmbedded import NyEmbedded
-from nylium.objects.nyfile import NyFile
-from nylium.objects.nyprop import NyProp
-from nylium.objects.nyscalar import VALUE_PROP_KEY, ScalarPayload, NyScalar, NyString
+from nylium.objects.NyFile import NyFile
+from nylium.objects.NyProp import NyProp
+from nylium.objects.NyScalar import NyScalar
+from nylium.objects.NyString import NyString
+from nylium.objects.nyscalar import VALUE_PROP_KEY, ScalarPayload
 from nylium.objects.NyType import NyType
-from nylium.objects.nytypemeta import StoredValue, NyObjectShape, NyTypeMeta
+from nylium.objects.NyObjectShape import NyObjectShape
+from nylium.objects.NyTypeMeta import StoredValue, NyTypeMeta
 
 ARRAY_INSTANCE_NAME = "array"
 

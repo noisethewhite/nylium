@@ -7,9 +7,9 @@ import pytest
 from nylium.api import Api, ScalarValue
 from nylium.objects import NyScalar
 from nylium.objects.navigation import type_color, type_icon
-from nylium.objects.nyscalar import NyColor
+from nylium.objects.NyColor import NyColor
 from nylium.server import NyliumApp
-from nylium.server.errors import ValidationError
+from nylium.server.ValidationError import ValidationError
 from sqlalchemy import text
 from nylium.database import Database
 

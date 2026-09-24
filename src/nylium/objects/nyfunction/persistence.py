@@ -21,7 +21,7 @@ from nylium.data.tables import FunctionNodes
 from nylium.data.tables import InstanceFunctionLinks
 from nylium.data.tables import instances
 from nylium.objects.navigation import instance_uuids_of_kind
-from nylium.objects.nyprop import NyProp
+from nylium.objects.NyProp import NyProp
 from nylium.objects.NyType import NyType
 from nylium.objects.nyfunction.constants import NODE_GET_PROP, fail
 

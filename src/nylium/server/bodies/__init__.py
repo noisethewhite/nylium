@@ -19,57 +19,45 @@ directions, no parallel input hierarchy.
 The package surface re-exports every body class, so call sites keep
 addressing them as ``bodies.<Name>`` regardless of the domain module.
 """
-from nylium.server.bodies.files import (
-    FileUuidRequest,
-    ListFilesRequest,
-    RenameFileBody,
-    StorageRequest,
-    UploadFileRequest,
-)
-from nylium.server.bodies.functions import (
-    CreateFunctionBody,
-    FunctionEdgeInput,
-    FunctionNodeInput,
-    FunctionUuidRequest,
-    ListFunctionsRequest,
-    SetInstancePropFunctionBody,
-    UpdateFunctionBody,
-)
-from nylium.server.bodies.formulas import (
-    FormulaParseBody,
-    FormulaRenderBody,
-)
-from nylium.server.bodies.objects import (
-    CreateObjectBody,
-    ListObjectsRequest,
-    ObjectUuidRequest,
-    UpdateObjectBody,
-)
-from nylium.server.bodies.traits import (
-    CreateTraitBody,
-    DetachTraitRequest,
-    ListTraitsRequest,
-    SyncTraitBody,
-    SyncTraitPropItem,
-    TraitAttachBody,
-    TraitNameRequest,
-)
-from nylium.server.bodies.types import (
-    CreateEnumBody,
-    CreateTypeBody,
-    CreateUnitBody,
-    ListTypesRequest,
-    ReorderPropsBody,
-    SyncEnumOptionItem,
-    SyncEnumOptionsBody,
-    SyncPropItem,
-    SyncPropsBody,
-    SyncUnitPartItem,
-    SyncUnitPartsBody,
-    TypeNameRequest,
-    UnitSecondaryInput,
-    UpdateTypeBody,
-)
+from nylium.server.bodies.FileUuidRequest import FileUuidRequest
+from nylium.server.bodies.ListFilesRequest import ListFilesRequest
+from nylium.server.bodies.RenameFileBody import RenameFileBody
+from nylium.server.bodies.StorageRequest import StorageRequest
+from nylium.server.bodies.UploadFileRequest import UploadFileRequest
+from nylium.server.bodies.CreateFunctionBody import CreateFunctionBody
+from nylium.server.bodies.FunctionEdgeInput import FunctionEdgeInput
+from nylium.server.bodies.FunctionNodeInput import FunctionNodeInput
+from nylium.server.bodies.FunctionUuidRequest import FunctionUuidRequest
+from nylium.server.bodies.ListFunctionsRequest import ListFunctionsRequest
+from nylium.server.bodies.SetInstancePropFunctionBody import SetInstancePropFunctionBody
+from nylium.server.bodies.UpdateFunctionBody import UpdateFunctionBody
+from nylium.server.bodies.FormulaParseBody import FormulaParseBody
+from nylium.server.bodies.FormulaRenderBody import FormulaRenderBody
+from nylium.server.bodies.CreateObjectBody import CreateObjectBody
+from nylium.server.bodies.ListObjectsRequest import ListObjectsRequest
+from nylium.server.bodies.ObjectUuidRequest import ObjectUuidRequest
+from nylium.server.bodies.UpdateObjectBody import UpdateObjectBody
+from nylium.server.bodies.CreateTraitBody import CreateTraitBody
+from nylium.server.bodies.DetachTraitRequest import DetachTraitRequest
+from nylium.server.bodies.ListTraitsRequest import ListTraitsRequest
+from nylium.server.bodies.SyncTraitBody import SyncTraitBody
+from nylium.server.bodies.SyncTraitPropItem import SyncTraitPropItem
+from nylium.server.bodies.TraitAttachBody import TraitAttachBody
+from nylium.server.bodies.TraitNameRequest import TraitNameRequest
+from nylium.server.bodies.CreateEnumBody import CreateEnumBody
+from nylium.server.bodies.CreateTypeBody import CreateTypeBody
+from nylium.server.bodies.CreateUnitBody import CreateUnitBody
+from nylium.server.bodies.ListTypesRequest import ListTypesRequest
+from nylium.server.bodies.ReorderPropsBody import ReorderPropsBody
+from nylium.server.bodies.SyncEnumOptionItem import SyncEnumOptionItem
+from nylium.server.bodies.SyncEnumOptionsBody import SyncEnumOptionsBody
+from nylium.server.bodies.SyncPropItem import SyncPropItem
+from nylium.server.bodies.SyncPropsBody import SyncPropsBody
+from nylium.server.bodies.SyncUnitPartItem import SyncUnitPartItem
+from nylium.server.bodies.SyncUnitPartsBody import SyncUnitPartsBody
+from nylium.server.bodies.TypeNameRequest import TypeNameRequest
+from nylium.server.bodies.UnitSecondaryInput import UnitSecondaryInput
+from nylium.server.bodies.UpdateTypeBody import UpdateTypeBody
 
 __all__ = [
     "CreateEnumBody",

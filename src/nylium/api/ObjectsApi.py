@@ -13,11 +13,11 @@ from nylium.objects.navigation import type_name_of
 from nylium.data.tables import instances
 from nylium.objects.NyEmbedded import NyEmbedded
 from nylium.objects.nyobject import NyObject
-from nylium.objects.nyprop import NyProp
+from nylium.objects.NyProp import NyProp
 from nylium.objects.NyType import NyType
-from nylium.objects.nytypemeta import NyTypeMeta
+from nylium.objects.NyTypeMeta import NyTypeMeta
 from nylium.api.MarkdownRenderer import MarkdownRenderer
-from nylium.server.errors import ValidationError
+from nylium.server.ValidationError import ValidationError
 from nylium.data.tables import InstanceFunctionLinks
 
 

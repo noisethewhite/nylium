@@ -10,7 +10,7 @@ from nylium.api import Api, ScalarValue
 from nylium.objects.navigation import effective_props, type_unit_parts
 from nylium.data.rows import Type
 from nylium.objects.Quantity import Quantity
-from nylium.server.errors import ValidationError
+from nylium.server.ValidationError import ValidationError
 
 
 def temperature_unit() -> Type:

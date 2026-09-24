@@ -7,7 +7,7 @@ from uuid import UUID
 
 from nylium.api import Api, TagView
 from nylium.objects.navigation import effective_props, prop_value_type_name
-from nylium.objects.nyscalar import NyColor
+from nylium.objects.NyColor import NyColor
 
 
 def book_type():

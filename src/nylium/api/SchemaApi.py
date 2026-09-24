@@ -17,10 +17,10 @@ from nylium.data.tables import props
 from nylium.data.rows import Type
 from nylium.objects.NyEmbedded import NyEmbedded
 from nylium.objects.nyformula import Formula
-from nylium.objects.nyprop import NyProp
-from nylium.objects.nyscalar import NyString
+from nylium.objects.NyProp import NyProp
+from nylium.objects.NyString import NyString
 from nylium.objects.NyType import NyType
-from nylium.server.errors import ValidationError
+from nylium.server.ValidationError import ValidationError
 
 
 class SchemaApi(_SchemaBase):

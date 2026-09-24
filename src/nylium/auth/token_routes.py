@@ -20,7 +20,7 @@ from nylium.auth.tokens import tokens
 from nylium.data.tables import api_tokens
 from nylium.data.rows import ApiToken
 from nylium.data.rows import AuthUser
-from nylium.server.errors import ValidationError
+from nylium.server.ValidationError import ValidationError
 
 
 def _token_view(row: ApiToken) -> dict[str, object]:

@@ -23,10 +23,14 @@ from nylium.data.tables import types
 from nylium.data.tables import InstanceFunctionLinks
 from nylium.objects.nyformula import Formula
 from nylium.objects.nyfunction import NyFunction
-from nylium.objects.nyprop import NyProp
-from nylium.objects.nyscalar import NyDate, NyDatetime, NyInteger, NyNumeric, NyString
+from nylium.objects.NyProp import NyProp
+from nylium.objects.NyDate import NyDate
+from nylium.objects.NyDatetime import NyDatetime
+from nylium.objects.NyInteger import NyInteger
+from nylium.objects.NyNumeric import NyNumeric
+from nylium.objects.NyString import NyString
 from nylium.objects.NyType import NyType
-from nylium.server.errors import ValidationError
+from nylium.server.ValidationError import ValidationError
 from nylium.data.tables import instances
 
 

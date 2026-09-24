@@ -8,7 +8,7 @@ import pytest
 from nylium.api import Api, ArrayValue, ScalarValue
 from nylium.objects.navigation import effective_props, type_enum_options
 from nylium.data.rows import Type
-from nylium.server.errors import ValidationError
+from nylium.server.ValidationError import ValidationError
 
 
 def ticket_type() -> Type:

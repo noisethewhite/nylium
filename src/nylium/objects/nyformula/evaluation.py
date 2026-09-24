@@ -10,7 +10,12 @@ from collections.abc import Mapping, Sequence
 from decimal import Decimal, InvalidOperation
 
 from nylium.objects.Quantity import Quantity
-from nylium.objects.nyformula.nodes import BinOp, Expr, If, Neg, Number, Ref
+from nylium.objects.nyformula.BinOp import BinOp
+from nylium.objects.nyformula.If import If
+from nylium.objects.nyformula.Neg import Neg
+from nylium.objects.nyformula.Number import Number
+from nylium.objects.nyformula.Ref import Ref
+from nylium.objects.nyformula.nodes import Expr
 
 # array key -> rows; a row maps member key -> value (None = unset)
 ArrayRows = Mapping[str, Sequence[Mapping[str, "Value | None"]]]

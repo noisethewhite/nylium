@@ -21,11 +21,9 @@ written operation, so the arbitrary-code surface is structurally shut.
 from __future__ import annotations
 
 from nylium.objects.nyfunction.NyFunction import NyFunction
-from nylium.objects.nyfunction.views import (
-    FunctionEdgeView,
-    FunctionNodeView,
-    FunctionView,
-)
+from nylium.objects.nyfunction.FunctionEdgeView import FunctionEdgeView
+from nylium.objects.nyfunction.FunctionNodeView import FunctionNodeView
+from nylium.objects.nyfunction.FunctionView import FunctionView
 
 __all__ = [
     "FunctionEdgeView",

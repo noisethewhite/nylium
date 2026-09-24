@@ -11,7 +11,7 @@ from decimal import Decimal
 import pytest
 
 from nylium.api import Api, ArrayValue, RefValue, ScalarValue
-from nylium.server.errors import ValidationError
+from nylium.server.ValidationError import ValidationError
 
 
 def expense_type():

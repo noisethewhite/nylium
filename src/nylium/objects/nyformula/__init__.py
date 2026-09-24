@@ -23,7 +23,12 @@ Grammar (recursive descent, no ``eval``, no third-party deps)::
 """
 from nylium.objects.nyformula.evaluation import ArrayRows
 from nylium.objects.nyformula.Formula import Formula
-from nylium.objects.nyformula.nodes import FUNCTIONS, BinOp, Call, Expr, Neg, Number, Ref
+from nylium.objects.nyformula.BinOp import BinOp
+from nylium.objects.nyformula.Call import Call
+from nylium.objects.nyformula.Neg import Neg
+from nylium.objects.nyformula.Number import Number
+from nylium.objects.nyformula.Ref import Ref
+from nylium.objects.nyformula.nodes import FUNCTIONS, Expr
 
 __all__ = [
     "FUNCTIONS",

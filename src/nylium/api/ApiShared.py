@@ -11,17 +11,18 @@ from nylium.data.tables import traits
 from nylium.data.rows import Type
 from nylium.data.tables import types
 from nylium.objects.NyEmbedded import EMBEDDED_NAME_SEPARATOR
-from nylium.objects.nyenum import NyEnum
-from nylium.objects.nyfile import NyFile
+from nylium.objects.NyEnum import NyEnum
+from nylium.objects.NyFile import NyFile
 from nylium.objects.nyobject import NyObject
 from nylium.objects.nyobject import ObjectRef
-from nylium.objects.nyprop import NyProp
-from nylium.objects.nyscalar import NyColor, NyScalar
+from nylium.objects.NyProp import NyProp
+from nylium.objects.NyColor import NyColor
+from nylium.objects.NyScalar import NyScalar
 from nylium.objects.NyType import NyType
-from nylium.objects.nytypemeta import StoredValue
+from nylium.objects.NyTypeMeta import StoredValue
 from nylium.objects.TypeView import TypeView
 from nylium.objects.navigation import effective_props, prop_value_type_name
-from nylium.server.errors import ValidationError
+from nylium.server.ValidationError import ValidationError
 
 # What callers may hand in for a prop: stored values, plus links as
 # UUID/ObjectRef (resolved to NyObject here), plus a props draft for

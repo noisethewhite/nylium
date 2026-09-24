@@ -14,7 +14,7 @@ from nylium.objects.navigation import (
     trait_color,
     trait_props,
 )
-from nylium.objects.nyprop import PropView
+from nylium.objects.PropView import PropView
 
 _CONFIG = ConfigDict(strict=True)
 

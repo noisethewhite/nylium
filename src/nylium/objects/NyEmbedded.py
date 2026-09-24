@@ -25,9 +25,9 @@ from nylium.data.tables import instances
 from nylium.data.tables import ArrayValues
 from nylium.data.tables import InstanceValues
 from nylium.data.tables import StringValues
-from nylium.objects.nyprop import NyProp
+from nylium.objects.NyProp import NyProp
 from nylium.objects.NyType import NyType
-from nylium.objects.nytypemeta import StoredValue, NyTypeMeta
+from nylium.objects.NyTypeMeta import StoredValue, NyTypeMeta
 
 EMBEDDED_NAME_SEPARATOR = "→"
 # mirrors api.NAME_PROP_KEY; api imports the object layer, so the

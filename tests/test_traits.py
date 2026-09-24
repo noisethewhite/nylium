@@ -10,8 +10,8 @@ from nylium.objects.navigation import (
     trait_props,
     type_trait_names,
 )
-from nylium.server.errors import ValidationError
-from nylium.objects.nyprop import PropView
+from nylium.server.ValidationError import ValidationError
+from nylium.objects.PropView import PropView
 from nylium.objects.TraitView import TraitView
 
 

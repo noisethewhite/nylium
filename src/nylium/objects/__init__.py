@@ -12,17 +12,15 @@ stateless-фасад = concern-модули + @final класс со staticmetho
 одним файлом.
 """
 from nylium.objects.nyobject.NyObject import NyObject
-from nylium.objects.nyprop import NyProp
-from nylium.objects.nyscalar import (
-    NyBoolean,
-    NyDatetime,
-    NyInteger,
-    NyNumeric,
-    NyScalar,
-    NyString,
-)
+from nylium.objects.NyProp import NyProp
+from nylium.objects.NyBoolean import NyBoolean
+from nylium.objects.NyDatetime import NyDatetime
+from nylium.objects.NyInteger import NyInteger
+from nylium.objects.NyNumeric import NyNumeric
+from nylium.objects.NyScalar import NyScalar
+from nylium.objects.NyString import NyString
 from nylium.objects.NyType import NyType
-from nylium.objects.nytypemeta import NyTypeMeta
+from nylium.objects.NyTypeMeta import NyTypeMeta
 
 __all__ = [
     "NyBoolean",

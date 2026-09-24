@@ -10,9 +10,9 @@ from typing import cast, override
 from uuid import UUID
 
 from nylium.database import Database
-from nylium.objects.nyprop import NyProp
+from nylium.objects.NyProp import NyProp
 from nylium.objects.NyType import NyType
-from nylium.objects.nytypemeta import StoredValue, NyTypeMeta
+from nylium.objects.NyTypeMeta import StoredValue, NyTypeMeta
 
 
 class FacadeMixin:

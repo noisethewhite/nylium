@@ -8,8 +8,8 @@ import pytest
 
 from nylium.api import Api
 from nylium.objects.navigation import type_icon
-from nylium.objects.nyfile import NyFile
-from nylium.server.errors import ValidationError
+from nylium.objects.NyFile import NyFile
+from nylium.server.ValidationError import ValidationError
 from uuid import uuid4
 from nylium.objects.nyobject import ArrayValue, ObjectRef, RefValue
 

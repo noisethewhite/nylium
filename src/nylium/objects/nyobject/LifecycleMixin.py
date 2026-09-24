@@ -17,7 +17,8 @@ from nylium.data.tables import InstanceValues
 from nylium.objects.NyArray import NyArray
 from nylium.objects.NyEmbedded import NyEmbedded
 from nylium.objects.NyType import NyType
-from nylium.objects.nytypemeta import StoredValue, NyObjectShape, NyTypeMeta
+from nylium.objects.NyObjectShape import NyObjectShape
+from nylium.objects.NyTypeMeta import StoredValue, NyTypeMeta
 from nylium.objects.nyobject.constants import INSTANCE_NAME_FORMAT, SHORT_UUID_LENGTH
 
 

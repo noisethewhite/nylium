@@ -25,9 +25,9 @@ from nylium.objects.navigation import (
     type_trait_names,
     type_unit_parts,
 )
-from nylium.objects.nyenum import EnumOptionView
-from nylium.objects.nyprop import PropView
-from nylium.objects.nyunit import UnitPartView
+from nylium.objects.EnumOptionView import EnumOptionView
+from nylium.objects.PropView import PropView
+from nylium.objects.UnitPartView import UnitPartView
 
 _CONFIG = ConfigDict(strict=True)
 
