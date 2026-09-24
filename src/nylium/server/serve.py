@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import uvicorn
 
-APP_FACTORY = "nylium.server.app:NyliumApp.create"
+APP_FACTORY = "nylium.server.NyliumApp:NyliumApp.create"
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8000
 

@@ -10,7 +10,7 @@ from uuid import UUID
 
 from nylium.api import Api, ArrayValue, EmbeddedValue, ScalarValue
 from nylium.objects.navigation import effective_props, prop_value_type_name
-from nylium.objects.quantity import Quantity
+from nylium.objects.Quantity import Quantity
 from nylium.server.errors import ValidationError
 
 

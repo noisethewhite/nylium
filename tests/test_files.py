@@ -8,10 +8,10 @@ import pytest
 
 from nylium.api import Api
 from nylium.objects.navigation import type_icon
-from nylium.objects.wfile import WFile
+from nylium.objects.nyfile import NyFile
 from nylium.server.errors import ValidationError
 from uuid import uuid4
-from nylium.objects.wobject import ArrayValue, ObjectRef, RefValue
+from nylium.objects.nyobject import ArrayValue, ObjectRef, RefValue
 
 PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 16
 PDF = b"%PDF-1.4 fake\n"
@@ -20,7 +20,7 @@ PDF = b"%PDF-1.4 fake\n"
 @pytest.fixture(autouse=True)
 def _file_builtins() -> None:
     """Test DB is wiped per session; boot-seeding doesn't run here."""
-    WFile.ensure_builtins()
+    NyFile.ensure_builtins()
 
 
 def upload(type_name: str, filename: str, mime: str, data: bytes = PNG):
@@ -28,19 +28,19 @@ def upload(type_name: str, filename: str, mime: str, data: bytes = PNG):
 
 
 def test_builtin_file_types_are_seeded():
-    for name in WFile.TYPE_NAMES:
+    for name in NyFile.TYPE_NAMES:
         assert Api.get_type(name) is not None
 
 
 def test_file_types_are_their_own_kind():
-    for name in WFile.TYPE_NAMES:
+    for name in NyFile.TYPE_NAMES:
         view = Api.get_type(name)
         assert view is not None
         assert view.kind == "file"
 
 
 def test_file_types_are_immutable():
-    for name in WFile.TYPE_NAMES:
+    for name in NyFile.TYPE_NAMES:
         with pytest.raises(ValidationError):
             Api.delete_type(name)
         with pytest.raises(ValidationError):
@@ -80,29 +80,29 @@ def test_upload_rejects_unknown_type():
 
 def test_upload_cap():
     with pytest.raises(ValidationError):
-        upload("File", "big.bin", "application/octet-stream", b"\x00" * (WFile.MAX_UPLOAD_BYTES + 1))
+        upload("File", "big.bin", "application/octet-stream", b"\x00" * (NyFile.MAX_UPLOAD_BYTES + 1))
 
 
 def test_blob_roundtrip_and_rename_safety():
     view = upload("Image", "a.png", "image/png", PNG)
-    assert WFile.blob_path(view.uuid).read_bytes() == PNG
+    assert NyFile.blob_path(view.uuid).read_bytes() == PNG
     # rename is a display-name update — the uuid pointer never changes
     renamed = Api.rename_file(view.uuid, "b.png")
     assert renamed.name == "b.png"
-    assert WFile.blob_path(view.uuid).read_bytes() == PNG
+    assert NyFile.blob_path(view.uuid).read_bytes() == PNG
 
 
 def test_delete_removes_blob_and_row():
     view = upload("Image", "a.png", "image/png", PNG)
-    assert WFile.blob_path(view.uuid).is_file()
+    assert NyFile.blob_path(view.uuid).is_file()
     assert Api.delete_file(view.uuid)
-    assert not WFile.blob_path(view.uuid).exists()
+    assert not NyFile.blob_path(view.uuid).exists()
     assert Api.get_file(view.uuid) is None
 
 
 def test_img_icon_validates_against_live_image():
     view = upload("Image", "icon.png", "image/png", PNG)
-    icon = f"{WFile.ICON_IMAGE_PREFIX}{view.uuid}"
+    icon = f"{NyFile.ICON_IMAGE_PREFIX}{view.uuid}"
     created = Api.create_type("Book", {"name": "String"}, "Books", icon=icon)
     assert type_icon(created.uuid) == icon
 
@@ -110,33 +110,33 @@ def test_img_icon_validates_against_live_image():
 def test_img_icon_rejects_dead_uuid():
 
     with pytest.raises(ValidationError):
-        Api.create_type("Book", {"name": "String"}, "Books", icon=f"{WFile.ICON_IMAGE_PREFIX}{uuid4()}")
+        Api.create_type("Book", {"name": "String"}, "Books", icon=f"{NyFile.ICON_IMAGE_PREFIX}{uuid4()}")
 
 
 def test_img_icon_rejects_non_image_file():
     view = upload("File", "f.bin", "application/octet-stream")
     with pytest.raises(ValidationError):
-        Api.create_type("Book", {"name": "String"}, "Books", icon=f"{WFile.ICON_IMAGE_PREFIX}{view.uuid}")
+        Api.create_type("Book", {"name": "String"}, "Books", icon=f"{NyFile.ICON_IMAGE_PREFIX}{view.uuid}")
 
 
 def test_deleting_icon_image_resets_type_icon():
     view = upload("Image", "icon.png", "image/png", PNG)
-    icon = f"{WFile.ICON_IMAGE_PREFIX}{view.uuid}"
+    icon = f"{NyFile.ICON_IMAGE_PREFIX}{view.uuid}"
     created = Api.create_type("Book", {"name": "String"}, "Books", icon=icon)
     assert type_icon(created.uuid) == icon
     assert Api.delete_file(view.uuid)
     reloaded = Api.get_type("Book")
     assert reloaded is not None
-    assert type_icon(reloaded.uuid) == WFile.DEFAULT_GLYPH
+    assert type_icon(reloaded.uuid) == NyFile.DEFAULT_GLYPH
 
 
 def test_sweep_orphans_removes_untracked_blobs():
     view = upload("Image", "a.png", "image/png", PNG)
-    orphan = WFile.blob_path(view.uuid).parent / "deadbeef"
+    orphan = NyFile.blob_path(view.uuid).parent / "deadbeef"
     orphan.write_bytes(b"junk")
-    WFile.sweep_orphans()
+    NyFile.sweep_orphans()
     assert not orphan.exists()
-    assert WFile.blob_path(view.uuid).is_file()
+    assert NyFile.blob_path(view.uuid).is_file()
 
 
 def test_file_prop_on_object_roundtrip():

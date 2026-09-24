@@ -5,9 +5,9 @@ named palette is migrated away and rejected at the API boundary."""
 import pytest
 
 from nylium.api import Api, ScalarValue
-from nylium.objects import WScalar
+from nylium.objects import NyScalar
 from nylium.objects.navigation import type_color, type_icon
-from nylium.objects.wscalar import WColor
+from nylium.objects.nyscalar import NyColor
 from nylium.server import NyliumApp
 from nylium.server.errors import ValidationError
 from sqlalchemy import text
@@ -18,7 +18,7 @@ def test_color_is_a_registered_builtin():
     _ = Api.create_type("T", {"name": "String"}, "Ts")  # seeds builtins
     view = Api.get_type("Color")
     assert view is not None
-    assert (type_icon(view.uuid), type_color(view.uuid)) == ("palette", WColor.DEFAULT)
+    assert (type_icon(view.uuid), type_color(view.uuid)) == ("palette", NyColor.DEFAULT)
 
 
 @pytest.mark.parametrize(
@@ -26,7 +26,7 @@ def test_color_is_a_registered_builtin():
     ["#9e9e9e", "#FFFFFF", "#00ab0F"],
 )
 def test_validate_accepts_hex(value):
-    WScalar.validate("Color", value)
+    NyScalar.validate("Color", value)
 
 
 @pytest.mark.parametrize(
@@ -35,12 +35,12 @@ def test_validate_accepts_hex(value):
 )
 def test_validate_rejects_non_hex(value):
     with pytest.raises(ValueError):
-        WScalar.validate("Color", value)
+        NyScalar.validate("Color", value)
 
 
 def test_validate_rejects_non_string():
     with pytest.raises(TypeError):
-        WScalar.validate("Color", 0x9E9E9E)
+        NyScalar.validate("Color", 0x9E9E9E)
 
 
 def test_color_prop_roundtrip_through_write_path():
@@ -92,10 +92,10 @@ def test_legacy_named_colors_migrate_to_hex():
 
     migrated = Api.get_type("Old")
     assert migrated is not None
-    assert type_color(migrated.uuid) == WColor.LEGACY_PALETTE["red"]
+    assert type_color(migrated.uuid) == NyColor.LEGACY_PALETTE["red"]
 
     # idempotent — a second run leaves hex values alone
     NyliumApp._migrate_schema()
     again = Api.get_type("Old")
     assert again is not None
-    assert type_color(again.uuid) == WColor.LEGACY_PALETTE["red"]
+    assert type_color(again.uuid) == NyColor.LEGACY_PALETTE["red"]

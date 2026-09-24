@@ -1,17 +1,17 @@
 """Table stores."""
-from nylium.data.tables.values.array_values import ArrayValues, array_values
-from nylium.data.tables.values.boolean_values import BooleanValues, boolean_values
-from nylium.data.tables.values.date_values import DateValues, date_values
-from nylium.data.tables.values.datetime_values import DatetimeValues, datetime_values
-from nylium.data.tables.values.file_values import FileValues, file_values
-from nylium.data.tables.values.instance_values import InstanceValues, instance_values
-from nylium.data.tables.values.integer_values import IntegerValues, integer_values
-from nylium.data.tables.values.month_day_time_values import MonthDayTimeValues, monthdaytime_values
-from nylium.data.tables.values.month_day_values import MonthDayValues, monthday_values
-from nylium.data.tables.values.numeric_values import NumericValues, numeric_values
-from nylium.data.tables.values.scalar_values_table import ScalarValuesTable
-from nylium.data.tables.values.string_values import StringValues, string_values
-from nylium.data.tables.values.time_values import TimeValues, time_values
+from nylium.data.tables.values.ArrayValues import ArrayValues, array_values
+from nylium.data.tables.values.BooleanValues import BooleanValues, boolean_values
+from nylium.data.tables.values.DateValues import DateValues, date_values
+from nylium.data.tables.values.DatetimeValues import DatetimeValues, datetime_values
+from nylium.data.tables.values.FileValues import FileValues, file_values
+from nylium.data.tables.values.InstanceValues import InstanceValues, instance_values
+from nylium.data.tables.values.IntegerValues import IntegerValues, integer_values
+from nylium.data.tables.values.MonthDayTimeValues import MonthDayTimeValues, monthdaytime_values
+from nylium.data.tables.values.MonthDayValues import MonthDayValues, monthday_values
+from nylium.data.tables.values.NumericValues import NumericValues, numeric_values
+from nylium.data.tables.values.ScalarValuesTable import ScalarValuesTable
+from nylium.data.tables.values.StringValues import StringValues, string_values
+from nylium.data.tables.values.TimeValues import TimeValues, time_values
 
 __all__ = [
     'ArrayValues',

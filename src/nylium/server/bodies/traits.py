@@ -8,11 +8,11 @@ from typing import Annotated
 from uuid import UUID
 from fastapi.responses import Response
 from pydantic.dataclasses import dataclass
-from nylium.api.api import Api
-from nylium.api.shared import ApiShared
-from nylium.objects.wscalar import WColor
-from nylium.objects.wtrait import TraitView
-from nylium.objects.wtypeview import TypeView
+from nylium.api.Api import Api
+from nylium.api.ApiShared import ApiShared
+from nylium.objects.nyscalar import NyColor
+from nylium.objects.TraitView import TraitView
+from nylium.objects.TypeView import TypeView
 from nylium.server.bodies.shared import BODY_CONFIG, PATH_PARAMS, resolve_route_hints
 from nylium.server.errors import NotFoundError
 
@@ -24,7 +24,7 @@ class CreateTraitBody:
 
     name: str
     props: dict[str, str] = field(default_factory=dict)
-    color: str = WColor.DEFAULT
+    color: str = NyColor.DEFAULT
 
     @classmethod
     def route(cls, body: "CreateTraitBody") -> TraitView:

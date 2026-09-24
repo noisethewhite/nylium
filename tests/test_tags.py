@@ -7,7 +7,7 @@ from uuid import UUID
 
 from nylium.api import Api, TagView
 from nylium.objects.navigation import effective_props, prop_value_type_name
-from nylium.objects.wscalar import WColor
+from nylium.objects.nyscalar import NyColor
 
 
 def book_type():
@@ -36,7 +36,7 @@ def test_object_in_one_array_has_one_tag():
             owner_name="Sci-Fi",
             prop_key="books",
             name="Sci-Fi → books",
-            color=WColor.DEFAULT,
+            color=NyColor.DEFAULT,
         )
     ]
 
@@ -72,7 +72,7 @@ def test_object_in_three_owners_arrays_has_three_tags():
             owner_name=name,
             prop_key="books",
             name=f"{name} → books",
-            color=WColor.DEFAULT,
+            color=NyColor.DEFAULT,
         )
         for owner, name in zip(owners, ("Alpha", "Beta", "Gamma"))
     ]
@@ -99,14 +99,14 @@ def test_object_in_two_props_has_two_tags():
             owner_name="Sci-Fi",
             prop_key="books",
             name="Sci-Fi → books",
-            color=WColor.DEFAULT,
+            color=NyColor.DEFAULT,
         ),
         TagView(
             owner_uuid=shelf.uuid,
             owner_name="Sci-Fi",
             prop_key="featured",
             name="Sci-Fi → featured",
-            color=WColor.DEFAULT,
+            color=NyColor.DEFAULT,
         ),
     ]
 
@@ -136,7 +136,7 @@ def test_renaming_owner_renames_tag():
             owner_name="Fantasy",
             prop_key="books",
             name="Fantasy → books",
-            color=WColor.DEFAULT,
+            color=NyColor.DEFAULT,
         )
     ]
 
@@ -165,7 +165,7 @@ def test_renaming_prop_key_renames_tag():
             owner_name="Sci-Fi",
             prop_key="items",
             name="Sci-Fi → items",
-            color=WColor.DEFAULT,
+            color=NyColor.DEFAULT,
         )
     ]
 

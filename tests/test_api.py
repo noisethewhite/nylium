@@ -14,7 +14,7 @@ from nylium.api import (
     ScalarValue,
 )
 from nylium.data.rows import Type
-from nylium.objects import WInteger, WObject, WString
+from nylium.objects import NyInteger, NyObject, NyString
 from nylium.objects.navigation import (
     effective_props,
     prop_value_type_name,
@@ -25,12 +25,12 @@ from nylium.objects.navigation import (
 from nylium.server.errors import ValidationError
 
 
-def person_class() -> type[WObject]:
-    class Person(WObject):
-        name: WString
-        age: WInteger
+def person_class() -> type[NyObject]:
+    class Person(NyObject):
+        name: NyString
+        age: NyInteger
         friend: "Person"
-        tags: list[WString]
+        tags: list[NyString]
 
     return Person
 

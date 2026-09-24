@@ -18,8 +18,8 @@ import sqlalchemy as sqla
 from sqlalchemy.orm import Mapped, aliased
 
 from nylium.database import Database
-from nylium.database.row import mapper
-from nylium.database.table import Row
+from nylium.database.Row import mapper
+from nylium.database.Table import Row
 from nylium.objects.scalar_type_names import DATE, DATETIME, INTEGER
 from nylium.data.tables import trait_decor
 from nylium.data.tables import type_decor
@@ -389,7 +389,7 @@ def array_link_uuids_of(owner_inst_uuid: UUID) -> list[UUID]:
         .join(Type, p_c.value_type_uuid == t_c.uuid)
         .where(
             iv_c.inst_uuid == owner_inst_uuid,
-            # mirrors WType.ARRAY_TYPE_PREFIX (objects layer imports tables,
+            # mirrors NyType.ARRAY_TYPE_PREFIX (objects layer imports tables,
             # so the constant cannot flow the other way)
             t_c.name.like("Array<%"),
         )

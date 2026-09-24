@@ -7,7 +7,7 @@ a true many-to-one link (ADR-0028), not the old 1-target-1-owner keying."""
 from decimal import Decimal
 
 from nylium.api import Api
-from nylium.objects.wobject import (
+from nylium.objects.nyobject import (
     ArrayValue,
     EmbeddedValue,
     ObjectRef,
@@ -15,9 +15,9 @@ from nylium.objects.wobject import (
     ScalarValue,
 )
 from nylium.objects.navigation import effective_props
-from nylium.objects.quantity import Quantity
-from nylium.server.codec import PropCodec
-from nylium.api.shared import ApiShared
+from nylium.objects.Quantity import Quantity
+from nylium.server.PropCodec import PropCodec
+from nylium.api.ApiShared import ApiShared
 
 
 def _currency() -> None:

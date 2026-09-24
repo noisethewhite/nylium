@@ -11,9 +11,9 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from nylium.objects.wscalar import WColor
+from nylium.objects.nyscalar import NyColor
 from nylium.server import NyliumApp
-from nylium.objects.wfile import WFile
+from nylium.objects.nyfile import NyFile
 from nylium.api import Api
 import secrets
 from nylium.auth.sessions import sessions
@@ -274,7 +274,7 @@ def test_delete_flows(auth_client: TestClient) -> None:
 
 def test_file_types_immutable_over_http(auth_client: TestClient) -> None:
 
-    WFile.ensure_builtins()
+    NyFile.ensure_builtins()
     assert auth_client.delete("/api/types/File").status_code == 422
     assert auth_client.delete("/api/types/Image").status_code == 422
     assert auth_client.delete("/api/types/Document").status_code == 422
@@ -685,7 +685,7 @@ def test_tags_over_http(auth_client: TestClient) -> None:
             "owner_name": "Sci-Fi",
             "prop_key": "books",
             "name": "Sci-Fi → books",
-            "color": WColor.DEFAULT,
+            "color": NyColor.DEFAULT,
         }
     ]
 
@@ -846,7 +846,7 @@ def test_files_over_http(auth_client: TestClient) -> None:
     # delete cascades: row gone, blob gone
     deleted = auth_client.delete(f"/api/files/{obj['uuid']}")
     assert deleted.status_code == 204, deleted.text
-    assert not WFile.blob_path(obj["uuid"]).exists()
+    assert not NyFile.blob_path(obj["uuid"]).exists()
     assert auth_client.get(f"/api/files/{obj['uuid']}").status_code == 404
 
     # unknown uuid is a 404, not a 500

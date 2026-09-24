@@ -1,9 +1,9 @@
 """Mapped Row classes."""
-from nylium.data.rows.auth.api_token import ApiToken
-from nylium.data.rows.auth.auth_challenge import AuthChallenge
-from nylium.data.rows.auth.auth_credential import AuthCredential
-from nylium.data.rows.auth.auth_session import AuthSession
-from nylium.data.rows.auth.auth_user import AuthUser
+from nylium.data.rows.auth.ApiToken import ApiToken
+from nylium.data.rows.auth.AuthChallenge import AuthChallenge
+from nylium.data.rows.auth.AuthCredential import AuthCredential
+from nylium.data.rows.auth.AuthSession import AuthSession
+from nylium.data.rows.auth.AuthUser import AuthUser
 
 __all__ = [
     'ApiToken',

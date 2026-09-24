@@ -7,7 +7,7 @@ which keeps 02-29 representable while rejecting 02-31 and friends.
 
 File-level exception to one-class-per-file: two peer value types
 expressing one idea (a calendar stamp without a year), mirroring
-wscalar.py.
+nyscalar.py.
 """
 
 from __future__ import annotations

@@ -9,8 +9,8 @@ from decimal import Decimal
 import pytest
 
 from nylium.api import Api, ScalarValue
-from nylium.api.shared import PropInput
-from nylium.objects.quantity import Quantity
+from nylium.api.ApiShared import PropInput
+from nylium.objects.Quantity import Quantity
 from nylium.server.errors import ValidationError
 
 

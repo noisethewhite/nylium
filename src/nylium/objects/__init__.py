@@ -1,38 +1,38 @@
 """Dynamic object layer over database/tables.py.
 
-W*-классы — доменные фасады над таблицами: WObject (экземпляры),
-WType (схема), WProp (свойства), WScalar и семейство (скаляры),
-WFormula/WFunction (вычисляемые пропы, ADR-0005/0007), WEnum, WFile,
-WArray, WEmbedded, WUnit. Префикс W — исторический (wrapper), семантику
+W*-классы — доменные фасады над таблицами: NyObject (экземпляры),
+NyType (схема), NyProp (свойства), NyScalar и семейство (скаляры),
+NyFormula/NyFunction (вычисляемые пропы, ADR-0005/0007), NyEnum, NyFile,
+NyArray, NyEmbedded, NyUnit. Префикс W — исторический (wrapper), семантику
 несёт слой: SQL живёт только в tables/ и database/ (ADR-0019).
 
-Крупные фасады — пакеты (wobject/, wformula/, wfunction/ — ADR-0018):
+Крупные фасады — пакеты (nyobject/, nyformula/, nyfunction/ — ADR-0018):
 stateless-фасад = concern-модули + @final класс со staticmethod-
-биндингом. Мелкие семейства (wscalar, monthday, quantity) остаются
+биндингом. Мелкие семейства (nyscalar, monthday, quantity) остаются
 одним файлом.
 """
-from nylium.objects.wobject.object import WObject
-from nylium.objects.wprop import WProp
-from nylium.objects.wscalar import (
-    WBoolean,
-    WDatetime,
-    WInteger,
-    WNumeric,
-    WScalar,
-    WString,
+from nylium.objects.nyobject.NyObject import NyObject
+from nylium.objects.nyprop import NyProp
+from nylium.objects.nyscalar import (
+    NyBoolean,
+    NyDatetime,
+    NyInteger,
+    NyNumeric,
+    NyScalar,
+    NyString,
 )
-from nylium.objects.wtype import WType
-from nylium.objects.wtypemeta import WTypeMeta
+from nylium.objects.NyType import NyType
+from nylium.objects.nytypemeta import NyTypeMeta
 
 __all__ = [
-    "WBoolean",
-    "WDatetime",
-    "WInteger",
-    "WNumeric",
-    "WObject",
-    "WProp",
-    "WScalar",
-    "WString",
-    "WType",
-    "WTypeMeta",
+    "NyBoolean",
+    "NyDatetime",
+    "NyInteger",
+    "NyNumeric",
+    "NyObject",
+    "NyProp",
+    "NyScalar",
+    "NyString",
+    "NyType",
+    "NyTypeMeta",
 ]

@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from nylium.database import Database
 from nylium.data.rows import Instance
-from nylium.objects import WInteger, WObject, WString
+from nylium.objects import NyInteger, NyObject, NyString
 
 
 def instance_count() -> int:
@@ -19,19 +19,19 @@ def instance_count() -> int:
         return count
 
 
-def person_class() -> type[WObject]:
-    class Person(WObject):
-        name: WString
-        age: WInteger
+def person_class() -> type[NyObject]:
+    class Person(NyObject):
+        name: NyString
+        age: NyInteger
         friend: "Person"
-        tags: list[WString]
+        tags: list[NyString]
 
     return Person
 
 
 def test_plain_annotation_rejected():
     with pytest.raises(TypeError):
-        class Bad(WObject):
+        class Bad(NyObject):
             name: str
 
 
@@ -60,8 +60,8 @@ def test_scalar_validation():
 def test_link_type_check():
     Person = person_class()
 
-    class Order(WObject):
-        title: WString
+    class Order(NyObject):
+        title: NyString
 
     person = Person(name="Max", age=26)
     with pytest.raises(TypeError):
@@ -76,8 +76,8 @@ def test_array_element_check():
 
 
 def test_nested_arrays_round_trip_and_rewrite():
-    class Matrix(WObject):
-        rows: list[list[WInteger]]
+    class Matrix(NyObject):
+        rows: list[list[NyInteger]]
 
     matrix = Matrix(rows=[[1, 2], [3]])
     assert matrix.rows == [[1, 2], [3]]
@@ -88,8 +88,8 @@ def test_nested_arrays_round_trip_and_rewrite():
 def test_get_type_check():
     Person = person_class()
 
-    class Order(WObject):
-        title: WString
+    class Order(NyObject):
+        title: NyString
 
     order = Order(title="candles")
     with pytest.raises(TypeError):

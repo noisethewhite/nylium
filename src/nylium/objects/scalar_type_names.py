@@ -1,9 +1,9 @@
 """Canonical value-type names (the ``TYPE_NAME`` of each scalar wrapper).
 
-A shared leaf so both the objects layer (``wscalar``) and the tables layer
+A shared leaf so both the objects layer (``nyscalar``) and the tables layer
 (``tables.values`` stores) can reference these names without importing each
-other. Importing ``wscalar`` from a value store would close a cycle:
-``wscalar`` -> ``tables.values`` -> stores -> ``wscalar`` (ADR-0031).
+other. Importing ``nyscalar`` from a value store would close a cycle:
+``nyscalar`` -> ``tables.values`` -> stores -> ``nyscalar`` (ADR-0031).
 """
 
 STRING = "String"

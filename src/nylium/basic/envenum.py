@@ -4,7 +4,7 @@ from enum import StrEnum, EnumMeta
 import os
 import dotenv
 
-from nylium.basic.namedstring import NamedString
+from nylium.basic.NamedString import NamedString
 from nylium.basic.smartoverride import smartoverride
 
 class EnvEnum_Meta(EnumMeta):

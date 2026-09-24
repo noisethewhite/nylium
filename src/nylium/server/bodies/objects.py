@@ -8,11 +8,11 @@ from typing import Annotated
 from uuid import UUID
 from fastapi.responses import Response
 from pydantic.dataclasses import dataclass
-from nylium.api.api import Api
-from nylium.objects.wobject import ObjectView
-from nylium.objects.wobject import PropValue
+from nylium.api.Api import Api
+from nylium.objects.nyobject import ObjectView
+from nylium.objects.nyobject import PropValue
 from nylium.server.bodies.shared import BODY_CONFIG, PATH_PARAMS, resolve_route_hints
-from nylium.server.codec import PropCodec
+from nylium.server.PropCodec import PropCodec
 from nylium.server.errors import NotFoundError
 
 

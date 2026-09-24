@@ -1,6 +1,6 @@
 """Table stores and the shared SQLAlchemy registry compatibility export."""
 from nylium.database.registry import reg as reg
-from nylium.data.tables.files import Files, files
+from nylium.data.tables.Files import Files, files
 from nylium.data.tables.auth import ApiTokens, api_tokens
 from nylium.data.tables.auth import AuthChallenges, auth_challenges
 from nylium.data.tables.auth import AuthCredentials, auth_credentials

@@ -1,0 +1,22 @@
+"""TimeValue mapped row."""
+from __future__ import annotations
+
+from datetime import time
+from typing import ClassVar
+from uuid import UUID
+from sqlalchemy import ForeignKey, Time
+from sqlalchemy.orm import Mapped, mapped_column
+from nylium.database.Table import Row
+from nylium.database.registry import reg
+
+@reg.mapped_as_dataclass
+class TimeValue(Row):
+    __tablename__: ClassVar[str] = "time_values"
+
+    inst_uuid: Mapped[UUID] = mapped_column(
+        ForeignKey("instances.uuid", ondelete="CASCADE"), primary_key=True
+    )
+    prop_uuid: Mapped[UUID] = mapped_column(
+        ForeignKey("props.uuid", ondelete="CASCADE"), primary_key=True
+    )
+    value: Mapped[time] = mapped_column(Time, nullable=False)

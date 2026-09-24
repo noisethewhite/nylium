@@ -9,10 +9,10 @@ from uuid import UUID
 from fastapi import UploadFile
 from fastapi.responses import FileResponse, Response
 from pydantic.dataclasses import dataclass
-from nylium.api.api import Api
+from nylium.api.Api import Api
 from nylium.server.bodies.shared import BODY_CONFIG, PATH_PARAMS, resolve_route_hints
 from nylium.server.errors import NotFoundError
-from nylium.objects.wfile import FileView, StorageStats, WFile
+from nylium.objects.nyfile import FileView, StorageStats, NyFile
 
 
 @dataclass(config=BODY_CONFIG)
@@ -87,7 +87,7 @@ class FileUuidRequest:
         file = Api.get_file(request.file_uuid)
         if file is None:
             raise NotFoundError(f"no file {request.file_uuid}")
-        path = WFile.blob_path(request.file_uuid)
+        path = NyFile.blob_path(request.file_uuid)
         if not path.is_file():
             raise NotFoundError(f"blob for file {request.file_uuid} is missing")
         return FileResponse(path, media_type=file.mime, filename=file.name)

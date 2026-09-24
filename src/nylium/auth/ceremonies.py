@@ -18,7 +18,7 @@ from webauthn.helpers.structs import PublicKeyCredentialDescriptor
 from nylium.data.tables import auth_challenges
 from nylium.data.tables import auth_credentials
 from nylium.data.tables import auth_users
-from nylium.system.environment import Environment
+from nylium.system.Environment import Environment
 
 from .sessions import sessions
 

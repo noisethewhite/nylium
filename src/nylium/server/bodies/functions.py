@@ -8,9 +8,9 @@ from typing import Annotated
 from uuid import UUID
 from fastapi.responses import Response
 from pydantic.dataclasses import dataclass
-from nylium.api.api import Api
-from nylium.objects.wfunction import FunctionView
-from nylium.objects.wobject import ObjectView
+from nylium.api.Api import Api
+from nylium.objects.nyfunction import FunctionView
+from nylium.objects.nyobject import ObjectView
 from nylium.server.bodies.shared import BODY_CONFIG, PATH_PARAMS, resolve_route_hints
 from nylium.server.errors import NotFoundError
 

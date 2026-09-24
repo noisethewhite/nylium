@@ -9,8 +9,8 @@ from uuid import UUID, uuid4
 import pytest
 
 from nylium.api import Api, ScalarValue
-from nylium.api.shared import PropInput
-from nylium.objects.wfunction import WFunction
+from nylium.api.ApiShared import PropInput
+from nylium.objects.nyfunction import NyFunction
 from nylium.server.errors import ValidationError
 
 
@@ -145,7 +145,7 @@ def test_empty_graph_rejected():
 def test_eval_get_prop():
     inv = invoice("42")
     fn = passthrough()
-    assert WFunction.evaluate_for(inv.uuid, fn.uuid) == Decimal("42")
+    assert NyFunction.evaluate_for(inv.uuid, fn.uuid) == Decimal("42")
 
 
 def test_eval_mul():
@@ -160,7 +160,7 @@ def test_eval_mul():
         ],
         [edge(a, 0, c, 0), edge(b, 0, c, 1)],
     )
-    assert WFunction.evaluate_for(inv.uuid, fn.uuid) == Decimal("500")
+    assert NyFunction.evaluate_for(inv.uuid, fn.uuid) == Decimal("500")
 
 
 def test_eval_div_respects_port_order():
@@ -180,7 +180,7 @@ def test_eval_div_respects_port_order():
         ],
         [edge(a, 0, c, 0), edge(b, 0, c, 1)],
     )
-    assert WFunction.evaluate_for(inv.uuid, fn.uuid) == Decimal("25")
+    assert NyFunction.evaluate_for(inv.uuid, fn.uuid) == Decimal("25")
 
 
 def test_eval_sum_array():
@@ -194,7 +194,7 @@ def test_eval_sum_array():
         ],
         [edge(a, 0, b, 0)],
     )
-    assert WFunction.evaluate_for(inv.uuid, fn.uuid) == Decimal("60")
+    assert NyFunction.evaluate_for(inv.uuid, fn.uuid) == Decimal("60")
 
 
 def test_eval_map_over_object_array():
@@ -218,7 +218,7 @@ def test_eval_map_over_object_array():
         ],
         [edge(a, 0, b, 0), edge(b, 0, c, 0)],
     )
-    assert WFunction.evaluate_for(rep.uuid, fn.uuid) == Decimal("30")
+    assert NyFunction.evaluate_for(rep.uuid, fn.uuid) == Decimal("30")
 
 
 def test_map_over_scalar_array_rejected():
@@ -248,7 +248,7 @@ def test_eval_div_by_zero_renders_none():
         ],
         [edge(a, 0, c, 0), edge(b, 0, c, 1)],
     )
-    assert WFunction.evaluate_for(inv.uuid, fn.uuid) is None
+    assert NyFunction.evaluate_for(inv.uuid, fn.uuid) is None
 
 
 # --- update / delete ---
@@ -269,7 +269,7 @@ def test_update_function_replaces_graph():
     )
     assert updated.name == "doubled"
     assert len(updated.nodes) == 3
-    assert WFunction.evaluate_for(inv.uuid, fn.uuid) == Decimal("14")
+    assert NyFunction.evaluate_for(inv.uuid, fn.uuid) == Decimal("14")
 
 
 def test_delete_function():
@@ -325,11 +325,11 @@ def test_function_chain_recomputes_across_bindings():
     _ = Api.set_instance_prop_function(inv.uuid, "taxed", fb.uuid)
     # fa isn't bound to a prop on Invoice, but we can evaluate the chain
     # directly: materialize_owner resolves the function-backed `taxed` via fb
-    assert WFunction.evaluate_for(inv.uuid, fa.uuid) == Decimal("60")
+    assert NyFunction.evaluate_for(inv.uuid, fa.uuid) == Decimal("60")
     # mutate total -> taxed (30 -> 12) -> grand (60 -> 24) recomputes
     _ = Api.update_object(inv.uuid, {"total": Decimal("4")})
-    assert WFunction.evaluate_for(inv.uuid, fb.uuid) == Decimal("12")
-    assert WFunction.evaluate_for(inv.uuid, fa.uuid) == Decimal("24")
+    assert NyFunction.evaluate_for(inv.uuid, fb.uuid) == Decimal("12")
+    assert NyFunction.evaluate_for(inv.uuid, fa.uuid) == Decimal("24")
 
 
 def test_set_instance_prop_function_unbinds():

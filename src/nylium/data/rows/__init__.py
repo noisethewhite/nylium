@@ -1,5 +1,5 @@
 """Mapped Row classes."""
-from nylium.data.rows.file import File
+from nylium.data.rows.File import File
 from nylium.data.rows.auth import ApiToken
 from nylium.data.rows.auth import AuthChallenge
 from nylium.data.rows.auth import AuthCredential

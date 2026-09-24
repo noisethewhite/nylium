@@ -1,6 +1,6 @@
 """Mapped Row classes."""
-from nylium.data.rows.decor.trait_decor import TraitDecor
-from nylium.data.rows.decor.type_decor import TypeDecor
+from nylium.data.rows.decor.TraitDecor import TraitDecor
+from nylium.data.rows.decor.TypeDecor import TypeDecor
 
 __all__ = [
     'TraitDecor',

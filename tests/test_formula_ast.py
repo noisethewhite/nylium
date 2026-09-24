@@ -1,7 +1,7 @@
 """ADR-0026: formula AST serialization — the block-editor contract."""
 import pytest
 
-from nylium.objects.wformula import Formula
+from nylium.objects.nyformula import Formula
 from nylium.server.errors import ValidationError
 
 

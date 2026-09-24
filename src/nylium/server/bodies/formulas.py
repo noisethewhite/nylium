@@ -6,7 +6,7 @@ from dataclasses import field
 
 from pydantic.dataclasses import dataclass
 
-from nylium.objects.wformula import Formula
+from nylium.objects.nyformula import Formula
 from nylium.server.bodies.shared import BODY_CONFIG, resolve_route_hints
 
 
