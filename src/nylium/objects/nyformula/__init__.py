@@ -28,7 +28,10 @@ from nylium.objects.nyformula.Call import Call
 from nylium.objects.nyformula.Neg import Neg
 from nylium.objects.nyformula.Number import Number
 from nylium.objects.nyformula.Ref import Ref
-from nylium.objects.nyformula.nodes import FUNCTIONS, Expr
+from nylium.objects.nyformula.nodes import Expr
+from nylium.Constants import Constants
+
+FUNCTIONS = Constants.Formulas.FUNCTIONS
 
 __all__ = [
     "FUNCTIONS",

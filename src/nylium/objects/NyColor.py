@@ -1,5 +1,4 @@
 from __future__ import annotations
-from nylium.objects.scalar_type_names import COLOR
 from typing import ClassVar
 from nylium.objects.NyScalar import NyScalar
 from nylium.objects.NyScalar import ScalarPayload
@@ -9,6 +8,7 @@ from typing import cast
 from typing import final
 from typing import override
 import re
+from nylium.Constants import Constants
 
 
 @final
@@ -16,7 +16,7 @@ class NyColor(NyScalar):
     """3-byte RGB hex ``#RRGGBB`` (ADR-0005): first-class scalar and the
     backing type of type/icon/tag colors. Stored in StringValue."""
 
-    TYPE_NAME = COLOR
+    TYPE_NAME = Constants.Scalar.COLOR
     PYTHON_TYPE = str
     TABLE = StringValue
     SCALAR = StringValues

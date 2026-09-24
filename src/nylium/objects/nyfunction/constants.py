@@ -5,36 +5,20 @@ from __future__ import annotations
 
 from typing import NoReturn, TypeAlias
 
-from nylium.objects.NyInteger import NyInteger
-from nylium.objects.NyNumeric import NyNumeric
 from nylium.objects.NyType import NyType
 from nylium.server.ValidationError import ValidationError
+from nylium.Constants import Constants
 
 # The closed set of node operations. The `kind` string is validated
 # against this set at save time.
-NODE_GET_PROP = "get_prop"
-NODE_CONST = "const"
-NODE_ADD = "add"
-NODE_SUB = "sub"
-NODE_MUL = "mul"
-NODE_DIV = "div"
-NODE_SUM = "sum"
-NODE_AVERAGE = "average"
-NODE_COUNT = "count"
-NODE_MIN = "min"
-NODE_MAX = "max"
-NODE_CAST = "cast"
-NODE_MAP = "map"
 
 # The one pinned prop every function type carries: `name` (String, like
 # every object type). ADR-0029 removed the `input` link prop — a function's
 # input is now the sibling props of the object it is bound into.
-NAME_PROP_KEY = "name"
 
 # A node output type: an exact scalar TYPE_NAME, or an Array<ElementTypeName>.
 NodeType: TypeAlias = str
 
-NUMERIC_SCALARS = frozenset({NyInteger.TYPE_NAME, NyNumeric.TYPE_NAME})
 
 
 def fail(message: str) -> NoReturn:
@@ -43,7 +27,7 @@ def fail(message: str) -> NoReturn:
 
 
 def is_numeric_scalar(name: str) -> bool:
-    return name in NUMERIC_SCALARS
+    return name in Constants.Scalar.NUMERIC_SCALARS
 
 
 def is_array_type(name: str) -> bool:

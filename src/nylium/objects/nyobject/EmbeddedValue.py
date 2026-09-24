@@ -4,16 +4,16 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from nylium.Constants import Constants
 
 
 if TYPE_CHECKING:
     from nylium.objects.nyobject.values import PropValue
-from nylium.objects.nyobject.shared import CONFIG
 from uuid import UUID
 from pydantic.dataclasses import dataclass
 
 
-@dataclass(config=CONFIG)
+@dataclass(config=Constants.Pydantic.CONFIG)
 class EmbeddedValue:
     """A composition child rendered inline (ADR-0004). uuid None means
     the prop was never filled — the child is created lazily on the first

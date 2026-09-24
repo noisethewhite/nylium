@@ -21,8 +21,8 @@ from nylium.data.rows import MonthDayValue
 from nylium.data.rows import NumericValue
 from nylium.data.rows import StringValue
 from nylium.data.rows import TimeValue
+from nylium.Constants import Constants
 
-VALUE_PROP_KEY = "value"
 
 ScalarPayload = str | int | Decimal | bool | datetime | date | time | MonthDay | MonthDayTime
 ScalarTable = (
@@ -100,7 +100,7 @@ class NyScalar:
 
         for scalar in cls.all():
             type_row = NyType.ensure(scalar.TYPE_NAME, icon=scalar.ICON)
-            _ = NyProp.ensure(type_row, VALUE_PROP_KEY, type_row)
+            _ = NyProp.ensure(type_row, Constants.Props.VALUE_PROP_KEY, type_row)
 
 
 class _ScalarStore(Protocol):

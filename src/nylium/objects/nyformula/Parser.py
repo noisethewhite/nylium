@@ -23,7 +23,8 @@ from nylium.objects.nyformula.If import If
 from nylium.objects.nyformula.Neg import Neg
 from nylium.objects.nyformula.Number import Number
 from nylium.objects.nyformula.Ref import Ref
-from nylium.objects.nyformula.nodes import FUNCTIONS, Expr, error
+from nylium.objects.nyformula.nodes import Expr, error
+from nylium.Constants import Constants
 
 
 @dataclass(frozen=True)
@@ -182,7 +183,7 @@ class Parser:
 
     def _call(self, name_token: _Token) -> Call:
         func = name_token.text.upper()
-        if func not in FUNCTIONS:
+        if func not in Constants.Formulas.FUNCTIONS:
             error(f"unknown function {name_token.text!r}", name_token.pos)
         _ = self._expect("lparen", "'('")
         first = self._expect("ident", "an array prop key")

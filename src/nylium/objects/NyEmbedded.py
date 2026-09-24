@@ -28,13 +28,7 @@ from nylium.data.tables import StringValues
 from nylium.objects.NyProp import NyProp
 from nylium.objects.NyType import NyType
 from nylium.objects.NyTypeMeta import StoredValue, NyTypeMeta
-
-EMBEDDED_NAME_SEPARATOR = "→"
-# mirrors api.NAME_PROP_KEY; api imports the object layer, so the
-# constant can't be imported from there without a cycle
-NAME_PROP_KEY = "name"
-REGISTRY_NAME_FORMAT = "{type_name}:{short_uuid}"
-SHORT_UUID_LENGTH = 8
+from nylium.Constants import Constants
 
 
 class NyEmbedded:
@@ -136,7 +130,7 @@ class NyEmbedded:
         if inst is not None:
             owner = NyType.by_uuid(inst.type_uuid)
             if owner is not None:
-                name_prop = NyProp.by_key(owner, NAME_PROP_KEY)
+                name_prop = NyProp.by_key(owner, Constants.Props.NAME_PROP_KEY)
                 if name_prop is not None:
                     base = cast(
                         str | None, StringValues.read(owner_uuid, name_prop.uuid)
@@ -145,7 +139,7 @@ class NyEmbedded:
                 base = inst.name
         if not base:
             base = str(owner_uuid)
-        return f"{base} {EMBEDDED_NAME_SEPARATOR} {prop.key}"
+        return f"{base} {Constants.Embedded.NAME_SEPARATOR} {prop.key}"
 
     @classmethod
     @Database.use_same_session
@@ -184,9 +178,9 @@ class NyEmbedded:
         instances.create(
             child_uuid,
             embedded.uuid,
-            REGISTRY_NAME_FORMAT.format(
+            Constants.Objects.INSTANCE_NAME_FORMAT.format(
                 type_name=embedded.name,
-                short_uuid=str(child_uuid)[:SHORT_UUID_LENGTH],
+                short_uuid=str(child_uuid)[:Constants.Objects.SHORT_UUID_LENGTH],
             ),
             owner_object_uuid=array_uuid,
             owner_prop_uuid=None,
@@ -205,9 +199,9 @@ class NyEmbedded:
         instances.create(
             child_uuid,
             child_type.uuid,
-            REGISTRY_NAME_FORMAT.format(
+            Constants.Objects.INSTANCE_NAME_FORMAT.format(
                 type_name=child_type.name,
-                short_uuid=str(child_uuid)[:SHORT_UUID_LENGTH],
+                short_uuid=str(child_uuid)[:Constants.Objects.SHORT_UUID_LENGTH],
             ),
             owner_object_uuid=owner_uuid,
             owner_prop_uuid=prop.uuid,
@@ -219,7 +213,7 @@ class NyEmbedded:
     def _fill_child(cls, child_uuid: UUID, props: dict[str, StoredValue]) -> None:
         child = NyTypeMeta.root().wrap(child_uuid)
         for key, value in props.items():
-            if key == NAME_PROP_KEY:
+            if key == Constants.Props.NAME_PROP_KEY:
                 continue  # caller-supplied names are ignored — generated only
             setattr(child, key, value)
 
@@ -228,9 +222,9 @@ class NyEmbedded:
         child = NyTypeMeta.root().wrap(child_uuid)
         inst = instances.get(child_uuid)
         owner = NyType.by_uuid(inst.type_uuid) if inst is not None else None
-        if owner is None or NyProp.by_key(owner, NAME_PROP_KEY) is None:
+        if owner is None or NyProp.by_key(owner, Constants.Props.NAME_PROP_KEY) is None:
             return  # name-less embedded type (ADR-0027) keeps its registry name
-        setattr(child, NAME_PROP_KEY, name)
+        setattr(child, Constants.Props.NAME_PROP_KEY, name)
 
     @classmethod
     def _destroy_child(cls, child_uuid: UUID) -> None:

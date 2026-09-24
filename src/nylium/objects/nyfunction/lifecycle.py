@@ -8,8 +8,8 @@ from nylium.objects.NyProp import NyProp
 from nylium.objects.NyScalar import NyScalar
 from nylium.objects.NyString import NyString
 from nylium.objects.NyType import NyType
-from nylium.objects.nyfunction.constants import NAME_PROP_KEY
 from nylium.server.ValidationError import ValidationError
+from nylium.Constants import Constants
 
 
 def is_function(type_name: str) -> bool:
@@ -41,5 +41,5 @@ def ensure_type(input_name: str, output_name: str) -> NyType:
     name_type = NyType.by_name(NyString.TYPE_NAME)
     if name_type is None:
         name_type = NyType.ensure(NyString.TYPE_NAME)
-    _ = NyProp.ensure(owner, NAME_PROP_KEY, name_type, position=0)
+    _ = NyProp.ensure(owner, Constants.Props.NAME_PROP_KEY, name_type, position=0)
     return owner

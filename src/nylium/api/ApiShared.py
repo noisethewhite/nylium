@@ -10,7 +10,6 @@ from nylium.data.rows import Trait
 from nylium.data.tables import traits
 from nylium.data.rows import Type
 from nylium.data.tables import types
-from nylium.objects.NyEmbedded import EMBEDDED_NAME_SEPARATOR
 from nylium.objects.NyEnum import NyEnum
 from nylium.objects.NyFile import NyFile
 from nylium.objects.nyobject import NyObject
@@ -23,6 +22,7 @@ from nylium.objects.NyTypeMeta import StoredValue
 from nylium.objects.TypeView import TypeView
 from nylium.objects.navigation import effective_props, prop_value_type_name
 from nylium.server.ValidationError import ValidationError
+from nylium.Constants import Constants
 
 # What callers may hand in for a prop: stored values, plus links as
 # UUID/ObjectRef (resolved to NyObject here), plus a props draft for
@@ -35,7 +35,6 @@ PropInput: TypeAlias = (
 # Every object type starts with a `name` prop — it IS the instance's
 # title, rendered as the editable heading in the UI. Pinned at
 # position 0: reorder may shuffle the rest, never the name.
-NAME_PROP_KEY = "name"
 
 
 class ApiShared:
@@ -238,7 +237,7 @@ class ApiShared:
             normalized = cls._normalize_value(
                 value, cls._prop_value_type_name(owner_type_row.uuid, key)
             )
-            if key == NAME_PROP_KEY and isinstance(normalized, str):
+            if key == Constants.Props.NAME_PROP_KEY and isinstance(normalized, str):
                 # → would make a user-typed name indistinguishable from a
                 # generated embedded one. Embedded children never pass
                 # here — their names are written by NyEmbedded directly.
@@ -349,7 +348,7 @@ class ApiShared:
         """The → separator of generated embedded names is reserved, so a
         generated name can never collide with a user-typed one."""
 
-        if EMBEDDED_NAME_SEPARATOR in value:
+        if Constants.Embedded.NAME_SEPARATOR in value:
             raise ValidationError(
-                f"{what} {value!r} must not contain {EMBEDDED_NAME_SEPARATOR!r} — reserved for generated embedded names"
+                f"{what} {value!r} must not contain {Constants.Embedded.NAME_SEPARATOR!r} — reserved for generated embedded names"
             )

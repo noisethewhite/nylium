@@ -1,9 +1,8 @@
 from __future__ import annotations
-from nylium.objects.nyobject.shared import CONFIG
 from nylium.database import Database
 from nylium.objects.nyfunction.FunctionEdgeView import FunctionEdgeView
 from nylium.objects.nyfunction.FunctionNodeView import FunctionNodeView
-from nylium.objects.nyobject.shared import NAME_PROP_KEY
+from nylium.Constants import Constants
 from nylium.objects.nyfunction.NyFunction import NyFunction
 from nylium.objects.nyobject.NyObject import NyObject
 from nylium.objects.NyType import NyType
@@ -14,7 +13,7 @@ from pydantic.dataclasses import dataclass
 from nylium.data.tables import instances
 
 
-@dataclass(config=CONFIG)
+@dataclass(config=Constants.Pydantic.CONFIG)
 class FunctionView:
     """Snapshot of one Function<T,R> instance: its parameterization and its
     full action DAG (nodes + edges). ADR-0029: no input link — the input is
@@ -43,7 +42,7 @@ class FunctionView:
             return None
         input_type, output_type = params
         wrapper = NyObject.wrap(uuid)
-        name = cast(str | None, getattr(wrapper, NAME_PROP_KEY))
+        name = cast(str | None, getattr(wrapper, Constants.Props.NAME_PROP_KEY))
         if not name:
             inst = instances.get(uuid)
             name = "" if inst is None else inst.name

@@ -19,11 +19,9 @@ from nylium.objects.nyobject import (
     RefValue,
     ScalarValue,
 )
+from nylium.Constants import Constants
 
-NAME_PROP_KEY = "name"
 
-_UNSET = "—"
-_EMPTY_ARRAY = "∅"
 
 
 class MarkdownRenderer:
@@ -46,7 +44,7 @@ class MarkdownRenderer:
         return f"{self._slug(title)}.md", "\n".join(lines) + "\n"
 
     def _title(self, view: ObjectView) -> str:
-        name = view.props.get(NAME_PROP_KEY)
+        name = view.props.get(Constants.Props.NAME_PROP_KEY)
         if isinstance(name, ScalarValue) and name.value is not None:
             return str(name.value)
         return str(view.uuid)
@@ -60,7 +58,7 @@ class MarkdownRenderer:
             return self._render_scalar(value)
         if isinstance(value, RefValue):
             if value.ref is None:
-                return _UNSET
+                return Constants.Render.UNSET
             return f"[{self._ref_label(value.ref)}](object:{value.ref.uuid})"
         if isinstance(value, ArrayValue):
             return self._render_array(value, indent)
@@ -68,16 +66,16 @@ class MarkdownRenderer:
 
     def _render_scalar(self, value: ScalarValue) -> str:
         if value.value is None:
-            return _UNSET
+            return Constants.Render.UNSET
         if value.unit is not None:
             return f"{value.value} {value.unit}"
         return str(value.value)
 
     def _render_array(self, value: ArrayValue, indent: str) -> str:
         if value.items is None:
-            return _UNSET
+            return Constants.Render.UNSET
         if not value.items:
-            return _EMPTY_ARRAY
+            return Constants.Render.EMPTY_ARRAY
         rows = [
             f"{indent}  - {self._render_prop(item, indent + '  ')}"
             for item in value.items
@@ -86,7 +84,7 @@ class MarkdownRenderer:
 
     def _render_embedded(self, value: EmbeddedValue, indent: str) -> str:
         if not value.props:
-            return _UNSET
+            return Constants.Render.UNSET
         rows = [
             f"{indent}  - **{key}**: {self._render_prop(prop, indent + '  ')}"
             for key, prop in value.props.items()

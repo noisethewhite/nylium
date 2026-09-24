@@ -21,11 +21,13 @@ from nylium.api.FilesApi import FilesApi
 from nylium.api.FunctionsApi import FunctionsApi
 from nylium.api.ObjectsApi import ObjectsApi
 from nylium.api.SchemaApi import SchemaApi
-from nylium.api.ApiShared import NAME_PROP_KEY as NAME_PROP_KEY
+from nylium.Constants import Constants
 from nylium.api.ApiShared import PropInput as PropInput
 from nylium.api.TraitsApi import TraitsApi
 from nylium.api.TypesApi import TypesApi
 from nylium.api.UnitsApi import UnitsApi
+
+NAME_PROP_KEY = Constants.Props.NAME_PROP_KEY
 
 
 class Api(

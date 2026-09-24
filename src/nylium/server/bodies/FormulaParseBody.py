@@ -1,12 +1,12 @@
 from __future__ import annotations
-from nylium.server.bodies.shared import BODY_CONFIG
 from nylium.objects.nyformula import Formula
 from pydantic.dataclasses import dataclass
 import sys
 from nylium.server.bodies.shared import resolve_route_hints
+from nylium.Constants import Constants
 
 
-@dataclass(config=BODY_CONFIG)
+@dataclass(config=Constants.Pydantic.CONFIG)
 class FormulaParseBody:
     """Text in, AST out — the block editor opens a stored formula with this."""
 

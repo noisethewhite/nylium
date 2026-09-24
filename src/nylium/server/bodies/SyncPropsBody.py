@@ -1,15 +1,15 @@
 from __future__ import annotations
 from nylium.api.Api import Api
 from nylium.api.ApiShared import ApiShared
-from nylium.server.bodies.shared import BODY_CONFIG
 from nylium.server.bodies.SyncPropItem import SyncPropItem
 from nylium.objects.TypeView import TypeView
 from pydantic.dataclasses import dataclass
 import sys
 from nylium.server.bodies.shared import resolve_route_hints
+from nylium.Constants import Constants
 
 
-@dataclass(config=BODY_CONFIG)
+@dataclass(config=Constants.Pydantic.CONFIG)
 class SyncPropsBody:
     """The full prop draft — renames/retypes by uuid, creates without,
     deletes whatever the draft omits."""

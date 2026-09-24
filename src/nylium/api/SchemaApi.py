@@ -4,7 +4,8 @@ from __future__ import annotations
 from uuid import UUID
 from typing import TYPE_CHECKING
 
-from nylium.api.ApiShared import ApiShared, NAME_PROP_KEY
+from nylium.api.ApiShared import ApiShared
+from nylium.Constants import Constants
 
 if TYPE_CHECKING:
     # see functions.py: cross-domain calls resolve on the combined Api
@@ -28,7 +29,7 @@ class SchemaApi(_SchemaBase):
     @Database.commit_after_this
     def reorder_props(cls, type_name: str, keys: list[str]) -> Type:
         """Persist a new prop order; keys must cover the whole schema and
-        keep the `name` prop first (see NAME_PROP_KEY)."""
+        keep the `name` prop first (see Constants.Props.NAME_PROP_KEY)."""
 
         owner = NyType.by_name(type_name)
         if owner is None:
@@ -40,10 +41,10 @@ class SchemaApi(_SchemaBase):
             raise ValueError(f"prop order {keys!r} does not match {type_name!r} schema")
         if (
             not owner.is_embedded
-            and NAME_PROP_KEY in existing
-            and (not keys or keys[0] != NAME_PROP_KEY)
+            and Constants.Props.NAME_PROP_KEY in existing
+            and (not keys or keys[0] != Constants.Props.NAME_PROP_KEY)
         ):
-            raise ValidationError(f"the {NAME_PROP_KEY!r} prop must stay first")
+            raise ValidationError(f"the {Constants.Props.NAME_PROP_KEY!r} prop must stay first")
         NyProp.reorder(owner, keys)
         return cls._type_result(type_name)
 
@@ -72,7 +73,7 @@ class SchemaApi(_SchemaBase):
         existing = NyProp.all_for(owner)
         by_uuid = {prop.uuid: prop for prop in existing}
         name_prop = next(
-            (prop for prop in existing if prop.key == NAME_PROP_KEY), None
+            (prop for prop in existing if prop.key == Constants.Props.NAME_PROP_KEY), None
         )
         if not owner.is_embedded:
             # standalone types keep a pinned `name` prop first; embedded
@@ -83,10 +84,10 @@ class SchemaApi(_SchemaBase):
             if (
                 name_prop is not None
                 and (first_uuid, first_key, first_type)
-                != (name_prop.uuid, NAME_PROP_KEY, NyString.TYPE_NAME)
+                != (name_prop.uuid, Constants.Props.NAME_PROP_KEY, NyString.TYPE_NAME)
             ):
                 raise ValidationError(
-                    f"the {NAME_PROP_KEY!r} prop must stay first, keyed {NAME_PROP_KEY!r}, typed {NyString.TYPE_NAME!r}"
+                    f"the {Constants.Props.NAME_PROP_KEY!r} prop must stay first, keyed {Constants.Props.NAME_PROP_KEY!r}, typed {NyString.TYPE_NAME!r}"
                 )
         keys = [key for _, key, _, _ in items]
         if any(not key.strip() for key in keys):

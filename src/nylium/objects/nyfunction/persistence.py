@@ -23,7 +23,8 @@ from nylium.data.tables import instances
 from nylium.objects.navigation import instance_uuids_of_kind
 from nylium.objects.NyProp import NyProp
 from nylium.objects.NyType import NyType
-from nylium.objects.nyfunction.constants import NODE_GET_PROP, fail
+from nylium.objects.nyfunction.constants import fail
+from nylium.Constants import Constants
 
 
 @Database.commit_after_this
@@ -69,7 +70,7 @@ def assert_no_dependency_cycle(inst_uuid: UUID) -> None:
     deps: dict[UUID, set[UUID]] = {fn_uuid: set() for fn_uuid in bindings.values()}
     for fn_uuid in bindings.values():
         for node in FunctionNodes.nodes_of(fn_uuid):
-            if node.kind != NODE_GET_PROP:
+            if node.kind != Constants.Functions.NODE_GET_PROP:
                 continue
             key = node.config.get("key")
             if not isinstance(key, str):

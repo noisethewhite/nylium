@@ -5,11 +5,11 @@ from __future__ import annotations
 from uuid import UUID
 
 from pydantic.dataclasses import dataclass
+from nylium.Constants import Constants
 
-from nylium.objects.nyobject.shared import CONFIG
 
 
-@dataclass(config=CONFIG)
+@dataclass(config=Constants.Pydantic.CONFIG)
 class TagView:
     """A derived tag (ADR-0005): one array-membership edge projected back
     onto the member object. Nothing is stored — the name is recomputed on

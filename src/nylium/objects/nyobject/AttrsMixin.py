@@ -24,8 +24,8 @@ from nylium.objects.NyType import NyType
 from nylium.objects.NyObjectShape import NyObjectShape
 from nylium.objects.NyTypeMeta import StoredValue, NyTypeMeta
 from nylium.objects.NyUnit import NyUnit
-from nylium.objects.nyobject.constants import PRIVATE_PREFIX
 from nylium.objects.nyobject.PersistenceMixin import PersistenceMixin
+from nylium.Constants import Constants
 
 
 class AttrsMixin(PersistenceMixin):
@@ -67,7 +67,7 @@ class AttrsMixin(PersistenceMixin):
     @override
     @Database.commit_after_this
     def __setattr__(self, key: str, value: StoredValue) -> None:
-        if key.startswith(PRIVATE_PREFIX):
+        if key.startswith(Constants.Types.PRIVATE_PREFIX):
             object.__setattr__(self, key, value)
             return
         prop, value_type = self._prop_and_type(key)
@@ -112,7 +112,7 @@ class AttrsMixin(PersistenceMixin):
     @override
     @Database.commit_after_this
     def __delattr__(self, key: str) -> None:
-        if key.startswith(PRIVATE_PREFIX):
+        if key.startswith(Constants.Types.PRIVATE_PREFIX):
             object.__delattr__(self, key)
             return
         prop, value_type = self._prop_and_type(key)

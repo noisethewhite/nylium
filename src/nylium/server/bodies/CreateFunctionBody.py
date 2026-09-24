@@ -1,6 +1,5 @@
 from __future__ import annotations
 from nylium.api.Api import Api
-from nylium.server.bodies.shared import BODY_CONFIG
 from nylium.server.bodies.FunctionEdgeInput import FunctionEdgeInput
 from nylium.server.bodies.FunctionNodeInput import FunctionNodeInput
 from nylium.objects.nyfunction.FunctionView import FunctionView
@@ -8,9 +7,10 @@ from pydantic.dataclasses import dataclass
 from dataclasses import field
 import sys
 from nylium.server.bodies.shared import resolve_route_hints
+from nylium.Constants import Constants
 
 
-@dataclass(config=BODY_CONFIG)
+@dataclass(config=Constants.Pydantic.CONFIG)
 class CreateFunctionBody:
     """A Function<T,R> instance (ADR-0029): parameterization + the full
     action DAG in one draft. No input link — the function reads the sibling

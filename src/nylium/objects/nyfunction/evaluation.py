@@ -16,23 +16,9 @@ from nylium.data.tables import FunctionNodes
 from nylium.objects.NyInteger import NyInteger
 from nylium.objects.NyString import NyString
 from nylium.objects.NyScalar import ScalarPayload
-from nylium.objects.nyfunction.constants import (
-    NODE_ADD,
-    NODE_AVERAGE,
-    NODE_CAST,
-    NODE_CONST,
-    NODE_COUNT,
-    NODE_DIV,
-    NODE_GET_PROP,
-    NODE_MAP,
-    NODE_MAX,
-    NODE_MIN,
-    NODE_MUL,
-    NODE_SUB,
-    NODE_SUM,
-    fail,
-)
+from nylium.objects.nyfunction.constants import fail
 from nylium.objects.nyfunction.validation import topo_sort
+from nylium.Constants import Constants
 
 
 @Database.use_same_session
@@ -83,32 +69,32 @@ def _eval_node(
     inputs: list[object],
     input_values: Mapping[str, object],
 ) -> object:
-    if kind == NODE_GET_PROP:
+    if kind == Constants.Functions.NODE_GET_PROP:
         key = cast(str, config["key"])
         return input_values.get(key)
-    if kind == NODE_CONST:
+    if kind == Constants.Functions.NODE_CONST:
         value = config["value"]
         if isinstance(value, float):
             return Decimal(str(value))
         return value
-    if kind in (NODE_ADD, NODE_SUB, NODE_MUL, NODE_DIV):
+    if kind in (Constants.Functions.NODE_ADD, Constants.Functions.NODE_SUB, Constants.Functions.NODE_MUL, Constants.Functions.NODE_DIV):
         left = _as_decimal(inputs[0])
         right = _as_decimal(inputs[1])
         if left is None or right is None:
             raise InvalidOperation
-        if kind == NODE_ADD:
+        if kind == Constants.Functions.NODE_ADD:
             return left + right
-        if kind == NODE_SUB:
+        if kind == Constants.Functions.NODE_SUB:
             return left - right
-        if kind == NODE_MUL:
+        if kind == Constants.Functions.NODE_MUL:
             return left * right
         return left / right
-    if kind == NODE_COUNT:
+    if kind == Constants.Functions.NODE_COUNT:
         seq = inputs[0]
         if seq is None:
             return 0
         return len(cast(list[object], seq))
-    if kind in (NODE_SUM, NODE_AVERAGE, NODE_MIN, NODE_MAX):
+    if kind in (Constants.Functions.NODE_SUM, Constants.Functions.NODE_AVERAGE, Constants.Functions.NODE_MIN, Constants.Functions.NODE_MAX):
         seq = inputs[0]
         if seq is None:
             return None
@@ -118,14 +104,14 @@ def _eval_node(
         decimals: list[Decimal] = [v for v in values if v is not None]
         if not decimals:
             return Decimal(0)
-        if kind == NODE_SUM:
+        if kind == Constants.Functions.NODE_SUM:
             return sum(decimals, Decimal(0))
-        if kind == NODE_AVERAGE:
+        if kind == Constants.Functions.NODE_AVERAGE:
             return sum(decimals, Decimal(0)) / Decimal(len(decimals))
-        if kind == NODE_MIN:
+        if kind == Constants.Functions.NODE_MIN:
             return min(decimals)
         return max(decimals)
-    if kind == NODE_CAST:
+    if kind == Constants.Functions.NODE_CAST:
         target = cast(str, config["target"])
         src = inputs[0]
         if target == NyString.TYPE_NAME:
@@ -135,7 +121,7 @@ def _eval_node(
         if target == NyInteger.TYPE_NAME:
             return int(Decimal(str(src)))
         return Decimal(str(src))
-    if kind == NODE_MAP:
+    if kind == Constants.Functions.NODE_MAP:
         key = cast(str, config["key"])
         seq = inputs[0]
         if seq is None:

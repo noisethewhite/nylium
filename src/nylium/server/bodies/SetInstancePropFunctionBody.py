@@ -1,14 +1,14 @@
 from __future__ import annotations
 from nylium.api.Api import Api
-from nylium.server.bodies.shared import BODY_CONFIG
 from nylium.objects.nyobject import ObjectView
 from uuid import UUID
 from pydantic.dataclasses import dataclass
 import sys
 from nylium.server.bodies.shared import resolve_route_hints
+from nylium.Constants import Constants
 
 
-@dataclass(config=BODY_CONFIG)
+@dataclass(config=Constants.Pydantic.CONFIG)
 class SetInstancePropFunctionBody:
     """ADR-0029: bind a Function<T,R> to a prop of a specific object (None
     unbinds)."""

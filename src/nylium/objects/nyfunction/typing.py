@@ -11,43 +11,25 @@ from nylium.objects.NyNumeric import NyNumeric
 from nylium.objects.NyScalar import NyScalar
 from nylium.objects.NyString import NyString
 from nylium.objects.NyType import NyType
-from nylium.objects.nyfunction.constants import (
-    NODE_ADD,
-    NODE_AVERAGE,
-    NODE_CAST,
-    NODE_CONST,
-    NODE_COUNT,
-    NODE_DIV,
-    NODE_GET_PROP,
-    NODE_MAP,
-    NODE_MAX,
-    NODE_MIN,
-    NODE_MUL,
-    NODE_SUB,
-    NODE_SUM,
-    NUMERIC_SCALARS,
-    NodeType,
-    fail,
-    is_array_type,
-    is_numeric_scalar,
-)
+from nylium.objects.nyfunction.constants import NodeType, fail, is_array_type, is_numeric_scalar
+from nylium.Constants import Constants
 
 # kind -> input arity. validate_graph rejects any kind missing here, so
 # this table IS the node whitelist.
 NODE_ARITY: dict[str, int] = {
-    NODE_GET_PROP: 0,
-    NODE_CONST: 0,
-    NODE_ADD: 2,
-    NODE_SUB: 2,
-    NODE_MUL: 2,
-    NODE_DIV: 2,
-    NODE_SUM: 1,
-    NODE_AVERAGE: 1,
-    NODE_COUNT: 1,
-    NODE_MIN: 1,
-    NODE_MAX: 1,
-    NODE_CAST: 1,
-    NODE_MAP: 1,
+    Constants.Functions.NODE_GET_PROP: 0,
+    Constants.Functions.NODE_CONST: 0,
+    Constants.Functions.NODE_ADD: 2,
+    Constants.Functions.NODE_SUB: 2,
+    Constants.Functions.NODE_MUL: 2,
+    Constants.Functions.NODE_DIV: 2,
+    Constants.Functions.NODE_SUM: 1,
+    Constants.Functions.NODE_AVERAGE: 1,
+    Constants.Functions.NODE_COUNT: 1,
+    Constants.Functions.NODE_MIN: 1,
+    Constants.Functions.NODE_MAX: 1,
+    Constants.Functions.NODE_CAST: 1,
+    Constants.Functions.NODE_MAP: 1,
 }
 
 
@@ -59,7 +41,7 @@ def node_output_type(
 ) -> NodeType:
     """The static output type of a node, given the function's input
     type `T` (for `get_prop` lookups) and the node's config."""
-    if kind == NODE_GET_PROP:
+    if kind == Constants.Functions.NODE_GET_PROP:
         key = config.get("key")
         if not isinstance(key, str):
             fail("get_prop needs a string 'key' in config")
@@ -77,7 +59,7 @@ def node_output_type(
         fail(
             f"get_prop can only read scalar or array props, got {value_name!r}"
         )
-    if kind == NODE_MAP:
+    if kind == Constants.Functions.NODE_MAP:
         key = config.get("key")
         if not isinstance(key, str):
             fail("map needs a string 'key' in config")
@@ -95,7 +77,7 @@ def node_output_type(
         if NyScalar.by_type_name(value_name) is None and not is_array_type(value_name):
             fail(f"map can only read scalar or array props, got {value_name!r}")
         return NyType.array_name(value_name)
-    if kind == NODE_CONST:
+    if kind == Constants.Functions.NODE_CONST:
         value = config.get("value")
         if isinstance(value, bool) or value is None:
             fail("const needs a number or string 'value'")
@@ -104,13 +86,13 @@ def node_output_type(
         if isinstance(value, (float, str)):
             return NyNumeric.TYPE_NAME if isinstance(value, float) else NyString.TYPE_NAME
         fail("const value must be an int, float or str")
-    if kind in (NODE_ADD, NODE_SUB, NODE_MUL, NODE_DIV):
+    if kind in (Constants.Functions.NODE_ADD, Constants.Functions.NODE_SUB, Constants.Functions.NODE_MUL, Constants.Functions.NODE_DIV):
         return NyNumeric.TYPE_NAME
-    if kind in (NODE_SUM, NODE_AVERAGE, NODE_MIN, NODE_MAX):
+    if kind in (Constants.Functions.NODE_SUM, Constants.Functions.NODE_AVERAGE, Constants.Functions.NODE_MIN, Constants.Functions.NODE_MAX):
         return NyNumeric.TYPE_NAME
-    if kind == NODE_COUNT:
+    if kind == Constants.Functions.NODE_COUNT:
         return NyInteger.TYPE_NAME
-    if kind == NODE_CAST:
+    if kind == Constants.Functions.NODE_CAST:
         target = config.get("target")
         if not isinstance(target, str) or NyScalar.by_type_name(target) is None:
             fail("cast needs a scalar 'target' in config")
@@ -120,12 +102,12 @@ def node_output_type(
 
 def check_inputs(kind: str, input_types: list[NodeType]) -> None:
     """Type-conformance check on a node's resolved input types."""
-    if kind in (NODE_ADD, NODE_SUB, NODE_MUL, NODE_DIV):
+    if kind in (Constants.Functions.NODE_ADD, Constants.Functions.NODE_SUB, Constants.Functions.NODE_MUL, Constants.Functions.NODE_DIV):
         for t in input_types:
             if not is_numeric_scalar(t):
                 fail(f"{kind} needs numeric inputs, got {t!r}")
         return
-    if kind in (NODE_SUM, NODE_AVERAGE, NODE_MIN, NODE_MAX):
+    if kind in (Constants.Functions.NODE_SUM, Constants.Functions.NODE_AVERAGE, Constants.Functions.NODE_MIN, Constants.Functions.NODE_MAX):
         array_type = input_types[0]
         if not is_array_type(array_type):
             fail(f"{kind} needs an array input, got {array_type!r}")
@@ -133,15 +115,15 @@ def check_inputs(kind: str, input_types: list[NodeType]) -> None:
         if not is_numeric_scalar(element):
             fail(f"{kind} needs a numeric array, got Array<{element}>")
         return
-    if kind == NODE_COUNT:
+    if kind == Constants.Functions.NODE_COUNT:
         if not is_array_type(input_types[0]):
             fail(f"count needs an array input, got {input_types[0]!r}")
         return
-    if kind == NODE_CAST:
+    if kind == Constants.Functions.NODE_CAST:
         src = input_types[0]
-        if src not in NUMERIC_SCALARS and src != NyString.TYPE_NAME:
+        if src not in Constants.Scalar.NUMERIC_SCALARS and src != NyString.TYPE_NAME:
             fail(f"cast needs a numeric or string input, got {src!r}")
-    if kind == NODE_MAP:
+    if kind == Constants.Functions.NODE_MAP:
         array_type = input_types[0]
         if not is_array_type(array_type):
             fail(f"map needs an array input, got {array_type!r}")

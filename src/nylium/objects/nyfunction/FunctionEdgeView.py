@@ -1,10 +1,10 @@
 from __future__ import annotations
-from nylium.objects.nyobject.shared import CONFIG
 from uuid import UUID
 from pydantic.dataclasses import dataclass
+from nylium.Constants import Constants
 
 
-@dataclass(config=CONFIG)
+@dataclass(config=Constants.Pydantic.CONFIG)
 class FunctionEdgeView:
     """A dataflow edge between two function nodes (ADR-0007)."""
 

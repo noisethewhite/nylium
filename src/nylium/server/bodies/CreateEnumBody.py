@@ -1,16 +1,16 @@
 from __future__ import annotations
 from nylium.api.Api import Api
 from nylium.api.ApiShared import ApiShared
-from nylium.server.bodies.shared import BODY_CONFIG
 from nylium.objects.NyColor import NyColor
 from nylium.objects.TypeView import TypeView
 from pydantic.dataclasses import dataclass
 from dataclasses import field
 import sys
 from nylium.server.bodies.shared import resolve_route_hints
+from nylium.Constants import Constants
 
 
-@dataclass(config=BODY_CONFIG)
+@dataclass(config=Constants.Pydantic.CONFIG)
 class CreateEnumBody:
     """A string enum type: name plus its allowed option values."""
 

@@ -1,6 +1,5 @@
 from __future__ import annotations
 from nylium.api.Api import Api
-from nylium.server.bodies.shared import BODY_CONFIG
 from nylium.server.NotFoundError import NotFoundError
 from nylium.objects.nyobject import ObjectView
 from nylium.server.PropCodec import PropCodec
@@ -10,9 +9,10 @@ from pydantic.dataclasses import dataclass
 from dataclasses import field
 import sys
 from nylium.server.bodies.shared import resolve_route_hints
+from nylium.Constants import Constants
 
 
-@dataclass(config=BODY_CONFIG)
+@dataclass(config=Constants.Pydantic.CONFIG)
 class UpdateObjectBody:
     """PATCH semantics: only the listed props are touched."""
 

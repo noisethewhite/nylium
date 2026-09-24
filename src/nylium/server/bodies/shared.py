@@ -8,12 +8,10 @@ from types import ModuleType
 from typing import TYPE_CHECKING
 
 from fastapi import Depends, params
-from pydantic import ConfigDict
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-BODY_CONFIG = ConfigDict(extra="ignore")
 
 # FastAPI binds a dataclass dependency's __init__ parameters from the
 # path/query by name — that is how GET/DELETE requests become typed.

@@ -19,7 +19,7 @@ from nylium.objects.NyEmbedded import NyEmbedded
 from nylium.objects.NyType import NyType
 from nylium.objects.NyObjectShape import NyObjectShape
 from nylium.objects.NyTypeMeta import StoredValue, NyTypeMeta
-from nylium.objects.nyobject.constants import INSTANCE_NAME_FORMAT, SHORT_UUID_LENGTH
+from nylium.Constants import Constants
 
 
 class LifecycleMixin:
@@ -42,9 +42,9 @@ class LifecycleMixin:
         instances.create(
             self._uuid,
             owner.uuid,
-            INSTANCE_NAME_FORMAT.format(
+            Constants.Objects.INSTANCE_NAME_FORMAT.format(
                 type_name=type(self).__name__,
-                short_uuid=str(self._uuid)[:SHORT_UUID_LENGTH],
+                short_uuid=str(self._uuid)[:Constants.Objects.SHORT_UUID_LENGTH],
             ),
         )
 
@@ -60,9 +60,9 @@ class LifecycleMixin:
         instances.create(
             instance_uuid,
             owner.uuid,
-            INSTANCE_NAME_FORMAT.format(
+            Constants.Objects.INSTANCE_NAME_FORMAT.format(
                 type_name=type_name,
-                short_uuid=str(instance_uuid)[:SHORT_UUID_LENGTH],
+                short_uuid=str(instance_uuid)[:Constants.Objects.SHORT_UUID_LENGTH],
             ),
         )
         wrapper = cls.wrap(instance_uuid)

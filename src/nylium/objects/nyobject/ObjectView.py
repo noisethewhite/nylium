@@ -24,7 +24,6 @@ from nylium.objects.NyTypeMeta import StoredValue
 from nylium.objects.MonthDay import MonthDay
 from nylium.objects.MonthDayTime import MonthDayTime
 from nylium.objects.Quantity import Quantity
-from nylium.objects.NyEmbedded import EMBEDDED_NAME_SEPARATOR
 from nylium.objects.NyEnum import NyEnum
 from nylium.objects.NyFile import NyFile
 from nylium.objects.nyformula import Formula
@@ -39,9 +38,9 @@ from nylium.objects.nyobject.EmbeddedValue import EmbeddedValue
 from nylium.objects.nyobject.ObjectRef import ObjectRef
 from nylium.objects.nyobject.RefValue import RefValue
 from nylium.objects.nyobject.ScalarValue import ScalarValue
-from nylium.objects.nyobject.shared import CONFIG, NAME_PROP_KEY
 from nylium.objects.nyobject.values import PropValue
 from nylium.data.tables import InstanceFunctionLinks
+from nylium.Constants import Constants
 
 
 def _sibling_cell(value: StoredValue) -> Decimal | Quantity | str | None:
@@ -68,7 +67,7 @@ def _comparable(value: object) -> object:
     return value
 
 
-@dataclass(config=CONFIG)
+@dataclass(config=Constants.Pydantic.CONFIG)
 class ObjectView:
     """Snapshot of one instance: every prop rendered as a typed
     ScalarValue / RefValue / ArrayValue — no Any escapes. `tags` is the
@@ -147,7 +146,7 @@ class ObjectView:
         ``Array<type_name>`` prop whose stored array contains this object
         becomes one tag ``<owner display name> → <prop key>``. One query,
         no N+1."""
-        rows = array_tag_rows(uuid, NyType.array_name(type_name), NAME_PROP_KEY)
+        rows = array_tag_rows(uuid, NyType.array_name(type_name), Constants.Props.NAME_PROP_KEY)
         tags: list[TagView] = []
         for owner_uuid, prop_key, registry_name, display_name, color in rows:
             display_name = display_name or registry_name
@@ -156,7 +155,7 @@ class ObjectView:
                     owner_uuid=owner_uuid,
                     owner_name=display_name,
                     prop_key=prop_key,
-                    name=f"{display_name} {EMBEDDED_NAME_SEPARATOR} {prop_key}",
+                    name=f"{display_name} {Constants.Embedded.NAME_SEPARATOR} {prop_key}",
                     color=color,
                 )
             )

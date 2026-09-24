@@ -1,10 +1,10 @@
 from __future__ import annotations
-from nylium.objects.nyobject.shared import CONFIG
 from nylium.objects.NyScalar import ScalarPayload
 from pydantic.dataclasses import dataclass
+from nylium.Constants import Constants
 
 
-@dataclass(config=CONFIG)
+@dataclass(config=Constants.Pydantic.CONFIG)
 class ScalarValue:
     """None means the prop was never set. `unit` is the unit part name
     as entered for `Numeric<Unit>` props; absent everywhere else."""

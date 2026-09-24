@@ -6,7 +6,8 @@ from collections.abc import Mapping
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from nylium.api.ApiShared import NAME_PROP_KEY, ApiShared, PropInput
+from nylium.api.ApiShared import ApiShared, PropInput
+from nylium.Constants import Constants
 
 if TYPE_CHECKING:
     # mixins resolve cross-domain calls on the combined Api facade; give the
@@ -74,7 +75,7 @@ class FunctionsApi(_FunctionsBase):
             output_type,
         )
         owner = NyFunction.ensure_type(input_type, output_type)
-        props_draft: dict[str, PropInput] = {NAME_PROP_KEY: name}
+        props_draft: dict[str, PropInput] = {Constants.Props.NAME_PROP_KEY: name}
         view = cls.create_object(owner.name, props_draft)
         NyFunction.sync_graph(view.uuid, nodes, edges)
         result = FunctionView.from_uuid(view.uuid)
@@ -108,7 +109,7 @@ class FunctionsApi(_FunctionsBase):
             existing.input_type,
             existing.output_type,
         )
-        _ = cls.update_object(uuid, {NAME_PROP_KEY: name})
+        _ = cls.update_object(uuid, {Constants.Props.NAME_PROP_KEY: name})
         NyFunction.sync_graph(uuid, nodes, edges)
         for owner_uuid in InstanceFunctionLinks.instance_uuids_bound_to(uuid):
             NyFunction.assert_no_dependency_cycle(owner_uuid)

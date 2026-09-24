@@ -28,28 +28,17 @@ objectview, which imports them mid-package-init.
 """
 from __future__ import annotations
 
-from nylium.objects.nyobject.constants import (
-    INSTANCE_NAME_FORMAT,
-    PRIVATE_PREFIX,
-    SHORT_UUID_LENGTH,
-)
 from nylium.objects.nyobject.NyObject import NyObject
 from nylium.objects.nyobject.ArrayValue import ArrayValue
 from nylium.objects.nyobject.EmbeddedValue import EmbeddedValue
 from nylium.objects.nyobject.ObjectRef import ObjectRef
 from nylium.objects.nyobject.RefValue import RefValue
 from nylium.objects.nyobject.ScalarValue import ScalarValue
-from nylium.objects.nyobject.shared import CONFIG, NAME_PROP_KEY
 from nylium.objects.nyobject.values import PropValue
 from nylium.objects.nyobject.TagView import TagView
 from nylium.objects.nyobject.ObjectView import ObjectView
 
 __all__ = [
-    "CONFIG",
-    "INSTANCE_NAME_FORMAT",
-    "NAME_PROP_KEY",
-    "PRIVATE_PREFIX",
-    "SHORT_UUID_LENGTH",
     "ArrayValue",
     "EmbeddedValue",
     "ObjectRef",

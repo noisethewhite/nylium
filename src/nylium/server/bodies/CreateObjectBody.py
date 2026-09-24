@@ -1,6 +1,5 @@
 from __future__ import annotations
 from nylium.api.Api import Api
-from nylium.server.bodies.shared import BODY_CONFIG
 from nylium.objects.nyobject import ObjectView
 from nylium.server.PropCodec import PropCodec
 from nylium.objects.nyobject import PropValue
@@ -8,9 +7,10 @@ from pydantic.dataclasses import dataclass
 from dataclasses import field
 import sys
 from nylium.server.bodies.shared import resolve_route_hints
+from nylium.Constants import Constants
 
 
-@dataclass(config=BODY_CONFIG)
+@dataclass(config=Constants.Pydantic.CONFIG)
 class CreateObjectBody:
     type_name: str
     props: dict[str, PropValue] = field(default_factory=dict)

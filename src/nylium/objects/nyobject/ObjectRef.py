@@ -1,10 +1,10 @@
 from __future__ import annotations
-from nylium.objects.nyobject.shared import CONFIG
 from uuid import UUID
 from pydantic.dataclasses import dataclass
+from nylium.Constants import Constants
 
 
-@dataclass(config=CONFIG)
+@dataclass(config=Constants.Pydantic.CONFIG)
 class ObjectRef:
     """A link target rendered for display: who it is, not its whole body."""
 

@@ -4,15 +4,15 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from nylium.Constants import Constants
 
 
 if TYPE_CHECKING:
     from nylium.objects.nyobject.values import PropValue
-from nylium.objects.nyobject.shared import CONFIG
 from pydantic.dataclasses import dataclass
 
 
-@dataclass(config=CONFIG)
+@dataclass(config=Constants.Pydantic.CONFIG)
 class ArrayValue:
     """None means the prop was never set; [] means set to empty."""
 

@@ -5,7 +5,7 @@ from collections.abc import Callable
 from typing import cast
 from uuid import UUID
 
-from nylium.api.ApiShared import ApiShared, NAME_PROP_KEY, PropInput
+from nylium.api.ApiShared import ApiShared, PropInput
 from nylium.objects.nyobject import ObjectView
 from nylium.objects.nyobject import ObjectRef
 from nylium.database import Database
@@ -19,6 +19,7 @@ from nylium.objects.NyTypeMeta import NyTypeMeta
 from nylium.api.MarkdownRenderer import MarkdownRenderer
 from nylium.server.ValidationError import ValidationError
 from nylium.data.tables import InstanceFunctionLinks
+from nylium.Constants import Constants
 
 
 class ObjectsApi(ApiShared):
@@ -60,9 +61,9 @@ class ObjectsApi(ApiShared):
         def ref_label(ref: ObjectRef) -> str:
             inst = instances.get(ref.uuid)
             owner = NyType.by_uuid(inst.type_uuid) if inst is not None else None
-            if owner is not None and NyProp.by_key(owner, NAME_PROP_KEY) is not None:
+            if owner is not None and NyProp.by_key(owner, Constants.Props.NAME_PROP_KEY) is not None:
                 wrapper = NyObject.wrap(ref.uuid)
-                label = cast(str | None, getattr(wrapper, NAME_PROP_KEY))
+                label = cast(str | None, getattr(wrapper, Constants.Props.NAME_PROP_KEY))
                 if label:
                     return label
             return "" if inst is None else inst.name

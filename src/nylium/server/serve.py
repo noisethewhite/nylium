@@ -2,16 +2,14 @@
 from __future__ import annotations
 
 import uvicorn
-
-APP_FACTORY = "nylium.server.NyliumApp:NyliumApp.create"
-DEFAULT_HOST = "127.0.0.1"
-DEFAULT_PORT = 8000
+from nylium.Constants import Constants
 
 
-def serve(host: str = DEFAULT_HOST, port: int = DEFAULT_PORT, *, live_reload: bool = False) -> None:
+
+def serve(host: str = Constants.Server.DEFAULT_HOST, port: int = Constants.Server.DEFAULT_PORT, *, live_reload: bool = False) -> None:
     """Run the HTTP server in the foreground."""
     uvicorn.run(
-        APP_FACTORY,
+        Constants.Server.APP_FACTORY,
         factory=True,
         host=host,
         port=port,

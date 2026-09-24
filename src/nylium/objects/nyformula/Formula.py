@@ -19,7 +19,7 @@ from nylium.objects.nyformula.Call import Call
 from nylium.objects.nyformula.If import If
 from nylium.objects.nyformula.Neg import Neg
 from nylium.objects.nyformula.Ref import Ref
-from nylium.objects.nyformula.nodes import FUNCTIONS, Expr
+from nylium.objects.nyformula.nodes import Expr
 from nylium.objects.nyformula.Parser import Parser, tokenize
 from nylium.objects.nyformula.rewriting import render, rewrite_ast
 from nylium.objects.nyformula.serialization import ast_to_dict, dict_to_ast
@@ -29,6 +29,7 @@ from nylium.objects.NyNumeric import NyNumeric
 from nylium.objects.NyString import NyString
 from nylium.objects.NyType import NyType
 from nylium.server.ValidationError import ValidationError
+from nylium.Constants import Constants
 
 
 def _calls(node: Expr) -> Iterator[Call]:
@@ -95,7 +96,7 @@ class Formula:
     plain data, so this class stays free of any object-layer coupling.
     """
 
-    FUNCTIONS: ClassVar[frozenset[str]] = FUNCTIONS
+    FUNCTIONS: ClassVar[frozenset[str]] = Constants.Formulas.FUNCTIONS
 
     @classmethod
     def parse(cls, formula: str) -> Expr:

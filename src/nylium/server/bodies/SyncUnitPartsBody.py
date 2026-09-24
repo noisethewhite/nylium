@@ -1,15 +1,15 @@
 from __future__ import annotations
 from nylium.api.Api import Api
 from nylium.api.ApiShared import ApiShared
-from nylium.server.bodies.shared import BODY_CONFIG
 from nylium.server.bodies.SyncUnitPartItem import SyncUnitPartItem
 from nylium.objects.TypeView import TypeView
 from pydantic.dataclasses import dataclass
 import sys
 from nylium.server.bodies.shared import resolve_route_hints
+from nylium.Constants import Constants
 
 
-@dataclass(config=BODY_CONFIG)
+@dataclass(config=Constants.Pydantic.CONFIG)
 class SyncUnitPartsBody:
     """The full part draft — renames by uuid (propagating to stored
     values), creates without, deletes whatever the draft omits unless

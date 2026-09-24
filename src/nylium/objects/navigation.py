@@ -20,7 +20,6 @@ from sqlalchemy.orm import Mapped, aliased
 from nylium.database import Database
 from nylium.database.Row import mapper
 from nylium.database.Table import Row
-from nylium.objects.scalar_type_names import DATE, DATETIME, INTEGER
 from nylium.data.tables import trait_decor
 from nylium.data.tables import type_decor
 from nylium.data.rows import TypeDecor
@@ -46,6 +45,7 @@ from nylium.data.rows import MonthDayValue
 from nylium.data.rows import NumericValue
 from nylium.data.rows import StringValue
 from nylium.data.rows import TimeValue
+from nylium.Constants import Constants
 
 # --- schema navigation (was Row properties) ---
 
@@ -505,11 +505,11 @@ def collect_range(
 
     `spec_name` is the member prop's value spec (ordered scalar); it picks
     the matching value table."""
-    if spec_name == INTEGER:
+    if spec_name == Constants.Scalar.INTEGER:
         table: type[Row] = IntegerValue
-    elif spec_name == DATE:
+    elif spec_name == Constants.Scalar.DATE:
         table = DateValue
-    elif spec_name == DATETIME:
+    elif spec_name == Constants.Scalar.DATETIME:
         table = DatetimeValue
     else:
         # Numeric and Numeric<Unit> both store their magnitude in numeric_values

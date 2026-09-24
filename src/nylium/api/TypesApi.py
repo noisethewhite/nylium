@@ -3,7 +3,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from nylium.api.ApiShared import ApiShared, NAME_PROP_KEY
+from nylium.api.ApiShared import ApiShared
+from nylium.Constants import Constants
 
 if TYPE_CHECKING:
     # see functions.py: cross-domain calls resolve on the combined Api
@@ -51,7 +52,7 @@ class TypesApi(_TypesBase):
         """props maps key -> value type name. Missing value types are created.
         Dict order becomes the schema's display order (positions).
         The schema must open with the `name` prop (String) — see
-        NAME_PROP_KEY. embedded marks a composition type (ADR-0004):
+        Constants.Props.NAME_PROP_KEY. embedded marks a composition type (ADR-0004):
         its instances exist only as a prop value of an owner object.
         formulas maps prop key -> formula string (ADR-0005); a formula
         prop must be Numeric (or Integer for a bare COUNT). collects maps
@@ -66,16 +67,16 @@ class TypesApi(_TypesBase):
             # ADR-0004 composition types may omit the `name` prop — their
             # instances carry a generated/registry title instead (ADR-0027).
             # When present it must still be a String.
-            if NAME_PROP_KEY in props and props[NAME_PROP_KEY] != NyString.TYPE_NAME:
+            if Constants.Props.NAME_PROP_KEY in props and props[Constants.Props.NAME_PROP_KEY] != NyString.TYPE_NAME:
                 raise ValidationError(
-                    f"the {NAME_PROP_KEY!r} prop must be of type {NyString.TYPE_NAME!r}"
+                    f"the {Constants.Props.NAME_PROP_KEY!r} prop must be of type {NyString.TYPE_NAME!r}"
                 )
         else:
-            if not keys or keys[0] != NAME_PROP_KEY:
-                raise ValidationError(f"first prop of a type must be {NAME_PROP_KEY!r}")
-            if props[NAME_PROP_KEY] != NyString.TYPE_NAME:
+            if not keys or keys[0] != Constants.Props.NAME_PROP_KEY:
+                raise ValidationError(f"first prop of a type must be {Constants.Props.NAME_PROP_KEY!r}")
+            if props[Constants.Props.NAME_PROP_KEY] != NyString.TYPE_NAME:
                 raise ValidationError(
-                    f"the {NAME_PROP_KEY!r} prop must be of type {NyString.TYPE_NAME!r}"
+                    f"the {Constants.Props.NAME_PROP_KEY!r} prop must be of type {NyString.TYPE_NAME!r}"
                 )
         cls._check_reserved_name(name, "type name")
         for key in keys:

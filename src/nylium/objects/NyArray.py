@@ -24,14 +24,13 @@ from nylium.objects.NyEnum import NyEnum
 from nylium.objects.NyEmbedded import NyEmbedded
 from nylium.objects.NyFile import NyFile
 from nylium.objects.NyProp import NyProp
-from nylium.objects.NyScalar import NyScalar
+from nylium.objects.NyScalar import NyScalar, ScalarPayload
 from nylium.objects.NyString import NyString
-from nylium.objects.NyScalar import VALUE_PROP_KEY, ScalarPayload
+from nylium.Constants import Constants
 from nylium.objects.NyType import NyType
 from nylium.objects.NyObjectShape import NyObjectShape
 from nylium.objects.NyTypeMeta import StoredValue, NyTypeMeta
 
-ARRAY_INSTANCE_NAME = "array"
 
 
 class NyArray:
@@ -134,7 +133,7 @@ class NyArray:
     def _create_array_instance(cls, array_type_name: str) -> UUID:
         array_uuid = uuid4()
         array_type = NyType.ensure(array_type_name)
-        instances.create(array_uuid, array_type.uuid, ARRAY_INSTANCE_NAME)
+        instances.create(array_uuid, array_type.uuid, Constants.Types.ARRAY_INSTANCE_NAME)
         return array_uuid
 
     @classmethod
@@ -157,7 +156,7 @@ class NyArray:
         owner = NyType.by_uuid(inst.type_uuid)
         if owner is None:
             raise RuntimeError(f"instance {uuid} has dangling type")
-        value_prop = NyProp.by_key(owner, VALUE_PROP_KEY)
+        value_prop = NyProp.by_key(owner, Constants.Props.VALUE_PROP_KEY)
         if value_prop is None:
             raise RuntimeError(f"scalar type {type_name} lost its 'value' prop")
         stored = scalar.SCALAR.read(uuid, value_prop.uuid)
@@ -220,7 +219,7 @@ class NyArray:
         box_uuid = uuid4()
         owner = NyType.ensure(scalar.TYPE_NAME)
         instances.create(box_uuid, owner.uuid, str(value))
-        value_prop = NyProp.by_key(owner, VALUE_PROP_KEY)
+        value_prop = NyProp.by_key(owner, Constants.Props.VALUE_PROP_KEY)
         if value_prop is None:
             raise RuntimeError(f"scalar type {type_name} lost its 'value' prop")
         scalar.SCALAR.write(

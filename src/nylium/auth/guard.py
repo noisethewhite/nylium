@@ -15,6 +15,7 @@ from nylium.auth.sessions import sessions
 from nylium.auth.tokens import tokens
 from nylium.data.tables import auth_users
 from nylium.data.rows import AuthUser
+from nylium.Constants import Constants
 
 
 @dataclass
@@ -24,14 +25,13 @@ class _Credential:
     scope: str | None
 
 
-_BEARER_PREFIX = "Bearer "
 
 
 def _bearer_token(request: Request) -> str | None:
     header = request.headers.get("Authorization")
-    if header is None or not header.startswith(_BEARER_PREFIX):
+    if header is None or not header.startswith(Constants.Auth.BEARER_PREFIX):
         return None
-    raw = header[len(_BEARER_PREFIX):].strip()
+    raw = header[len(Constants.Auth.BEARER_PREFIX):].strip()
     return raw or None
 
 

@@ -4,7 +4,8 @@ from __future__ import annotations
 import argparse
 from typing import cast
 
-from nylium.server.serve import DEFAULT_HOST, DEFAULT_PORT, serve
+from nylium.server.serve import serve
+from nylium.Constants import Constants
 
 
 def main() -> None:
@@ -13,8 +14,8 @@ def main() -> None:
     commands = parser.add_subparsers(dest="command", required=True)
 
     serve_parser = commands.add_parser("serve", help="run the HTTP server")
-    _ = serve_parser.add_argument("--host", default=DEFAULT_HOST)
-    _ = serve_parser.add_argument("--port", type=int, default=DEFAULT_PORT)
+    _ = serve_parser.add_argument("--host", default=Constants.Server.DEFAULT_HOST)
+    _ = serve_parser.add_argument("--port", type=int, default=Constants.Server.DEFAULT_PORT)
     _ = serve_parser.add_argument(
         "--reload", action="store_true", help="auto-reload on source changes"
     )

@@ -27,14 +27,12 @@ from nylium.objects.NyScalar import NyScalar
 from nylium.objects.NyScalar import ScalarPayload
 from nylium.objects.NyType import NyType
 from nylium.objects.NyObjectShape import NyObjectShape
+from nylium.Constants import Constants
 
-LIST_ANNOTATION_PREFIX = "list["
 ABSTRACT_FLAG = "__abstract__"
-PRIVATE_PREFIX = "_"
 # annotationlib.Format.VALUE (PEP 649): evaluate __annotate_func__ to real objects.
 # Mirrored as a constant instead of importing annotationlib, which only exists on 3.14+.
 _ANNOTATE_FORMAT_VALUE = 1
-NYOBJECT_ROOT_NAME = "NyObject"
 
 
 
@@ -67,7 +65,7 @@ class NyTypeMeta(type):
         **kwargs: object,
     ):
         cls = super().__new__(mcls, name, bases, namespace, **kwargs)
-        if name == NYOBJECT_ROOT_NAME and mcls._root is None:
+        if name == Constants.Types.NYOBJECT_ROOT_NAME and mcls._root is None:
             mcls._root = cast(type[NyObjectShape], cls)
         if namespace.get(ABSTRACT_FLAG):
             return cls
@@ -146,7 +144,7 @@ class NyTypeMeta(type):
         NyScalar.ensure_builtins()
         owner = NyType.ensure(cls.__name__)
         for key, annotation in mcls._class_annotations(namespace).items():
-            if key.startswith(PRIVATE_PREFIX):
+            if key.startswith(Constants.Types.PRIVATE_PREFIX):
                 continue
             value_type = NyType.ensure(mcls.resolve_annotation(annotation))
             _ = NyProp.ensure(owner, key, value_type)
@@ -184,8 +182,8 @@ class NyTypeMeta(type):
     @classmethod
     def _resolve_string_annotation(mcls, annotation: str) -> str:
         name = annotation.strip().strip("\"'")
-        if name.startswith(LIST_ANNOTATION_PREFIX) and name.endswith("]"):
-            element = mcls.resolve_annotation(name[len(LIST_ANNOTATION_PREFIX) : -1])
+        if name.startswith(Constants.Types.LIST_ANNOTATION_PREFIX) and name.endswith("]"):
+            element = mcls.resolve_annotation(name[len(Constants.Types.LIST_ANNOTATION_PREFIX) : -1])
             return NyType.array_name(element)
         scalar = NyScalar.by_class_name(name) or NyScalar.by_type_name(name)
         if scalar is not None:
