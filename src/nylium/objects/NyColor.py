@@ -2,7 +2,7 @@ from __future__ import annotations
 from nylium.objects.scalar_type_names import COLOR
 from typing import ClassVar
 from nylium.objects.NyScalar import NyScalar
-from nylium.objects.nyscalar import ScalarPayload
+from nylium.objects.NyScalar import ScalarPayload
 from nylium.data.rows import StringValue
 from nylium.data.tables import StringValues
 from typing import cast

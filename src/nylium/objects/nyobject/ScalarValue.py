@@ -1,6 +1,6 @@
 from __future__ import annotations
 from nylium.objects.nyobject.shared import CONFIG
-from nylium.objects.nyscalar import ScalarPayload
+from nylium.objects.NyScalar import ScalarPayload
 from pydantic.dataclasses import dataclass
 
 

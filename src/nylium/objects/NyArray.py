@@ -26,7 +26,7 @@ from nylium.objects.NyFile import NyFile
 from nylium.objects.NyProp import NyProp
 from nylium.objects.NyScalar import NyScalar
 from nylium.objects.NyString import NyString
-from nylium.objects.nyscalar import VALUE_PROP_KEY, ScalarPayload
+from nylium.objects.NyScalar import VALUE_PROP_KEY, ScalarPayload
 from nylium.objects.NyType import NyType
 from nylium.objects.NyObjectShape import NyObjectShape
 from nylium.objects.NyTypeMeta import StoredValue, NyTypeMeta

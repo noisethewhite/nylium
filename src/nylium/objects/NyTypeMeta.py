@@ -24,7 +24,7 @@ from nylium.data.tables import TypeTraits
 from nylium.objects.Quantity import Quantity
 from nylium.objects.NyProp import NyProp
 from nylium.objects.NyScalar import NyScalar
-from nylium.objects.nyscalar import ScalarPayload
+from nylium.objects.NyScalar import ScalarPayload
 from nylium.objects.NyType import NyType
 from nylium.objects.NyObjectShape import NyObjectShape
 

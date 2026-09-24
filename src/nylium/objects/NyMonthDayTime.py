@@ -4,7 +4,7 @@ from nylium.objects.MonthDayTime import MonthDayTime
 from nylium.data.rows import MonthDayTimeValue
 from nylium.data.tables import MonthDayTimeValues
 from nylium.objects.NyScalar import NyScalar
-from nylium.objects.nyscalar import ScalarPayload
+from nylium.objects.NyScalar import ScalarPayload
 from typing import final
 from typing import override
 

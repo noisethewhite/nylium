@@ -32,7 +32,7 @@ from nylium.objects.nyfunction.NyFunction import NyFunction
 from nylium.objects.NyProp import NyProp
 from nylium.objects.NyInteger import NyInteger
 from nylium.objects.NyScalar import NyScalar
-from nylium.objects.nyscalar import ScalarPayload
+from nylium.objects.NyScalar import ScalarPayload
 from nylium.objects.nyobject.TagView import TagView
 from nylium.objects.nyobject.ArrayValue import ArrayValue
 from nylium.objects.nyobject.EmbeddedValue import EmbeddedValue

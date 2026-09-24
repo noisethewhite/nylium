@@ -13,7 +13,7 @@ from nylium.objects.nyobject import (
     RefValue,
     ScalarValue,
 )
-from nylium.objects.nyscalar import ScalarPayload
+from nylium.objects.NyScalar import ScalarPayload
 
 __all__ = [
     "Api",

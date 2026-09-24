@@ -15,7 +15,7 @@ from nylium.data.tables import FunctionEdges
 from nylium.data.tables import FunctionNodes
 from nylium.objects.NyInteger import NyInteger
 from nylium.objects.NyString import NyString
-from nylium.objects.nyscalar import ScalarPayload
+from nylium.objects.NyScalar import ScalarPayload
 from nylium.objects.nyfunction.constants import (
     NODE_ADD,
     NODE_AVERAGE,

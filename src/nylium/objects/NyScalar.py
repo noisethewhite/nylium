@@ -4,11 +4,31 @@ from nylium.database import Database
 from nylium.objects.NyProp import NyProp
 from nylium.objects.NyType import NyType
 from typing import Protocol
-from nylium.objects.nyscalar import ScalarPayload
-from nylium.objects.nyscalar import ScalarTable
 from uuid import UUID
-from nylium.objects.nyscalar import VALUE_PROP_KEY
 from typing import cast
+
+from datetime import date, datetime, time
+from decimal import Decimal
+
+from nylium.objects.MonthDay import MonthDay
+from nylium.objects.MonthDayTime import MonthDayTime
+from nylium.data.rows import BooleanValue
+from nylium.data.rows import DateValue
+from nylium.data.rows import DatetimeValue
+from nylium.data.rows import IntegerValue
+from nylium.data.rows import MonthDayTimeValue
+from nylium.data.rows import MonthDayValue
+from nylium.data.rows import NumericValue
+from nylium.data.rows import StringValue
+from nylium.data.rows import TimeValue
+
+VALUE_PROP_KEY = "value"
+
+ScalarPayload = str | int | Decimal | bool | datetime | date | time | MonthDay | MonthDayTime
+ScalarTable = (
+    StringValue | IntegerValue | NumericValue | BooleanValue | DatetimeValue
+    | DateValue | TimeValue | MonthDayValue | MonthDayTimeValue
+)
 
 
 class NyScalar:

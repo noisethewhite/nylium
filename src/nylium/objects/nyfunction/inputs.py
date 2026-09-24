@@ -21,7 +21,7 @@ from nylium.data.tables import instances
 from nylium.data.tables import InstanceFunctionLinks
 from nylium.objects.nyobject.NyObject import NyObject
 from nylium.objects.NyProp import NyProp
-from nylium.objects.nyscalar import ScalarPayload
+from nylium.objects.NyScalar import ScalarPayload
 from nylium.objects.NyType import NyType
 from nylium.objects.nyfunction.evaluation import evaluate
 

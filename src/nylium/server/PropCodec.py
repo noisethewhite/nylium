@@ -33,7 +33,7 @@ from nylium.objects.NyNumeric import NyNumeric
 from nylium.objects.NyScalar import NyScalar
 from nylium.objects.NyString import NyString
 from nylium.objects.NyTime import NyTime
-from nylium.objects.nyscalar import ScalarPayload
+from nylium.objects.NyScalar import ScalarPayload
 from nylium.objects.NyType import NyType
 
 
