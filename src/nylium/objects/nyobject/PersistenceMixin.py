@@ -19,12 +19,13 @@ from nylium.objects.NyObjectShape import NyObjectShape
 from nylium.data.rows import InstanceValue
 from nylium.data.tables import FileValues
 from nylium.data.tables import InstanceValues
+from nylium.uuid import ObjectUUID
 
 
 class PersistenceMixin:
     """Read and write prop values for an instance; uuid bookkeeping is upstream."""
 
-    _uuid: UUID
+    _uuid: ObjectUUID
 
     def _link(self, prop: NyProp) -> InstanceValue | None:
         return InstanceValues.link_for(self._uuid, prop.uuid)

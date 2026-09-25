@@ -6,9 +6,9 @@ from uuid import UUID
 import pytest
 
 from nylium.api import Api, ArrayValue, ScalarValue
-from nylium.objects.navigation import effective_props, type_enum_options
 from nylium.data.rows import Type
 from nylium.server.ValidationError import ValidationError
+from nylium.uuid import TypeUUID
 
 
 def ticket_type() -> Type:
@@ -26,8 +26,8 @@ def status_enum() -> Type:
 def test_create_enum_view():
     view = status_enum()
     assert view.kind == "enum"
-    assert [option.value for option in type_enum_options(view.uuid)] == ["open", "closed"]
-    assert effective_props(view.uuid) == []
+    assert [option.value for option in TypeUUID.of(view.uuid).enum_options()] == ["open", "closed"]
+    assert TypeUUID.of(view.uuid).effective_props() == []
 
 
 def test_enum_membership_validation():
@@ -61,7 +61,7 @@ def test_enum_array_prop():
 
 
 def _option_uuids(view: Type) -> dict[str, UUID]:
-    return {option.value: option.uuid for option in type_enum_options(view.uuid)}
+    return {option.value: option.uuid for option in TypeUUID.of(view.uuid).enum_options()}
 
 
 def test_sync_options_rename_propagates():
@@ -73,7 +73,7 @@ def test_sync_options_rename_propagates():
     # the declared element type, not the inferred join
     draft: list[tuple[UUID | None, str]] = [(uuids["open"], "in progress"), (None, "archived")]
     synced = Api.sync_enum_options("Status", draft)
-    assert [option.value for option in type_enum_options(synced.uuid)] == ["in progress", "archived"]
+    assert [option.value for option in TypeUUID.of(synced.uuid).enum_options()] == ["in progress", "archived"]
     reloaded = Api.get_object(ticket.uuid)
     assert reloaded is not None
     assert reloaded.props["status"] == ScalarValue(value="in progress")
@@ -95,7 +95,7 @@ def test_sync_options_delete_unused_ok():
     uuids = _option_uuids(view)
     draft: list[tuple[UUID | None, str]] = [(uuids["open"], "open")]
     synced = Api.sync_enum_options("Status", draft)
-    assert [option.value for option in type_enum_options(synced.uuid)] == ["open"]
+    assert [option.value for option in TypeUUID.of(synced.uuid).enum_options()] == ["open"]
 
 
 def test_sync_options_guards():
@@ -118,5 +118,5 @@ def test_enum_rename_and_identity():
     _ = status_enum()
     renamed = Api.rename_type("Status", "TicketStatus")
     assert renamed.name == "TicketStatus" and renamed.kind == "enum"
-    assert [option.value for option in type_enum_options(renamed.uuid)] == ["open", "closed"]
+    assert [option.value for option in TypeUUID.of(renamed.uuid).enum_options()] == ["open", "closed"]
     assert Api.get_type("Status") is None

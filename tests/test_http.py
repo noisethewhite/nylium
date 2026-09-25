@@ -19,6 +19,7 @@ import secrets
 from nylium.auth.sessions import sessions
 from nylium.data.tables import auth_credentials
 from nylium.data.tables import auth_users
+from nylium.uuid import FileUUID
 from uuid import uuid4
 
 
@@ -846,7 +847,7 @@ def test_files_over_http(auth_client: TestClient) -> None:
     # delete cascades: row gone, blob gone
     deleted = auth_client.delete(f"/api/files/{obj['uuid']}")
     assert deleted.status_code == 204, deleted.text
-    assert not NyFile.blob_path(obj["uuid"]).exists()
+    assert not NyFile.blob_path(FileUUID.of(obj["uuid"])).exists()
     assert auth_client.get(f"/api/files/{obj['uuid']}").status_code == 404
 
     # unknown uuid is a 404, not a 500

@@ -9,7 +9,7 @@ from nylium.api.ApiShared import ApiShared, PropInput
 from nylium.objects.nyobject import ObjectView
 from nylium.objects.nyobject import ObjectRef
 from nylium.database import Database
-from nylium.objects.navigation import type_name_of
+from nylium.uuid import ObjectUUID, TypeUUID
 from nylium.data.tables import instances
 from nylium.objects.NyEmbedded import NyEmbedded
 from nylium.objects.nyobject import NyObject
@@ -60,7 +60,7 @@ class ObjectsApi(ApiShared):
 
         def ref_label(ref: ObjectRef) -> str:
             inst = instances.get(ref.uuid)
-            owner = NyType.by_uuid(inst.type_uuid) if inst is not None else None
+            owner = NyType.by_uuid(TypeUUID.of(inst.type_uuid)) if inst is not None else None
             if owner is not None and NyProp.by_key(owner, Constants.Props.NAME_PROP_KEY) is not None:
                 wrapper = NyObject.wrap(ref.uuid)
                 label = cast(str | None, getattr(wrapper, Constants.Props.NAME_PROP_KEY))
@@ -92,7 +92,7 @@ class ObjectsApi(ApiShared):
             instance_uuid = NyObject.create_db_only(type_name, normalized)
         # heal generated names: an embedded prop written before the name
         # prop in the same request computed a fallback-based child name
-        NyEmbedded.regenerate_names(instance_uuid)
+        NyEmbedded.regenerate_names(ObjectUUID.of(instance_uuid))
         view = cls.get_object(instance_uuid)
         if view is None:
             raise RuntimeError(f"created {type_name} instance {instance_uuid} vanished")
@@ -107,7 +107,7 @@ class ObjectsApi(ApiShared):
                 "embedded objects are edited through their owner — write the embedded prop on the parent instead"
             )
         wrapper = NyObject.wrap(uuid)
-        type_name = type_name_of(instances[uuid].type_uuid)
+        type_name = TypeUUID.of(instances[uuid].type_uuid).name_of()
         normalized = cls._normalize_props(type_name, props)
         # ADR-0029: function-bound props are instance-level read-only.
 
@@ -129,7 +129,7 @@ class ObjectsApi(ApiShared):
             setattr(wrapper, key, value)
         # a renamed parent (or a reordered draft) invalidates the
         # generated names of its embedded children
-        NyEmbedded.regenerate_names(uuid)
+        NyEmbedded.regenerate_names(ObjectUUID.of(uuid))
         view = cls.get_object(uuid)
         if view is None:
             raise RuntimeError(f"updated instance {uuid} vanished")

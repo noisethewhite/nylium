@@ -24,6 +24,7 @@ from nylium.objects.NyProp import NyProp
 from nylium.objects.NyScalar import ScalarPayload
 from nylium.objects.NyType import NyType
 from nylium.objects.nyfunction.evaluation import evaluate
+from nylium.uuid import TypeUUID
 
 
 @Database.use_same_session
@@ -54,7 +55,7 @@ def _materialize_owner(inst_uuid: UUID, visiting: frozenset[UUID]) -> dict[str, 
     type_uuid = None if inst is None else inst.type_uuid
     if type_uuid is None:
         return {}
-    owner = NyType.by_uuid(type_uuid)
+    owner = NyType.by_uuid(TypeUUID.of(type_uuid))
     if owner is None:
         return {}
     result: dict[str, object] = {}

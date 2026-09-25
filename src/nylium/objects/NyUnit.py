@@ -5,7 +5,7 @@ from nylium.data.tables import NumericValues
 from nylium.objects.NyProp import NyProp
 from nylium.objects.NyType import NyType
 from nylium.objects.Quantity import Quantity
-from uuid import UUID
+from nylium.uuid import ObjectUUID
 from nylium.server.ValidationError import ValidationError
 from nylium.data.tables import unit_parts
 
@@ -50,7 +50,7 @@ class NyUnit:
     @classmethod
     @Database.use_same_session
     def read(
-        cls, inst_uuid: UUID, prop: NyProp, type_name: str
+        cls, inst_uuid: ObjectUUID, prop: NyProp, type_name: str
     ) -> Quantity | None:
         stored = NumericValues.read_with_unit(inst_uuid, prop.uuid)
         if stored is None:
@@ -79,7 +79,7 @@ class NyUnit:
     @classmethod
     @Database.commit_after_this
     def write(
-        cls, inst_uuid: UUID, prop: NyProp, quantity: Quantity | None
+        cls, inst_uuid: ObjectUUID, prop: NyProp, quantity: Quantity | None
     ) -> None:
         if quantity is None:
             _ = NumericValues.clear(inst_uuid, prop.uuid)

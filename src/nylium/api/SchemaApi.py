@@ -22,6 +22,7 @@ from nylium.objects.NyProp import NyProp
 from nylium.objects.NyString import NyString
 from nylium.objects.NyType import NyType
 from nylium.server.ValidationError import ValidationError
+from nylium.uuid import ObjectUUID, PropUUID
 
 
 class SchemaApi(_SchemaBase):
@@ -96,7 +97,7 @@ class SchemaApi(_SchemaBase):
             cls._check_reserved_name(key, "prop key")
         if len(set(keys)) != len(keys):
             raise ValidationError(f"duplicate prop keys in {keys!r}")
-        strangers = [uuid for uuid, _, _, _ in items if uuid is not None and uuid not in by_uuid]
+        strangers = [uuid for uuid, _, _, _ in items if uuid is not None and PropUUID.of(uuid) not in by_uuid]
         if strangers:
             raise ValidationError(f"prop uuids {strangers!r} do not belong to {type_name!r}")
         # ADR-0005 rename-rewrite, local pass: the editor echoes formulas
@@ -104,9 +105,9 @@ class SchemaApi(_SchemaBase):
         # on the stale path. Rewrite array keys — and member keys of
         # self-referencing arrays — before checking against the new schema.
         renames = {
-            by_uuid[uuid].key: key
+            by_uuid[PropUUID.of(uuid)].key: key
             for uuid, key, _, _ in items
-            if uuid is not None and by_uuid[uuid].key != key
+            if uuid is not None and by_uuid[PropUUID.of(uuid)].key != key
         }
         self_arrays = {
             key
@@ -181,5 +182,5 @@ class SchemaApi(_SchemaBase):
             # a renamed embedded prop key invalidates every generated
             # child name of every instance of this type
             for instance_uuid in [i.uuid for i in instances.where(type_uuid=owner.uuid)]:
-                NyEmbedded.regenerate_names(instance_uuid)
+                NyEmbedded.regenerate_names(ObjectUUID.of(instance_uuid))
         return cls._type_result(type_name)

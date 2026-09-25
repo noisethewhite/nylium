@@ -20,9 +20,11 @@ from nylium.objects.NyScalar import NyScalar
 from nylium.objects.NyType import NyType
 from nylium.objects.NyTypeMeta import StoredValue
 from nylium.objects.TypeView import TypeView
-from nylium.objects.navigation import effective_props, prop_value_type_name
+from nylium.objects.navigation import prop_value_type_name
+from nylium.uuid import TypeUUID
 from nylium.server.ValidationError import ValidationError
 from nylium.Constants import Constants
+from nylium.uuid import FileUUID
 
 # What callers may hand in for a prop: stored values, plus links as
 # UUID/ObjectRef (resolved to NyObject here), plus a props draft for
@@ -45,7 +47,7 @@ class ApiShared:
         owner = types.get(owner_type_uuid)
         if owner is None:
             raise KeyError(f"type <gone> has no prop {key!r}")
-        prop = next((p for p in effective_props(owner_type_uuid) if p.key == key), None)
+        prop = next((p for p in TypeUUID.of(owner_type_uuid).effective_props() if p.key == key), None)
         if prop is None:
             raise KeyError(f"type {owner.name!r} has no prop {key!r}")
         return prop_value_type_name(prop)
@@ -99,7 +101,7 @@ class ApiShared:
             if row.name not in object_names:
                 continue
             deps: list[str | None] = []
-            for prop in effective_props(row.uuid):
+            for prop in TypeUUID.of(row.uuid).effective_props():
                 value_type = prop_value_type_name(prop)
                 if NyType.is_any_name(value_type):
                     deps.append(cls._ANY_LINK)
@@ -219,7 +221,7 @@ class ApiShared:
             raise KeyError(f"no type {type_name!r}")
         # ADR-0013: the effective schema — attached traits' props are
         # writable through the object editor like the type's own
-        owner_props = effective_props(owner_type_row.uuid)
+        owner_props = TypeUUID.of(owner_type_row.uuid).effective_props()
         formula_readonly = {p.key for p in owner_props if p.formula is not None}
         collect_readonly = {p.key for p in owner_props if p.collect is not None}
         result: dict[str, StoredValue] = {}
@@ -338,7 +340,7 @@ class ApiShared:
         image_uuid = NyFile.parse_icon_image(icon)
         if image_uuid is None:
             return
-        if not NyFile.image_file_exists(image_uuid):
+        if not NyFile.image_file_exists(FileUUID.of(image_uuid)):
             raise ValidationError(
                 f"icon {icon!r} does not reference a live Image instance"
             )

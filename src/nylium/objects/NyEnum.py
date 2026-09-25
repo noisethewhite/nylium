@@ -3,7 +3,7 @@ from nylium.database import Database
 from nylium.objects.NyProp import NyProp
 from nylium.objects.NyType import NyType
 from nylium.data.tables import StringValues
-from uuid import UUID
+from nylium.uuid import ObjectUUID
 from nylium.server.ValidationError import ValidationError
 from typing import cast
 from nylium.data.tables import enum_options
@@ -33,12 +33,12 @@ class NyEnum:
 
     @classmethod
     @Database.use_same_session
-    def read(cls, inst_uuid: UUID, prop: NyProp) -> str | None:
+    def read(cls, inst_uuid: ObjectUUID, prop: NyProp) -> str | None:
         return cast(str | None, StringValues.read(inst_uuid, prop.uuid))
 
     @classmethod
     @Database.use_same_session
-    def write(cls, inst_uuid: UUID, prop: NyProp, value: str | None) -> None:
+    def write(cls, inst_uuid: ObjectUUID, prop: NyProp, value: str | None) -> None:
         if value is None:
             _ = StringValues.clear(inst_uuid, prop.uuid)
             return

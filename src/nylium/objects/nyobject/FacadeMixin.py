@@ -7,16 +7,16 @@ from __future__ import annotations
 
 from collections.abc import ItemsView
 from typing import cast, override
-from uuid import UUID
 
 from nylium.database import Database
 from nylium.objects.NyProp import NyProp
 from nylium.objects.NyType import NyType
 from nylium.objects.NyTypeMeta import StoredValue, NyTypeMeta
+from nylium.uuid import ObjectUUID
 
 
 class FacadeMixin:
-    _uuid: UUID
+    _uuid: ObjectUUID
 
     @classmethod
     @Database.use_same_session

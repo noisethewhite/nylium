@@ -14,10 +14,10 @@ from nylium.objects.nyobject import (
     RefValue,
     ScalarValue,
 )
-from nylium.objects.navigation import effective_props
 from nylium.objects.Quantity import Quantity
 from nylium.server.PropCodec import PropCodec
 from nylium.api.ApiShared import ApiShared
+from nylium.uuid import TypeUUID
 
 
 def _currency() -> None:
@@ -48,7 +48,7 @@ def _receipt_schema():
 def test_receipt_item_embedded_without_name():
     item_view = _receipt_schema()
     # no `name` prop — the embedded type is name-less (ADR-0027)
-    assert [prop.key for prop in effective_props(item_view.uuid)] == [
+    assert [prop.key for prop in TypeUUID.of(item_view.uuid).effective_props()] == [
         "product",
         "price",
         "quantity",

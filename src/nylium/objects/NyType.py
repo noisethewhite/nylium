@@ -9,13 +9,13 @@ objects package a DAG.
 """
 from __future__ import annotations
 
-from uuid import UUID
+from typing import ClassVar
 
 from nylium.database import Database
 from nylium.data.tables import type_decor
 from nylium.data.rows import Type
 from nylium.data.tables import types
-from typing import ClassVar
+from nylium.uuid import TypeUUID
 
 
 class NyType:
@@ -34,7 +34,7 @@ class NyType:
         # that fetched the row still being open. Decor is a 1:1 side table
         # (ADR-0014) — one lookup, not a Row navigation property.
         decor = type_decor[row.uuid]
-        self._uuid: UUID = row.uuid
+        self._uuid: TypeUUID = TypeUUID.of(row.uuid)
         self._name: str = row.name
         self._plural_name: str = decor.plural_name
         self._icon: str = decor.icon
@@ -43,7 +43,7 @@ class NyType:
         self._embedded: bool = row.embedded
 
     @property
-    def uuid(self) -> UUID:
+    def uuid(self) -> TypeUUID:
         return self._uuid
 
     @property
@@ -162,7 +162,7 @@ class NyType:
 
     @classmethod
     @Database.use_same_session
-    def by_uuid(cls, uuid: UUID) -> "NyType | None":
+    def by_uuid(cls, uuid: TypeUUID) -> "NyType | None":
         row = types.get(uuid)
         return None if row is None else cls(row)
 

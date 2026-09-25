@@ -26,6 +26,7 @@ from nylium.objects.NyTypeMeta import StoredValue, NyTypeMeta
 from nylium.objects.NyUnit import NyUnit
 from nylium.objects.nyobject.PersistenceMixin import PersistenceMixin
 from nylium.Constants import Constants
+from nylium.uuid import ObjectUUID, TypeUUID
 
 
 class AttrsMixin(PersistenceMixin):
@@ -36,7 +37,7 @@ class AttrsMixin(PersistenceMixin):
         inst = instances.get(self._uuid)
         if inst is None:
             raise AttributeError(f"instance {self._uuid} does not exist")
-        owner = NyType.by_uuid(inst.type_uuid)
+        owner = NyType.by_uuid(TypeUUID.of(inst.type_uuid))
         if owner is None:
             raise RuntimeError(f"instance {self._uuid} has dangling type")
         prop = NyProp.effective_by_key(owner, key)
@@ -61,7 +62,7 @@ class AttrsMixin(PersistenceMixin):
         if link is None:
             return None
         if NyType.is_array_name(value_type):
-            return NyArray.read(link.uuid, NyType.element_name(value_type))
+            return NyArray.read(ObjectUUID.of(link.uuid), NyType.element_name(value_type))
         return NyTypeMeta.root().wrap(link.uuid)
 
     @override
@@ -137,9 +138,9 @@ class AttrsMixin(PersistenceMixin):
         if link is None:
             return
         if NyType.is_array_name(value_type):
-            NyArray.destroy(link.uuid)
+            NyArray.destroy(ObjectUUID.of(link.uuid))
         elif not prop.is_trait_bound and prop.value_type().is_embedded:
-            NyEmbedded.destroy(link.uuid)  # the child dies with the prop
+            NyEmbedded.destroy(ObjectUUID.of(link.uuid))  # the child dies with the prop
         else:
             InstanceValues.delete_row(link)
         self._touch()

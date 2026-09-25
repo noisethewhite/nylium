@@ -28,6 +28,7 @@ from nylium.objects.NyScalar import ScalarPayload
 from nylium.objects.NyType import NyType
 from nylium.objects.NyObjectShape import NyObjectShape
 from nylium.Constants import Constants
+from nylium.uuid import TypeUUID
 
 ABSTRACT_FLAG = "__abstract__"
 # annotationlib.Format.VALUE (PEP 649): evaluate __annotate_func__ to real objects.
@@ -101,7 +102,7 @@ class NyTypeMeta(type):
                 )
             return
         inst = instances.get(value.uuid)
-        actual = None if inst is None else NyType.by_uuid(inst.type_uuid)
+        actual = None if inst is None else NyType.by_uuid(TypeUUID.of(inst.type_uuid))
         if actual is None or actual.name != expected_name:
             raise TypeError(
                 f"{expected_name} prop takes {expected_name}, got {'<missing instance>' if actual is None else actual.name}"
@@ -123,7 +124,7 @@ class NyTypeMeta(type):
                 f"Any<{trait_name}> prop takes a NyObject, got {type(value).__name__}"
             )
         inst = instances.get(value.uuid)
-        actual = None if inst is None else NyType.by_uuid(inst.type_uuid)
+        actual = None if inst is None else NyType.by_uuid(TypeUUID.of(inst.type_uuid))
         if actual is None:
             raise TypeError(
                 f"Any<{trait_name}> prop takes an object with trait {trait_name!r}, got <missing instance>"

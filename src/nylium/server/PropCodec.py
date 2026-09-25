@@ -20,7 +20,8 @@ from nylium.objects.nyobject import (
 )
 from nylium.objects.MonthDay import MonthDay
 from nylium.objects.MonthDayTime import MonthDayTime
-from nylium.objects.navigation import effective_props, prop_value_type_name
+from nylium.objects.navigation import prop_value_type_name
+from nylium.uuid import TypeUUID
 from nylium.objects.Quantity import Quantity
 from nylium.objects.NyEnum import NyEnum
 from nylium.objects.NyBoolean import NyBoolean
@@ -46,7 +47,7 @@ class PropCodec:
         type_view = Api.get_type(type_name)
         if type_view is None:
             raise KeyError(f"no type {type_name!r}")
-        schema = {prop.key: prop_value_type_name(prop) for prop in effective_props(type_view.uuid)}
+        schema = {prop.key: prop_value_type_name(prop) for prop in TypeUUID.of(type_view.uuid).effective_props()}
         return {
             key: cls._decode_value(value, cls._schema_type(schema, type_name, key))
             for key, value in props.items()

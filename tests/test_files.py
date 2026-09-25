@@ -7,11 +7,12 @@ from __future__ import annotations
 import pytest
 
 from nylium.api import Api
-from nylium.objects.navigation import type_icon
 from nylium.objects.NyFile import NyFile
 from nylium.server.ValidationError import ValidationError
 from uuid import uuid4
 from nylium.objects.nyobject import ArrayValue, ObjectRef, RefValue
+from nylium.uuid import TypeUUID
+from nylium.uuid import FileUUID
 
 PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 16
 PDF = b"%PDF-1.4 fake\n"
@@ -85,18 +86,18 @@ def test_upload_cap():
 
 def test_blob_roundtrip_and_rename_safety():
     view = upload("Image", "a.png", "image/png", PNG)
-    assert NyFile.blob_path(view.uuid).read_bytes() == PNG
+    assert NyFile.blob_path(FileUUID.of(view.uuid)).read_bytes() == PNG
     # rename is a display-name update — the uuid pointer never changes
     renamed = Api.rename_file(view.uuid, "b.png")
     assert renamed.name == "b.png"
-    assert NyFile.blob_path(view.uuid).read_bytes() == PNG
+    assert NyFile.blob_path(FileUUID.of(view.uuid)).read_bytes() == PNG
 
 
 def test_delete_removes_blob_and_row():
     view = upload("Image", "a.png", "image/png", PNG)
-    assert NyFile.blob_path(view.uuid).is_file()
+    assert NyFile.blob_path(FileUUID.of(view.uuid)).is_file()
     assert Api.delete_file(view.uuid)
-    assert not NyFile.blob_path(view.uuid).exists()
+    assert not NyFile.blob_path(FileUUID.of(view.uuid)).exists()
     assert Api.get_file(view.uuid) is None
 
 
@@ -104,7 +105,7 @@ def test_img_icon_validates_against_live_image():
     view = upload("Image", "icon.png", "image/png", PNG)
     icon = f"{NyFile.ICON_IMAGE_PREFIX}{view.uuid}"
     created = Api.create_type("Book", {"name": "String"}, "Books", icon=icon)
-    assert type_icon(created.uuid) == icon
+    assert TypeUUID.of(created.uuid).icon() == icon
 
 
 def test_img_icon_rejects_dead_uuid():
@@ -123,20 +124,20 @@ def test_deleting_icon_image_resets_type_icon():
     view = upload("Image", "icon.png", "image/png", PNG)
     icon = f"{NyFile.ICON_IMAGE_PREFIX}{view.uuid}"
     created = Api.create_type("Book", {"name": "String"}, "Books", icon=icon)
-    assert type_icon(created.uuid) == icon
+    assert TypeUUID.of(created.uuid).icon() == icon
     assert Api.delete_file(view.uuid)
     reloaded = Api.get_type("Book")
     assert reloaded is not None
-    assert type_icon(reloaded.uuid) == NyFile.DEFAULT_GLYPH
+    assert TypeUUID.of(reloaded.uuid).icon() == NyFile.DEFAULT_GLYPH
 
 
 def test_sweep_orphans_removes_untracked_blobs():
     view = upload("Image", "a.png", "image/png", PNG)
-    orphan = NyFile.blob_path(view.uuid).parent / "deadbeef"
+    orphan = NyFile.blob_path(FileUUID.of(view.uuid)).parent / "deadbeef"
     orphan.write_bytes(b"junk")
     NyFile.sweep_orphans()
     assert not orphan.exists()
-    assert NyFile.blob_path(view.uuid).is_file()
+    assert NyFile.blob_path(FileUUID.of(view.uuid)).is_file()
 
 
 def test_file_prop_on_object_roundtrip():

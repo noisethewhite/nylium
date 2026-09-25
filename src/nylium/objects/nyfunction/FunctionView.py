@@ -11,6 +11,7 @@ from uuid import UUID
 from typing import cast
 from pydantic.dataclasses import dataclass
 from nylium.data.tables import instances
+from nylium.uuid import TypeUUID
 
 
 @dataclass(config=Constants.Pydantic.CONFIG)
@@ -34,7 +35,7 @@ class FunctionView:
         type_uuid = None if inst is None else inst.type_uuid
         if type_uuid is None:
             return None
-        owner = NyType.by_uuid(type_uuid)
+        owner = NyType.by_uuid(TypeUUID.of(type_uuid))
         if owner is None or not owner.is_function:
             return None
         params = NyType.function_params(owner.name)

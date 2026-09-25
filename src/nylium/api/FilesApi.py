@@ -11,6 +11,7 @@ from nylium.objects.NyFile import NyFile
 from nylium.server.ValidationError import ValidationError
 import shutil
 from nylium.database import database_size_bytes
+from nylium.uuid import FileUUID
 
 
 class FilesApi(ApiShared):
@@ -39,7 +40,7 @@ class FilesApi(ApiShared):
             )
         file_uuid = uuid4()
         created = files.create(file_uuid, type_name, filename, mime, len(data))
-        blob = NyFile.blob_path(file_uuid)
+        blob = NyFile.blob_path(FileUUID.of(file_uuid))
         tmp = blob.with_suffix(".tmp")
         try:
             _ = tmp.write_bytes(data)
@@ -81,10 +82,10 @@ class FilesApi(ApiShared):
         if row is None:
             return False
         if row.type_name == NyFile.TYPE_IMAGE:
-            NyFile.reset_icons_referencing(uuid)
-        NyFile.clear_array_refs(uuid)
+            NyFile.reset_icons_referencing(FileUUID.of(uuid))
+        NyFile.clear_array_refs(FileUUID.of(uuid))
         files.delete(uuid)
-        NyFile.delete_blob(uuid)
+        NyFile.delete_blob(FileUUID.of(uuid))
         return True
 
     @classmethod

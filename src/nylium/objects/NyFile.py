@@ -6,7 +6,7 @@ from nylium.system.Environment import Environment
 from nylium.objects.NyType import NyType
 from pathlib import Path
 from nylium.data.tables import TypeDecors
-from uuid import UUID
+from nylium.uuid import FileUUID
 from nylium.data.tables import files
 import logging
 
@@ -59,7 +59,7 @@ class NyFile:
         return path
 
     @classmethod
-    def blob_path(cls, uuid: UUID) -> Path:
+    def blob_path(cls, uuid: FileUUID) -> Path:
         return cls.storage_dir() / str(uuid)
 
     @classmethod
@@ -98,7 +98,7 @@ class NyFile:
                 blob.unlink()
 
     @classmethod
-    def delete_blob(cls, uuid: UUID) -> None:
+    def delete_blob(cls, uuid: FileUUID) -> None:
         """Best-effort disk cleanup for a deleted instance. The DB row
         cascades with the instance; the blob cannot."""
         path = cls.blob_path(uuid)
@@ -107,7 +107,7 @@ class NyFile:
 
     @classmethod
     @Database.use_same_session
-    def reset_icons_referencing(cls, image_uuid: UUID) -> None:
+    def reset_icons_referencing(cls, image_uuid: FileUUID) -> None:
         """Deleting an Image used as an icon is allowed (ADR-0006): every
         type pointing at it falls back to the default glyph."""
 
@@ -115,24 +115,24 @@ class NyFile:
         TypeDecors.reset_icons_referencing(marker, cls.DEFAULT_GLYPH)
 
     @classmethod
-    def parse_icon_image(cls, icon: str) -> UUID | None:
+    def parse_icon_image(cls, icon: str) -> FileUUID | None:
         """types.icon either names a Material glyph or `img:<uuid>` of an
         Image instance. Returns the uuid for the latter, None otherwise."""
         if not icon.startswith(cls.ICON_IMAGE_PREFIX):
             return None
         try:
-            return UUID(icon[len(cls.ICON_IMAGE_PREFIX) :])
+            return FileUUID(icon[len(cls.ICON_IMAGE_PREFIX) :])
         except ValueError:
             return None
 
     @classmethod
     @Database.use_same_session
-    def image_file_exists(cls, uuid: UUID) -> bool:
+    def image_file_exists(cls, uuid: FileUUID) -> bool:
         return files.type_name_of(uuid) == cls.TYPE_IMAGE
 
     @classmethod
     @Database.use_same_session
-    def clear_array_refs(cls, uuid: UUID) -> None:
+    def clear_array_refs(cls, uuid: FileUUID) -> None:
         """Deleting a file also drops Array<File/Document/Image> members that
         pointed at it (ADR-0008) — mirrors NyObject.delete's cleanup of array
         links, so no dangling files.uuid survives in an array."""

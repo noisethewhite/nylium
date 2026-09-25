@@ -10,9 +10,9 @@ from uuid import UUID, uuid4
 import pytest
 
 from nylium.api import Api
-from nylium.objects.navigation import type_name_of
 from nylium.data.tables import instances
 from nylium.data.tables import types
+from nylium.uuid import TypeUUID
 
 
 def _seed_type() -> UUID:
@@ -50,7 +50,7 @@ def test_domain_reads():
     t = _seed_type()
     u = _seed_instance(t)
     assert instances[u].name == "instance-1"
-    assert type_name_of(instances[u].type_uuid) == "T"
+    assert TypeUUID.of(instances[u].type_uuid).name_of() == "T"
     assert u in instances
     assert uuid4() not in instances
     assert instances.get(u) is not None

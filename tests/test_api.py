@@ -15,14 +15,9 @@ from nylium.api import (
 )
 from nylium.data.rows import Type
 from nylium.objects import NyInteger, NyObject, NyString
-from nylium.objects.navigation import (
-    effective_props,
-    prop_value_type_name,
-    type_color,
-    type_icon,
-    type_plural_name,
-)
+from nylium.objects.navigation import prop_value_type_name
 from nylium.server.ValidationError import ValidationError
+from nylium.uuid import TypeUUID
 
 
 def person_class() -> type[NyObject]:
@@ -42,7 +37,7 @@ def test_type_listing():
     person = views["Person"]
     assert isinstance(person, Type)
     props = {
-        prop.key: prop_value_type_name(prop) for prop in effective_props(person.uuid)
+        prop.key: prop_value_type_name(prop) for prop in TypeUUID.of(person.uuid).effective_props()
     }
     assert props["name"] == "String"
     assert props["tags"] == "Array<String>"
@@ -95,7 +90,7 @@ def test_links_and_arrays_render_as_views():
 def test_db_only_type_created_through_api():
     view = Api.create_type("Note", {"name": "String", "body": "String"}, "Notes")
     assert view.name == "Note"
-    assert type_plural_name(view.uuid) == "Notes"
+    assert TypeUUID.of(view.uuid).plural_name() == "Notes"
 
     note = Api.create_object("Note", {"body": "hello"})
     assert note.props["body"] == ScalarValue(value="hello")
@@ -127,10 +122,10 @@ def test_delete_type_when_empty():
 def test_reorder_props_roundtrip():
     _ = person_class()
     view = Api.reorder_props("Person", ["name", "tags", "age", "friend"])
-    assert [prop.key for prop in effective_props(view.uuid)] == ["name", "tags", "age", "friend"]
+    assert [prop.key for prop in TypeUUID.of(view.uuid).effective_props()] == ["name", "tags", "age", "friend"]
     reloaded = Api.get_type("Person")
     assert reloaded is not None
-    assert [prop.key for prop in effective_props(reloaded.uuid)] == ["name", "tags", "age", "friend"]
+    assert [prop.key for prop in TypeUUID.of(reloaded.uuid).effective_props()] == ["name", "tags", "age", "friend"]
 
 
 def test_reorder_props_keeps_name_first():
@@ -181,7 +176,7 @@ def draft_items(view, drop: Iterable[str] = (), rename: dict[str, str] | None = 
             retype.get(prop.key, prop_value_type_name(prop)),
             prop.formula,
         )
-        for prop in effective_props(view.uuid)
+        for prop in TypeUUID.of(view.uuid).effective_props()
         if prop.key not in drop
     ]
     additions: PropDraft = [(None, key, value_type, None) for key, value_type in add]
@@ -194,7 +189,7 @@ def test_sync_props_add_and_delete():
     synced = Api.sync_props(
         "Note", draft_items(view, drop=("body",), add=[("mood", "String")])
     )
-    assert [prop.key for prop in effective_props(synced.uuid)] == ["name", "priority", "mood"]
+    assert [prop.key for prop in TypeUUID.of(synced.uuid).effective_props()] == ["name", "priority", "mood"]
     reloaded = Api.get_object(note.uuid)
     assert reloaded is not None
     assert "body" not in reloaded.props
@@ -205,7 +200,7 @@ def test_sync_props_rename_keeps_values():
     view = note_type()
     note = Api.create_object("Note", {"name": "n1", "body": "hello"})
     synced = Api.sync_props("Note", draft_items(view, rename={"body": "text"}))
-    assert [prop.key for prop in effective_props(synced.uuid)] == ["name", "text", "priority"]
+    assert [prop.key for prop in TypeUUID.of(synced.uuid).effective_props()] == ["name", "text", "priority"]
     reloaded = Api.get_object(note.uuid)
     assert reloaded is not None
     assert reloaded.props["text"] == ScalarValue(value="hello")
@@ -216,7 +211,7 @@ def test_sync_props_retype_purges_values():
     note = Api.create_object("Note", {"name": "n1", "priority": 5})
     synced = Api.sync_props("Note", draft_items(view, retype={"priority": "String"}))
     assert {
-        p.key: prop_value_type_name(p) for p in effective_props(synced.uuid)
+        p.key: prop_value_type_name(p) for p in TypeUUID.of(synced.uuid).effective_props()
     }["priority"] == "String"
     reloaded = Api.get_object(note.uuid)
     assert reloaded is not None
@@ -235,7 +230,7 @@ def test_sync_props_keeps_name_pinned():
 
 def test_sync_props_rejects_bad_drafts():
     view = note_type()
-    body = next(prop for prop in effective_props(view.uuid) if prop.key == "body")
+    body = next(prop for prop in TypeUUID.of(view.uuid).effective_props() if prop.key == "body")
     with pytest.raises(ValidationError):
         Api.sync_props("Note", draft_items(view, add=[("body", "String")]))
     with pytest.raises(ValidationError):
@@ -251,7 +246,7 @@ def test_rename_type_roundtrip():
     _ = note_type()
     note = Api.create_object("Note", {"name": "n1"})
     renamed = Api.rename_type("Note", "Memo", "Memos")
-    assert renamed.name == "Memo" and type_plural_name(renamed.uuid) == "Memos"
+    assert renamed.name == "Memo" and TypeUUID.of(renamed.uuid).plural_name() == "Memos"
     reloaded = Api.get_object(note.uuid)
     assert reloaded is not None and reloaded.type_name == "Memo"
     assert Api.get_type("Note") is None
@@ -274,17 +269,17 @@ def test_type_icon_and_color():
     view = Api.create_type(
         "Tagged", {"name": "String"}, "Tagged", icon="star", color="#e5534b"
     )
-    assert (type_icon(view.uuid), type_color(view.uuid)) == ("star", "#e5534b")
+    assert (TypeUUID.of(view.uuid).icon(), TypeUUID.of(view.uuid).color()) == ("star", "#e5534b")
     plain = Api.create_type("Plain", {"name": "String"}, "Plains")
-    assert (type_icon(plain.uuid), type_color(plain.uuid)) == ("inventory_2", "#9e9e9e")
+    assert (TypeUUID.of(plain.uuid).icon(), TypeUUID.of(plain.uuid).color()) == ("inventory_2", "#9e9e9e")
     updated = Api.rename_type("Tagged", icon="heart", color="#e275ad")
-    assert (updated.name, type_icon(updated.uuid), type_color(updated.uuid)) == (
+    assert (updated.name, TypeUUID.of(updated.uuid).icon(), TypeUUID.of(updated.uuid).color()) == (
         "Tagged",
         "heart",
         "#e275ad",
     )
     builtin = Api.get_type("String")
     assert builtin is not None
-    assert (type_icon(builtin.uuid), type_color(builtin.uuid)) == ("text_fields", "#9e9e9e")
+    assert (TypeUUID.of(builtin.uuid).icon(), TypeUUID.of(builtin.uuid).color()) == ("text_fields", "#9e9e9e")
     with pytest.raises(ValidationError):
         Api.rename_type("String", icon="x")

@@ -25,6 +25,7 @@ from nylium.objects.NyProp import NyProp
 from nylium.objects.NyType import NyType
 from nylium.objects.nyfunction.constants import fail
 from nylium.Constants import Constants
+from nylium.uuid import TypeUUID
 
 
 @Database.commit_after_this
@@ -62,7 +63,7 @@ def assert_no_dependency_cycle(inst_uuid: UUID) -> None:
     type_uuid = None if inst is None else inst.type_uuid
     if type_uuid is None:
         return
-    owner = NyType.by_uuid(type_uuid)
+    owner = NyType.by_uuid(TypeUUID.of(type_uuid))
     if owner is None:
         return
     prop_uuid_by_key = {prop.key: prop.uuid for prop in NyProp.effective_for(owner)}

@@ -33,6 +33,7 @@ from nylium.objects.NyString import NyString
 from nylium.objects.NyType import NyType
 from nylium.server.ValidationError import ValidationError
 from nylium.data.tables import instances
+from nylium.uuid import TypeUUID
 
 
 class FunctionsApi(_FunctionsBase):
@@ -142,7 +143,7 @@ class FunctionsApi(_FunctionsBase):
         inst = instances.get(inst_uuid)
         if inst is None:
             raise ValidationError(f"no object {inst_uuid}")
-        owner = NyType.by_uuid(inst.type_uuid)
+        owner = NyType.by_uuid(TypeUUID.of(inst.type_uuid))
         if owner is None:
             raise ValidationError(f"object {inst_uuid} has no type")
         prop = NyProp.by_key(owner, prop_key)
@@ -238,7 +239,7 @@ class FunctionsApi(_FunctionsBase):
                 continue  # self-referencing arrays were rewritten locally
             by_owner.setdefault(dependent_uuid, []).append(array_key)
         for dependent_uuid, array_keys in by_owner.items():
-            dependent = NyType.by_uuid(dependent_uuid)
+            dependent = NyType.by_uuid(TypeUUID.of(dependent_uuid))
             if dependent is None:
                 continue
             dependent_props = NyProp.all_for(dependent)

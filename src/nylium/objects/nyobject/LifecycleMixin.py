@@ -10,7 +10,7 @@ from typing import cast
 from uuid import UUID, uuid4
 
 from nylium.database import Database
-from nylium.objects.navigation import array_link_uuids_of
+from nylium.uuid import ObjectUUID
 from nylium.data.tables import Instances, instances
 from nylium.data.tables import ArrayValues
 from nylium.data.tables import InstanceValues
@@ -20,16 +20,17 @@ from nylium.objects.NyType import NyType
 from nylium.objects.NyObjectShape import NyObjectShape
 from nylium.objects.NyTypeMeta import StoredValue, NyTypeMeta
 from nylium.Constants import Constants
+from nylium.uuid import TypeUUID
 
 
 class LifecycleMixin:
-    _uuid: UUID
+    _uuid: ObjectUUID
 
     @Database.commit_after_this
     def __init__(self, _uuid: UUID | None = None, **props: StoredValue) -> None:
         # plain assignment: __setattr__ routes "_" names to object.__setattr__,
         # and the checker gets to see _uuid initialized
-        self._uuid = _uuid or uuid4()
+        self._uuid = ObjectUUID.of(_uuid) if _uuid is not None else ObjectUUID.of(uuid4())
         if _uuid is not None:
             return
         self._register()
@@ -78,7 +79,7 @@ class LifecycleMixin:
         inst = instances.get(uuid)
         if inst is None:
             return None
-        owner = NyType.by_uuid(inst.type_uuid)
+        owner = NyType.by_uuid(TypeUUID.of(inst.type_uuid))
         if owner is None:
             raise RuntimeError(f"instance {uuid} has dangling type")
         actual_name = owner.name
@@ -99,16 +100,16 @@ class LifecycleMixin:
         inst = instances.get(uuid)
         if inst is None:
             raise KeyError(f"no instance {uuid}")
-        owner = NyType.by_uuid(inst.type_uuid)
+        owner = NyType.by_uuid(TypeUUID.of(inst.type_uuid))
         if owner is None:
             raise KeyError(f"instance {uuid} has dangling type {inst.type_uuid}")
         klass = NyTypeMeta.python_class(owner.name) or NyTypeMeta.root()
         wrapped = klass.__new__(klass)
-        object.__setattr__(wrapped, "_uuid", uuid)
+        object.__setattr__(wrapped, "_uuid", ObjectUUID.of(uuid))
         return wrapped
 
     @property
-    def uuid(self) -> UUID:
+    def uuid(self) -> ObjectUUID:
         return self._uuid
 
     @Database.commit_after_this
@@ -121,11 +122,11 @@ class LifecycleMixin:
         ArrayValues.delete_memberships(self._uuid)
         Instances.delete_row(self._uuid)
 
-    def _owned_embedded_uuids(self) -> list[UUID]:
+    def _owned_embedded_uuids(self) -> list[ObjectUUID]:
         """Instance rows held through embedded-typed props — composition
         children (ADR-0004), found via the owner_* read-index."""
-        return Instances.owned_uuids(self._uuid)
+        return [ObjectUUID.of(u) for u in Instances.owned_uuids(self._uuid)]
 
-    def _owned_array_uuids(self) -> list[UUID]:
+    def _owned_array_uuids(self) -> list[ObjectUUID]:
         """Uuids of array-instance links held by this object."""
-        return array_link_uuids_of(self._uuid)
+        return self._uuid.array_link_uuids()
