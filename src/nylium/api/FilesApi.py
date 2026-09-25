@@ -10,7 +10,6 @@ from nylium.data.tables import files
 from nylium.objects.NyFile import NyFile
 from nylium.server.ValidationError import ValidationError
 import shutil
-from nylium.database import database_size_bytes
 from nylium.uuid import FileUUID
 
 
@@ -97,7 +96,7 @@ class FilesApi(ApiShared):
 
         storage = NyFile.storage_dir()
         usage = shutil.disk_usage(storage)
-        db_bytes = database_size_bytes()
+        db_bytes = Database.size_bytes()
         blob_bytes = sum(
             path.stat().st_size for path in storage.iterdir() if path.is_file()
         )

@@ -1,8 +1,7 @@
 from __future__ import annotations
-from .Database import Database, database_size_bytes
+from .Database import Database
 
 
 __all__ = [
     "Database",
-    "database_size_bytes",
 ]

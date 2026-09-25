@@ -79,6 +79,21 @@ class Database(metaclass=_DatabaseMeta):
         return cls.session.query(*entities)  # pyright: ignore[reportAny]
 
     @classmethod
+    def size_bytes(cls) -> int:
+        """Server-level footprint of the nylium database (ADR-0015 storage stats).
+
+        An engine query, not a session/table read — kept on ``Database`` so
+        the api layer never reaches for SQLAlchemy directly.
+        """
+        with cls.engine.connect() as connection:
+            return cast(
+                int,
+                connection.execute(
+                    sqla.select(sqla.func.pg_database_size(sqla.func.current_database()))
+                ).scalar_one(),
+            )
+
+    @classmethod
     def use_same_session(cls, func: Callable[_P, _R]) -> Callable[_P, _R]:
         """Run ``func`` inside a SessionContext without committing.
 
@@ -113,18 +128,3 @@ class Database(metaclass=_DatabaseMeta):
                 return value
 
         return wrapper
-
-
-def database_size_bytes() -> int:
-    """Server-level footprint of the nylium database (ADR-0015 storage stats).
-
-    An engine query, not a session/table read — lives beside ``Database`` so
-    the api layer never reaches for SQLAlchemy directly.
-    """
-    with Database.engine.connect() as connection:
-        return cast(
-            int,
-            connection.execute(
-                sqla.select(sqla.func.pg_database_size(sqla.func.current_database()))
-            ).scalar_one(),
-        )
