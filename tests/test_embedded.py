@@ -8,10 +8,10 @@ from uuid import UUID
 import pytest
 
 from nylium.api import Api, ArrayValue, EmbeddedValue, ScalarValue
-from nylium.objects.navigation import prop_value_type_name
 from nylium.data.rows import Type
 from nylium.server.ValidationError import ValidationError
 from nylium.uuid import TypeUUID
+from nylium.uuid import PropUUID
 
 
 def contact_details_type() -> Type:
@@ -298,7 +298,7 @@ def test_sync_props_rename_regenerates_names():
     contact = person.props["contact"]
     assert isinstance(contact, EmbeddedValue) and contact.uuid is not None
     items = [
-        (prop.uuid, prop.key, prop_value_type_name(prop), prop.formula)
+        (prop.uuid, prop.key, PropUUID.of(prop.uuid).value_type_name(), prop.formula)
         for prop in TypeUUID.of(view.uuid).effective_props()
     ]
     items = [
@@ -371,7 +371,7 @@ def test_sync_props_rename_regenerates_array_names():
     ]
     assert len(member_uuids) == 2
     items = [
-        (prop.uuid, prop.key, prop_value_type_name(prop), prop.formula)
+        (prop.uuid, prop.key, PropUUID.of(prop.uuid).value_type_name(), prop.formula)
         for prop in TypeUUID.of(view.uuid).effective_props()
     ]
     items = [

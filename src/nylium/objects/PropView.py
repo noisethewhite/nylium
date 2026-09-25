@@ -3,9 +3,8 @@ from nylium.data.rows import Prop
 from typing import Self
 from uuid import UUID
 from pydantic.dataclasses import dataclass
-from nylium.objects.navigation import prop_owner_trait
-from nylium.objects.navigation import prop_value_type_name
 from nylium.Constants import Constants
+from nylium.uuid import PropUUID
 
 
 
@@ -25,11 +24,11 @@ class PropView:
 
     @classmethod
     def from_row(cls, prop: Prop) -> Self:
-        owner_trait = prop_owner_trait(prop)
+        owner_trait = PropUUID.of(prop.uuid).owner_trait()
         return cls(
             uuid=prop.uuid,
             key=prop.key,
-            value_type=prop_value_type_name(prop),
+            value_type=PropUUID.of(prop.uuid).value_type_name(),
             formula=prop.formula,
             collect=prop.collect,
             trait=None if owner_trait is None else owner_trait[0],

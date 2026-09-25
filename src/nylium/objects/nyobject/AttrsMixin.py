@@ -27,6 +27,7 @@ from nylium.objects.NyUnit import NyUnit
 from nylium.objects.nyobject.PersistenceMixin import PersistenceMixin
 from nylium.Constants import Constants
 from nylium.uuid import ObjectUUID, TypeUUID
+from nylium.uuid.objects import ArrayUUID
 
 
 class AttrsMixin(PersistenceMixin):
@@ -62,7 +63,7 @@ class AttrsMixin(PersistenceMixin):
         if link is None:
             return None
         if NyType.is_array_name(value_type):
-            return NyArray.read(ObjectUUID.of(link.uuid), NyType.element_name(value_type))
+            return NyArray.read(ArrayUUID.of(link.uuid), NyType.element_name(value_type))
         return NyTypeMeta.root().wrap(link.uuid)
 
     @override
@@ -138,7 +139,7 @@ class AttrsMixin(PersistenceMixin):
         if link is None:
             return
         if NyType.is_array_name(value_type):
-            NyArray.destroy(ObjectUUID.of(link.uuid))
+            NyArray.destroy(ArrayUUID.of(link.uuid))
         elif not prop.is_trait_bound and prop.value_type().is_embedded:
             NyEmbedded.destroy(ObjectUUID.of(link.uuid))  # the child dies with the prop
         else:

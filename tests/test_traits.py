@@ -3,12 +3,12 @@ the Any<Trait> bound form. Api-level; HTTP shape lives in test_http.py."""
 import pytest
 
 from nylium.api import Api, ObjectRef, RefValue, ScalarValue
-from nylium.objects.navigation import prop_value_type_name
 from nylium.server.ValidationError import ValidationError
 from nylium.objects.PropView import PropView
 from nylium.objects.TraitView import TraitView
 from nylium.uuid import TraitUUID
 from nylium.uuid import TypeUUID
+from nylium.uuid import PropUUID
 
 
 def stamped_trait(color: str = "#3a7d5c"):
@@ -215,7 +215,7 @@ def test_any_trait_wire_name_roundtrip():
         [(name_uuid, "name", "String", None), (None, "related", "Any<Stamped>", None)],
     )
     spec = {
-        prop.key: prop_value_type_name(prop) for prop in TypeUUID.of(view.uuid).effective_props()
+        prop.key: PropUUID.of(prop.uuid).value_type_name() for prop in TypeUUID.of(view.uuid).effective_props()
     }
     assert spec["related"] == "Any<Stamped>"
 

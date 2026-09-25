@@ -11,6 +11,7 @@ from uuid import UUID, uuid4
 
 from nylium.database import Database
 from nylium.uuid import ObjectUUID
+from nylium.uuid.objects import ArrayUUID
 from nylium.data.tables import Instances, instances
 from nylium.data.tables import ArrayValues
 from nylium.data.tables import InstanceValues
@@ -127,6 +128,6 @@ class LifecycleMixin:
         children (ADR-0004), found via the owner_* read-index."""
         return [ObjectUUID.of(u) for u in Instances.owned_uuids(self._uuid)]
 
-    def _owned_array_uuids(self) -> list[ObjectUUID]:
+    def _owned_array_uuids(self) -> list[ArrayUUID]:
         """Uuids of array-instance links held by this object."""
-        return self._uuid.array_link_uuids()
+        return [ArrayUUID.of(u) for u in self._uuid.array_link_uuids()]

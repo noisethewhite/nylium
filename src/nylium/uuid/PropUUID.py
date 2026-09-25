@@ -26,7 +26,7 @@ from nylium.data.rows import (
     StringValue,
     TimeValue,
 )
-from nylium.data.tables import props
+from nylium.data.tables import props, trait_decor, traits, types
 from nylium.uuid.ObjectUUID import ObjectUUID
 
 
@@ -65,6 +65,36 @@ class PropUUID(UUID):
     def get(self) -> Prop | None:
         """The ``Prop`` row this uuid points at, or ``None`` if it is gone."""
         return props.get(self)
+
+    def value_type_name(self) -> str:
+        """The wire-facing value spec: the concrete type's name, or
+        ``Any<TraitName>`` for a trait-bound prop (ADR-0013)."""
+        prop = self.get()
+        if prop is None:
+            raise KeyError(f"Prop {self} does not exist")
+        if prop.value_trait_uuid is not None:
+            t = traits.get(prop.value_trait_uuid)
+            if t is None:
+                raise KeyError(f"Trait with UUID {prop.value_trait_uuid} does not exist")
+            return f"Any<{t.name}>"
+        if prop.value_type_uuid is None:
+            raise KeyError(f"Prop {prop.key!r} has no value typing")
+        t = types.get(prop.value_type_uuid)
+        if t is None:
+            raise KeyError(f"Type with UUID {prop.value_type_uuid} does not exist")
+        return t.name
+
+    def owner_trait(self) -> tuple[str, str] | None:
+        """``(name, color)`` of the owning trait, None for a type-owned prop."""
+        prop = self.get()
+        if prop is None:
+            raise KeyError(f"Prop {self} does not exist")
+        if prop.owner_trait_uuid is None:
+            return None
+        t = traits.get(prop.owner_trait_uuid)
+        if t is None:
+            raise KeyError(f"Trait with UUID {prop.owner_trait_uuid} does not exist")
+        return t.name, trait_decor[t.uuid].color
 
     @Database.use_same_session
     def purge_values(self) -> None:

@@ -31,6 +31,21 @@ class ObjectUUID(UUID):
         """The ``Instance`` row this uuid points at, or ``None`` if it is gone."""
         return instances.get(self)
 
+    @classmethod
+    @Database.use_same_session
+    def instances_of_kind(cls, kind: str) -> list[ObjectUUID]:
+        """Every instance uuid whose type has the given kind."""
+        i_c = mapper(Instance).columns
+        t_c = mapper(Type).columns
+        rows: list[UUID] = list(
+            Database.scalars(
+                sqla.select(i_c.uuid)
+                .join(Type, t_c.uuid == i_c.type_uuid)
+                .where(t_c.kind == kind)
+            ).all()
+        )
+        return [cls.of(u) for u in rows]
+
     @Database.use_same_session
     def array_link_uuids(self) -> list[ObjectUUID]:
         """Uuids of array-instance links held by this owner object."""

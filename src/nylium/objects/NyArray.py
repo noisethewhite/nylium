@@ -31,13 +31,14 @@ from nylium.objects.NyType import NyType
 from nylium.objects.NyObjectShape import NyObjectShape
 from nylium.objects.NyTypeMeta import StoredValue, NyTypeMeta
 from nylium.uuid import ObjectUUID, TypeUUID
+from nylium.uuid.objects import ArrayUUID
 
 
 
 class NyArray:
     @classmethod
     @Database.use_same_session
-    def read(cls, array_uuid: ObjectUUID, elem_type: str) -> list[StoredValue]:
+    def read(cls, array_uuid: ArrayUUID, elem_type: str) -> list[StoredValue]:
         return [cls._unwrap(uuid, elem_type) for uuid in ArrayValues.element_uuids_of(array_uuid)]
 
     @classmethod
@@ -53,14 +54,14 @@ class NyArray:
             # None unsets the prop: destroy the array instance (and its boxes)
             link = InstanceValues.link_for(owner_uuid, prop.uuid)
             if link is not None:
-                cls.destroy(ObjectUUID.of(link.uuid))
+                cls.destroy(ArrayUUID.of(link.uuid))
             return
         array_uuid = cls._ensure_array_instance(owner_uuid, prop, elem_type)
         cls._fill(array_uuid, elem_type, values, owner_uuid, prop)
 
     @classmethod
     @Database.commit_after_this
-    def destroy(cls, array_uuid: ObjectUUID) -> None:
+    def destroy(cls, array_uuid: ArrayUUID) -> None:
         """Delete the array instance and every box it owns, recursively."""
         cls._destroy_boxes(array_uuid)
         InstanceValues.delete_links_to(array_uuid)
@@ -72,7 +73,7 @@ class NyArray:
     @Database.commit_after_this
     def _fill(
         cls,
-        array_uuid: ObjectUUID,
+        array_uuid: ArrayUUID,
         elem_type: str,
         values: list[StoredValue],
         owner_uuid: ObjectUUID,
@@ -86,7 +87,7 @@ class NyArray:
 
     @classmethod
     @Database.commit_after_this
-    def _destroy_boxes(cls, array_uuid: ObjectUUID) -> None:
+    def _destroy_boxes(cls, array_uuid: ArrayUUID) -> None:
         box_uuids = ArrayValues.element_uuids_of(array_uuid)
         # detach pointer rows first: FK array_values.value_uuid -> instances
         # forbids deleting a box that is still referenced
@@ -107,7 +108,7 @@ class NyArray:
             Instances.delete_row(box_uuid)  # its scalar values cascade on inst_uuid
             return
         if NyType.is_array_name(owner.name):
-            cls.destroy(box_uuid)
+            cls.destroy(ArrayUUID.of(box_uuid))
             return
         if owner.is_embedded:
             # ADR-0021: an Array<Embedded> element is a composition child —
@@ -121,27 +122,27 @@ class NyArray:
     @Database.commit_after_this
     def _ensure_array_instance(
         cls, owner_uuid: ObjectUUID, prop: NyProp, elem_type: str
-    ) -> ObjectUUID:
+    ) -> ArrayUUID:
         link = InstanceValues.link_for(owner_uuid, prop.uuid)
         if link is not None:
-            return ObjectUUID.of(link.uuid)
+            return ArrayUUID.of(link.uuid)
         array_uuid = cls._create_array_instance(NyType.array_name(elem_type))
         InstanceValues.add_link(array_uuid, prop.uuid, owner_uuid)
         return array_uuid
 
     @classmethod
     @Database.commit_after_this
-    def _create_array_instance(cls, array_type_name: str) -> ObjectUUID:
-        array_uuid = ObjectUUID.of(uuid4())
+    def _create_array_instance(cls, array_type_name: str) -> ArrayUUID:
+        array_uuid = uuid4()
         array_type = NyType.ensure(array_type_name)
         instances.create(array_uuid, array_type.uuid, Constants.Types.ARRAY_INSTANCE_NAME)
-        return array_uuid
+        return ArrayUUID.of(array_uuid)
 
     @classmethod
     @Database.use_same_session
     def _unwrap(cls, uuid: UUID, type_name: str) -> StoredValue:
         if NyType.is_array_name(type_name):
-            return cls.read(ObjectUUID.of(uuid), NyType.element_name(type_name))
+            return cls.read(ArrayUUID.of(uuid), NyType.element_name(type_name))
         if NyFile.is_file_type(type_name):
             # ADR-0008: a file element is a files.uuid, not a box instance
             return uuid
@@ -169,7 +170,7 @@ class NyArray:
         cls,
         type_name: str,
         value: StoredValue,
-        array_uuid: ObjectUUID,
+        array_uuid: ArrayUUID,
         owner_uuid: ObjectUUID,
         prop: NyProp,
         index: int,
@@ -236,7 +237,7 @@ class NyArray:
         cls,
         embedded: NyType,
         draft: StoredValue,
-        array_uuid: ObjectUUID,
+        array_uuid: ArrayUUID,
         owner_uuid: ObjectUUID,
         prop: NyProp,
         index: int,

@@ -6,16 +6,13 @@ from uuid import UUID
 
 from nylium.api.ApiShared import ApiShared
 from nylium.database import Database
-from nylium.objects.navigation import (
-    sync_unit_parts as _sync_unit_parts,
-    unit_part_usage,
-)
 from nylium.data.tables import unit_parts
 from nylium.data.tables import type_decor
 from nylium.data.rows import Type
 from nylium.objects.NyColor import NyColor
 from nylium.objects.NyType import NyType
 from nylium.server.ValidationError import ValidationError
+from nylium.uuid import TypeUUID
 
 
 class UnitsApi(ApiShared):
@@ -49,7 +46,7 @@ class UnitsApi(ApiShared):
             *[(None, n, m, o, False) for n, m, o in (secondaries or [])],
         ]
         cls._validate_unit_draft(items)
-        _sync_unit_parts(owner.uuid, final_name, items)
+        TypeUUID.of(owner.uuid).sync_unit_parts(final_name, items)
         decor = type_decor[owner.uuid]
         decor.icon = icon
         decor.color = color
@@ -80,12 +77,12 @@ class UnitsApi(ApiShared):
         if (
             old_base is not None
             and new_base_uuid != old_base.uuid
-            and unit_part_usage(owner.name) > 0
+            and TypeUUID.unit_part_usage(owner.name) > 0
         ):
             raise ValidationError(
                 f"unit {name!r} still has values; its base part cannot change"
             )
-        _sync_unit_parts(owner.uuid, owner.name, items)
+        TypeUUID.of(owner.uuid).sync_unit_parts(owner.name, items)
         return cls._type_result(name)
 
     @classmethod

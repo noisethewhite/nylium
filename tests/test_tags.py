@@ -6,9 +6,9 @@ in test_http.py."""
 from uuid import UUID
 
 from nylium.api import Api, TagView
-from nylium.objects.navigation import prop_value_type_name
 from nylium.objects.NyColor import NyColor
 from nylium.uuid import TypeUUID
+from nylium.uuid import PropUUID
 
 
 def book_type():
@@ -151,7 +151,7 @@ def test_renaming_prop_key_renames_tag():
         (
             prop.uuid,
             "items" if prop.key == "books" else prop.key,
-            prop_value_type_name(prop),
+            PropUUID.of(prop.uuid).value_type_name(),
             prop.formula,
         )
         for prop in TypeUUID.of(view.uuid).effective_props()

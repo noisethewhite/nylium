@@ -20,11 +20,11 @@ from nylium.objects.NyScalar import NyScalar
 from nylium.objects.NyType import NyType
 from nylium.objects.NyTypeMeta import StoredValue
 from nylium.objects.TypeView import TypeView
-from nylium.objects.navigation import prop_value_type_name
 from nylium.uuid import TypeUUID
 from nylium.server.ValidationError import ValidationError
 from nylium.Constants import Constants
 from nylium.uuid import FileUUID
+from nylium.uuid import PropUUID
 
 # What callers may hand in for a prop: stored values, plus links as
 # UUID/ObjectRef (resolved to NyObject here), plus a props draft for
@@ -50,7 +50,7 @@ class ApiShared:
         prop = next((p for p in TypeUUID.of(owner_type_uuid).effective_props() if p.key == key), None)
         if prop is None:
             raise KeyError(f"type {owner.name!r} has no prop {key!r}")
-        return prop_value_type_name(prop)
+        return PropUUID.of(prop.uuid).value_type_name()
 
     @classmethod
     def _is_builtin_type(cls, owner: NyType) -> bool:
@@ -102,7 +102,7 @@ class ApiShared:
                 continue
             deps: list[str | None] = []
             for prop in TypeUUID.of(row.uuid).effective_props():
-                value_type = prop_value_type_name(prop)
+                value_type = PropUUID.of(prop.uuid).value_type_name()
                 if NyType.is_any_name(value_type):
                     deps.append(cls._ANY_LINK)
                 elif NyType.is_array_name(value_type):

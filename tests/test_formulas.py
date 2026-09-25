@@ -9,10 +9,10 @@ import pytest
 from uuid import UUID
 
 from nylium.api import Api, ArrayValue, EmbeddedValue, ScalarValue
-from nylium.objects.navigation import prop_value_type_name
 from nylium.objects.Quantity import Quantity
 from nylium.server.ValidationError import ValidationError
 from nylium.uuid import TypeUUID
+from nylium.uuid import PropUUID
 
 
 def item_type():
@@ -115,7 +115,7 @@ def _sync_items(
     view, formulas
 ) -> list[tuple[UUID | None, str, str, str | None]]:
     return [
-        (prop.uuid, prop.key, prop_value_type_name(prop), formulas.get(prop.key))
+        (prop.uuid, prop.key, PropUUID.of(prop.uuid).value_type_name(), formulas.get(prop.key))
         for prop in TypeUUID.of(view.uuid).effective_props()
     ]
 
@@ -262,7 +262,7 @@ def test_rename_array_key_rewrites_formula():
     renamed = Api.sync_props(
         "Receipt",
         [
-            (prop.uuid, "goods" if prop.key == "lines" else prop.key, prop_value_type_name(prop), prop.formula)
+            (prop.uuid, "goods" if prop.key == "lines" else prop.key, PropUUID.of(prop.uuid).value_type_name(), prop.formula)
             for prop in TypeUUID.of(view.uuid).effective_props()
         ],
     )
@@ -277,7 +277,7 @@ def test_rename_member_key_rewrites_formula():
     _ = Api.sync_props(
         "Item",
         [
-            (prop.uuid, "cost" if prop.key == "price" else prop.key, prop_value_type_name(prop), prop.formula)
+            (prop.uuid, "cost" if prop.key == "price" else prop.key, PropUUID.of(prop.uuid).value_type_name(), prop.formula)
             for prop in TypeUUID.of(item.uuid).effective_props()
         ],
     )
@@ -289,7 +289,7 @@ def test_rename_member_key_rewrites_formula():
 
 def test_delete_referenced_array_key_rejected():
     view = receipt_type({"total": "SUM(lines.price)"})
-    draft = [(prop.uuid, prop.key, prop_value_type_name(prop), prop.formula) for prop in TypeUUID.of(view.uuid).effective_props()]
+    draft = [(prop.uuid, prop.key, PropUUID.of(prop.uuid).value_type_name(), prop.formula) for prop in TypeUUID.of(view.uuid).effective_props()]
     with pytest.raises(ValidationError):
         Api.sync_props(
             "Receipt", [item for item in draft if item[1] != "lines"]
@@ -300,7 +300,7 @@ def test_delete_referenced_member_key_rejected():
     _ = receipt_type({"total": "SUM(lines.price)"})
     item = Api.get_type("Item")
     assert item is not None
-    draft = [(prop.uuid, prop.key, prop_value_type_name(prop), prop.formula) for prop in TypeUUID.of(item.uuid).effective_props()]
+    draft = [(prop.uuid, prop.key, PropUUID.of(prop.uuid).value_type_name(), prop.formula) for prop in TypeUUID.of(item.uuid).effective_props()]
     with pytest.raises(ValidationError):
         Api.sync_props("Item", [row for row in draft if row[1] != "price"])
 

@@ -15,9 +15,9 @@ from nylium.api import (
 )
 from nylium.data.rows import Type
 from nylium.objects import NyInteger, NyObject, NyString
-from nylium.objects.navigation import prop_value_type_name
 from nylium.server.ValidationError import ValidationError
 from nylium.uuid import TypeUUID
+from nylium.uuid import PropUUID
 
 
 def person_class() -> type[NyObject]:
@@ -37,7 +37,7 @@ def test_type_listing():
     person = views["Person"]
     assert isinstance(person, Type)
     props = {
-        prop.key: prop_value_type_name(prop) for prop in TypeUUID.of(person.uuid).effective_props()
+        prop.key: PropUUID.of(prop.uuid).value_type_name() for prop in TypeUUID.of(person.uuid).effective_props()
     }
     assert props["name"] == "String"
     assert props["tags"] == "Array<String>"
@@ -173,7 +173,7 @@ def draft_items(view, drop: Iterable[str] = (), rename: dict[str, str] | None = 
         (
             prop.uuid,
             rename.get(prop.key, prop.key),
-            retype.get(prop.key, prop_value_type_name(prop)),
+            retype.get(prop.key, PropUUID.of(prop.uuid).value_type_name()),
             prop.formula,
         )
         for prop in TypeUUID.of(view.uuid).effective_props()
@@ -211,7 +211,7 @@ def test_sync_props_retype_purges_values():
     note = Api.create_object("Note", {"name": "n1", "priority": 5})
     synced = Api.sync_props("Note", draft_items(view, retype={"priority": "String"}))
     assert {
-        p.key: prop_value_type_name(p) for p in TypeUUID.of(synced.uuid).effective_props()
+        p.key: PropUUID.of(p.uuid).value_type_name() for p in TypeUUID.of(synced.uuid).effective_props()
     }["priority"] == "String"
     reloaded = Api.get_object(note.uuid)
     assert reloaded is not None

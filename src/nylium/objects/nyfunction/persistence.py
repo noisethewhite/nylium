@@ -20,7 +20,6 @@ from nylium.data.tables import FunctionEdges
 from nylium.data.tables import FunctionNodes
 from nylium.data.tables import InstanceFunctionLinks
 from nylium.data.tables import instances
-from nylium.objects.navigation import instance_uuids_of_kind
 from nylium.objects.NyProp import NyProp
 from nylium.objects.NyType import NyType
 from nylium.objects.nyfunction.constants import fail
@@ -44,7 +43,7 @@ def sync_graph(
 def _function_instance_uuids() -> list[ObjectUUID]:
     """Every function instance uuid (instances whose type kind is
     'function')."""
-    return [ObjectUUID.of(u) for u in instance_uuids_of_kind(NyType.KIND_FUNCTION)]
+    return [ObjectUUID.of(u) for u in ObjectUUID.instances_of_kind(NyType.KIND_FUNCTION)]
 
 
 @Database.use_same_session

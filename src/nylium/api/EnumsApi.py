@@ -5,12 +5,12 @@ from uuid import UUID
 
 from nylium.api.ApiShared import ApiShared
 from nylium.database import Database
-from nylium.objects.navigation import sync_enum_options as _sync_enum_options
 from nylium.data.tables import type_decor
 from nylium.data.rows import Type
 from nylium.objects.NyColor import NyColor
 from nylium.objects.NyType import NyType
 from nylium.server.ValidationError import ValidationError
+from nylium.uuid import TypeUUID
 
 
 class EnumsApi(ApiShared):
@@ -34,7 +34,7 @@ class EnumsApi(ApiShared):
         cls._check_color(color)
         cls._check_icon(icon)
         owner = NyType.ensure(final_name, kind=NyType.KIND_ENUM)
-        _sync_enum_options(owner.uuid, [(None, v) for v in (options or [])])
+        TypeUUID.of(owner.uuid).sync_enum_options([(None, v) for v in (options or [])])
         decor = type_decor[owner.uuid]
         decor.icon = icon
         decor.color = color
@@ -59,5 +59,5 @@ class EnumsApi(ApiShared):
             raise ValidationError("enum options must not be empty")
         if len(set(values)) != len(values):
             raise ValidationError(f"duplicate enum options in {values!r}")
-        _sync_enum_options(owner.uuid, items)
+        TypeUUID.of(owner.uuid).sync_enum_options(items)
         return cls._type_result(name)
