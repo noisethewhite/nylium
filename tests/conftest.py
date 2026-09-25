@@ -14,6 +14,7 @@ from nylium.data.tables import auth_credentials
 from nylium.data.tables import auth_users
 from nylium.auth.sessions import sessions
 from nylium.server import NyliumApp
+from nylium.uuid import UserUUID
 
 
 @pytest.fixture(autouse=True)
@@ -45,5 +46,5 @@ def auth_client() -> TestClient:
     user = auth_users.create("owner")
     auth_credentials.create(user.uuid, secrets.token_bytes(32), b"pk", 0, "")
     client = TestClient(NyliumApp.create())
-    client.cookies.set(sessions.COOKIE_NAME, sessions.issue(user.uuid))
+    client.cookies.set(sessions.COOKIE_NAME, sessions.issue(UserUUID.of(user.uuid)))
     return client

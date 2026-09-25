@@ -1,5 +1,5 @@
 from __future__ import annotations
-from uuid import UUID
+from nylium.uuid import FunctionUUID
 from pydantic.dataclasses import dataclass
 from nylium.Constants import Constants
 
@@ -8,8 +8,8 @@ from nylium.Constants import Constants
 class FunctionEdgeView:
     """A dataflow edge between two function nodes (ADR-0007)."""
 
-    uuid: UUID
-    from_node_uuid: UUID
+    uuid: FunctionUUID
+    from_node_uuid: FunctionUUID
     from_port: int
-    to_node_uuid: UUID
+    to_node_uuid: FunctionUUID
     to_port: int

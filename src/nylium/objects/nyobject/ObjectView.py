@@ -162,7 +162,7 @@ class ObjectView:
     def _eval_function(cls, inst_uuid: UUID, function_uuid: UUID) -> ScalarValue:
         """ADR-0029 read-time evaluation: fold the function's DAG over the
         owner's sibling props. A div-by-zero / missing input renders empty."""
-        value = NyFunction.evaluate_for(inst_uuid, function_uuid)
+        value = NyFunction.evaluate_for(ObjectUUID.of(inst_uuid), ObjectUUID.of(function_uuid))
         return ScalarValue(value=value)
 
     @classmethod

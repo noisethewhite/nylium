@@ -4,6 +4,8 @@ from __future__ import annotations
 from typing import Protocol
 from uuid import UUID
 
+from pydantic_core import core_schema
+
 import sqlalchemy as sqla
 from sqlalchemy.orm import Mapped
 
@@ -55,6 +57,10 @@ class PropUUID(UUID):
     @classmethod
     def of(cls, value: UUID) -> "PropUUID":
         return cls(str(value))
+
+    @classmethod
+    def __get_pydantic_core_schema__(cls, _source: object, _handler: object) -> core_schema.CoreSchema:
+        return core_schema.uuid_schema()
 
     def get(self) -> Prop | None:
         """The ``Prop`` row this uuid points at, or ``None`` if it is gone."""

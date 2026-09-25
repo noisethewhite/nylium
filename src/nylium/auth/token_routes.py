@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 from typing import Annotated, cast
-from uuid import UUID
+from nylium.uuid import TokenUUID
 
 from fastapi import Depends, Request
 from fastapi.responses import JSONResponse
@@ -21,6 +21,7 @@ from nylium.data.tables import api_tokens
 from nylium.data.rows import ApiToken
 from nylium.data.rows import AuthUser
 from nylium.server.ValidationError import ValidationError
+from nylium.uuid import UserUUID
 
 
 def _token_view(row: ApiToken) -> dict[str, object]:
@@ -51,7 +52,7 @@ class token_routes:
             raise ValidationError("token scope must be 'read' or 'read-write'")
         final_name = name.strip()
         final_scope = cast(str, scope)
-        uuid, raw = tokens.issue(user.uuid, final_name, final_scope)
+        uuid, raw = tokens.issue(UserUUID.of(user.uuid), final_name, final_scope)
         return JSONResponse(
             {
                 "uuid": str(uuid),
@@ -75,7 +76,7 @@ class token_routes:
 
     @classmethod
     def revoke(
-        cls, token_uuid: UUID, user: Annotated[AuthUser, Depends(require_cookie_user)]
+        cls, token_uuid: TokenUUID, user: Annotated[AuthUser, Depends(require_cookie_user)]
     ) -> JSONResponse:
         row = api_tokens.get(token_uuid)
         if row is None or row.user_uuid != user.uuid:

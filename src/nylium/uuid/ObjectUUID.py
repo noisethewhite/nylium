@@ -4,6 +4,8 @@ from __future__ import annotations
 from typing import cast
 from uuid import UUID
 
+from pydantic_core import core_schema
+
 import sqlalchemy as sqla
 from sqlalchemy.orm import aliased
 
@@ -20,6 +22,10 @@ class ObjectUUID(UUID):
     @classmethod
     def of(cls, value: UUID) -> "ObjectUUID":
         return cls(str(value))
+
+    @classmethod
+    def __get_pydantic_core_schema__(cls, _source: object, _handler: object) -> core_schema.CoreSchema:
+        return core_schema.uuid_schema()
 
     def get(self) -> Instance | None:
         """The ``Instance`` row this uuid points at, or ``None`` if it is gone."""

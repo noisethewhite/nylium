@@ -15,6 +15,7 @@ from nylium.auth.sessions import sessions
 from nylium.data.tables import auth_credentials
 from nylium.data.tables import auth_users
 from nylium.server import NyliumApp
+from nylium.uuid import UserUUID
 
 
 @pytest.fixture()
@@ -25,7 +26,7 @@ def client() -> TestClient:
 def _plant_owner() -> str:
     user = next(auth_users.where(name="owner"), None) or auth_users.create("owner")
     auth_credentials.create(user.uuid, secrets.token_bytes(32), b"pk", 0, "")
-    return sessions.issue(user.uuid)
+    return sessions.issue(UserUUID.of(user.uuid))
 
 
 def test_api_requires_auth(client: TestClient) -> None:

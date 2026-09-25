@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from uuid import UUID
 
+from pydantic_core import core_schema
+
 from nylium.data.rows import Prop, Trait
 from nylium.data.tables import props, trait_decor, traits, type_traits, types
 
@@ -13,6 +15,10 @@ class TraitUUID(UUID):
     @classmethod
     def of(cls, value: UUID) -> "TraitUUID":
         return cls(str(value))
+
+    @classmethod
+    def __get_pydantic_core_schema__(cls, _source: object, _handler: object) -> core_schema.CoreSchema:
+        return core_schema.uuid_schema()
 
     def get(self) -> Trait | None:
         """The ``Trait`` row this uuid points at, or ``None`` if it is gone."""

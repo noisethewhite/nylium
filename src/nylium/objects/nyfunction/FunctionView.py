@@ -11,7 +11,7 @@ from uuid import UUID
 from typing import cast
 from pydantic.dataclasses import dataclass
 from nylium.data.tables import instances
-from nylium.uuid import TypeUUID
+from nylium.uuid import FunctionUUID, ObjectUUID, TypeUUID
 
 
 @dataclass(config=Constants.Pydantic.CONFIG)
@@ -20,7 +20,7 @@ class FunctionView:
     full action DAG (nodes + edges). ADR-0029: no input link — the input is
     the sibling props of the object the function is bound into."""
 
-    uuid: UUID
+    uuid: ObjectUUID
     name: str
     type_name: str
     input_type: str
@@ -48,28 +48,28 @@ class FunctionView:
             inst = instances.get(uuid)
             name = "" if inst is None else inst.name
         return cls(
-            uuid=uuid,
+            uuid=ObjectUUID.of(uuid),
             name=name,
             type_name=owner.name,
             input_type=input_type,
             output_type=output_type,
             nodes=[
                 FunctionNodeView(
-                    uuid=node.uuid,
+                    uuid=FunctionUUID.of(node.uuid),
                     kind=node.kind,
                     position=node.position,
                     config=node.config,
                 )
-                for node in NyFunction.nodes(uuid)
+                for node in NyFunction.nodes(ObjectUUID.of(uuid))
             ],
             edges=[
                 FunctionEdgeView(
-                    uuid=edge.uuid,
-                    from_node_uuid=edge.from_node_uuid,
+                    uuid=FunctionUUID.of(edge.uuid),
+                    from_node_uuid=FunctionUUID.of(edge.from_node_uuid),
                     from_port=edge.from_port,
-                    to_node_uuid=edge.to_node_uuid,
+                    to_node_uuid=FunctionUUID.of(edge.to_node_uuid),
                     to_port=edge.to_port,
                 )
-                for edge in NyFunction.edges(uuid)
+                for edge in NyFunction.edges(ObjectUUID.of(uuid))
             ],
         )

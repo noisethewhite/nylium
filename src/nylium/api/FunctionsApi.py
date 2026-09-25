@@ -33,7 +33,7 @@ from nylium.objects.NyString import NyString
 from nylium.objects.NyType import NyType
 from nylium.server.ValidationError import ValidationError
 from nylium.data.tables import instances
-from nylium.uuid import TypeUUID
+from nylium.uuid import ObjectUUID, TypeUUID
 
 
 class FunctionsApi(_FunctionsBase):
@@ -78,7 +78,7 @@ class FunctionsApi(_FunctionsBase):
         owner = NyFunction.ensure_type(input_type, output_type)
         props_draft: dict[str, PropInput] = {Constants.Props.NAME_PROP_KEY: name}
         view = cls.create_object(owner.name, props_draft)
-        NyFunction.sync_graph(view.uuid, nodes, edges)
+        NyFunction.sync_graph(ObjectUUID.of(view.uuid), nodes, edges)
         result = FunctionView.from_uuid(view.uuid)
         if result is None:
             raise RuntimeError(f"created function {view.uuid} vanished")
@@ -111,9 +111,9 @@ class FunctionsApi(_FunctionsBase):
             existing.output_type,
         )
         _ = cls.update_object(uuid, {Constants.Props.NAME_PROP_KEY: name})
-        NyFunction.sync_graph(uuid, nodes, edges)
+        NyFunction.sync_graph(ObjectUUID.of(uuid), nodes, edges)
         for owner_uuid in InstanceFunctionLinks.instance_uuids_bound_to(uuid):
-            NyFunction.assert_no_dependency_cycle(owner_uuid)
+            NyFunction.assert_no_dependency_cycle(ObjectUUID.of(owner_uuid))
         result = FunctionView.from_uuid(uuid)
         if result is None:
             raise RuntimeError(f"updated function {uuid} vanished")
@@ -132,7 +132,7 @@ class FunctionsApi(_FunctionsBase):
     @classmethod
     @Database.commit_after_this
     def set_instance_prop_function(
-        cls, inst_uuid: UUID, prop_key: str, function_uuid: UUID | None
+        cls, inst_uuid: ObjectUUID, prop_key: str, function_uuid: ObjectUUID | None
     ) -> ObjectView:
         """ADR-0029: bind a Function<T,R> to a specific prop of a specific
         object (None unbinds). The function's output type must equal the
@@ -182,7 +182,7 @@ class FunctionsApi(_FunctionsBase):
         else:
             InstanceFunctionLinks.merge_function_link(inst_uuid, prop.uuid, function_uuid)
         Database.flush()  # publish the pending link before the cycle check reads it
-        NyFunction.assert_no_dependency_cycle(inst_uuid)
+        NyFunction.assert_no_dependency_cycle(ObjectUUID.of(inst_uuid))
         view = ObjectView.from_uuid(inst_uuid)
         if view is None:
             raise RuntimeError(f"object {inst_uuid} vanished after function bind")

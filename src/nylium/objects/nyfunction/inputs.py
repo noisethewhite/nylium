@@ -14,7 +14,7 @@ overflowing the interpreter."""
 from __future__ import annotations
 
 from typing import cast
-from uuid import UUID
+from nylium.uuid import ObjectUUID
 
 from nylium.database import Database
 from nylium.data.tables import instances
@@ -28,14 +28,14 @@ from nylium.uuid import TypeUUID
 
 
 @Database.use_same_session
-def evaluate_for(inst_uuid: UUID, function_uuid: UUID) -> ScalarPayload | None:
+def evaluate_for(inst_uuid: ObjectUUID, function_uuid: ObjectUUID) -> ScalarPayload | None:
     """Fold the function over the owner's sibling props — the read-time
     entry point for rendering a function-backed prop (ADR-0029)."""
     return _evaluate_for(inst_uuid, function_uuid, frozenset())
 
 
 def _evaluate_for(
-    inst_uuid: UUID, function_uuid: UUID, visiting: frozenset[UUID]
+    inst_uuid: ObjectUUID, function_uuid: ObjectUUID, visiting: frozenset[ObjectUUID]
 ) -> ScalarPayload | None:
     if function_uuid in visiting:
         return None
@@ -43,13 +43,13 @@ def _evaluate_for(
 
 
 @Database.use_same_session
-def materialize_owner(inst_uuid: UUID) -> dict[str, object]:
+def materialize_owner(inst_uuid: ObjectUUID) -> dict[str, object]:
     """Project the owner object's sibling props to a prop-key -> value
     mapping. A function-backed sibling is resolved recursively."""
     return _materialize_owner(inst_uuid, frozenset())
 
 
-def _materialize_owner(inst_uuid: UUID, visiting: frozenset[UUID]) -> dict[str, object]:
+def _materialize_owner(inst_uuid: ObjectUUID, visiting: frozenset[ObjectUUID]) -> dict[str, object]:
     wrapper = NyObject.wrap(inst_uuid)
     inst = instances.get(inst_uuid)
     type_uuid = None if inst is None else inst.type_uuid
@@ -62,7 +62,7 @@ def _materialize_owner(inst_uuid: UUID, visiting: frozenset[UUID]) -> dict[str, 
     for prop in NyProp.effective_for(owner):
         bound = InstanceFunctionLinks.function_uuid_for(inst_uuid, prop.uuid)
         if bound is not None:
-            result[prop.key] = _evaluate_for(inst_uuid, bound, visiting)
+            result[prop.key] = _evaluate_for(inst_uuid, ObjectUUID.of(bound), visiting)
         else:
             result[prop.key] = cast(object, getattr(wrapper, prop.key))
     return result
