@@ -13,7 +13,7 @@ class Trait(Row):
     """One trait: a named, colored bundle of prop definitions (ADR-0013).
 
     The color lives in the 1:1 trait_decor row (ADR-0014); cross-table
-    navigation lives in ``nylium.objects.navigation``.
+    navigation lives in ``nylium.ny.navigation``.
     """
 
     __tablename__: ClassVar[str] = "traits"

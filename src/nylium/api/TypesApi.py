@@ -17,11 +17,11 @@ from nylium.data.tables import props
 from nylium.data.tables import type_decor
 from nylium.data.rows import Type
 from nylium.data.tables import types
-from nylium.objects.NyProp import NyProp
-from nylium.objects.NyColor import NyColor
-from nylium.objects.NyScalar import NyScalar
-from nylium.objects.NyString import NyString
-from nylium.objects.NyType import NyType
+from nylium.ny.NyProp import NyProp
+from nylium.ny.NyColor import NyColor
+from nylium.ny.NyScalar import NyScalar
+from nylium.ny.NyString import NyString
+from nylium.ny.NyType import NyType
 from nylium.server.ValidationError import ValidationError
 from nylium.uuid import TraitUUID, TypeUUID
 

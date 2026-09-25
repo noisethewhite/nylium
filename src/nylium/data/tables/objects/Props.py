@@ -14,7 +14,7 @@ class Props(Table[UUID, Prop]):
     """The props table as a Mapping of writable props.
 
     Cross-table concerns (value purge on retype, owner/value navigation)
-    live in ``nylium.objects.navigation`` — a table store never imports a
+    live in ``nylium.ny.navigation`` — a table store never imports a
     sibling table (ADR-0033).
     """
 
@@ -115,7 +115,7 @@ class Props(Table[UUID, Prop]):
 
         Returns the uuids of props whose value typing changed — the caller
         purges their stored values via
-        ``nylium.objects.navigation.purge_prop_values``, so this module
+        ``nylium.ny.navigation.purge_prop_values``, so this module
         never imports the value tables.
         """
         existing = {

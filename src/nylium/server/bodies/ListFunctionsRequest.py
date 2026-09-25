@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import Annotated
 from nylium.api.Api import Api
-from nylium.objects.nyfunction.FunctionView import FunctionView
+from nylium.data.views.FunctionView import FunctionView
 from nylium.server.bodies.shared import PATH_PARAMS
 from dataclasses import dataclass as plain_dataclass
 import sys

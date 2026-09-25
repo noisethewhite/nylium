@@ -12,15 +12,15 @@ from nylium.auth.routes import auth_routes
 from nylium.auth.token_routes import token_routes
 from nylium.database import Database
 from nylium.database.registry import reg
-from nylium.objects.NyFile import NyFile
-from nylium.objects.NyScalar import NyScalar
+from nylium.ny.NyFile import NyFile
+from nylium.ny.NyScalar import NyScalar
 import nylium.server.bodies as bodies
 from nylium.server.errors import errors
 from nylium.server.migrations import migrations
 from nylium.server.StaticSpa import StaticSpa
 from nylium.system.Environment import Environment
 from typing import ClassVar
-from nylium.objects.NyColor import NyColor
+from nylium.ny.NyColor import NyColor
 
 
 class NyliumApp:

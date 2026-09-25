@@ -4,7 +4,7 @@ from nylium.api.Api import Api
 from nylium.server.NotFoundError import NotFoundError
 from nylium.server.bodies.shared import PATH_PARAMS
 from fastapi.responses import Response
-from nylium.objects.TraitView import TraitView
+from nylium.data.views.TraitView import TraitView
 from dataclasses import dataclass as plain_dataclass
 import sys
 from nylium.server.bodies.shared import resolve_route_hints

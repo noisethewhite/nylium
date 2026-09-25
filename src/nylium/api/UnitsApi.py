@@ -9,8 +9,8 @@ from nylium.database import Database
 from nylium.data.tables import unit_parts
 from nylium.data.tables import type_decor
 from nylium.data.rows import Type
-from nylium.objects.NyColor import NyColor
-from nylium.objects.NyType import NyType
+from nylium.ny.NyColor import NyColor
+from nylium.ny.NyType import NyType
 from nylium.server.ValidationError import ValidationError
 from nylium.uuid import TypeUUID
 

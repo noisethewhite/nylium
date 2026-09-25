@@ -4,8 +4,8 @@ import pytest
 
 from nylium.api import Api, ObjectRef, RefValue, ScalarValue
 from nylium.server.ValidationError import ValidationError
-from nylium.objects.PropView import PropView
-from nylium.objects.TraitView import TraitView
+from nylium.data.views.PropView import PropView
+from nylium.data.views.TraitView import TraitView
 from nylium.uuid import TraitUUID
 from nylium.uuid import TypeUUID
 from nylium.uuid import PropUUID

@@ -9,7 +9,7 @@ import pytest
 from uuid import UUID
 
 from nylium.api import Api, ArrayValue, EmbeddedValue, ScalarValue
-from nylium.objects.Quantity import Quantity
+from nylium.data.types.Quantity import Quantity
 from nylium.server.ValidationError import ValidationError
 from nylium.uuid import TypeUUID
 from nylium.uuid import PropUUID

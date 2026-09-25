@@ -8,7 +8,7 @@ import pytest
 
 from nylium.api import Api, ScalarValue
 from nylium.data.rows import Type
-from nylium.objects.Quantity import Quantity
+from nylium.data.types.Quantity import Quantity
 from nylium.server.ValidationError import ValidationError
 from nylium.uuid import TypeUUID
 

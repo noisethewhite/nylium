@@ -13,7 +13,7 @@ class Type(Row):
     """One type: identity + semantics (ADR-0014 keeps decor in type_decor).
 
     Cross-table navigation (props/traits/decor) lives in
-    ``nylium.objects.navigation`` — a Row never imports a sibling table.
+    ``nylium.ny.navigation`` — a Row never imports a sibling table.
     """
 
     __tablename__: ClassVar[str] = "types"

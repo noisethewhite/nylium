@@ -7,14 +7,14 @@ a true many-to-one link (ADR-0028), not the old 1-target-1-owner keying."""
 from decimal import Decimal
 
 from nylium.api import Api
-from nylium.objects.nyobject import (
+from nylium.ny.nyobject import (
     ArrayValue,
     EmbeddedValue,
     ObjectRef,
     RefValue,
     ScalarValue,
 )
-from nylium.objects.Quantity import Quantity
+from nylium.data.types.Quantity import Quantity
 from nylium.server.PropCodec import PropCodec
 from nylium.api.ApiShared import ApiShared
 from nylium.uuid import TypeUUID

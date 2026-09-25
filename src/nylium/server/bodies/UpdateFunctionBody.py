@@ -2,7 +2,7 @@ from __future__ import annotations
 from nylium.api.Api import Api
 from nylium.server.bodies.FunctionEdgeInput import FunctionEdgeInput
 from nylium.server.bodies.FunctionNodeInput import FunctionNodeInput
-from nylium.objects.nyfunction.FunctionView import FunctionView
+from nylium.data.views.FunctionView import FunctionView
 from uuid import UUID
 from pydantic.dataclasses import dataclass
 from dataclasses import field

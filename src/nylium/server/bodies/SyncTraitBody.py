@@ -1,7 +1,7 @@
 from __future__ import annotations
 from nylium.api.Api import Api
 from nylium.server.bodies.SyncTraitPropItem import SyncTraitPropItem
-from nylium.objects.TraitView import TraitView
+from nylium.data.views.TraitView import TraitView
 from uuid import UUID
 from pydantic.dataclasses import dataclass
 import sys

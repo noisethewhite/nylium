@@ -16,21 +16,21 @@ if TYPE_CHECKING:
     from nylium.api.ObjectsApi import ObjectsApi as _FunctionsBase
 else:
     _FunctionsBase = ApiShared
-from nylium.objects.nyfunction import FunctionView
-from nylium.objects.nyobject import ObjectView
+from nylium.ny.nyfunction import FunctionView
+from nylium.ny.nyobject import ObjectView
 from nylium.database import Database
 from nylium.data.tables import props
 from nylium.data.tables import types
 from nylium.data.tables import InstanceFunctionLinks
-from nylium.objects.nyformula import Formula
-from nylium.objects.nyfunction import NyFunction
-from nylium.objects.NyProp import NyProp
-from nylium.objects.NyDate import NyDate
-from nylium.objects.NyDatetime import NyDatetime
-from nylium.objects.NyInteger import NyInteger
-from nylium.objects.NyNumeric import NyNumeric
-from nylium.objects.NyString import NyString
-from nylium.objects.NyType import NyType
+from nylium.ny.nyformula import Formula
+from nylium.ny.nyfunction import NyFunction
+from nylium.ny.NyProp import NyProp
+from nylium.ny.NyDate import NyDate
+from nylium.ny.NyDatetime import NyDatetime
+from nylium.ny.NyInteger import NyInteger
+from nylium.ny.NyNumeric import NyNumeric
+from nylium.ny.NyString import NyString
+from nylium.ny.NyType import NyType
 from nylium.server.ValidationError import ValidationError
 from nylium.data.tables import instances
 from nylium.uuid import ObjectUUID, TypeUUID

@@ -11,9 +11,9 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from nylium.objects.NyColor import NyColor
+from nylium.ny.NyColor import NyColor
 from nylium.server import NyliumApp
-from nylium.objects.NyFile import NyFile
+from nylium.ny.NyFile import NyFile
 from nylium.api import Api
 import secrets
 from nylium.auth.sessions import sessions

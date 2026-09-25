@@ -2,9 +2,9 @@ from __future__ import annotations
 from typing import Annotated
 from nylium.api.Api import Api
 from fastapi.responses import FileResponse
-from nylium.objects.FileView import FileView
+from nylium.data.views.FileView import FileView
 from nylium.server.NotFoundError import NotFoundError
-from nylium.objects.NyFile import NyFile
+from nylium.ny.NyFile import NyFile
 from nylium.server.bodies.shared import PATH_PARAMS
 from fastapi.responses import Response
 from uuid import UUID

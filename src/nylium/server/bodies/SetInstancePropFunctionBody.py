@@ -1,6 +1,6 @@
 from __future__ import annotations
 from nylium.api.Api import Api
-from nylium.objects.nyobject import ObjectView
+from nylium.ny.nyobject import ObjectView
 from uuid import UUID
 from pydantic.dataclasses import dataclass
 import sys

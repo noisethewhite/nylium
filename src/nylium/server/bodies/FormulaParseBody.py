@@ -1,5 +1,5 @@
 from __future__ import annotations
-from nylium.objects.nyformula import Formula
+from nylium.ny.nyformula import Formula
 from pydantic.dataclasses import dataclass
 import sys
 from nylium.server.bodies.shared import resolve_route_hints

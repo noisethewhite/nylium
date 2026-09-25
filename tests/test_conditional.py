@@ -10,7 +10,7 @@ import pytest
 
 from nylium.api import Api, ScalarValue
 from nylium.api.ApiShared import PropInput
-from nylium.objects.Quantity import Quantity
+from nylium.data.types.Quantity import Quantity
 from nylium.server.ValidationError import ValidationError
 
 

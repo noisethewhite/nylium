@@ -1,6 +1,6 @@
 from __future__ import annotations
 from nylium.api.Api import Api
-from nylium.objects.FileView import FileView
+from nylium.data.views.FileView import FileView
 from nylium.server.NotFoundError import NotFoundError
 from uuid import UUID
 from pydantic.dataclasses import dataclass

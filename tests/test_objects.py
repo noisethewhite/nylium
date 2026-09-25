@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from nylium.database import Database
 from nylium.data.rows import Instance
-from nylium.objects import NyInteger, NyObject, NyString
+from nylium.ny import NyInteger, NyObject, NyString
 
 
 def instance_count() -> int:

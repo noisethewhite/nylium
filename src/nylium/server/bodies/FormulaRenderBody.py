@@ -1,5 +1,5 @@
 from __future__ import annotations
-from nylium.objects.nyformula import Formula
+from nylium.ny.nyformula import Formula
 from pydantic.dataclasses import dataclass
 from dataclasses import field
 import sys

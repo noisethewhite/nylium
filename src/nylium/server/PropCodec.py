@@ -11,30 +11,30 @@ from decimal import Decimal, InvalidOperation
 from typing import cast
 
 from nylium.api.Api import Api, PropInput
-from nylium.objects.nyobject import (
+from nylium.ny.nyobject import (
     ArrayValue,
     EmbeddedValue,
     PropValue,
     RefValue,
     ScalarValue,
 )
-from nylium.objects.MonthDay import MonthDay
-from nylium.objects.MonthDayTime import MonthDayTime
+from nylium.data.types.MonthDay import MonthDay
+from nylium.data.types.MonthDayTime import MonthDayTime
 from nylium.uuid import TypeUUID
-from nylium.objects.Quantity import Quantity
-from nylium.objects.NyEnum import NyEnum
-from nylium.objects.NyBoolean import NyBoolean
-from nylium.objects.NyDate import NyDate
-from nylium.objects.NyDatetime import NyDatetime
-from nylium.objects.NyInteger import NyInteger
-from nylium.objects.NyMonthDay import NyMonthDay
-from nylium.objects.NyMonthDayTime import NyMonthDayTime
-from nylium.objects.NyNumeric import NyNumeric
-from nylium.objects.NyScalar import NyScalar
-from nylium.objects.NyString import NyString
-from nylium.objects.NyTime import NyTime
-from nylium.objects.NyScalar import ScalarPayload
-from nylium.objects.NyType import NyType
+from nylium.data.types.Quantity import Quantity
+from nylium.ny.NyEnum import NyEnum
+from nylium.ny.NyBoolean import NyBoolean
+from nylium.ny.NyDate import NyDate
+from nylium.ny.NyDatetime import NyDatetime
+from nylium.ny.NyInteger import NyInteger
+from nylium.ny.NyMonthDay import NyMonthDay
+from nylium.ny.NyMonthDayTime import NyMonthDayTime
+from nylium.ny.NyNumeric import NyNumeric
+from nylium.ny.NyScalar import NyScalar
+from nylium.ny.NyString import NyString
+from nylium.ny.NyTime import NyTime
+from nylium.ny.NyScalar import ScalarPayload
+from nylium.ny.NyType import NyType
 from nylium.uuid import PropUUID
 
 

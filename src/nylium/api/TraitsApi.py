@@ -15,9 +15,9 @@ from nylium.data.rows import SchemaItem
 from nylium.data.rows import Type
 from nylium.data.tables import types
 from nylium.uuid import ObjectUUID, PropUUID, TraitUUID
-from nylium.objects.NyProp import NyProp
-from nylium.objects.NyScalar import NyScalar
-from nylium.objects.NyType import NyType
+from nylium.ny.NyProp import NyProp
+from nylium.ny.NyScalar import NyScalar
+from nylium.ny.NyType import NyType
 from nylium.server.ValidationError import ValidationError
 
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 from nylium.api.Api import Api
-from nylium.objects.NyColor import NyColor
-from nylium.objects.TraitView import TraitView
+from nylium.ny.NyColor import NyColor
+from nylium.data.views.TraitView import TraitView
 from pydantic.dataclasses import dataclass
 from dataclasses import field
 import sys

@@ -5,8 +5,8 @@ named palette is migrated away and rejected at the API boundary."""
 import pytest
 
 from nylium.api import Api, ScalarValue
-from nylium.objects import NyScalar
-from nylium.objects.NyColor import NyColor
+from nylium.ny import NyScalar
+from nylium.ny.NyColor import NyColor
 from nylium.server import NyliumApp
 from nylium.server.ValidationError import ValidationError
 from sqlalchemy import text

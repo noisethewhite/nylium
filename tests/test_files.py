@@ -7,10 +7,10 @@ from __future__ import annotations
 import pytest
 
 from nylium.api import Api
-from nylium.objects.NyFile import NyFile
+from nylium.ny.NyFile import NyFile
 from nylium.server.ValidationError import ValidationError
 from uuid import uuid4
-from nylium.objects.nyobject import ArrayValue, ObjectRef, RefValue
+from nylium.ny.nyobject import ArrayValue, ObjectRef, RefValue
 from nylium.uuid import TypeUUID
 from nylium.uuid import FileUUID
 

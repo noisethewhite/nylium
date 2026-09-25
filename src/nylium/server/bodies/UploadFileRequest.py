@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import Annotated
 from nylium.api.Api import Api
-from nylium.objects.FileView import FileView
+from nylium.data.views.FileView import FileView
 from nylium.server.bodies.shared import PATH_PARAMS
 from fastapi import UploadFile
 from dataclasses import dataclass as plain_dataclass

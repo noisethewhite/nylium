@@ -6,7 +6,7 @@ in test_http.py."""
 from uuid import UUID
 
 from nylium.api import Api, TagView
-from nylium.objects.NyColor import NyColor
+from nylium.ny.NyColor import NyColor
 from nylium.uuid import TypeUUID
 from nylium.uuid import PropUUID
 

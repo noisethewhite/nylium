@@ -3,9 +3,9 @@ FastAPI app mounts. Table-domain objects, UUIDs and plain values in
 and out; only the PropValue/ObjectView aggregates stay as DTOs
 (ADR-0011 §5)."""
 from nylium.api.Api import Api
-from nylium.objects.nyobject import ObjectView
-from nylium.objects.nyobject import TagView
-from nylium.objects.nyobject import (
+from nylium.ny.nyobject import ObjectView
+from nylium.ny.nyobject import TagView
+from nylium.ny.nyobject import (
     ArrayValue,
     EmbeddedValue,
     ObjectRef,
@@ -13,7 +13,7 @@ from nylium.objects.nyobject import (
     RefValue,
     ScalarValue,
 )
-from nylium.objects.NyScalar import ScalarPayload
+from nylium.ny.NyScalar import ScalarPayload
 
 __all__ = [
     "Api",

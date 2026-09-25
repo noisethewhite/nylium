@@ -10,7 +10,7 @@ import pytest
 
 from nylium.api import Api, ScalarValue
 from nylium.api.ApiShared import PropInput
-from nylium.objects.nyfunction import NyFunction
+from nylium.ny.nyfunction import NyFunction
 from nylium.server.ValidationError import ValidationError
 from nylium.uuid import ObjectUUID
 
