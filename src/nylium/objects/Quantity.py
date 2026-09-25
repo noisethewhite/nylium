@@ -8,9 +8,18 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal
+from typing import TypeVar
 
 
 @dataclass(frozen=True)
 class Quantity:
     value: Decimal
     unit: str | None = None
+
+
+_T = TypeVar("_T")
+
+
+def magnitude(value: Quantity | _T) -> Decimal | _T:
+    """Unwrap a Quantity to its canonical magnitude; scalars pass through."""
+    return value.value if isinstance(value, Quantity) else value

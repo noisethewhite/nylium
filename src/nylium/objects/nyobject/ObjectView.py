@@ -18,7 +18,7 @@ from nylium.objects.NyObjectShape import NyObjectShape
 from nylium.objects.NyTypeMeta import StoredValue
 from nylium.objects.MonthDay import MonthDay
 from nylium.objects.MonthDayTime import MonthDayTime
-from nylium.objects.Quantity import Quantity
+from nylium.objects.Quantity import Quantity, magnitude
 from nylium.objects.NyEnum import NyEnum
 from nylium.objects.NyFile import NyFile
 from nylium.objects.nyformula import Formula
@@ -52,14 +52,6 @@ def _sibling_cell(value: StoredValue) -> Decimal | Quantity | str | None:
     if isinstance(value, str):
         return value
     return None
-
-
-def _comparable(value: object) -> object:
-    """ADR-0025: reduce a stored bound to its comparable scalar — a Quantity
-    compares on its canonical magnitude, everything else passes through."""
-    if isinstance(value, Quantity):
-        return value.value
-    return value
 
 
 @dataclass(config=Constants.Pydantic.CONFIG)
@@ -264,8 +256,8 @@ class ObjectView:
             if element_type is not None
             else None
         )
-        lo = _comparable(cast(StoredValue, getattr(wrapper, "from")))
-        hi = _comparable(cast(StoredValue, getattr(wrapper, "to")))
+        lo = magnitude(cast(StoredValue, getattr(wrapper, "from")))
+        hi = magnitude(cast(StoredValue, getattr(wrapper, "to")))
         if member_prop is None or lo is None or hi is None:
             return []
         return PropUUID.of(member_prop.uuid).collect_range(member_prop.value_spec_name(), lo, hi)

@@ -9,7 +9,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from decimal import Decimal, InvalidOperation
 
-from nylium.objects.Quantity import Quantity
+from nylium.objects.Quantity import Quantity, magnitude
 from nylium.objects.nyformula.BinOp import BinOp
 from nylium.objects.nyformula.If import If
 from nylium.objects.nyformula.Neg import Neg
@@ -32,15 +32,11 @@ def _cell(row: Mapping[str, "Value | None"], key: str) -> Value:
     return Decimal(0) if value is None else value
 
 
-def _magnitude(value: Value) -> Decimal:
-    return value.value if isinstance(value, Quantity) else value
-
-
 def _sum(values: Sequence[Value]) -> Value:
     """Aggregate SUM. A quantity cell promotes the total to a Quantity in
     the first quantity's part (members share one type, so parts agree)."""
     part = next((v.unit for v in values if isinstance(v, Quantity)), None)
-    total = sum((_magnitude(v) for v in values), Decimal(0))
+    total = sum((magnitude(v) for v in values), Decimal(0))
     return Quantity(total, part) if part is not None else total
 
 
@@ -124,5 +120,5 @@ def evaluate_ast(node: Expr, arrays: ArrayRows, scalars: SiblingRow) -> Value:
     if node.func == "AVERAGE":
         return _average(values)
     if node.func == "MIN":
-        return min(values, key=_magnitude)
-    return max(values, key=_magnitude)
+        return min(values, key=magnitude)
+    return max(values, key=magnitude)

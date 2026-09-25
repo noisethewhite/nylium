@@ -9,6 +9,7 @@ from pydantic_core import core_schema
 
 from nylium.database import Database
 from nylium.database.Row import mapper
+from nylium.database.Table import Row
 from nylium.data.rows import EnumOption, NumericValue, Prop, StringValue, Type, UnitPart
 from nylium.data.tables import (
     enum_options,
@@ -75,20 +76,58 @@ class TypeUUID(UUID):
         t = types.get(self)
         return "<dangling>" if t is None else t.name
 
+    # --- shared draft helpers (enum + unit share the same shape) ---
+
+    @classmethod
+    @Database.use_same_session
+    def _usage_count(
+        cls,
+        value_table: type[Row],
+        type_uuid: UUID,
+        *,
+        condition: sqla.ColumnElement[bool] | None = None,
+    ) -> int:
+        """How many stored values reference a type (optionally one value)."""
+        v_c = mapper(value_table).columns
+        p_c = mapper(Prop).columns
+        stmt = (
+            sqla.select(sqla.func.count())
+            .select_from(value_table)
+            .join(Prop, v_c.prop_uuid == p_c.uuid)
+            .where(p_c.value_type_uuid == type_uuid)
+        )
+        if condition is not None:
+            stmt = stmt.where(condition)
+        return int(Database.scalar(stmt) or 0)
+
+    @classmethod
+    @Database.use_same_session
+    def _rename_propagate(
+        cls,
+        value_table: type[Row],
+        type_uuid: UUID,
+        value_column: sqla.Column[object],
+        old_value: object,
+        new_value: object,
+    ) -> None:
+        """Rewrite a stored value column across the type's props (rename)."""
+        v_c = mapper(value_table).columns
+        p_c = mapper(Prop).columns
+        _ = Database.execute(
+            sqla.update(value_table)
+            .where(
+                value_column == old_value,
+                v_c.prop_uuid.in_(sqla.select(p_c.uuid).where(p_c.value_type_uuid == type_uuid)),
+            )
+            .values({value_column: new_value})
+        )
+
     # --- enum options ---
 
     @Database.use_same_session
     def _enum_option_usage(self, value: str) -> int:
-        sv_c = mapper(StringValue).columns
-        p_c = mapper(Prop).columns
-        return int(
-            Database.scalar(
-                sqla.select(sqla.func.count())
-                .select_from(StringValue)
-                .join(Prop, sv_c.prop_uuid == p_c.uuid)
-                .where(p_c.value_type_uuid == self, sv_c.value == value)
-            )
-            or 0
+        return self._usage_count(
+            StringValue, self, condition=mapper(StringValue).columns.value == value
         )
 
     @Database.commit_after_this
@@ -118,17 +157,8 @@ class TypeUUID(UUID):
                 continue
             row = existing[option_uuid]
             if row.value != value:
-                sv_c = mapper(StringValue).columns
-                p_c = mapper(Prop).columns
-                _ = Database.execute(
-                    sqla.update(StringValue)
-                    .where(
-                        sv_c.value == row.value,
-                        sv_c.prop_uuid.in_(
-                            sqla.select(p_c.uuid).where(p_c.value_type_uuid == self)
-                        ),
-                    )
-                    .values(value=value)
+                self._rename_propagate(
+                    StringValue, self, mapper(StringValue).columns.value, row.value, value
                 )
                 row.value = value
             row.position = position
@@ -153,20 +183,8 @@ class TypeUUID(UUID):
         parameterized = cls.parameterized_numeric(unit_type_name)
         if parameterized is None:
             return 0
-        p_c = mapper(Prop).columns
-        nv_c = mapper(NumericValue).columns
-        conditions: list[sqla.ColumnElement[bool]] = [
-            p_c.value_type_uuid == parameterized,
-            nv_c.prop_uuid == p_c.uuid,
-        ]
-        if part_name is not None:
-            conditions.append(nv_c.unit == part_name)
-        return int(
-            Database.scalar(
-                sqla.select(sqla.func.count()).select_from(NumericValue).where(*conditions)
-            )
-            or 0
-        )
+        condition = None if part_name is None else mapper(NumericValue).columns.unit == part_name
+        return cls._usage_count(NumericValue, parameterized, condition=condition)
 
     @Database.commit_after_this
     def sync_unit_parts(
@@ -203,19 +221,8 @@ class TypeUUID(UUID):
                 if part.name != name:
                     parameterized = self.parameterized_numeric(unit_type_name)
                     if parameterized is not None:
-                        p_c = mapper(Prop).columns
-                        nv_c = mapper(NumericValue).columns
-                        _ = Database.execute(
-                            sqla.update(NumericValue)
-                            .where(
-                                nv_c.prop_uuid.in_(
-                                    sqla.select(p_c.uuid).where(
-                                        p_c.value_type_uuid == parameterized,
-                                    )
-                                ),
-                                nv_c.unit == part.name,
-                            )
-                            .values(unit=name)
+                        self._rename_propagate(
+                            NumericValue, parameterized, mapper(NumericValue).columns.unit, part.name, name
                         )
                     part.name = name
                 part.multiplier = multiplier

@@ -60,9 +60,7 @@ class NyProp:
     def value_spec_name(self) -> str:
         """The wire-facing value spec: concrete type name, or
         ``Any<TraitName>`` for a trait-bound prop (ADR-0013)."""
-        if self.is_trait_bound:
-            return f"Any<{self.value_trait_name()}>"
-        return self.value_type().name
+        return self._uuid.value_type_name()
 
     @classmethod
     @Database.use_same_session
