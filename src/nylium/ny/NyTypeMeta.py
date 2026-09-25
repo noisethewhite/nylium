@@ -6,7 +6,7 @@ conformance at write time.
 Dependency-inversion note: every layer below NyObject (nyarray included)
 needs *something* it can wrap links into, but importing NyObject from
 here would close an import cycle (NyObject's metaclass is NyTypeMeta).
-So this module owns the abstraction instead: the NyObjectShape protocol,
+So this module owns the abstraction instead: the NyObjectProtocol protocol,
 the StoredValue union built on it, and a registry slot for the NyObject
 root class, which the metaclass records when NyObject itself is created.
 NyObject conforms structurally; nothing here imports it.
@@ -26,7 +26,7 @@ from nylium.ny.NyProp import NyProp
 from nylium.ny.NyScalar import NyScalar
 from nylium.ny.NyScalar import ScalarPayload
 from nylium.ny.NyType import NyType
-from nylium.ny.NyObjectShape import NyObjectShape
+from nylium.ny.NyObjectProtocol import NyObjectProtocol
 from nylium.Constants import Constants
 from nylium.uuid import TypeUUID
 
@@ -47,13 +47,13 @@ _ANNOTATE_FORMAT_VALUE = 1
 # (composition) props, ADR-0004 — reads always come back as NyObject
 # links, the dict never leaves the write path.
 StoredValue: TypeAlias = (
-    ScalarPayload | Quantity | NyObjectShape | UUID | list["StoredValue"] | dict[str, "StoredValue"] | None
+    ScalarPayload | Quantity | NyObjectProtocol | UUID | list["StoredValue"] | dict[str, "StoredValue"] | None
 )
 
 
 class NyTypeMeta(type):
-    _python_classes: ClassVar[dict[str, type[NyObjectShape]]] = {}
-    _root: ClassVar[type[NyObjectShape] | None] = None
+    _python_classes: ClassVar[dict[str, type[NyObjectProtocol]]] = {}
+    _root: ClassVar[type[NyObjectProtocol] | None] = None
 
     def __new__(
         mcls,
@@ -67,19 +67,19 @@ class NyTypeMeta(type):
     ):
         cls = super().__new__(mcls, name, bases, namespace, **kwargs)
         if name == Constants.Types.NYOBJECT_ROOT_NAME and mcls._root is None:
-            mcls._root = cast(type[NyObjectShape], cls)
+            mcls._root = cast(type[NyObjectProtocol], cls)
         if namespace.get(ABSTRACT_FLAG):
             return cls
-        mcls._python_classes[name] = cast(type[NyObjectShape], cls)
-        mcls._materialize(cast(type[NyObjectShape], cls), namespace)
+        mcls._python_classes[name] = cast(type[NyObjectProtocol], cls)
+        mcls._materialize(cast(type[NyObjectProtocol], cls), namespace)
         return cls
 
     @classmethod
-    def python_class(mcls, type_name: str) -> type[NyObjectShape] | None:
+    def python_class(mcls, type_name: str) -> type[NyObjectProtocol] | None:
         return mcls._python_classes.get(type_name)
 
     @classmethod
-    def root(mcls) -> type[NyObjectShape]:
+    def root(mcls) -> type[NyObjectProtocol]:
         """The NyObject base class itself. Registered when the metaclass
         created it; wrap() on it resolves registered subclasses."""
         if mcls._root is None:
@@ -141,7 +141,7 @@ class NyTypeMeta(type):
 
     @classmethod
     @Database.commit_after_this
-    def _materialize(mcls, cls: type[NyObjectShape], namespace: dict[str, object]) -> None:
+    def _materialize(mcls, cls: type[NyObjectProtocol], namespace: dict[str, object]) -> None:
         NyScalar.ensure_builtins()
         owner = NyType.ensure(cls.__name__)
         for key, annotation in mcls._class_annotations(namespace).items():

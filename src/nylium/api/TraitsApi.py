@@ -10,7 +10,7 @@ from nylium.data.tables import instances
 from nylium.data.tables import props
 from nylium.data.tables import traits
 from nylium.data.tables import type_traits
-from nylium.data.tables import trait_decor
+from nylium.data.tables import trait_style
 from nylium.data.rows import SchemaItem
 from nylium.data.rows import Type
 from nylium.data.tables import types
@@ -126,7 +126,7 @@ class TraitsApi(ApiShared):
             ]
             NyProp.sync_trait_schema(TraitUUID.of(row.uuid), resolved)
         row.name = final_name
-        trait_decor[row.uuid].color = final_color
+        trait_style[row.uuid].color = final_color
         return cls._trait_result(final_name)
 
     @classmethod

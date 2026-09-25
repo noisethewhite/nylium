@@ -5,7 +5,7 @@ from nylium.Constants import Constants
 
 
 @dataclass(config=Constants.Pydantic.CONFIG)
-class ScalarValue:
+class ScalarValueView:
     """None means the prop was never set. `unit` is the unit part name
     as entered for `Numeric<Unit>` props; absent everywhere else."""
 

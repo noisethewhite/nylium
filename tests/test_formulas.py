@@ -8,7 +8,7 @@ from decimal import Decimal
 import pytest
 from uuid import UUID
 
-from nylium.api import Api, ArrayValue, EmbeddedValue, ScalarValue
+from nylium.api import Api, ArrayValueView, EmbeddedValueView, ScalarValueView
 from nylium.data.types.Quantity import Quantity
 from nylium.server.ValidationError import ValidationError
 from nylium.uuid import TypeUUID
@@ -173,7 +173,7 @@ def test_eval_sum_over_items():
     )
     view = Api.get_object(receipt.uuid)
     assert view is not None
-    assert view.props["total"] == ScalarValue(value=Decimal("12.5"))
+    assert view.props["total"] == ScalarValueView(value=Decimal("12.5"))
 
 
 def test_eval_arithmetic_and_integer_count():
@@ -183,9 +183,9 @@ def test_eval_arithmetic_and_integer_count():
     )
     view = Api.get_object(receipt.uuid)
     assert view is not None
-    assert view.props["total"] == ScalarValue(value=Decimal("121.00"))
+    assert view.props["total"] == ScalarValueView(value=Decimal("121.00"))
     # a bare COUNT on an Integer prop yields a plain int
-    assert view.props["count"] == ScalarValue(value=2)
+    assert view.props["count"] == ScalarValueView(value=2)
 
 
 def test_eval_unset_member_counts_zero():
@@ -197,7 +197,7 @@ def test_eval_unset_member_counts_zero():
     )
     view = Api.get_object(receipt.uuid)
     assert view is not None
-    assert view.props["total"] == ScalarValue(value=Decimal("11"))
+    assert view.props["total"] == ScalarValueView(value=Decimal("11"))
 
 
 def test_eval_avg_min_max():
@@ -207,22 +207,22 @@ def test_eval_avg_min_max():
     )
     view = Api.get_object(receipt.uuid)
     assert view is not None
-    assert view.props["total"] == ScalarValue(value=Decimal("60"))
+    assert view.props["total"] == ScalarValueView(value=Decimal("60"))
 
 
 def test_eval_empty_array_aggregates_zero():
     receipt = _receipt({"total": "SUM(lines.price)", "count": "COUNT(lines)"}, [])
     view = Api.get_object(receipt.uuid)
     assert view is not None
-    assert view.props["total"] == ScalarValue(value=Decimal("0"))
-    assert view.props["count"] == ScalarValue(value=0)
+    assert view.props["total"] == ScalarValueView(value=Decimal("0"))
+    assert view.props["count"] == ScalarValueView(value=0)
 
 
 def test_eval_division_by_zero_renders_empty():
     receipt = _receipt({"total": "SUM(lines.price) / COUNT(lines.price)"}, [])
     view = Api.get_object(receipt.uuid)
     assert view is not None
-    assert view.props["total"] == ScalarValue(value=None)
+    assert view.props["total"] == ScalarValueView(value=None)
 
 
 def test_eval_deleted_member_drops_out():
@@ -235,8 +235,8 @@ def test_eval_deleted_member_drops_out():
     assert Api.delete_object(doomed.uuid)
     view = Api.get_object(receipt.uuid)
     assert view is not None
-    assert view.props["total"] == ScalarValue(value=Decimal("10"))
-    assert view.props["count"] == ScalarValue(value=1)
+    assert view.props["total"] == ScalarValueView(value=Decimal("10"))
+    assert view.props["count"] == ScalarValueView(value=1)
 
 
 # --- the write guard ---
@@ -251,7 +251,7 @@ def test_write_guard_create_and_update():
         Api.update_object(receipt.uuid, {"total": "5"})
     # plain props still write fine alongside a computed sibling
     updated = Api.update_object(receipt.uuid, {"name": "R2"})
-    assert updated.props["name"] == ScalarValue(value="R2")
+    assert updated.props["name"] == ScalarValueView(value="R2")
 
 
 # --- rename-rewrite ---
@@ -343,14 +343,14 @@ def test_prop_to_prop_with_unit_result():
         },
     )
     lines = receipt.props["lines"]
-    assert isinstance(lines, ArrayValue)
+    assert isinstance(lines, ArrayValueView)
     assert lines.items is not None and len(lines.items) == 2
     first, second = lines.items
-    assert isinstance(first, EmbeddedValue) and isinstance(second, EmbeddedValue)
+    assert isinstance(first, EmbeddedValueView) and isinstance(second, EmbeddedValueView)
     # line_total = price * quantity folds a Quantity (Currency) with a
     # Decimal (quantity) into a Quantity carrying the left unit
-    assert first.props["line_total"] == ScalarValue(value=Decimal(10), unit="€")
-    assert second.props["line_total"] == ScalarValue(value=Decimal(12), unit="€")
+    assert first.props["line_total"] == ScalarValueView(value=Decimal(10), unit="€")
+    assert second.props["line_total"] == ScalarValueView(value=Decimal(12), unit="€")
 
 
 def test_prop_to_prop_rejects_array_sibling():
@@ -408,11 +408,11 @@ def test_aggregate_over_embedded_chained_and_unit():
     # SUM(lines.line_total) folds each element's computed line_total
     # (price * quantity) one level down, then sums the resulting quantities
     receipt = _receipt_with_lines("SUM(lines.line_total)")
-    assert receipt.props["subtotal"] == ScalarValue(value=Decimal(22), unit="€")
+    assert receipt.props["subtotal"] == ScalarValueView(value=Decimal(22), unit="€")
 
 
 def test_aggregate_over_embedded_unit_member():
     # SUM(lines.price) over a unit-numeric member yields a Quantity, not a
     # bare magnitude (ADR-0023 unit-preserving cells)
     receipt = _receipt_with_lines("SUM(lines.price)")
-    assert receipt.props["subtotal"] == ScalarValue(value=Decimal(8), unit="€")
+    assert receipt.props["subtotal"] == ScalarValueView(value=Decimal(8), unit="€")

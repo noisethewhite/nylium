@@ -13,7 +13,7 @@ from nylium.data.tables import types
 from nylium.ny.NyEnum import NyEnum
 from nylium.ny.NyFile import NyFile
 from nylium.ny.nyobject import NyObject
-from nylium.ny.nyobject import ObjectRef
+from nylium.ny.nyobject import ObjectRefView
 from nylium.ny.NyProp import NyProp
 from nylium.ny.NyColor import NyColor
 from nylium.ny.NyScalar import NyScalar
@@ -27,11 +27,11 @@ from nylium.uuid import FileUUID
 from nylium.uuid import PropUUID
 
 # What callers may hand in for a prop: stored values, plus links as
-# UUID/ObjectRef (resolved to NyObject here), plus a props draft for
+# UUID/ObjectRefView (resolved to NyObject here), plus a props draft for
 # embedded (composition) props — ADR-0004. A string forward ref inside
 # list[...] keeps the recursion 3.11-parseable without typing.Union.
 PropInput: TypeAlias = (
-    StoredValue | UUID | ObjectRef | list["PropInput"] | dict[str, "PropInput"]
+    StoredValue | UUID | ObjectRefView | list["PropInput"] | dict[str, "PropInput"]
 )
 
 # Every object type starts with a `name` prop — it IS the instance's
@@ -214,7 +214,7 @@ class ApiShared:
     def _normalize_props(
         cls, type_name: str, prop_specs: dict[str, PropInput]
     ) -> dict[str, StoredValue]:
-        """Callers hand links over as UUID/ObjectRef (that's all they have);
+        """Callers hand links over as UUID/ObjectRefView (that's all they have);
         the object layer wants NyObject wrappers. Resolve by prop type."""
         owner_type_row = next(types.where(name=type_name), None)
         if owner_type_row is None:
@@ -257,10 +257,10 @@ class ApiShared:
             return cast(StoredValue, value)  # membership checked in setattr
         if NyFile.is_file_type(type_name):
             # ADR-0008: a file-typed prop holds a files.uuid — never an
-            # object link. ObjectRef/UUID both normalize to the raw uuid.
+            # object link. ObjectRefView/UUID both normalize to the raw uuid.
             if value is None:
                 return None
-            if isinstance(value, ObjectRef):
+            if isinstance(value, ObjectRefView):
                 return value.uuid
             if isinstance(value, UUID):
                 return value
@@ -272,7 +272,7 @@ class ApiShared:
             # enforced in setattr (NyTypeMeta.check_trait_link)
             if value is None:
                 return None
-            if isinstance(value, ObjectRef):
+            if isinstance(value, ObjectRefView):
                 return NyObject.wrap(value.uuid)
             if isinstance(value, UUID):
                 return NyObject.wrap(value)
@@ -290,7 +290,7 @@ class ApiShared:
         if resolved is not None and resolved.is_embedded:
             # composition: the value is an inline props draft, recursively
             # normalized against the embedded type's schema. A link
-            # (UUID/ObjectRef) is refused — picking an existing object is
+            # (UUID/ObjectRefView) is refused — picking an existing object is
             # exactly what embedded props are not (ADR-0004).
             if value is None:
                 return None
@@ -318,7 +318,7 @@ class ApiShared:
                 )
                 for key, item in value.items()
             }
-        if isinstance(value, ObjectRef):
+        if isinstance(value, ObjectRefView):
             return NyObject.wrap(value.uuid)
         if isinstance(value, UUID):
             return NyObject.wrap(value)

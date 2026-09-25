@@ -1,10 +1,10 @@
 """Table stores."""
-from nylium.data.tables.decor.TraitDecors import TraitDecors, trait_decor
-from nylium.data.tables.decor.TypeDecors import TypeDecors, type_decor
+from nylium.data.tables.decor.TraitStyles import TraitStyles, trait_style
+from nylium.data.tables.decor.TypeStyles import TypeStyles, type_style
 
 __all__ = [
-    'TraitDecors',
-    'trait_decor',
-    'TypeDecors',
-    'type_decor',
+    'TraitStyles',
+    'trait_style',
+    'TypeStyles',
+    'type_style',
 ]

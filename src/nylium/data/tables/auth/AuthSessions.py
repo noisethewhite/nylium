@@ -6,7 +6,7 @@ from typing import ClassVar
 from uuid import UUID
 import sqlalchemy as sqla
 from nylium.database import Database
-from nylium.database.Row import mapper
+from nylium.database.Row import get_mapper
 from nylium.database.Table import Row, Table
 from nylium.data.rows import AuthSession
 
@@ -29,7 +29,7 @@ class AuthSessions(Table[str, AuthSession]):
 
     @Database.commit_after_this
     def purge_expired(self) -> None:
-        c = mapper(AuthSession).columns
+        c = get_mapper(AuthSession).columns
         _ = Database.execute(
             sqla.delete(AuthSession).where(c.expires_at <= datetime.now(timezone.utc))
         )

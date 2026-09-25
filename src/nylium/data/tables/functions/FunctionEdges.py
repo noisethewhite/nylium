@@ -5,7 +5,7 @@ from typing import ClassVar
 from uuid import UUID
 import sqlalchemy as sqla
 from nylium.database import Database
-from nylium.database.Row import mapper
+from nylium.database.Row import get_mapper
 from nylium.database.Table import Row, Table
 from nylium.data.rows import FunctionEdge
 
@@ -17,7 +17,7 @@ class FunctionEdges(Table[UUID, FunctionEdge]):
     @classmethod
     @Database.use_same_session
     def edges_of(cls, function_uuid: UUID) -> list[FunctionEdge]:
-        c = mapper(FunctionEdge).columns
+        c = get_mapper(FunctionEdge).columns
         return list(
             Database.scalars(
                 sqla.select(FunctionEdge).where(c.function_uuid == function_uuid)

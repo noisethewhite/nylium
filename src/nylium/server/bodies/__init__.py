@@ -13,7 +13,7 @@ Every route takes a request dataclass and returns a response dataclass:
   ``UploadFile`` parameter — see ADR-0017.
 
 The props payload reuses the same discriminated shape the API renders
-(ScalarValue / RefValue / ArrayValue): one wire contract in both
+(ScalarValueView / RefValueView / ArrayValueView): one wire contract in both
 directions, no parallel input hierarchy.
 
 The package surface re-exports every body class, so call sites keep

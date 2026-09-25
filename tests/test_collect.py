@@ -10,7 +10,7 @@ from decimal import Decimal
 
 import pytest
 
-from nylium.api import Api, ArrayValue, RefValue, ScalarValue
+from nylium.api import Api, ArrayValueView, RefValueView, ScalarValueView
 from nylium.server.ValidationError import ValidationError
 
 
@@ -57,16 +57,16 @@ def test_collect_derives_range_and_total():
         "Period", {"name": "P", "from": date(2026, 9, 12), "to": date(2026, 9, 16)}
     )
     expenses = period.props["expenses"]
-    assert isinstance(expenses, ArrayValue)
+    assert isinstance(expenses, ArrayValueView)
     assert expenses.items is not None
     # only e2 (the 15th) falls inside [12, 16]
     refs = [
         item.ref.uuid
         for item in expenses.items
-        if isinstance(item, RefValue) and item.ref is not None
+        if isinstance(item, RefValueView) and item.ref is not None
     ]
     assert refs == [e2.uuid]
-    assert period.props["total"] == ScalarValue(value=Decimal(20))
+    assert period.props["total"] == ScalarValueView(value=Decimal(20))
 
 
 def test_collect_empty_range_aggregates_zero():
@@ -76,9 +76,9 @@ def test_collect_empty_range_aggregates_zero():
         "Period", {"name": "P", "from": date(2026, 9, 20), "to": date(2026, 9, 30)}
     )
     expenses = period.props["expenses"]
-    assert isinstance(expenses, ArrayValue)
+    assert isinstance(expenses, ArrayValueView)
     assert expenses.items == []
-    assert period.props["total"] == ScalarValue(value=Decimal(0))
+    assert period.props["total"] == ScalarValueView(value=Decimal(0))
 
 
 def test_collect_inclusive_bounds():
@@ -89,13 +89,13 @@ def test_collect_inclusive_bounds():
         "Period", {"name": "P", "from": date(2026, 9, 12), "to": date(2026, 9, 16)}
     )
     expenses = period.props["expenses"]
-    assert isinstance(expenses, ArrayValue)
+    assert isinstance(expenses, ArrayValueView)
     assert expenses.items is not None
     # between is inclusive on both ends
     refs = {
         item.ref.uuid
         for item in expenses.items
-        if isinstance(item, RefValue) and item.ref is not None
+        if isinstance(item, RefValueView) and item.ref is not None
     }
     assert refs == {e1.uuid, e2.uuid}
 

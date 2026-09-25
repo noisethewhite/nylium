@@ -1,4 +1,4 @@
-"""TraitDecor mapped row."""
+"""TraitStyle mapped row."""
 from __future__ import annotations
 
 from typing import ClassVar
@@ -9,7 +9,7 @@ from nylium.database.Table import Row
 from nylium.database.registry import reg
 
 @reg.mapped_as_dataclass
-class TraitDecor(Row):
+class TraitStyle(Row):
     __tablename__: ClassVar[str] = "trait_decor"
 
     uuid: Mapped[UUID] = mapped_column(

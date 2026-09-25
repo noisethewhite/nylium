@@ -12,7 +12,7 @@ from uuid import UUID
 
 from nylium.database import Database
 from nylium.data.tables import Instances, instances
-from nylium.data.tables import InstanceValues
+from nylium.data.tables import InstanceLinks
 from nylium.ny.NyArray import NyArray
 from nylium.ny.NyEmbedded import NyEmbedded
 from nylium.ny.NyEnum import NyEnum
@@ -21,7 +21,7 @@ from nylium.ny.NyProp import NyProp
 from nylium.ny.NyScalar import NyScalar
 from nylium.ny.NyScalar import ScalarPayload
 from nylium.ny.NyType import NyType
-from nylium.ny.NyObjectShape import NyObjectShape
+from nylium.ny.NyObjectProtocol import NyObjectProtocol
 from nylium.ny.NyTypeMeta import StoredValue, NyTypeMeta
 from nylium.ny.NyUnit import NyUnit
 from nylium.ny.nyobject.PersistenceMixin import PersistenceMixin
@@ -93,7 +93,7 @@ class AttrsMixin(PersistenceMixin):
             # ADR-0013: Any<TraitName> — a plain object link whose type
             # must carry the bound trait
             NyTypeMeta.check_trait_link(prop.value_trait_name(), value)
-            self._write_link(prop, cast(NyObjectShape, value))
+            self._write_link(prop, cast(NyObjectProtocol, value))
         elif prop.value_type().is_embedded:
             # composition (ADR-0004): the value is an inline props draft,
             # the child is created lazily / updated / deleted on None
@@ -108,7 +108,7 @@ class AttrsMixin(PersistenceMixin):
             self._write_file_ref(prop, value)
         else:
             NyTypeMeta.check_link(value_type, value)
-            self._write_link(prop, cast(NyObjectShape, value))
+            self._write_link(prop, cast(NyObjectProtocol, value))
         self._touch()
 
     @override
@@ -143,7 +143,7 @@ class AttrsMixin(PersistenceMixin):
         elif not prop.is_trait_bound and prop.value_type().is_embedded:
             NyEmbedded.destroy(ObjectUUID.of(link.uuid))  # the child dies with the prop
         else:
-            InstanceValues.delete_row(link)
+            InstanceLinks.delete_row(link)
         self._touch()
 
     @Database.commit_after_this

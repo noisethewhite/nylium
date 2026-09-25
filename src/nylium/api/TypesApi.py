@@ -14,7 +14,7 @@ else:
 from nylium.database import Database
 from nylium.data.tables import instances
 from nylium.data.tables import props
-from nylium.data.tables import type_decor
+from nylium.data.tables import type_style
 from nylium.data.rows import Type
 from nylium.data.tables import types
 from nylium.ny.NyProp import NyProp
@@ -118,7 +118,7 @@ class TypesApi(_TypesBase):
                 value_trait_uuid=None if value_trait_uuid is None else TraitUUID.of(value_trait_uuid),
                 collect=collects.get(key),
             )
-        decor = type_decor[owner.uuid]
+        decor = type_style[owner.uuid]
         decor.icon = icon
         decor.color = color
         return cls._type_result(name)
@@ -157,7 +157,7 @@ class TypesApi(_TypesBase):
         final_color = owner.color if color is None else color
         row = types[owner.uuid]
         row.name = final_name
-        decor = type_decor[owner.uuid]
+        decor = type_style[owner.uuid]
         decor.plural_name = final_plural
         decor.icon = final_icon
         decor.color = final_color
@@ -169,7 +169,7 @@ class TypesApi(_TypesBase):
             )
             if parameterized_row is not None:
                 parameterized_row.name = NyType.unit_numeric_name(final_name)
-                type_decor[
+                type_style[
                     parameterized_row.uuid
                 ].plural_name = f"{NyType.unit_numeric_name(final_name)}s"
         return cls._type_result(final_name)

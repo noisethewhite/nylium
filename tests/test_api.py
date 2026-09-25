@@ -7,11 +7,11 @@ import pytest
 
 from nylium.api import (
     Api,
-    ArrayValue,
-    ObjectRef,
+    ArrayValueView,
+    ObjectRefView,
     ObjectView,
-    RefValue,
-    ScalarValue,
+    RefValueView,
+    ScalarValueView,
 )
 from nylium.data.rows import Type
 from nylium.ny import NyInteger, NyObject, NyString
@@ -52,14 +52,14 @@ def test_object_crud_round_trip():
     created = Api.create_object("Person", {"name": "Max", "age": 26})
     assert isinstance(created, ObjectView)
     assert created.type_name == "Person"
-    assert created.props["name"] == ScalarValue(value="Max")
-    assert created.props["tags"] == ArrayValue(items=None)  # set vs unset
+    assert created.props["name"] == ScalarValueView(value="Max")
+    assert created.props["tags"] == ArrayValueView(items=None)  # set vs unset
 
     fetched = Api.get_object(created.uuid)
-    assert fetched is not None and fetched.props["age"] == ScalarValue(value=26)
+    assert fetched is not None and fetched.props["age"] == ScalarValueView(value=26)
 
     updated = Api.update_object(created.uuid, {"age": 27})
-    assert updated.props["age"] == ScalarValue(value=27)
+    assert updated.props["age"] == ScalarValueView(value=27)
 
     listing = Api.list_objects("Person")
     assert [view.uuid for view in listing] == [created.uuid]
@@ -73,17 +73,17 @@ def test_links_and_arrays_render_as_views():
     _ = person_class()
     oleg = Api.create_object("Person", {"name": "Oleg", "age": 30})
     maxim = Api.create_object("Person", {"name": "Max", "age": 26})
-    # links come in as UUID or ObjectRef — that's all an API caller has
-    Api.update_object(oleg.uuid, {"friend": ObjectRef(uuid=maxim.uuid, type_name="Person")})
+    # links come in as UUID or ObjectRefView — that's all an API caller has
+    Api.update_object(oleg.uuid, {"friend": ObjectRefView(uuid=maxim.uuid, type_name="Person")})
     Api.update_object(oleg.uuid, {"friend": maxim.uuid, "tags": ["admin", "owner"]})
 
     view = Api.get_object(oleg.uuid)
     assert view is not None
     friend = view.props["friend"]
-    assert isinstance(friend, RefValue) and friend.ref is not None
+    assert isinstance(friend, RefValueView) and friend.ref is not None
     assert friend.ref.uuid == maxim.uuid and friend.ref.type_name == "Person"
-    assert view.props["tags"] == ArrayValue(
-        items=[ScalarValue(value="admin"), ScalarValue(value="owner")]
+    assert view.props["tags"] == ArrayValueView(
+        items=[ScalarValueView(value="admin"), ScalarValueView(value="owner")]
     )
 
 
@@ -93,7 +93,7 @@ def test_db_only_type_created_through_api():
     assert TypeUUID.of(view.uuid).plural_name() == "Notes"
 
     note = Api.create_object("Note", {"body": "hello"})
-    assert note.props["body"] == ScalarValue(value="hello")
+    assert note.props["body"] == ScalarValueView(value="hello")
 
     with pytest.raises(TypeError):
         Api.create_object("Note", {"body": 42})
@@ -193,7 +193,7 @@ def test_sync_props_add_and_delete():
     reloaded = Api.get_object(note.uuid)
     assert reloaded is not None
     assert "body" not in reloaded.props
-    assert reloaded.props["mood"] == ScalarValue(value=None)
+    assert reloaded.props["mood"] == ScalarValueView(value=None)
 
 
 def test_sync_props_rename_keeps_values():
@@ -203,7 +203,7 @@ def test_sync_props_rename_keeps_values():
     assert [prop.key for prop in TypeUUID.of(synced.uuid).effective_props()] == ["name", "text", "priority"]
     reloaded = Api.get_object(note.uuid)
     assert reloaded is not None
-    assert reloaded.props["text"] == ScalarValue(value="hello")
+    assert reloaded.props["text"] == ScalarValueView(value="hello")
 
 
 def test_sync_props_retype_purges_values():
@@ -215,7 +215,7 @@ def test_sync_props_retype_purges_values():
     }["priority"] == "String"
     reloaded = Api.get_object(note.uuid)
     assert reloaded is not None
-    assert reloaded.props["priority"] == ScalarValue(value=None)
+    assert reloaded.props["priority"] == ScalarValueView(value=None)
 
 
 def test_sync_props_keeps_name_pinned():

@@ -1,11 +1,11 @@
 from __future__ import annotations
-from nylium.data.views.ObjectRef import ObjectRef
+from nylium.data.views.ObjectRefView import ObjectRefView
 from pydantic.dataclasses import dataclass
 from nylium.Constants import Constants
 
 
 @dataclass(config=Constants.Pydantic.CONFIG)
-class RefValue:
+class RefValueView:
     """None means the link was never set (or the target is gone)."""
 
-    ref: ObjectRef | None
+    ref: ObjectRefView | None

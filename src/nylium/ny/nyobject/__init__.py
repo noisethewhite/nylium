@@ -10,7 +10,7 @@ reads/writes translate into queries/upserts against the *values tables:
         tags: list[NyString]
 
     oleg = Person(name="Oleg")
-    oleg.friend = maxim   # -> instance_values row, type-checked
+    oleg.friend = maxim   # -> instance_links row, type-checked
     oleg.tags = ["a"]     # -> array instance + array_values rows
 
 Session-per-operation on purpose: this is the correctness layer, not the
@@ -27,23 +27,23 @@ this package imports them after NyObject to keep mid-package-init order.
 from __future__ import annotations
 
 from nylium.ny.nyobject.NyObject import NyObject
-from nylium.data.views.ArrayValue import ArrayValue
-from nylium.data.views.EmbeddedValue import EmbeddedValue
-from nylium.data.views.ObjectRef import ObjectRef
-from nylium.data.views.RefValue import RefValue
-from nylium.data.views.ScalarValue import ScalarValue
+from nylium.data.views.ArrayValueView import ArrayValueView
+from nylium.data.views.EmbeddedValueView import EmbeddedValueView
+from nylium.data.views.ObjectRefView import ObjectRefView
+from nylium.data.views.RefValueView import RefValueView
+from nylium.data.views.ScalarValueView import ScalarValueView
 from nylium.data.views.values import PropValue
 from nylium.data.views.TagView import TagView
 from nylium.data.views.ObjectView import ObjectView
 
 __all__ = [
-    "ArrayValue",
-    "EmbeddedValue",
-    "ObjectRef",
+    "ArrayValueView",
+    "EmbeddedValueView",
+    "ObjectRefView",
     "ObjectView",
     "PropValue",
-    "RefValue",
-    "ScalarValue",
+    "RefValueView",
+    "ScalarValueView",
     "TagView",
     "NyObject",
 ]

@@ -12,11 +12,11 @@ from typing import cast
 
 from nylium.api.Api import Api, PropInput
 from nylium.ny.nyobject import (
-    ArrayValue,
-    EmbeddedValue,
+    ArrayValueView,
+    EmbeddedValueView,
     PropValue,
-    RefValue,
-    ScalarValue,
+    RefValueView,
+    ScalarValueView,
 )
 from nylium.data.types.MonthDay import MonthDay
 from nylium.data.types.MonthDayTime import MonthDayTime
@@ -63,12 +63,12 @@ class PropCodec:
     @classmethod
     def _decode_value(cls, value: PropValue, type_name: str) -> PropInput:
         if NyScalar.by_type_name(type_name) is not None:
-            if not isinstance(value, ScalarValue):
-                raise TypeError(cls._shape_error(type_name, "ScalarValue", value))
+            if not isinstance(value, ScalarValueView):
+                raise TypeError(cls._shape_error(type_name, "ScalarValueView", value))
             return cls._coerce_scalar(value.value, type_name)
         if NyType.unit_param_of(type_name) is not None:
-            if not isinstance(value, ScalarValue):
-                raise TypeError(cls._shape_error(type_name, "ScalarValue", value))
+            if not isinstance(value, ScalarValueView):
+                raise TypeError(cls._shape_error(type_name, "ScalarValueView", value))
             if value.value is None:
                 return None
             coerced = cls._coerce_scalar(value.value, NyNumeric.TYPE_NAME)
@@ -79,15 +79,15 @@ class PropCodec:
             # when the write hits the object layer
             return Quantity(value=cast(Decimal, coerced), unit=unit)
         if NyEnum.is_enum(type_name):
-            if not isinstance(value, ScalarValue):
-                raise TypeError(cls._shape_error(type_name, "ScalarValue", value))
+            if not isinstance(value, ScalarValueView):
+                raise TypeError(cls._shape_error(type_name, "ScalarValueView", value))
             raw = value.value
             if raw is not None and type(raw) is not str:
                 raise TypeError(f"value {raw!r} is not a valid {type_name}")
             return raw
         if NyType.is_array_name(type_name):
-            if not isinstance(value, ArrayValue):
-                raise TypeError(cls._shape_error(type_name, "ArrayValue", value))
+            if not isinstance(value, ArrayValueView):
+                raise TypeError(cls._shape_error(type_name, "ArrayValueView", value))
             if value.items is None:
                 raise TypeError(
                     "unsetting arrays is not supported — omit the prop (untouched) or send an empty list"
@@ -105,15 +105,15 @@ class PropCodec:
             return decoded
         owner = NyType.by_name(type_name)
         if owner is not None and owner.is_embedded:
-            if not isinstance(value, EmbeddedValue):
-                raise TypeError(cls._shape_error(type_name, "EmbeddedValue", value))
+            if not isinstance(value, EmbeddedValueView):
+                raise TypeError(cls._shape_error(type_name, "EmbeddedValueView", value))
             # an empty draft clears the child; uuid is server-owned,
             # the client's copy is ignored entirely
             if not value.props:
                 return None
             return cls.decode(type_name, value.props)
-        if not isinstance(value, RefValue):
-            raise TypeError(cls._shape_error(type_name, "RefValue", value))
+        if not isinstance(value, RefValueView):
+            raise TypeError(cls._shape_error(type_name, "RefValueView", value))
         return value.ref
 
     @classmethod

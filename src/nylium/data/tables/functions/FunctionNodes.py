@@ -6,7 +6,7 @@ from typing import ClassVar
 from uuid import UUID, uuid4
 import sqlalchemy as sqla
 from nylium.database import Database
-from nylium.database.Row import mapper
+from nylium.database.Row import get_mapper
 from nylium.database.Table import Row, Table
 from nylium.data.rows import FunctionNode
 from nylium.data.rows import FunctionEdge
@@ -19,7 +19,7 @@ class FunctionNodes(Table[UUID, FunctionNode]):
     @classmethod
     @Database.use_same_session
     def nodes_of(cls, function_uuid: UUID) -> list[FunctionNode]:
-        c = mapper(FunctionNode).columns
+        c = get_mapper(FunctionNode).columns
         return list(
             Database.scalars(
                 sqla.select(FunctionNode)
@@ -62,7 +62,7 @@ class FunctionNodes(Table[UUID, FunctionNode]):
             if stale.uuid not in kept:
                 Database.delete(stale)
         Database.flush()
-        fe_c = mapper(FunctionEdge).columns
+        fe_c = get_mapper(FunctionEdge).columns
         _ = Database.execute(
             sqla.delete(FunctionEdge).where(fe_c.function_uuid == function_uuid)
         )

@@ -11,13 +11,13 @@ from sqlalchemy.orm import Mapped
 
 from nylium.Constants import Constants
 from nylium.database import Database
-from nylium.database.Row import mapper
+from nylium.database.Row import get_mapper
 from nylium.database.Table import Row
 from nylium.data.rows import (
     BooleanValue,
     DateValue,
     DatetimeValue,
-    InstanceValue,
+    InstanceLink,
     IntegerValue,
     MonthDayTimeValue,
     MonthDayValue,
@@ -26,7 +26,7 @@ from nylium.data.rows import (
     StringValue,
     TimeValue,
 )
-from nylium.data.tables import props, trait_decor, traits, types
+from nylium.data.tables import props, trait_style, traits, types
 from nylium.uuid.ObjectUUID import ObjectUUID
 
 
@@ -47,7 +47,7 @@ _PROP_KEYED_VALUE_TABLES: tuple[type[_PropKeyedValues], ...] = (
     TimeValue,
     MonthDayValue,
     MonthDayTimeValue,
-    InstanceValue,
+    InstanceLink,
 )
 
 
@@ -94,13 +94,13 @@ class PropUUID(UUID):
         t = traits.get(prop.owner_trait_uuid)
         if t is None:
             raise KeyError(f"Trait with UUID {prop.owner_trait_uuid} does not exist")
-        return t.name, trait_decor[t.uuid].color
+        return t.name, trait_style[t.uuid].color
 
     @Database.use_same_session
     def purge_values(self) -> None:
         """Wipe every stored value of this prop across all value tables."""
         for table in _PROP_KEYED_VALUE_TABLES:
-            tc = mapper(table).columns
+            tc = get_mapper(table).columns
             _ = Database.execute(sqla.delete(table).where(tc.prop_uuid == self))
         Database.flush()
 
@@ -111,7 +111,7 @@ class PropUUID(UUID):
         if not inst_uuids:
             return
         for table in _PROP_KEYED_VALUE_TABLES:
-            tc = mapper(table).columns
+            tc = get_mapper(table).columns
             _ = Database.execute(
                 sqla.delete(table).where(
                     tc.prop_uuid == self,
@@ -135,7 +135,7 @@ class PropUUID(UUID):
         else:
             # Numeric and Numeric<Unit> both store their magnitude in numeric_values
             table = NumericValue
-        c = mapper(table).columns
+        c = get_mapper(table).columns
         stmt = sqla.select(c.inst_uuid).where(
             c.prop_uuid == self,
             c.value >= lo,

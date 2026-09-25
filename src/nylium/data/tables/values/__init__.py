@@ -4,7 +4,7 @@ from nylium.data.tables.values.BooleanValues import BooleanValues, boolean_value
 from nylium.data.tables.values.DateValues import DateValues, date_values
 from nylium.data.tables.values.DatetimeValues import DatetimeValues, datetime_values
 from nylium.data.tables.values.FileValues import FileValues, file_values
-from nylium.data.tables.values.InstanceValues import InstanceValues, instance_values
+from nylium.data.tables.values.InstanceLinks import InstanceLinks, instance_links
 from nylium.data.tables.values.IntegerValues import IntegerValues, integer_values
 from nylium.data.tables.values.MonthDayTimeValues import MonthDayTimeValues, monthdaytime_values
 from nylium.data.tables.values.MonthDayValues import MonthDayValues, monthday_values
@@ -24,8 +24,8 @@ __all__ = [
     'datetime_values',
     'FileValues',
     'file_values',
-    'InstanceValues',
-    'instance_values',
+    'InstanceLinks',
+    'instance_links',
     'IntegerValues',
     'integer_values',
     'MonthDayTimeValues',

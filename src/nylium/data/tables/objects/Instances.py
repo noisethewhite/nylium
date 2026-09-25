@@ -5,7 +5,7 @@ from typing import ClassVar
 from uuid import UUID
 import sqlalchemy as sqla
 from nylium.database import Database
-from nylium.database.Row import mapper
+from nylium.database.Row import get_mapper
 from nylium.database.Table import Row, Table
 from nylium.data.rows import Instance
 
@@ -18,7 +18,7 @@ class Instances(Table[UUID, Instance]):
     def _unique_plural_name(
         cls, uuid: UUID, name: str, plural_name: str | None = None
     ) -> str:
-        c = mapper(Instance).columns
+        c = get_mapper(Instance).columns
         candidate = plural_name or f"{name}s"
         taken = Database.scalar(sqla.select(c.uuid).where(c.plural_name == candidate))
         if taken is not None:
@@ -57,7 +57,7 @@ class Instances(Table[UUID, Instance]):
     @classmethod
     @Database.use_same_session
     def touch(cls, uuid: UUID) -> None:
-        c = mapper(Instance).columns
+        c = get_mapper(Instance).columns
         _ = Database.execute(
             sqla.update(Instance)
             .where(c.uuid == uuid)
@@ -67,7 +67,7 @@ class Instances(Table[UUID, Instance]):
     @classmethod
     @Database.use_same_session
     def owned_uuids(cls, owner_object_uuid: UUID) -> list[UUID]:
-        c = mapper(Instance).columns
+        c = get_mapper(Instance).columns
         return list(
             Database.scalars(
                 sqla.select(c.uuid).where(c.owner_object_uuid == owner_object_uuid)
@@ -79,7 +79,7 @@ class Instances(Table[UUID, Instance]):
     def existing_uuids(cls, uuids: list[UUID]) -> set[UUID]:
         if not uuids:
             return set()
-        c = mapper(Instance).columns
+        c = get_mapper(Instance).columns
         return set(Database.scalars(sqla.select(c.uuid).where(c.uuid.in_(uuids))).all())
 
 instances = Instances()

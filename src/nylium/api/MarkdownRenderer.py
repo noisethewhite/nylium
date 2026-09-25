@@ -12,12 +12,12 @@ from collections.abc import Callable
 
 from nylium.ny.nyobject import ObjectView
 from nylium.ny.nyobject import (
-    ArrayValue,
-    EmbeddedValue,
-    ObjectRef,
+    ArrayValueView,
+    EmbeddedValueView,
+    ObjectRefView,
     PropValue,
-    RefValue,
-    ScalarValue,
+    RefValueView,
+    ScalarValueView,
 )
 from nylium.Constants import Constants
 
@@ -32,8 +32,8 @@ class MarkdownRenderer:
     prop.
     """
 
-    def __init__(self, ref_label: Callable[[ObjectRef], str]) -> None:
-        self._ref_label: Callable[[ObjectRef], str] = ref_label
+    def __init__(self, ref_label: Callable[[ObjectRefView], str]) -> None:
+        self._ref_label: Callable[[ObjectRefView], str] = ref_label
 
     def render(self, view: ObjectView) -> tuple[str, str]:
         """Return (filename, content) for the object markdown document."""
@@ -45,7 +45,7 @@ class MarkdownRenderer:
 
     def _title(self, view: ObjectView) -> str:
         name = view.props.get(Constants.Props.NAME_PROP_KEY)
-        if isinstance(name, ScalarValue) and name.value is not None:
+        if isinstance(name, ScalarValueView) and name.value is not None:
             return str(name.value)
         return str(view.uuid)
 
@@ -54,24 +54,24 @@ class MarkdownRenderer:
         return slug or "object"
 
     def _render_prop(self, value: PropValue, indent: str = "") -> str:
-        if isinstance(value, ScalarValue):
+        if isinstance(value, ScalarValueView):
             return self._render_scalar(value)
-        if isinstance(value, RefValue):
+        if isinstance(value, RefValueView):
             if value.ref is None:
                 return Constants.Render.UNSET
             return f"[{self._ref_label(value.ref)}](object:{value.ref.uuid})"
-        if isinstance(value, ArrayValue):
+        if isinstance(value, ArrayValueView):
             return self._render_array(value, indent)
         return self._render_embedded(value, indent)
 
-    def _render_scalar(self, value: ScalarValue) -> str:
+    def _render_scalar(self, value: ScalarValueView) -> str:
         if value.value is None:
             return Constants.Render.UNSET
         if value.unit is not None:
             return f"{value.value} {value.unit}"
         return str(value.value)
 
-    def _render_array(self, value: ArrayValue, indent: str) -> str:
+    def _render_array(self, value: ArrayValueView, indent: str) -> str:
         if value.items is None:
             return Constants.Render.UNSET
         if not value.items:
@@ -82,7 +82,7 @@ class MarkdownRenderer:
         ]
         return "\n" + "\n".join(rows)
 
-    def _render_embedded(self, value: EmbeddedValue, indent: str) -> str:
+    def _render_embedded(self, value: EmbeddedValueView, indent: str) -> str:
         if not value.props:
             return Constants.Render.UNSET
         rows = [

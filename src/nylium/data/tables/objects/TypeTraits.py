@@ -5,7 +5,7 @@ from typing import ClassVar
 from uuid import UUID
 import sqlalchemy as sqla
 from nylium.database import Database
-from nylium.database.Row import mapper
+from nylium.database.Row import get_mapper
 from nylium.database.Table import Row, Table
 from nylium.data.rows import TypeTrait
 
@@ -32,7 +32,7 @@ class TypeTraits(Table[tuple[UUID, UUID], TypeTrait]):
     def is_attached(cls, type_uuid: UUID, trait_uuid: UUID | None) -> bool:
         if trait_uuid is None:
             return False
-        c = mapper(TypeTrait).columns
+        c = get_mapper(TypeTrait).columns
         attached = Database.scalar(
             sqla.select(c.type_uuid).where(
                 c.type_uuid == type_uuid, c.trait_uuid == trait_uuid
@@ -43,7 +43,7 @@ class TypeTraits(Table[tuple[UUID, UUID], TypeTrait]):
     @classmethod
     @Database.use_same_session
     def attached_trait_uuids(cls, type_uuid: UUID) -> list[UUID]:
-        c = mapper(TypeTrait).columns
+        c = get_mapper(TypeTrait).columns
         return list(
             Database.scalars(
                 sqla.select(c.trait_uuid)

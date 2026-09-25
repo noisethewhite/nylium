@@ -10,8 +10,8 @@ import sqlalchemy as sqla
 from sqlalchemy.orm import aliased
 
 from nylium.database import Database
-from nylium.database.Row import mapper
-from nylium.data.rows import ArrayValue, Instance, InstanceValue, Prop, StringValue, Type, TypeDecor
+from nylium.database.Row import get_mapper
+from nylium.data.rows import ArrayValue, Instance, InstanceLink, Prop, StringValue, Type, TypeStyle
 from nylium.data.tables import instances
 
 
@@ -35,8 +35,8 @@ class ObjectUUID(UUID):
     @Database.use_same_session
     def instances_of_kind(cls, kind: str) -> list[ObjectUUID]:
         """Every instance uuid whose type has the given kind."""
-        i_c = mapper(Instance).columns
-        t_c = mapper(Type).columns
+        i_c = get_mapper(Instance).columns
+        t_c = get_mapper(Type).columns
         rows: list[UUID] = list(
             Database.scalars(
                 sqla.select(i_c.uuid)
@@ -49,9 +49,9 @@ class ObjectUUID(UUID):
     @Database.use_same_session
     def array_link_uuids(self) -> list[ObjectUUID]:
         """Uuids of array-instance links held by this owner object."""
-        iv_c = mapper(InstanceValue).columns
-        p_c = mapper(Prop).columns
-        t_c = mapper(Type).columns
+        iv_c = get_mapper(InstanceLink).columns
+        p_c = get_mapper(Prop).columns
+        t_c = get_mapper(Type).columns
         stmt = (
             sqla.select(iv_c.uuid)
             .join(Prop, iv_c.prop_uuid == p_c.uuid)
@@ -71,9 +71,9 @@ class ObjectUUID(UUID):
         """(owner uuid, owner type name) for every instance that points at
         this object — directly through a link prop or through membership in
         one of its arrays. Owners deduplicated, direct links first."""
-        iv_c = mapper(InstanceValue).columns
-        i_c = mapper(Instance).columns
-        av_c = mapper(ArrayValue).columns
+        iv_c = get_mapper(InstanceLink).columns
+        i_c = get_mapper(Instance).columns
+        av_c = get_mapper(ArrayValue).columns
 
         direct_types = aliased(Type)
         direct = Database.execute(
@@ -83,7 +83,7 @@ class ObjectUUID(UUID):
             .where(iv_c.uuid == self)
         ).all()
 
-        box_link = aliased(InstanceValue)
+        box_link = aliased(InstanceLink)
         array_types = aliased(Type)
         via_arrays = Database.execute(
             sqla.select(box_link.inst_uuid, array_types.name)
@@ -115,13 +115,13 @@ class ObjectUUID(UUID):
         name, owner type color). One query, no N+1."""
         name_prop = aliased(Prop)
         owner_types = aliased(Type)
-        owner_decor = aliased(TypeDecor)
-        av_c = mapper(ArrayValue).columns
-        iv_c = mapper(InstanceValue).columns
-        p_c = mapper(Prop).columns
-        i_c = mapper(Instance).columns
-        s_c = mapper(StringValue).columns
-        t_c = mapper(Type).columns
+        owner_decor = aliased(TypeStyle)
+        av_c = get_mapper(ArrayValue).columns
+        iv_c = get_mapper(InstanceLink).columns
+        p_c = get_mapper(Prop).columns
+        i_c = get_mapper(Instance).columns
+        s_c = get_mapper(StringValue).columns
+        t_c = get_mapper(Type).columns
         rows = Database.execute(
             sqla.select(
                 iv_c.inst_uuid,
@@ -131,7 +131,7 @@ class ObjectUUID(UUID):
                 owner_decor.color,
             )
             .select_from(ArrayValue)
-            .join(InstanceValue, iv_c.uuid == av_c.inst_uuid)
+            .join(InstanceLink, iv_c.uuid == av_c.inst_uuid)
             .join(Prop, p_c.uuid == iv_c.prop_uuid)
             .join(Type, t_c.uuid == p_c.value_type_uuid)
             .join(Instance, i_c.uuid == iv_c.inst_uuid)

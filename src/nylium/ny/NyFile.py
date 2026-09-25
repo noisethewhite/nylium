@@ -5,7 +5,7 @@ from nylium.database import Database
 from nylium.system.Environment import Environment
 from nylium.ny.NyType import NyType
 from pathlib import Path
-from nylium.data.tables import TypeDecors
+from nylium.data.tables import TypeStyles
 from nylium.uuid import FileUUID
 from nylium.data.tables import files
 import logging
@@ -112,7 +112,7 @@ class NyFile:
         type pointing at it falls back to the default glyph."""
 
         marker = f"{cls.ICON_IMAGE_PREFIX}{image_uuid}"
-        TypeDecors.reset_icons_referencing(marker, cls.DEFAULT_GLYPH)
+        TypeStyles.reset_icons_referencing(marker, cls.DEFAULT_GLYPH)
 
     @classmethod
     def parse_icon_image(cls, icon: str) -> FileUUID | None:

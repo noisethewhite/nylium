@@ -12,7 +12,7 @@ from __future__ import annotations
 from typing import ClassVar
 
 from nylium.database import Database
-from nylium.data.tables import type_decor
+from nylium.data.tables import type_style
 from nylium.data.rows import Type
 from nylium.data.tables import types
 from nylium.uuid import TypeUUID
@@ -33,7 +33,7 @@ class NyType:
         # snapshot, not a live row: reads must not depend on the session
         # that fetched the row still being open. Decor is a 1:1 side table
         # (ADR-0014) — one lookup, not a Row navigation property.
-        decor = type_decor[row.uuid]
+        decor = type_style[row.uuid]
         self._uuid: TypeUUID = TypeUUID.of(row.uuid)
         self._name: str = row.name
         self._plural_name: str = decor.plural_name
@@ -191,7 +191,7 @@ class NyType:
                 )
             # builtins re-ensure on every boot: keep their icon canonical
             if icon is not None and existing.icon != icon:
-                type_decor[existing.uuid].icon = icon
+                type_style[existing.uuid].icon = icon
             return existing
         row = types.create(name, plural_name or f"{name}s", icon=icon, kind=kind, embedded=embedded)
         return cls(row)

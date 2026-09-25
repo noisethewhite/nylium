@@ -7,7 +7,7 @@ from uuid import UUID
 
 from nylium.api.ApiShared import ApiShared, PropInput
 from nylium.ny.nyobject import ObjectView
-from nylium.ny.nyobject import ObjectRef
+from nylium.ny.nyobject import ObjectRefView
 from nylium.database import Database
 from nylium.uuid import ObjectUUID, TypeUUID
 from nylium.data.tables import instances
@@ -58,7 +58,7 @@ class ObjectsApi(ApiShared):
         if view is None:
             return None
 
-        def ref_label(ref: ObjectRef) -> str:
+        def ref_label(ref: ObjectRefView) -> str:
             inst = instances.get(ref.uuid)
             owner = NyType.by_uuid(TypeUUID.of(inst.type_uuid)) if inst is not None else None
             if owner is not None and NyProp.by_key(owner, Constants.Props.NAME_PROP_KEY) is not None:

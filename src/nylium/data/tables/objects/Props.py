@@ -5,7 +5,7 @@ from typing import ClassVar
 from uuid import UUID, uuid4
 import sqlalchemy as sqla
 from nylium.database import Database
-from nylium.database.Row import mapper
+from nylium.database.Row import get_mapper
 from nylium.database.Table import Row, Table
 from nylium.data.rows import Prop
 from nylium.data.rows import SchemaItem
@@ -23,7 +23,7 @@ class Props(Table[UUID, Prop]):
     @classmethod
     @Database.use_same_session
     def by_type_key(cls, owner_uuid: UUID, key: str) -> Prop | None:
-        c = mapper(Prop).columns
+        c = get_mapper(Prop).columns
         return Database.scalar(
             sqla.select(Prop).where(c.owner_type_uuid == owner_uuid, c.key == key)
         )
@@ -31,7 +31,7 @@ class Props(Table[UUID, Prop]):
     @classmethod
     @Database.use_same_session
     def by_trait_key(cls, trait_uuid: UUID, key: str) -> Prop | None:
-        c = mapper(Prop).columns
+        c = get_mapper(Prop).columns
         return Database.scalar(
             sqla.select(Prop).where(c.owner_trait_uuid == trait_uuid, c.key == key)
         )
@@ -39,7 +39,7 @@ class Props(Table[UUID, Prop]):
     @classmethod
     @Database.use_same_session
     def rows_of_type(cls, owner_uuid: UUID) -> list[Prop]:
-        c = mapper(Prop).columns
+        c = get_mapper(Prop).columns
         return list(
             Database.scalars(
                 sqla.select(Prop)
@@ -51,7 +51,7 @@ class Props(Table[UUID, Prop]):
     @classmethod
     @Database.use_same_session
     def rows_of_trait(cls, trait_uuid: UUID) -> list[Prop]:
-        c = mapper(Prop).columns
+        c = get_mapper(Prop).columns
         return list(
             Database.scalars(
                 sqla.select(Prop)

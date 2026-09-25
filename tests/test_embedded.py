@@ -7,7 +7,7 @@ from uuid import UUID
 
 import pytest
 
-from nylium.api import Api, ArrayValue, EmbeddedValue, ScalarValue
+from nylium.api import Api, ArrayValueView, EmbeddedValueView, ScalarValueView
 from nylium.data.rows import Type
 from nylium.server.ValidationError import ValidationError
 from nylium.uuid import TypeUUID
@@ -51,7 +51,7 @@ def test_lazy_create_and_generated_name():
     _ = person_type()
     person = Api.create_object("Person", {"name": "Vasya"})
     # untouched embedded prop: no child yet
-    assert person.props["contact"] == EmbeddedValue(
+    assert person.props["contact"] == EmbeddedValueView(
         uuid=None, type_name="ContactDetails", props={}
     )
     # first fill creates the child lazily, with a generated name
@@ -59,10 +59,10 @@ def test_lazy_create_and_generated_name():
         person.uuid, {"contact": {"email": "v@x.com", "phone": "+1"}}
     )
     contact = person.props["contact"]
-    assert isinstance(contact, EmbeddedValue)
+    assert isinstance(contact, EmbeddedValueView)
     assert contact.uuid is not None
-    assert contact.props["email"] == ScalarValue(value="v@x.com")
-    assert contact.props["name"] == ScalarValue(value="Vasya → contact")
+    assert contact.props["email"] == ScalarValueView(value="v@x.com")
+    assert contact.props["name"] == ScalarValueView(value="Vasya → contact")
     # the child is readable by uuid, but never listed standalone
     assert Api.get_object(contact.uuid) is not None
     assert Api.list_objects("ContactDetails") == []
@@ -76,8 +76,8 @@ def test_name_generated_when_draft_precedes_parent_name():
         "Person", {"contact": {"email": "v@x.com"}, "name": "Vasya"}
     )
     contact = person.props["contact"]
-    assert isinstance(contact, EmbeddedValue)
-    assert contact.props["name"] == ScalarValue(value="Vasya → contact")
+    assert isinstance(contact, EmbeddedValueView)
+    assert contact.props["name"] == ScalarValueView(value="Vasya → contact")
 
 
 def test_name_regenerated_on_parent_rename():
@@ -87,8 +87,8 @@ def test_name_regenerated_on_parent_rename():
     )
     person = Api.update_object(person.uuid, {"name": "Petya"})
     contact = person.props["contact"]
-    assert isinstance(contact, EmbeddedValue)
-    assert contact.props["name"] == ScalarValue(value="Petya → contact")
+    assert isinstance(contact, EmbeddedValueView)
+    assert contact.props["name"] == ScalarValueView(value="Petya → contact")
 
 
 def test_update_embedded_keeps_child_identity():
@@ -97,13 +97,13 @@ def test_update_embedded_keeps_child_identity():
         "Person", {"name": "Vasya", "contact": {"email": "v@x.com"}}
     )
     before = person.props["contact"]
-    assert isinstance(before, EmbeddedValue)
+    assert isinstance(before, EmbeddedValueView)
     person = Api.update_object(person.uuid, {"contact": {"phone": "+2"}})
     after = person.props["contact"]
-    assert isinstance(after, EmbeddedValue)
+    assert isinstance(after, EmbeddedValueView)
     assert after.uuid == before.uuid
-    assert after.props["email"] == ScalarValue(value="v@x.com")
-    assert after.props["phone"] == ScalarValue(value="+2")
+    assert after.props["email"] == ScalarValueView(value="v@x.com")
+    assert after.props["phone"] == ScalarValueView(value="+2")
 
 
 def test_clear_prop_deletes_child():
@@ -112,9 +112,9 @@ def test_clear_prop_deletes_child():
         "Person", {"name": "Vasya", "contact": {"email": "v@x.com"}}
     )
     contact = person.props["contact"]
-    assert isinstance(contact, EmbeddedValue) and contact.uuid is not None
+    assert isinstance(contact, EmbeddedValueView) and contact.uuid is not None
     person = Api.update_object(person.uuid, {"contact": None})
-    assert person.props["contact"] == EmbeddedValue(
+    assert person.props["contact"] == EmbeddedValueView(
         uuid=None, type_name="ContactDetails", props={}
     )
     assert Api.get_object(contact.uuid) is None
@@ -126,7 +126,7 @@ def test_parent_delete_cascades():
         "Person", {"name": "Vasya", "contact": {"email": "v@x.com"}}
     )
     contact = person.props["contact"]
-    assert isinstance(contact, EmbeddedValue) and contact.uuid is not None
+    assert isinstance(contact, EmbeddedValueView) and contact.uuid is not None
     assert Api.delete_object(person.uuid)
     assert Api.get_object(contact.uuid) is None
 
@@ -137,7 +137,7 @@ def test_direct_write_and_delete_of_child_refused():
         "Person", {"name": "Vasya", "contact": {"email": "v@x.com"}}
     )
     contact = person.props["contact"]
-    assert isinstance(contact, EmbeddedValue) and contact.uuid is not None
+    assert isinstance(contact, EmbeddedValueView) and contact.uuid is not None
     with pytest.raises(ValidationError):
         Api.update_object(contact.uuid, {"email": "other@x.com"})
     with pytest.raises(ValidationError):
@@ -150,7 +150,7 @@ def test_link_to_existing_refused():
         "Person", {"name": "Vasya", "contact": {"email": "v@x.com"}}
     )
     contact = person.props["contact"]
-    assert isinstance(contact, EmbeddedValue) and contact.uuid is not None
+    assert isinstance(contact, EmbeddedValueView) and contact.uuid is not None
     # an embedded prop takes an inline draft, never a link (ADR-0004)
     with pytest.raises(TypeError):
         Api.create_object(
@@ -175,15 +175,15 @@ def test_array_of_embedded_round_trip():
         },
     )
     members = team.props["members"]
-    assert isinstance(members, ArrayValue)
+    assert isinstance(members, ArrayValueView)
     assert members.items is not None and len(members.items) == 2
     first, second = members.items
-    assert isinstance(first, EmbeddedValue) and isinstance(second, EmbeddedValue)
-    assert first.props["email"] == ScalarValue(value="a@x.com")
-    assert second.props["email"] == ScalarValue(value="b@x.com")
+    assert isinstance(first, EmbeddedValueView) and isinstance(second, EmbeddedValueView)
+    assert first.props["email"] == ScalarValueView(value="a@x.com")
+    assert second.props["email"] == ScalarValueView(value="b@x.com")
     # generated names carry the array prop key and the 1-based position
-    assert first.props["name"] == ScalarValue(value="A-Team → members #1")
-    assert second.props["name"] == ScalarValue(value="A-Team → members #2")
+    assert first.props["name"] == ScalarValueView(value="A-Team → members #1")
+    assert second.props["name"] == ScalarValueView(value="A-Team → members #2")
     # elements are readable by uuid but never listed standalone
     first_uuid = first.uuid
     assert isinstance(first_uuid, UUID) and Api.get_object(first_uuid) is not None
@@ -197,16 +197,16 @@ def test_array_of_embedded_rewrite_deletes_old_elements():
         {"name": "A-Team", "members": [{"email": "a@x.com"}, {"email": "b@x.com"}]},
     )
     members = team.props["members"]
-    assert isinstance(members, ArrayValue) and members.items is not None
+    assert isinstance(members, ArrayValueView) and members.items is not None
     old_uuids = [
         item.uuid
         for item in members.items
-        if isinstance(item, EmbeddedValue) and item.uuid is not None
+        if isinstance(item, EmbeddedValueView) and item.uuid is not None
     ]
     assert len(old_uuids) == 2
     team = Api.update_object(team.uuid, {"members": [{"email": "c@x.com"}]})
     members = team.props["members"]
-    assert isinstance(members, ArrayValue) and members.items is not None
+    assert isinstance(members, ArrayValueView) and members.items is not None
     assert len(members.items) == 1
     for uuid in old_uuids:
         assert Api.get_object(uuid) is None
@@ -219,11 +219,11 @@ def test_array_of_embedded_cascade_delete():
         {"name": "A-Team", "members": [{"email": "a@x.com"}, {"email": "b@x.com"}]},
     )
     members = team.props["members"]
-    assert isinstance(members, ArrayValue) and members.items is not None
+    assert isinstance(members, ArrayValueView) and members.items is not None
     member_uuids = [
         item.uuid
         for item in members.items
-        if isinstance(item, EmbeddedValue) and item.uuid is not None
+        if isinstance(item, EmbeddedValueView) and item.uuid is not None
     ]
     assert len(member_uuids) == 2
     assert Api.delete_object(team.uuid)
@@ -238,25 +238,25 @@ def test_array_of_embedded_empty_and_clear():
         {"name": "A-Team", "members": [{"email": "a@x.com"}]},
     )
     members = team.props["members"]
-    assert isinstance(members, ArrayValue) and members.items is not None
+    assert isinstance(members, ArrayValueView) and members.items is not None
     member = members.items[0]
-    assert isinstance(member, EmbeddedValue)
+    assert isinstance(member, EmbeddedValueView)
     member_uuid = member.uuid
     assert member_uuid is not None
     # `[]` empties the array, deleting the composed children
     team = Api.update_object(team.uuid, {"members": []})
     members = team.props["members"]
-    assert isinstance(members, ArrayValue) and members.items == []
+    assert isinstance(members, ArrayValueView) and members.items == []
     assert Api.get_object(member_uuid) is None
     # `None` unsets the prop entirely, also deleting composed children
     team = Api.update_object(team.uuid, {"members": [{"email": "b@x.com"}]})
     members = team.props["members"]
-    assert isinstance(members, ArrayValue) and members.items is not None
+    assert isinstance(members, ArrayValueView) and members.items is not None
     second = members.items[0]
-    assert isinstance(second, EmbeddedValue) and second.uuid is not None
+    assert isinstance(second, EmbeddedValueView) and second.uuid is not None
     second_uuid = second.uuid
     team = Api.update_object(team.uuid, {"members": None})
-    assert team.props["members"] == ArrayValue(items=None)
+    assert team.props["members"] == ArrayValueView(items=None)
     assert Api.get_object(second_uuid) is None
 
 
@@ -282,7 +282,7 @@ def test_sync_props_delete_destroys_children():
         "Person", {"name": "Vasya", "contact": {"email": "v@x.com"}}
     )
     contact = person.props["contact"]
-    assert isinstance(contact, EmbeddedValue) and contact.uuid is not None
+    assert isinstance(contact, EmbeddedValueView) and contact.uuid is not None
     name_prop = next(prop for prop in TypeUUID.of(view.uuid).effective_props() if prop.key == "name")
     # drop the contact prop from the schema entirely
     synced = Api.sync_props("Person", [(name_prop.uuid, "name", "String", None)])
@@ -296,7 +296,7 @@ def test_sync_props_rename_regenerates_names():
         "Person", {"name": "Vasya", "contact": {"email": "v@x.com"}}
     )
     contact = person.props["contact"]
-    assert isinstance(contact, EmbeddedValue) and contact.uuid is not None
+    assert isinstance(contact, EmbeddedValueView) and contact.uuid is not None
     items = [
         (prop.uuid, prop.key, PropUUID.of(prop.uuid).value_type_name(), prop.formula)
         for prop in TypeUUID.of(view.uuid).effective_props()
@@ -309,9 +309,9 @@ def test_sync_props_rename_regenerates_names():
     reloaded = Api.get_object(person.uuid)
     assert reloaded is not None
     details = reloaded.props["details"]
-    assert isinstance(details, EmbeddedValue)
+    assert isinstance(details, EmbeddedValueView)
     assert details.uuid == contact.uuid
-    assert details.props["name"] == ScalarValue(value="Vasya → details")
+    assert details.props["name"] == ScalarValueView(value="Vasya → details")
 
 
 def test_array_of_embedded_parent_rename_regenerates_names():
@@ -321,17 +321,17 @@ def test_array_of_embedded_parent_rename_regenerates_names():
         {"name": "A-Team", "members": [{"email": "a@x.com"}, {"email": "b@x.com"}]},
     )
     members = team.props["members"]
-    assert isinstance(members, ArrayValue) and members.items is not None
+    assert isinstance(members, ArrayValueView) and members.items is not None
     first, second = members.items
-    assert isinstance(first, EmbeddedValue) and isinstance(second, EmbeddedValue)
-    assert first.props["name"] == ScalarValue(value="A-Team → members #1")
+    assert isinstance(first, EmbeddedValueView) and isinstance(second, EmbeddedValueView)
+    assert first.props["name"] == ScalarValueView(value="A-Team → members #1")
     team = Api.update_object(team.uuid, {"name": "B-Team"})
     members = team.props["members"]
-    assert isinstance(members, ArrayValue) and members.items is not None
+    assert isinstance(members, ArrayValueView) and members.items is not None
     first, second = members.items
-    assert isinstance(first, EmbeddedValue) and isinstance(second, EmbeddedValue)
-    assert first.props["name"] == ScalarValue(value="B-Team → members #1")
-    assert second.props["name"] == ScalarValue(value="B-Team → members #2")
+    assert isinstance(first, EmbeddedValueView) and isinstance(second, EmbeddedValueView)
+    assert first.props["name"] == ScalarValueView(value="B-Team → members #1")
+    assert second.props["name"] == ScalarValueView(value="B-Team → members #2")
 
 
 def test_sync_props_delete_destroys_array_children():
@@ -341,11 +341,11 @@ def test_sync_props_delete_destroys_array_children():
         {"name": "A-Team", "members": [{"email": "a@x.com"}, {"email": "b@x.com"}]},
     )
     members = team.props["members"]
-    assert isinstance(members, ArrayValue) and members.items is not None
+    assert isinstance(members, ArrayValueView) and members.items is not None
     member_uuids = [
         item.uuid
         for item in members.items
-        if isinstance(item, EmbeddedValue) and item.uuid is not None
+        if isinstance(item, EmbeddedValueView) and item.uuid is not None
     ]
     assert len(member_uuids) == 2
     name_prop = next(prop for prop in TypeUUID.of(view.uuid).effective_props() if prop.key == "name")
@@ -363,11 +363,11 @@ def test_sync_props_rename_regenerates_array_names():
         {"name": "A-Team", "members": [{"email": "a@x.com"}, {"email": "b@x.com"}]},
     )
     members = team.props["members"]
-    assert isinstance(members, ArrayValue) and members.items is not None
+    assert isinstance(members, ArrayValueView) and members.items is not None
     member_uuids = [
         item.uuid
         for item in members.items
-        if isinstance(item, EmbeddedValue) and item.uuid is not None
+        if isinstance(item, EmbeddedValueView) and item.uuid is not None
     ]
     assert len(member_uuids) == 2
     items = [
@@ -382,16 +382,16 @@ def test_sync_props_rename_regenerates_array_names():
     reloaded = Api.get_object(team.uuid)
     assert reloaded is not None
     crew = reloaded.props["crew"]
-    assert isinstance(crew, ArrayValue) and crew.items is not None
+    assert isinstance(crew, ArrayValueView) and crew.items is not None
     assert [
         item.uuid
         for item in crew.items
-        if isinstance(item, EmbeddedValue) and item.uuid is not None
+        if isinstance(item, EmbeddedValueView) and item.uuid is not None
     ] == member_uuids
     first, second = crew.items
-    assert isinstance(first, EmbeddedValue) and isinstance(second, EmbeddedValue)
-    assert first.props["name"] == ScalarValue(value="A-Team → crew #1")
-    assert second.props["name"] == ScalarValue(value="A-Team → crew #2")
+    assert isinstance(first, EmbeddedValueView) and isinstance(second, EmbeddedValueView)
+    assert first.props["name"] == ScalarValueView(value="A-Team → crew #1")
+    assert second.props["name"] == ScalarValueView(value="A-Team → crew #2")
 
 
 def test_nested_embedded_names():
@@ -412,11 +412,11 @@ def test_nested_embedded_names():
         {"name": "Vasya", "contact": {"address": {"city": "Barcelona"}}},
     )
     contact = person.props["contact"]
-    assert isinstance(contact, EmbeddedValue)
+    assert isinstance(contact, EmbeddedValueView)
     address = contact.props["address"]
-    assert isinstance(address, EmbeddedValue)
-    assert address.props["city"] == ScalarValue(value="Barcelona")
-    assert address.props["name"] == ScalarValue(value="Vasya → contact → address")
+    assert isinstance(address, EmbeddedValueView)
+    assert address.props["city"] == ScalarValueView(value="Barcelona")
+    assert address.props["name"] == ScalarValueView(value="Vasya → contact → address")
     # deleting the parent cascades through the whole tree
     assert isinstance(contact.uuid, UUID) and isinstance(address.uuid, UUID)
     assert Api.delete_object(person.uuid)
@@ -440,14 +440,14 @@ def test_name_less_embedded_array():
         "Order", {"name": "N1", "lines": [{"sku": "A", "qty": Decimal("2")}]}
     )
     lines = order.props["lines"]
-    assert isinstance(lines, ArrayValue) and lines.items is not None
+    assert isinstance(lines, ArrayValueView) and lines.items is not None
     item = lines.items[0]
-    assert isinstance(item, EmbeddedValue)
+    assert isinstance(item, EmbeddedValueView)
     # no generated `name` prop — name-less embedded types keep their registry
     # name instead (display falls back to it in the UI)
     assert "name" not in item.props
-    assert item.props["sku"] == ScalarValue(value="A")
-    assert item.props["qty"] == ScalarValue(value=Decimal("2"))
+    assert item.props["sku"] == ScalarValueView(value="A")
+    assert item.props["qty"] == ScalarValueView(value=Decimal("2"))
     # readable by uuid, never listed standalone
     assert isinstance(item.uuid, UUID) and Api.get_object(item.uuid) is not None
     assert Api.list_objects("Item") == []

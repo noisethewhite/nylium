@@ -11,7 +11,7 @@ import pytest
 
 from nylium.api import Api
 from nylium.data.tables import types
-from nylium.data.tables import type_decor
+from nylium.data.tables import type_style
 
 
 def _seed() -> UUID:
@@ -61,15 +61,15 @@ def test_update_and_delete():
     uuid = _seed()
     row = types[uuid]
     row.name = "T2"
-    decor = type_decor[uuid]
+    decor = type_style[uuid]
     decor.plural_name = "T2s"
     decor.icon = "inventory_2"
     decor.color = "#112233"
     assert types[uuid].name == "T2"
-    assert type_decor[uuid].plural_name == "T2s"
-    assert type_decor[uuid].color == "#112233"
+    assert type_style[uuid].plural_name == "T2s"
+    assert type_style[uuid].color == "#112233"
 
     types.delete(uuid)  # its props + decor cascade via FK ondelete
     assert types.get(uuid) is None
-    assert type_decor.get(uuid) is None
+    assert type_style.get(uuid) is None
     assert next(types.where(name="T2"), None) is None

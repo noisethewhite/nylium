@@ -1,4 +1,4 @@
-"""InstanceValue mapped row."""
+"""InstanceLink mapped row."""
 from __future__ import annotations
 
 from typing import ClassVar
@@ -9,7 +9,7 @@ from nylium.database.Row import Row
 from nylium.database.registry import reg
 
 @reg.mapped_as_dataclass
-class InstanceValue(Row):
+class InstanceLink(Row):
     __tablename__: ClassVar[str] = "instance_values"
 
     uuid: Mapped[UUID] = mapped_column(

@@ -7,7 +7,7 @@ from uuid import UUID
 from nylium.api.ApiShared import ApiShared
 from nylium.database import Database
 from nylium.data.tables import unit_parts
-from nylium.data.tables import type_decor
+from nylium.data.tables import type_style
 from nylium.data.rows import Type
 from nylium.ny.NyColor import NyColor
 from nylium.ny.NyType import NyType
@@ -47,7 +47,7 @@ class UnitsApi(ApiShared):
         ]
         cls._validate_unit_draft(items)
         TypeUUID.of(owner.uuid).sync_unit_parts(final_name, items)
-        decor = type_decor[owner.uuid]
+        decor = type_style[owner.uuid]
         decor.icon = icon
         decor.color = color
         return cls._type_result(final_name)

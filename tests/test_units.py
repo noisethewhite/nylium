@@ -6,7 +6,7 @@ from uuid import UUID
 
 import pytest
 
-from nylium.api import Api, ScalarValue
+from nylium.api import Api, ScalarValueView
 from nylium.data.rows import Type
 from nylium.data.types.Quantity import Quantity
 from nylium.server.ValidationError import ValidationError
@@ -67,10 +67,10 @@ def test_unit_write_converts_and_read_displays():
     _ = oven_type()
     oven = Api.create_object("Oven", {"name": "o1", "temp": Quantity(Decimal(32), "°F")})
     # canonical 0°C is stored; the view renders back the magnitude as entered
-    assert oven.props["temp"] == ScalarValue(value=Decimal(32), unit="°F")
+    assert oven.props["temp"] == ScalarValueView(value=Decimal(32), unit="°F")
     reloaded = Api.get_object(oven.uuid)
     assert reloaded is not None
-    assert reloaded.props["temp"] == ScalarValue(value=Decimal(32), unit="°F")
+    assert reloaded.props["temp"] == ScalarValueView(value=Decimal(32), unit="°F")
 
 
 def test_unit_base_write_is_identity():
@@ -79,7 +79,7 @@ def test_unit_base_write_is_identity():
         "Bag", {"name": "String", "weight": "Numeric<Mass>"}, "Bags"
     )
     bag = Api.create_object("Bag", {"name": "b1", "weight": Quantity(Decimal(500), None)})
-    assert bag.props["weight"] == ScalarValue(value=Decimal(500), unit=None)
+    assert bag.props["weight"] == ScalarValueView(value=Decimal(500), unit=None)
 
 
 def test_unit_part_membership():
@@ -111,7 +111,7 @@ def test_sync_parts_rename_propagates():
     assert [p.name for p in TypeUUID.of(synced.uuid).unit_parts()] == ["°C", "fahrenheit"]
     reloaded = Api.get_object(oven.uuid)
     assert reloaded is not None
-    assert reloaded.props["temp"] == ScalarValue(value=Decimal(32), unit="fahrenheit")
+    assert reloaded.props["temp"] == ScalarValueView(value=Decimal(32), unit="fahrenheit")
 
 
 def test_sync_parts_delete_in_use_refused():
@@ -169,7 +169,7 @@ def test_unit_rename_tows_parameterized_row():
     assert Api.get_type("Temperature") is None
     assert Api.get_type("Numeric<Heat>") is not None
     oven = Api.create_object("Oven", {"name": "o1", "temp": Quantity(Decimal(32), "°F")})
-    assert oven.props["temp"] == ScalarValue(value=Decimal(32), unit="°F")
+    assert oven.props["temp"] == ScalarValueView(value=Decimal(32), unit="°F")
 
 
 def test_unit_delete_guard():

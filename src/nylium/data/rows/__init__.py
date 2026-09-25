@@ -5,8 +5,8 @@ from nylium.data.rows.auth import AuthChallenge
 from nylium.data.rows.auth import AuthCredential
 from nylium.data.rows.auth import AuthSession
 from nylium.data.rows.auth import AuthUser
-from nylium.data.rows.decor import TraitDecor
-from nylium.data.rows.decor import TypeDecor
+from nylium.data.rows.decor import TraitStyle
+from nylium.data.rows.decor import TypeStyle
 from nylium.data.rows.functions import FunctionEdge
 from nylium.data.rows.functions import FunctionNode
 from nylium.data.rows.functions import InstanceFunctionLink
@@ -23,7 +23,7 @@ from nylium.data.rows.values import BooleanValue
 from nylium.data.rows.values import DateValue
 from nylium.data.rows.values import DatetimeValue
 from nylium.data.rows.values import FileValue
-from nylium.data.rows.values import InstanceValue
+from nylium.data.rows.values import InstanceLink
 from nylium.data.rows.values import IntegerValue
 from nylium.data.rows.values import MonthDayTimeValue
 from nylium.data.rows.values import MonthDayValue
@@ -38,8 +38,8 @@ __all__ = [
     'AuthCredential',
     'AuthSession',
     'AuthUser',
-    'TraitDecor',
-    'TypeDecor',
+    'TraitStyle',
+    'TypeStyle',
     'FunctionEdge',
     'FunctionNode',
     'InstanceFunctionLink',
@@ -56,7 +56,7 @@ __all__ = [
     'DateValue',
     'DatetimeValue',
     'FileValue',
-    'InstanceValue',
+    'InstanceLink',
     'IntegerValue',
     'MonthDayTimeValue',
     'MonthDayValue',

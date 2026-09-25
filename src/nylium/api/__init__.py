@@ -6,24 +6,24 @@ from nylium.api.Api import Api
 from nylium.ny.nyobject import ObjectView
 from nylium.ny.nyobject import TagView
 from nylium.ny.nyobject import (
-    ArrayValue,
-    EmbeddedValue,
-    ObjectRef,
+    ArrayValueView,
+    EmbeddedValueView,
+    ObjectRefView,
     PropValue,
-    RefValue,
-    ScalarValue,
+    RefValueView,
+    ScalarValueView,
 )
 from nylium.ny.NyScalar import ScalarPayload
 
 __all__ = [
     "Api",
-    "ArrayValue",
-    "EmbeddedValue",
-    "ObjectRef",
+    "ArrayValueView",
+    "EmbeddedValueView",
+    "ObjectRefView",
     "ObjectView",
     "PropValue",
-    "RefValue",
+    "RefValueView",
     "ScalarPayload",
-    "ScalarValue",
+    "ScalarValueView",
     "TagView",
 ]

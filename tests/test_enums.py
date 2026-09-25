@@ -5,7 +5,7 @@ from uuid import UUID
 
 import pytest
 
-from nylium.api import Api, ArrayValue, ScalarValue
+from nylium.api import Api, ArrayValueView, ScalarValueView
 from nylium.data.rows import Type
 from nylium.server.ValidationError import ValidationError
 from nylium.uuid import TypeUUID
@@ -34,7 +34,7 @@ def test_enum_membership_validation():
     _ = status_enum()
     _ = ticket_type()
     created = Api.create_object("Ticket", {"name": "t1", "status": "open"})
-    assert created.props["status"] == ScalarValue(value="open")
+    assert created.props["status"] == ScalarValueView(value="open")
     with pytest.raises(ValidationError):
         Api.create_object("Ticket", {"name": "t2", "status": "bogus"})
     with pytest.raises(ValidationError):
@@ -45,16 +45,16 @@ def test_enum_unset_and_empty_name():
     _ = status_enum()
     _ = ticket_type()
     created = Api.create_object("Ticket", {"status": "open"})
-    assert created.props["name"] == ScalarValue(value=None)
-    assert created.props["status"] == ScalarValue(value="open")
+    assert created.props["name"] == ScalarValueView(value=None)
+    assert created.props["status"] == ScalarValueView(value="open")
 
 
 def test_enum_array_prop():
     _ = status_enum()
     _ = ticket_type()
     created = Api.create_object("Ticket", {"name": "t1", "tags": ["open", "closed"]})
-    assert created.props["tags"] == ArrayValue(
-        items=[ScalarValue(value="open"), ScalarValue(value="closed")]
+    assert created.props["tags"] == ArrayValueView(
+        items=[ScalarValueView(value="open"), ScalarValueView(value="closed")]
     )
     with pytest.raises(ValidationError):
         Api.update_object(created.uuid, {"tags": ["open", "bogus"]})
@@ -76,7 +76,7 @@ def test_sync_options_rename_propagates():
     assert [option.value for option in TypeUUID.of(synced.uuid).enum_options()] == ["in progress", "archived"]
     reloaded = Api.get_object(ticket.uuid)
     assert reloaded is not None
-    assert reloaded.props["status"] == ScalarValue(value="in progress")
+    assert reloaded.props["status"] == ScalarValueView(value="in progress")
 
 
 def test_sync_options_delete_in_use_refused():

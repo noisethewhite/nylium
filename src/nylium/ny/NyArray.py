@@ -7,7 +7,7 @@ rewriting or destroying the array destroys them recursively. Linked
 NyObjects of user types are never boxes and are never deleted here.
 
 Never imports nyobject: link wrapping goes through NyTypeMeta.root()
-and link values are narrowed to the NyObjectShape protocol. That's what
+and link values are narrowed to the NyObjectProtocol protocol. That's what
 keeps the objects package acyclic.
 """
 from __future__ import annotations
@@ -19,7 +19,7 @@ from nylium.database import Database
 from nylium.data.tables import files
 from nylium.data.tables import Instances, instances
 from nylium.data.tables import ArrayValues
-from nylium.data.tables import InstanceValues
+from nylium.data.tables import InstanceLinks
 from nylium.ny.NyEnum import NyEnum
 from nylium.ny.NyEmbedded import NyEmbedded
 from nylium.ny.NyFile import NyFile
@@ -28,7 +28,7 @@ from nylium.ny.NyScalar import NyScalar, ScalarPayload
 from nylium.ny.NyString import NyString
 from nylium.Constants import Constants
 from nylium.ny.NyType import NyType
-from nylium.ny.NyObjectShape import NyObjectShape
+from nylium.ny.NyObjectProtocol import NyObjectProtocol
 from nylium.ny.NyTypeMeta import StoredValue, NyTypeMeta
 from nylium.uuid import ObjectUUID, TypeUUID
 from nylium.uuid.objects import ArrayUUID
@@ -52,7 +52,7 @@ class NyArray:
     ) -> None:
         if values is None:
             # None unsets the prop: destroy the array instance (and its boxes)
-            link = InstanceValues.link_for(owner_uuid, prop.uuid)
+            link = InstanceLinks.link_for(owner_uuid, prop.uuid)
             if link is not None:
                 cls.destroy(ArrayUUID.of(link.uuid))
             return
@@ -64,7 +64,7 @@ class NyArray:
     def destroy(cls, array_uuid: ArrayUUID) -> None:
         """Delete the array instance and every box it owns, recursively."""
         cls._destroy_boxes(array_uuid)
-        InstanceValues.delete_links_to(array_uuid)
+        InstanceLinks.delete_links_to(array_uuid)
         Instances.delete_row(array_uuid)
 
     # --- internals ---
@@ -123,11 +123,11 @@ class NyArray:
     def _ensure_array_instance(
         cls, owner_uuid: ObjectUUID, prop: NyProp, elem_type: str
     ) -> ArrayUUID:
-        link = InstanceValues.link_for(owner_uuid, prop.uuid)
+        link = InstanceLinks.link_for(owner_uuid, prop.uuid)
         if link is not None:
             return ArrayUUID.of(link.uuid)
         array_uuid = cls._create_array_instance(NyType.array_name(elem_type))
-        InstanceValues.add_link(array_uuid, prop.uuid, owner_uuid)
+        InstanceLinks.add_link(array_uuid, prop.uuid, owner_uuid)
         return array_uuid
 
     @classmethod
@@ -216,7 +216,7 @@ class NyArray:
                         embedded, value, array_uuid, owner_uuid, prop, index
                     )
                 NyTypeMeta.check_link(type_name, value)
-                return cast(NyObjectShape, value).uuid
+                return cast(NyObjectProtocol, value).uuid
         NyScalar.validate(scalar.TYPE_NAME, cast(ScalarPayload | None, value))
         box_uuid = uuid4()
         owner = NyType.ensure(scalar.TYPE_NAME)

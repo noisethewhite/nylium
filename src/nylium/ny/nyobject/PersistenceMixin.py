@@ -15,10 +15,10 @@ from uuid import UUID
 from nylium.ny.NyProp import NyProp
 from nylium.ny.NyScalar import NyScalar
 from nylium.ny.NyScalar import ScalarPayload
-from nylium.ny.NyObjectShape import NyObjectShape
-from nylium.data.rows import InstanceValue
+from nylium.ny.NyObjectProtocol import NyObjectProtocol
+from nylium.data.rows import InstanceLink
 from nylium.data.tables import FileValues
-from nylium.data.tables import InstanceValues
+from nylium.data.tables import InstanceLinks
 from nylium.uuid import ObjectUUID
 
 
@@ -27,8 +27,8 @@ class PersistenceMixin:
 
     _uuid: ObjectUUID
 
-    def _link(self, prop: NyProp) -> InstanceValue | None:
-        return InstanceValues.link_for(self._uuid, prop.uuid)
+    def _link(self, prop: NyProp) -> InstanceLink | None:
+        return InstanceLinks.link_for(self._uuid, prop.uuid)
 
     def _file_ref(self, prop: NyProp) -> UUID | None:
         return FileValues.file_ref_for(self._uuid, prop.uuid)
@@ -43,8 +43,8 @@ class PersistenceMixin:
             return
         scalar.SCALAR.write(self._uuid, prop.uuid, scalar.to_storage(value))
 
-    def _write_link(self, prop: NyProp, value: NyObjectShape) -> None:
-        InstanceValues.merge_link(value.uuid, prop.uuid, self._uuid)
+    def _write_link(self, prop: NyProp, value: NyObjectProtocol) -> None:
+        InstanceLinks.merge_link(value.uuid, prop.uuid, self._uuid)
 
     def _write_file_ref(self, prop: NyProp, value: UUID | None) -> None:
         FileValues.write_ref(self._uuid, prop.uuid, value)

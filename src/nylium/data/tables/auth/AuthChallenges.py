@@ -6,7 +6,7 @@ from typing import ClassVar
 from uuid import UUID
 import sqlalchemy as sqla
 from nylium.database import Database
-from nylium.database.Row import mapper
+from nylium.database.Row import get_mapper
 from nylium.database.Table import Row, Table
 from nylium.data.rows import AuthChallenge
 
@@ -34,7 +34,7 @@ class AuthChallenges(Table[bytes, AuthChallenge]):
 
     @Database.commit_after_this
     def consume(self, challenge: bytes, kind: str) -> tuple[bool, UUID | None]:
-        c = mapper(AuthChallenge).columns
+        c = get_mapper(AuthChallenge).columns
         row = Database.get(AuthChallenge, challenge)
         if row is None:
             return False, None
@@ -49,7 +49,7 @@ class AuthChallenges(Table[bytes, AuthChallenge]):
 
     @Database.commit_after_this
     def purge_expired(self) -> None:
-        c = mapper(AuthChallenge).columns
+        c = get_mapper(AuthChallenge).columns
         _ = Database.execute(
             sqla.delete(AuthChallenge).where(
                 c.expires_at <= datetime.now(timezone.utc)

@@ -6,7 +6,7 @@ from nylium.data.tables import Props
 from nylium.data.rows import SchemaItem
 from nylium.data.tables import Traits
 from nylium.data.tables import TypeTraits
-from nylium.database.Row import mapper
+from nylium.database.Row import get_mapper
 from nylium.uuid import ObjectUUID, PropUUID, TraitUUID, TypeUUID
 from nylium.ny.NyType import NyType
 
@@ -98,7 +98,7 @@ class NyProp:
         old data rarely survives a type change, so every instance reads
         Null again. Deletes flush first so a freed key can be reused by a
         new prop in the same sync."""
-        retyped = Props.sync_owned(mapper(Prop).columns.owner_type_uuid, "owner_type_uuid", owner.uuid, items)
+        retyped = Props.sync_owned(get_mapper(Prop).columns.owner_type_uuid, "owner_type_uuid", owner.uuid, items)
         for prop_uuid in retyped:
             PropUUID.of(prop_uuid).purge_values()
 
@@ -108,7 +108,7 @@ class NyProp:
         """Same full-draft semantics as sync_schema, but the owner is a
         trait (ADR-0013). Retype purges values exactly like type-owned
         props."""
-        retyped = Props.sync_owned(mapper(Prop).columns.owner_trait_uuid, "owner_trait_uuid", trait_uuid, items)
+        retyped = Props.sync_owned(get_mapper(Prop).columns.owner_trait_uuid, "owner_trait_uuid", trait_uuid, items)
         for prop_uuid in retyped:
             PropUUID.of(prop_uuid).purge_values()
 

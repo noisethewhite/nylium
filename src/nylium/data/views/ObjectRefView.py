@@ -5,7 +5,7 @@ from nylium.Constants import Constants
 
 
 @dataclass(config=Constants.Pydantic.CONFIG)
-class ObjectRef:
+class ObjectRefView:
     """A link target rendered for display: who it is, not its whole body."""
 
     uuid: UUID

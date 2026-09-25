@@ -18,21 +18,21 @@ from nylium.ny.nyformula.Ref import Ref
 from nylium.ny.nyformula.nodes import Expr
 
 # array key -> rows; a row maps member key -> value (None = unset)
-ArrayRows = Mapping[str, Sequence[Mapping[str, "Value | None"]]]
+ArrayRows = Mapping[str, Sequence[Mapping[str, "FormulaValue | None"]]]
 # sibling prop key -> stored scalar (None = unset); a Quantity stays a
 # Quantity so unit promotion can recover the entered part name, and a
 # String/enum stays a str so an IF cond can compare it
 SiblingRow = Mapping[str, Decimal | Quantity | str | None]
 
-Value = Decimal | Quantity
+FormulaValue = Decimal | Quantity
 
 
-def _cell(row: Mapping[str, "Value | None"], key: str) -> Value:
+def _cell(row: Mapping[str, "FormulaValue | None"], key: str) -> FormulaValue:
     value = row.get(key)
     return Decimal(0) if value is None else value
 
 
-def _sum(values: Sequence[Value]) -> Value:
+def _sum(values: Sequence[FormulaValue]) -> FormulaValue:
     """Aggregate SUM. A quantity cell promotes the total to a Quantity in
     the first quantity's part (members share one type, so parts agree)."""
     part = next((v.unit for v in values if isinstance(v, Quantity)), None)
@@ -40,7 +40,7 @@ def _sum(values: Sequence[Value]) -> Value:
     return Quantity(total, part) if part is not None else total
 
 
-def _average(values: Sequence[Value]) -> Value:
+def _average(values: Sequence[FormulaValue]) -> FormulaValue:
     total = _sum(values)
     count = Decimal(len(values))
     if isinstance(total, Quantity):
@@ -58,7 +58,7 @@ def _apply(op: str, left: Decimal, right: Decimal) -> Decimal:
     return left / right
 
 
-def _binop(op: str, left: Value, right: Value) -> Value:
+def _binop(op: str, left: FormulaValue, right: FormulaValue) -> FormulaValue:
     """Fold two operands; if either is a Quantity the result is too, with
     the part name taken from the left Quantity when both are quantities."""
     if isinstance(left, Quantity):
@@ -85,7 +85,7 @@ def _compare(actual: Decimal | Quantity | str | None, op: str, value_str: str) -
     return equal if op == "==" else not equal
 
 
-def evaluate_ast(node: Expr, arrays: ArrayRows, scalars: SiblingRow) -> Value:
+def evaluate_ast(node: Expr, arrays: ArrayRows, scalars: SiblingRow) -> FormulaValue:
     if isinstance(node, Number):
         return node.value
     if isinstance(node, Ref):

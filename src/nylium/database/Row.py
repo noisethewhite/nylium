@@ -6,7 +6,7 @@ There is no separate ``TABLE_*`` raw mapping and no explicit write-through
 UPDATE — attribute writes go through SQLAlchemy's change tracking and are
 flushed/committed by the caller's transaction context.
 
-``mapper`` is the shared generic wrapper around ``sqlalchemy.inspect``.
+``get_mapper`` is the shared generic wrapper around ``sqlalchemy.inspect``.
 """
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ from nylium.database.SessionContext import SessionContext
 _M = TypeVar("_M")
 
 
-def mapper(mapped: type[_M]) -> Mapper[_M]:
+def get_mapper(mapped: type[_M]) -> Mapper[_M]:
     """SQLAlchemy's ``inspect``, narrowed to ``Mapper`` (with a clear error)."""
     inspected = sqla.inspect(mapped)
     if not isinstance(inspected, Mapper):
@@ -42,7 +42,7 @@ class Row:
     @classmethod
     def pk_name(cls) -> str:
         """The single primary-key column name (used for Mapping iteration)."""
-        return cast(str, mapper(cls).primary_key[0].name)
+        return cast(str, get_mapper(cls).primary_key[0].name)
 
     def __getitem__(self, name: str) -> object:
         return cast(object, getattr(self, name))

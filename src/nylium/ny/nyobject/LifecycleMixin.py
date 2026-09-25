@@ -14,11 +14,11 @@ from nylium.uuid import ObjectUUID
 from nylium.uuid.objects import ArrayUUID
 from nylium.data.tables import Instances, instances
 from nylium.data.tables import ArrayValues
-from nylium.data.tables import InstanceValues
+from nylium.data.tables import InstanceLinks
 from nylium.ny.NyArray import NyArray
 from nylium.ny.NyEmbedded import NyEmbedded
 from nylium.ny.NyType import NyType
-from nylium.ny.NyObjectShape import NyObjectShape
+from nylium.ny.NyObjectProtocol import NyObjectProtocol
 from nylium.ny.NyTypeMeta import StoredValue, NyTypeMeta
 from nylium.Constants import Constants
 from nylium.uuid import TypeUUID
@@ -76,7 +76,7 @@ class LifecycleMixin:
 
     @classmethod
     @Database.use_same_session
-    def get(cls, uuid: UUID) -> NyObjectShape | None:
+    def get(cls, uuid: UUID) -> NyObjectProtocol | None:
         inst = instances.get(uuid)
         if inst is None:
             return None
@@ -87,17 +87,17 @@ class LifecycleMixin:
         # cls is type[Self] of the mixin — the concrete class composes the
         # mixins into NyObject, hence the cast
         if cls is NyTypeMeta.root():
-            return cast(NyObjectShape, cls(_uuid=uuid))
+            return cast(NyObjectProtocol, cls(_uuid=uuid))
         actual_cls = NyTypeMeta.python_class(actual_name)
         if actual_cls is not None and issubclass(actual_cls, cls):
-            return cast(NyObjectShape, cls(_uuid=uuid))
+            return cast(NyObjectProtocol, cls(_uuid=uuid))
         if actual_cls is None and actual_name == cls.__name__:
-            return cast(NyObjectShape, cls(_uuid=uuid))
+            return cast(NyObjectProtocol, cls(_uuid=uuid))
         raise TypeError(f"instance {uuid} is {actual_name}, not {cls.__name__}")
 
     @classmethod
     @Database.use_same_session
-    def wrap(cls, uuid: UUID) -> NyObjectShape:
+    def wrap(cls, uuid: UUID) -> NyObjectProtocol:
         inst = instances.get(uuid)
         if inst is None:
             raise KeyError(f"no instance {uuid}")
@@ -119,7 +119,7 @@ class LifecycleMixin:
             NyArray.destroy(array_uuid)
         for child_uuid in self._owned_embedded_uuids():
             NyEmbedded.destroy(child_uuid)
-        InstanceValues.delete_links_to(self._uuid)
+        InstanceLinks.delete_links_to(self._uuid)
         ArrayValues.delete_memberships(self._uuid)
         Instances.delete_row(self._uuid)
 

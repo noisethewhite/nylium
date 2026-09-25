@@ -10,7 +10,7 @@ from nylium.database.registry import reg
 
 @reg.mapped_as_dataclass
 class Type(Row):
-    """One type: identity + semantics (ADR-0014 keeps decor in type_decor).
+    """One type: identity + semantics (ADR-0014 keeps decor in type_style).
 
     Cross-table navigation (props/traits/decor) lives in
     ``nylium.ny.navigation`` — a Row never imports a sibling table.

@@ -5,10 +5,10 @@ from typing import ClassVar
 from uuid import UUID
 import sqlalchemy as sqla
 from nylium.database import Database
-from nylium.database.Row import mapper
+from nylium.database.Row import get_mapper
 from nylium.database.Table import Row, Table
 from nylium.data.rows import Trait
-from nylium.data.tables.decor import trait_decor
+from nylium.data.tables.decor import trait_style
 
 class Traits(Table[UUID, Trait]):
     """The traits table as a Mapping of writable traits."""
@@ -21,7 +21,7 @@ class Traits(Table[UUID, Trait]):
         row = Trait(name=name)
         Database.add(row)
         Database.flush()
-        _ = trait_decor.create(row.uuid, color)
+        _ = trait_style.create(row.uuid, color)
         return row
 
     @Database.commit_after_this
@@ -34,7 +34,7 @@ class Traits(Table[UUID, Trait]):
     @Database.use_same_session
     def uuid_by_name(cls, name: str) -> UUID | None:
         """The trait uuid for a name, or None (ADR-0019: trait lookup)."""
-        c = mapper(Trait).columns
+        c = get_mapper(Trait).columns
         return Database.scalar(sqla.select(c.uuid).where(c.name == name))
 
     @classmethod

@@ -3,7 +3,7 @@
 An embedded-typed prop holds a child instance that exists only as that
 prop's value: created lazily on first write, owned exclusively by the
 (parent object, prop) pair, deleted with the parent or when the prop is
-cleared. The child rides the ordinary instance_values link machinery;
+cleared. The child rides the ordinary instance_links link machinery;
 the owner_* columns on instances are its read-side index.
 
 Child names are generated: "<parent name> → <prop key>", recursively for
@@ -23,7 +23,7 @@ from nylium.database import Database
 
 from nylium.data.tables import instances
 from nylium.data.tables import ArrayValues
-from nylium.data.tables import InstanceValues
+from nylium.data.tables import InstanceLinks
 from nylium.data.tables import StringValues
 from nylium.ny.NyProp import NyProp
 from nylium.ny.NyType import NyType
@@ -44,7 +44,7 @@ class NyEmbedded:
         """Create-or-update the child from a props draft; None deletes it.
         The draft maps prop key -> value, exactly like an object write.
         Caller-supplied `name` values are ignored — names are generated."""
-        link = InstanceValues.link_for(owner_uuid, prop.uuid)
+        link = InstanceLinks.link_for(owner_uuid, prop.uuid)
         if draft is None:
             if link is not None:
                 cls._destroy_child(ObjectUUID.of(link.uuid))
@@ -77,7 +77,7 @@ class NyEmbedded:
         instances orphan. For an Array<Embedded> prop the link rows point
         at the array instances; deleting one cascades (via its own
         lifecycle) to the composed elements."""
-        child_uuids = InstanceValues.linked_uuids_of(prop_uuid)
+        child_uuids = InstanceLinks.linked_uuids_of(prop_uuid)
         for child_uuid in child_uuids:
             cls._destroy_child(ObjectUUID.of(child_uuid))
 
@@ -100,7 +100,7 @@ class NyEmbedded:
                 continue
             value_type = prop.value_type()
             if value_type.is_embedded:
-                link = InstanceValues.link_for(object_uuid, prop.uuid)
+                link = InstanceLinks.link_for(object_uuid, prop.uuid)
                 if link is None:
                     continue
                 cls._write_generated_name(ObjectUUID.of(link.uuid), cls.generated_name(object_uuid, prop))
@@ -111,7 +111,7 @@ class NyEmbedded:
             # instance, not the parent — regenerate each in index order.
             if cls.array_element_type(value_type) is None:
                 continue
-            array_link = InstanceValues.link_for(object_uuid, prop.uuid)
+            array_link = InstanceLinks.link_for(object_uuid, prop.uuid)
             if array_link is None:
                 continue
             for index, element_uuid in enumerate(ArrayValues.element_uuids_of(array_link.uuid)):
@@ -207,7 +207,7 @@ class NyEmbedded:
             owner_object_uuid=owner_uuid,
             owner_prop_uuid=prop.uuid,
         )
-        InstanceValues.add_link(child_uuid, prop.uuid, owner_uuid)
+        InstanceLinks.add_link(child_uuid, prop.uuid, owner_uuid)
         return child_uuid
 
     @classmethod

@@ -14,7 +14,7 @@ from nylium.data.tables import Instances, instances
 from nylium.uuid import ObjectUUID, PropUUID, TypeUUID
 from nylium.ny.nyobject.NyObject import NyObject
 from nylium.ny.NyType import NyType
-from nylium.ny.NyObjectShape import NyObjectShape
+from nylium.ny.NyObjectProtocol import NyObjectProtocol
 from nylium.ny.NyTypeMeta import StoredValue
 from nylium.data.types.MonthDay import MonthDay
 from nylium.data.types.MonthDayTime import MonthDayTime
@@ -28,11 +28,11 @@ from nylium.ny.NyInteger import NyInteger
 from nylium.ny.NyScalar import NyScalar
 from nylium.ny.NyScalar import ScalarPayload
 from nylium.data.views.TagView import TagView
-from nylium.data.views.ArrayValue import ArrayValue
-from nylium.data.views.EmbeddedValue import EmbeddedValue
-from nylium.data.views.ObjectRef import ObjectRef
-from nylium.data.views.RefValue import RefValue
-from nylium.data.views.ScalarValue import ScalarValue
+from nylium.data.views.ArrayValueView import ArrayValueView
+from nylium.data.views.EmbeddedValueView import EmbeddedValueView
+from nylium.data.views.ObjectRefView import ObjectRefView
+from nylium.data.views.RefValueView import RefValueView
+from nylium.data.views.ScalarValueView import ScalarValueView
 from nylium.data.views.values import PropValue
 from nylium.data.tables import InstanceFunctionLinks
 from nylium.Constants import Constants
@@ -57,7 +57,7 @@ def _sibling_cell(value: StoredValue) -> Decimal | Quantity | str | None:
 @dataclass(config=Constants.Pydantic.CONFIG)
 class ObjectView:
     """Snapshot of one instance: every prop rendered as a typed
-    ScalarValue / RefValue / ArrayValue — no Any escapes. `tags` is the
+    ScalarValueView / RefValueView / ArrayValueView — no Any escapes. `tags` is the
     ADR-0005 reverse projection of the arrays that contain this object.
     `backlinks` is the ADR-0020 reverse projection of every link that
     points at this object — direct link props and array membership."""
@@ -66,7 +66,7 @@ class ObjectView:
     type_name: str
     props: dict[str, PropValue]
     tags: list[TagView] = field(default_factory=list)
-    backlinks: list[ObjectRef] = field(default_factory=list)
+    backlinks: list[ObjectRefView] = field(default_factory=list)
     # ADR-0029: instance-level function bindings — prop_key -> function_uuid.
     # The frontend uses this to mark computed/read-only props instead of the
     # removed type-level props.function_uuid.
@@ -117,12 +117,12 @@ class ObjectView:
 
     @classmethod
     @Database.use_same_session
-    def _backlinks_for(cls, uuid: UUID) -> list[ObjectRef]:
+    def _backlinks_for(cls, uuid: UUID) -> list[ObjectRefView]:
         """ADR-0020: reverse-projection of incoming links — every owner
         pointing at this object through a link prop or an array. One
         query per direction, no N+1."""
         return [
-            ObjectRef(uuid=owner_uuid, type_name=type_name)
+            ObjectRefView(uuid=owner_uuid, type_name=type_name)
             for owner_uuid, type_name in ObjectUUID.of(uuid).backlink_refs()
         ]
 
@@ -151,15 +151,15 @@ class ObjectView:
 
     @classmethod
     @Database.use_same_session
-    def _eval_function(cls, inst_uuid: UUID, function_uuid: UUID) -> ScalarValue:
+    def _eval_function(cls, inst_uuid: UUID, function_uuid: UUID) -> ScalarValueView:
         """ADR-0029 read-time evaluation: fold the function's DAG over the
         owner's sibling props. A div-by-zero / missing input renders empty."""
         value = NyFunction.evaluate_for(ObjectUUID.of(inst_uuid), ObjectUUID.of(function_uuid))
-        return ScalarValue(value=value)
+        return ScalarValueView(value=value)
 
     @classmethod
     @Database.use_same_session
-    def _eval_formula(cls, wrapper: NyObjectShape, owner: NyType, prop: NyProp) -> ScalarValue:
+    def _eval_formula(cls, wrapper: NyObjectProtocol, owner: NyType, prop: NyProp) -> ScalarValueView:
         """ADR-0005/0022/0023 read-time evaluation: fold the stored formula
         over the live rows of the arrays it references, the owner's sibling
         prop values and (one level down) computed member props. Unset cells
@@ -169,20 +169,20 @@ class ObjectView:
         assert prop.formula is not None
         result = cls._evaluate_formula(wrapper, owner, prop.formula)
         if result is None:
-            return ScalarValue(value=None)
+            return ScalarValueView(value=None)
         if prop.value_type().name == NyInteger.TYPE_NAME:
-            return ScalarValue(value=int(cast(Decimal, result)))
+            return ScalarValueView(value=int(cast(Decimal, result)))
         if NyType.unit_param_of(prop.value_type().name) is not None:
             if isinstance(result, Quantity):
-                return ScalarValue(value=result.value, unit=result.unit)
-            return ScalarValue(value=result)
+                return ScalarValueView(value=result.value, unit=result.unit)
+            return ScalarValueView(value=result)
         if isinstance(result, Quantity):
-            return ScalarValue(value=result.value)
-        return ScalarValue(value=result)
+            return ScalarValueView(value=result.value)
+        return ScalarValueView(value=result)
 
     @classmethod
     def _evaluate_formula(
-        cls, wrapper: NyObjectShape, owner: NyType, formula: str
+        cls, wrapper: NyObjectProtocol, owner: NyType, formula: str
     ) -> Decimal | Quantity | None:
         """Fold a formula over an owner's array rows and sibling props,
         returning the raw value (None on division by zero). A computed
@@ -204,7 +204,7 @@ class ObjectView:
             members = (
                 [NyObject.wrap(u) for u in cls._collect_uuids(wrapper, array_prop)]
                 if array_prop is not None and array_prop.collect is not None
-                else cast(list[NyObjectShape] | None, getattr(wrapper, array_key)) or []
+                else cast(list[NyObjectProtocol] | None, getattr(wrapper, array_key)) or []
             )
             existing: set[UUID] = (
                 Instances.existing_uuids([member.uuid for member in members]) if members else set()
@@ -228,7 +228,7 @@ class ObjectView:
 
     @classmethod
     def _member_cell(
-        cls, member: NyObjectShape, element_type: NyType | None, prop: NyProp | None
+        cls, member: NyObjectProtocol, element_type: NyType | None, prop: NyProp | None
     ) -> Decimal | Quantity | None:
         """One member cell. A computed member prop folds its own formula
         over the member's siblings (the ADR-0023 chained level); otherwise
@@ -245,7 +245,7 @@ class ObjectView:
 
     @classmethod
     @Database.use_same_session
-    def _collect_uuids(cls, wrapper: NyObjectShape, prop: NyProp) -> list[ObjectUUID]:
+    def _collect_uuids(cls, wrapper: NyObjectProtocol, prop: NyProp) -> list[ObjectUUID]:
         """ADR-0025: the derived member uuids of a collect prop — one reverse
         range query over the target type's member prop, bounded by the owner's
         from/to siblings. Missing bounds / dangling member yield an empty set."""
@@ -264,13 +264,13 @@ class ObjectView:
 
     @classmethod
     @Database.use_same_session
-    def _render_collect(cls, wrapper: NyObjectShape, prop: NyProp) -> ArrayValue:
+    def _render_collect(cls, wrapper: NyObjectProtocol, prop: NyProp) -> ArrayValueView:
         """ADR-0025: render a collect prop as an array of refs to the derived
         members (same shape as a stored Array<T> of standalone objects)."""
         element_name = NyType.element_name(prop.value_type().name)
-        return ArrayValue(
+        return ArrayValueView(
             items=[
-                RefValue(ref=ObjectRef(uuid=u, type_name=element_name))
+                RefValueView(ref=ObjectRefView(uuid=u, type_name=element_name))
                 for u in cls._collect_uuids(wrapper, prop)
             ]
         )
@@ -283,33 +283,33 @@ class ObjectView:
         if NyScalar.by_type_name(type_name) is not None:
             # year-less calendar values cross the wire as their stamps
             if isinstance(value, (MonthDay, MonthDayTime)):
-                return ScalarValue(value=str(value))
-            return ScalarValue(value=cast(ScalarPayload | None, value))
+                return ScalarValueView(value=str(value))
+            return ScalarValueView(value=cast(ScalarPayload | None, value))
         if NyType.unit_param_of(type_name) is not None:
             # Quantity: canonical magnitude re-scaled to the entered part,
             # rendered with the part name attached
             if value is None:
-                return ScalarValue(value=None)
+                return ScalarValueView(value=None)
             if not isinstance(value, Quantity):
                 raise TypeError(f"unit prop rendered a {type(value).__name__}")
-            return ScalarValue(value=value.value, unit=value.unit)
+            return ScalarValueView(value=value.value, unit=value.unit)
         if NyEnum.is_enum(type_name):
-            return ScalarValue(value=cast(str | None, value))
+            return ScalarValueView(value=cast(str | None, value))
         if NyFile.is_file_type(type_name):
             # ADR-0008: a file-typed prop renders as a ref to the files row
             # — the uuid is the pointer, the type name is the declared one
             if value is None:
-                return RefValue(ref=None)
+                return RefValueView(ref=None)
             if not isinstance(value, UUID):
                 raise TypeError(f"file prop rendered a {type(value).__name__}")
-            return RefValue(ref=ObjectRef(uuid=value, type_name=type_name))
+            return RefValueView(ref=ObjectRefView(uuid=value, type_name=type_name))
         if NyType.is_array_name(type_name):
             element_name = NyType.element_name(type_name)
             if value is None:
-                return ArrayValue(items=None)
+                return ArrayValueView(items=None)
             if not isinstance(value, list):
                 raise TypeError(f"array prop rendered a {type(value).__name__}")
-            return ArrayValue(
+            return ArrayValueView(
                 items=[cls._render_prop(item, element_name) for item in value]
             )
         owner = NyType.by_name(type_name)
@@ -317,17 +317,17 @@ class ObjectView:
             # composition child: rendered as the full nested props view,
             # so the editor can inline its fields without a second fetch
             if value is None:
-                return EmbeddedValue(uuid=None, type_name=type_name, props={})
+                return EmbeddedValueView(uuid=None, type_name=type_name, props={})
             if not isinstance(value, NyObject):
                 raise TypeError(f"embedded prop rendered a {type(value).__name__}")
             child = ObjectView.from_uuid(value.uuid)
             if child is None:
                 raise RuntimeError(f"embedded child {value.uuid} vanished")
-            return EmbeddedValue(uuid=child.uuid, type_name=type_name, props=child.props)
+            return EmbeddedValueView(uuid=child.uuid, type_name=type_name, props=child.props)
         if value is None:
-            return RefValue(ref=None)
+            return RefValueView(ref=None)
         if not isinstance(value, NyObject):
             raise TypeError(f"link prop rendered a {type(value).__name__}")
-        return RefValue(
-            ref=ObjectRef(uuid=value.uuid, type_name=TypeUUID.of(instances[value.uuid].type_uuid).name_of())
+        return RefValueView(
+            ref=ObjectRefView(uuid=value.uuid, type_name=TypeUUID.of(instances[value.uuid].type_uuid).name_of())
         )

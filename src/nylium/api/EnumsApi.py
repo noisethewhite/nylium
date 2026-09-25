@@ -5,7 +5,7 @@ from uuid import UUID
 
 from nylium.api.ApiShared import ApiShared
 from nylium.database import Database
-from nylium.data.tables import type_decor
+from nylium.data.tables import type_style
 from nylium.data.rows import Type
 from nylium.ny.NyColor import NyColor
 from nylium.ny.NyType import NyType
@@ -35,7 +35,7 @@ class EnumsApi(ApiShared):
         cls._check_icon(icon)
         owner = NyType.ensure(final_name, kind=NyType.KIND_ENUM)
         TypeUUID.of(owner.uuid).sync_enum_options([(None, v) for v in (options or [])])
-        decor = type_decor[owner.uuid]
+        decor = type_style[owner.uuid]
         decor.icon = icon
         decor.color = color
         return cls._type_result(final_name)

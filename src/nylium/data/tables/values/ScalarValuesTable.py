@@ -5,7 +5,7 @@ from typing import ClassVar, Generic, TypeVar, cast
 from uuid import UUID
 import sqlalchemy as sqla
 from nylium.database import Database
-from nylium.database.Row import Row, mapper
+from nylium.database.Row import Row, get_mapper
 from nylium.database.Table import Table
 from collections.abc import Callable
 
@@ -43,7 +43,7 @@ class ScalarValuesTable(Table[tuple[UUID, UUID], _R], Generic[_R]):
             ctor = cast("Callable[..., Row]", table)
             Database.add(ctor(inst_uuid=inst_uuid, prop_uuid=prop_uuid, value=value))
             return
-        columns = mapper(table).columns
+        columns = get_mapper(table).columns
         _ = Database.execute(
             sqla.update(table)
             .where(columns.inst_uuid == inst_uuid, columns.prop_uuid == prop_uuid)

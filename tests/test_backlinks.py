@@ -1,9 +1,9 @@
 """Backlinks (ADR-0020): every link pointing at an object projects back
-onto it as an ObjectRef — direct link props and array membership,
+onto it as an ObjectRefView — direct link props and array membership,
 owners deduplicated. Nothing is stored — recomputed on every read.
 Api-level; HTTP shape lives in test_http.py."""
 
-from nylium.api import Api, ObjectRef
+from nylium.api import Api, ObjectRefView
 
 
 def author_book_types():
@@ -31,7 +31,7 @@ def test_direct_link_projects_backlink():
 
     reloaded = Api.get_object(author.uuid)
     assert reloaded is not None
-    assert reloaded.backlinks == [ObjectRef(uuid=book.uuid, type_name="Book")]
+    assert reloaded.backlinks == [ObjectRefView(uuid=book.uuid, type_name="Book")]
 
 
 def test_array_membership_projects_backlink():
@@ -41,7 +41,7 @@ def test_array_membership_projects_backlink():
 
     reloaded = Api.get_object(dune.uuid)
     assert reloaded is not None
-    assert reloaded.backlinks == [ObjectRef(uuid=messiah.uuid, type_name="Book")]
+    assert reloaded.backlinks == [ObjectRefView(uuid=messiah.uuid, type_name="Book")]
 
 
 def test_owner_linking_directly_and_via_array_appears_once():
@@ -58,7 +58,7 @@ def test_owner_linking_directly_and_via_array_appears_once():
 
     reloaded = Api.get_object(label.uuid)
     assert reloaded is not None
-    assert reloaded.backlinks == [ObjectRef(uuid=note.uuid, type_name="Note")]
+    assert reloaded.backlinks == [ObjectRefView(uuid=note.uuid, type_name="Note")]
 
 
 def test_direct_and_array_referrers_project_two_backlinks():
@@ -69,7 +69,7 @@ def test_direct_and_array_referrers_project_two_backlinks():
         "Notes",
     )
     label = Api.create_object("Label", {"name": "urgent"})
-    # instance_values is keyed by the target uuid, so a second DIRECT
+    # instance_links is keyed by the target uuid, so a second DIRECT
     # link to the same target would replace the first — many→one
     # references go through arrays
     direct = Api.create_object("Note", {"name": "direct", "primary": label.uuid})

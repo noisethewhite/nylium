@@ -2,7 +2,7 @@
 the Any<Trait> bound form. Api-level; HTTP shape lives in test_http.py."""
 import pytest
 
-from nylium.api import Api, ObjectRef, RefValue, ScalarValue
+from nylium.api import Api, ObjectRefView, RefValueView, ScalarValueView
 from nylium.server.ValidationError import ValidationError
 from nylium.data.views.PropView import PropView
 from nylium.data.views.TraitView import TraitView
@@ -109,7 +109,7 @@ def test_detach_keeps_other_types_values():
     _ = Api.detach_trait("Task", "Stamped")
     reloaded = Api.get_object(bug.uuid)
     assert reloaded is not None
-    assert reloaded.props["priority"] == ScalarValue(value=9)
+    assert reloaded.props["priority"] == ScalarValueView(value=9)
 
 
 def test_detach_not_attached():
@@ -196,7 +196,7 @@ def test_any_trait_write_validation():
     task = Api.create_object("Task", {"name": "t1"})
     plain = Api.create_object("Plain", {"name": "p1"})
     ok = Api.create_object("Link", {"name": "l1", "target": task.uuid})
-    assert ok.props["target"] == RefValue(ref=ObjectRef(uuid=task.uuid, type_name="Task"))
+    assert ok.props["target"] == RefValueView(ref=ObjectRefView(uuid=task.uuid, type_name="Task"))
     # value-type mismatches surface as TypeError (mapped to 422 on HTTP)
     with pytest.raises(TypeError, match="Stamped"):
         _ = Api.create_object("Link", {"name": "l2", "target": plain.uuid})
@@ -225,10 +225,10 @@ def test_trait_prop_values_read_write():
     task_type()
     _ = Api.attach_trait("Task", "Stamped")
     task = Api.create_object("Task", {"name": "t1", "priority": 5})
-    assert task.props["priority"] == ScalarValue(value=5)
+    assert task.props["priority"] == ScalarValueView(value=5)
     updated = Api.update_object(task.uuid, {"created_note": "edited"})
-    assert updated.props["created_note"] == ScalarValue(value="edited")
-    assert updated.props["priority"] == ScalarValue(value=5)
+    assert updated.props["created_note"] == ScalarValueView(value="edited")
+    assert updated.props["priority"] == ScalarValueView(value=5)
 
 
 def test_trait_prop_key_collision_with_object_write():

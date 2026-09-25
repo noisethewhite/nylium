@@ -69,7 +69,7 @@ class NyliumApp:
     @classmethod
     def _migrate_decor(cls, connection: Connection) -> None:
         """ADR-0014: decor columns leave types/traits for the 1:1
-        type_decor/trait_decor tables (create_all made them). Backfill
+        type_style/trait_style tables (create_all made them). Backfill
         from the old columns if still present, then drop them. Runs last
         so _migrate_type_colors and the ADR-0005 color default have
         already normalized types.color."""
@@ -101,7 +101,7 @@ class NyliumApp:
         """ADR-0005: rewrite legacy named-palette type colors to their hex
         values. Idempotent — hex values never match a palette key. Runs
         before _migrate_decor so the decor backfill copies hex values;
-        a no-op once types.color has moved to type_decor (ADR-0014)."""
+        a no-op once types.color has moved to type_style (ADR-0014)."""
 
         has_column = connection.execute(
             text(migrations.statement("type_colors/001_has_column.sql"))

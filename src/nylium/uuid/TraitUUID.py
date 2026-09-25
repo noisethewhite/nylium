@@ -6,7 +6,7 @@ from uuid import UUID
 from pydantic_core import core_schema
 
 from nylium.data.rows import Prop, Trait
-from nylium.data.tables import props, trait_decor, traits, type_traits, types
+from nylium.data.tables import props, trait_style, traits, type_traits, types
 
 
 class TraitUUID(UUID):
@@ -25,7 +25,7 @@ class TraitUUID(UUID):
         return traits.get(self)
 
     def color(self) -> str:
-        return trait_decor[self].color
+        return trait_style[self].color
 
     def props(self) -> list[Prop]:
         return sorted(props.where(owner_trait_uuid=self), key=lambda p: p.position)

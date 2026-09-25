@@ -6,8 +6,8 @@ from nylium.data.tables.auth import AuthChallenges, auth_challenges
 from nylium.data.tables.auth import AuthCredentials, auth_credentials
 from nylium.data.tables.auth import AuthSessions, auth_sessions
 from nylium.data.tables.auth import AuthUsers, auth_users
-from nylium.data.tables.decor import TraitDecors, trait_decor
-from nylium.data.tables.decor import TypeDecors, type_decor
+from nylium.data.tables.decor import TraitStyles, trait_style
+from nylium.data.tables.decor import TypeStyles, type_style
 from nylium.data.tables.functions import FunctionEdges, function_edges
 from nylium.data.tables.functions import FunctionNodes, function_nodes
 from nylium.data.tables.functions import InstanceFunctionLinks, instance_function_links
@@ -23,7 +23,7 @@ from nylium.data.tables.values import BooleanValues, boolean_values
 from nylium.data.tables.values import DateValues, date_values
 from nylium.data.tables.values import DatetimeValues, datetime_values
 from nylium.data.tables.values import FileValues, file_values
-from nylium.data.tables.values import InstanceValues, instance_values
+from nylium.data.tables.values import InstanceLinks, instance_links
 from nylium.data.tables.values import IntegerValues, integer_values
 from nylium.data.tables.values import MonthDayTimeValues, monthdaytime_values
 from nylium.data.tables.values import MonthDayValues, monthday_values
@@ -46,10 +46,10 @@ __all__ = [
     'auth_sessions',
     'AuthUsers',
     'auth_users',
-    'TraitDecors',
-    'trait_decor',
-    'TypeDecors',
-    'type_decor',
+    'TraitStyles',
+    'trait_style',
+    'TypeStyles',
+    'type_style',
     'FunctionEdges',
     'function_edges',
     'FunctionNodes',
@@ -80,8 +80,8 @@ __all__ = [
     'datetime_values',
     'FileValues',
     'file_values',
-    'InstanceValues',
-    'instance_values',
+    'InstanceLinks',
+    'instance_links',
     'IntegerValues',
     'integer_values',
     'MonthDayTimeValues',

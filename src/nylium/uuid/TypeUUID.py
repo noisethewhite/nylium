@@ -8,14 +8,14 @@ import sqlalchemy as sqla
 from pydantic_core import core_schema
 
 from nylium.database import Database
-from nylium.database.Row import mapper
+from nylium.database.Row import get_mapper
 from nylium.database.Table import Row
 from nylium.data.rows import EnumOption, NumericValue, Prop, StringValue, Type, UnitPart
 from nylium.data.tables import (
     enum_options,
     props,
     traits,
-    type_decor,
+    type_style,
     type_traits,
     types,
     unit_parts,
@@ -48,13 +48,13 @@ class TypeUUID(UUID):
         return result
 
     def plural_name(self) -> str:
-        return type_decor[self].plural_name
+        return type_style[self].plural_name
 
     def icon(self) -> str:
-        return type_decor[self].icon
+        return type_style[self].icon
 
     def color(self) -> str:
-        return type_decor[self].color
+        return type_style[self].color
 
     def trait_names(self) -> list[str]:
         """Names of traits attached to this type, in attach order."""
@@ -88,8 +88,8 @@ class TypeUUID(UUID):
         condition: sqla.ColumnElement[bool] | None = None,
     ) -> int:
         """How many stored values reference a type (optionally one value)."""
-        v_c = mapper(value_table).columns
-        p_c = mapper(Prop).columns
+        v_c = get_mapper(value_table).columns
+        p_c = get_mapper(Prop).columns
         stmt = (
             sqla.select(sqla.func.count())
             .select_from(value_table)
@@ -111,8 +111,8 @@ class TypeUUID(UUID):
         new_value: object,
     ) -> None:
         """Rewrite a stored value column across the type's props (rename)."""
-        v_c = mapper(value_table).columns
-        p_c = mapper(Prop).columns
+        v_c = get_mapper(value_table).columns
+        p_c = get_mapper(Prop).columns
         _ = Database.execute(
             sqla.update(value_table)
             .where(
@@ -127,7 +127,7 @@ class TypeUUID(UUID):
     @Database.use_same_session
     def _enum_option_usage(self, value: str) -> int:
         return self._usage_count(
-            StringValue, self, condition=mapper(StringValue).columns.value == value
+            StringValue, self, condition=get_mapper(StringValue).columns.value == value
         )
 
     @Database.commit_after_this
@@ -135,7 +135,7 @@ class TypeUUID(UUID):
         """Apply the enum editor's full option draft: matching uuid renames
         (propagating to stored values), None creates, absent options are
         deleted unless still in use."""
-        c = mapper(EnumOption).columns
+        c = get_mapper(EnumOption).columns
         existing = {
             row.uuid: row
             for row in Database.scalars(sqla.select(EnumOption).where(c.type_uuid == self))
@@ -158,7 +158,7 @@ class TypeUUID(UUID):
             row = existing[option_uuid]
             if row.value != value:
                 self._rename_propagate(
-                    StringValue, self, mapper(StringValue).columns.value, row.value, value
+                    StringValue, self, get_mapper(StringValue).columns.value, row.value, value
                 )
                 row.value = value
             row.position = position
@@ -170,7 +170,7 @@ class TypeUUID(UUID):
     @Database.use_same_session
     def parameterized_numeric(cls, unit_type_name: str) -> "TypeUUID | None":
         """The uuid of the ``Numeric<Unit>`` parameterized type row."""
-        t_c = mapper(Type).columns
+        t_c = get_mapper(Type).columns
         raw: UUID | None = Database.scalar(
             sqla.select(t_c.uuid).where(t_c.name == f"Numeric<{unit_type_name}>")
         )
@@ -183,7 +183,7 @@ class TypeUUID(UUID):
         parameterized = cls.parameterized_numeric(unit_type_name)
         if parameterized is None:
             return 0
-        condition = None if part_name is None else mapper(NumericValue).columns.unit == part_name
+        condition = None if part_name is None else get_mapper(NumericValue).columns.unit == part_name
         return cls._usage_count(NumericValue, parameterized, condition=condition)
 
     @Database.commit_after_this
@@ -195,7 +195,7 @@ class TypeUUID(UUID):
         """Apply the unit editor's full part draft: matching uuid edits in
         place (a rename propagates to stored values), None creates, absent
         parts are deleted unless still in use."""
-        c = mapper(UnitPart).columns
+        c = get_mapper(UnitPart).columns
         existing = sorted(
             Database.scalars(sqla.select(UnitPart).where(c.type_uuid == self)),
             key=lambda p: p.position,
@@ -222,7 +222,7 @@ class TypeUUID(UUID):
                     parameterized = self.parameterized_numeric(unit_type_name)
                     if parameterized is not None:
                         self._rename_propagate(
-                            NumericValue, parameterized, mapper(NumericValue).columns.unit, part.name, name
+                            NumericValue, parameterized, get_mapper(NumericValue).columns.unit, part.name, name
                         )
                     part.name = name
                 part.multiplier = multiplier

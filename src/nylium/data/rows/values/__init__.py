@@ -4,7 +4,7 @@ from nylium.data.rows.values.BooleanValue import BooleanValue
 from nylium.data.rows.values.DateValue import DateValue
 from nylium.data.rows.values.DatetimeValue import DatetimeValue
 from nylium.data.rows.values.FileValue import FileValue
-from nylium.data.rows.values.InstanceValue import InstanceValue
+from nylium.data.rows.values.InstanceLink import InstanceLink
 from nylium.data.rows.values.IntegerValue import IntegerValue
 from nylium.data.rows.values.MonthDayTimeValue import MonthDayTimeValue
 from nylium.data.rows.values.MonthDayValue import MonthDayValue
@@ -18,7 +18,7 @@ __all__ = [
     'DateValue',
     'DatetimeValue',
     'FileValue',
-    'InstanceValue',
+    'InstanceLink',
     'IntegerValue',
     'MonthDayTimeValue',
     'MonthDayValue',

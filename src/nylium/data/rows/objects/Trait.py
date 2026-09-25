@@ -12,7 +12,7 @@ from nylium.database.registry import reg
 class Trait(Row):
     """One trait: a named, colored bundle of prop definitions (ADR-0013).
 
-    The color lives in the 1:1 trait_decor row (ADR-0014); cross-table
+    The color lives in the 1:1 trait_style row (ADR-0014); cross-table
     navigation lives in ``nylium.ny.navigation``.
     """
 

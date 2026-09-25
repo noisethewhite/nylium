@@ -8,11 +8,11 @@ from decimal import Decimal
 
 from nylium.api import Api
 from nylium.ny.nyobject import (
-    ArrayValue,
-    EmbeddedValue,
-    ObjectRef,
-    RefValue,
-    ScalarValue,
+    ArrayValueView,
+    EmbeddedValueView,
+    ObjectRefView,
+    RefValueView,
+    ScalarValueView,
 )
 from nylium.data.types.Quantity import Quantity
 from nylium.server.PropCodec import PropCodec
@@ -104,20 +104,20 @@ def test_empty_embedded_array_element_is_dropped():
     decoded = PropCodec.decode(
         "Receipt",
         {
-            "lines": ArrayValue(
+            "lines": ArrayValueView(
                 items=[
-                    EmbeddedValue(
+                    EmbeddedValueView(
                         uuid=None,
                         type_name="ReceiptItem",
                         props={
-                            "product": RefValue(
-                                ref=ObjectRef(uuid=product.uuid, type_name="Product")
+                            "product": RefValueView(
+                                ref=ObjectRefView(uuid=product.uuid, type_name="Product")
                             ),
-                            "price": ScalarValue(value="5.0", unit="€"),
-                            "quantity": ScalarValue(value="2"),
+                            "price": ScalarValueView(value="5.0", unit="€"),
+                            "quantity": ScalarValueView(value="2"),
                         },
                     ),
-                    EmbeddedValue(uuid=None, type_name="ReceiptItem", props={}),
+                    EmbeddedValueView(uuid=None, type_name="ReceiptItem", props={}),
                 ]
             )
         },

@@ -4,7 +4,7 @@ named palette is migrated away and rejected at the API boundary."""
 
 import pytest
 
-from nylium.api import Api, ScalarValue
+from nylium.api import Api, ScalarValueView
 from nylium.ny import NyScalar
 from nylium.ny.NyColor import NyColor
 from nylium.server import NyliumApp
@@ -49,7 +49,7 @@ def test_color_prop_roundtrip_through_write_path():
     reloaded = Api.get_object(swatch.uuid)
     assert reloaded is not None
     accent = reloaded.props["accent"]
-    assert isinstance(accent, ScalarValue)
+    assert isinstance(accent, ScalarValueView)
     assert accent.value == "#ff00aa"
     with pytest.raises(ValueError):
         Api.create_object("Swatch", {"name": "bad", "accent": "hotpink"})

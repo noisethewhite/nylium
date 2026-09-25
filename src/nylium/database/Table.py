@@ -26,7 +26,7 @@ from typing import ClassVar, Generic, TypeVar, cast, override
 import sqlalchemy as sqla
 
 from nylium.database import Database
-from nylium.database.Row import Row as Row, mapper
+from nylium.database.Row import Row as Row, get_mapper
 from nylium.database.SessionContext import SessionContext
 
 _K = TypeVar("_K")
@@ -56,7 +56,7 @@ class Table(Generic[_K, _R], Mapping[_K, _R]):
 
     @override
     def __iter__(self) -> Iterator[_K]:
-        pk = mapper(self._mapped).columns[self.__row__.pk_name()]
+        pk = get_mapper(self._mapped).columns[self.__row__.pk_name()]
         with SessionContext():
             keys = list(Database.scalars(sqla.select(pk)))
         yield from cast("list[_K]", keys)

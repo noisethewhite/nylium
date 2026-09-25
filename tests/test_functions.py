@@ -8,7 +8,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from nylium.api import Api, ScalarValue
+from nylium.api import Api, ScalarValueView
 from nylium.api.ApiShared import PropInput
 from nylium.ny.nyfunction import NyFunction
 from nylium.server.ValidationError import ValidationError
@@ -296,7 +296,7 @@ def test_set_instance_prop_function_binds_and_reads():
         [edge(a, 0, c, 0), edge(b, 0, c, 1)],
     )
     view = Api.set_instance_prop_function(ObjectUUID.of(inv.uuid), "taxed", ObjectUUID.of(fn.uuid))
-    assert view.props["taxed"] == ScalarValue(value=Decimal("30"))
+    assert view.props["taxed"] == ScalarValueView(value=Decimal("30"))
 
 
 def test_function_chain_recomputes_across_bindings():
@@ -338,7 +338,7 @@ def test_set_instance_prop_function_unbinds():
     fn = passthrough()
     _ = Api.set_instance_prop_function(ObjectUUID.of(inv.uuid), "taxed", ObjectUUID.of(fn.uuid))
     view = Api.set_instance_prop_function(ObjectUUID.of(inv.uuid), "taxed", None)
-    assert view.props["taxed"] == ScalarValue(value=None)
+    assert view.props["taxed"] == ScalarValueView(value=None)
 
 
 def test_set_instance_prop_function_output_type_mismatch_rejected():
@@ -400,7 +400,7 @@ def test_write_guard_function_prop():
         Api.update_object(inv.uuid, {"taxed": Decimal("5")})
     # plain props still write fine alongside a computed sibling
     updated = Api.update_object(inv.uuid, {"name": "r2"})
-    assert updated.props["name"] == ScalarValue(value="r2")
+    assert updated.props["name"] == ScalarValueView(value="r2")
 
 
 # --- per-owner cross-function dependency cycle (ADR-0029) ---

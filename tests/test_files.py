@@ -10,7 +10,7 @@ from nylium.api import Api
 from nylium.ny.NyFile import NyFile
 from nylium.server.ValidationError import ValidationError
 from uuid import uuid4
-from nylium.ny.nyobject import ArrayValue, ObjectRef, RefValue
+from nylium.ny.nyobject import ArrayValueView, ObjectRefView, RefValueView
 from nylium.uuid import TypeUUID
 from nylium.uuid import FileUUID
 
@@ -148,36 +148,36 @@ def test_file_prop_on_object_roundtrip():
     cover = upload("Image", "cover.png", "image/png", PNG)
     obj = Api.create_object(
         "Artwork",
-        {"name": "Mona", "cover": ObjectRef(uuid=cover.uuid, type_name="Image")},
+        {"name": "Mona", "cover": ObjectRefView(uuid=cover.uuid, type_name="Image")},
     )
-    assert obj.props["cover"] == RefValue(
-        ref=ObjectRef(uuid=cover.uuid, type_name="Image")
+    assert obj.props["cover"] == RefValueView(
+        ref=ObjectRefView(uuid=cover.uuid, type_name="Image")
     )
 
     # rename the file — the prop keeps pointing at the same uuid
     _ = Api.rename_file(cover.uuid, "renamed.png")
     reloaded = Api.get_object(obj.uuid)
     assert reloaded is not None
-    assert reloaded.props["cover"] == RefValue(
-        ref=ObjectRef(uuid=cover.uuid, type_name="Image")
+    assert reloaded.props["cover"] == RefValueView(
+        ref=ObjectRefView(uuid=cover.uuid, type_name="Image")
     )
 
     # delete the file — the prop reference cascades away
     assert Api.delete_file(cover.uuid)
     reloaded = Api.get_object(obj.uuid)
     assert reloaded is not None
-    assert reloaded.props["cover"] == RefValue(ref=None)
+    assert reloaded.props["cover"] == RefValueView(ref=None)
 
 
 def test_file_prop_writes_plain_uuid():
-    """A raw UUID is also a valid file-prop input (codec sends ObjectRef,
+    """A raw UUID is also a valid file-prop input (codec sends ObjectRefView,
     but the Api accepts either)."""
     _ = Api.create_type("Artwork", {"name": "String", "cover": "Image"}, "Artworks")
     cover = upload("Image", "cover.png", "image/png", PNG)
     obj = Api.create_object("Artwork", {"name": "Mona", "cover": cover.uuid})
 
-    assert obj.props["cover"] == RefValue(
-        ref=ObjectRef(uuid=cover.uuid, type_name="Image")
+    assert obj.props["cover"] == RefValueView(
+        ref=ObjectRefView(uuid=cover.uuid, type_name="Image")
     )
 
 
@@ -195,23 +195,23 @@ def test_array_of_image_stores_file_uuids():
         {
             "name": "g",
             "shots": [
-                ObjectRef(uuid=a.uuid, type_name="Image"),
-                ObjectRef(uuid=b.uuid, type_name="Image"),
+                ObjectRefView(uuid=a.uuid, type_name="Image"),
+                ObjectRefView(uuid=b.uuid, type_name="Image"),
             ],
         },
     )
     shots = gal.props["shots"]
-    assert isinstance(shots, ArrayValue)
+    assert isinstance(shots, ArrayValueView)
     assert shots.items == [
-        RefValue(ref=ObjectRef(uuid=a.uuid, type_name="Image")),
-        RefValue(ref=ObjectRef(uuid=b.uuid, type_name="Image")),
+        RefValueView(ref=ObjectRefView(uuid=a.uuid, type_name="Image")),
+        RefValueView(ref=ObjectRefView(uuid=b.uuid, type_name="Image")),
     ]
     # deleting one file drops its array member, leaving the rest intact
     assert Api.delete_file(a.uuid)
     reloaded = Api.get_object(gal.uuid)
     assert reloaded is not None
     shots_after = reloaded.props["shots"]
-    assert isinstance(shots_after, ArrayValue)
+    assert isinstance(shots_after, ArrayValueView)
     assert shots_after.items == [
-        RefValue(ref=ObjectRef(uuid=b.uuid, type_name="Image")),
+        RefValueView(ref=ObjectRefView(uuid=b.uuid, type_name="Image")),
     ]

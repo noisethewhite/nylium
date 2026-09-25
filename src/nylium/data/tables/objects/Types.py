@@ -6,7 +6,7 @@ from uuid import UUID
 from nylium.database import Database
 from nylium.database.Table import Row, Table
 from nylium.data.rows import Type
-from nylium.data.tables.decor import type_decor
+from nylium.data.tables.decor import type_style
 
 class Types(Table[UUID, Type]):
     """The types table as a Mapping of writable types."""
@@ -30,7 +30,7 @@ class Types(Table[UUID, Type]):
             row.embedded = embedded
         Database.add(row)
         Database.flush()
-        _ = type_decor.create(row.uuid, plural_name, icon, None)
+        _ = type_style.create(row.uuid, plural_name, icon, None)
         return row
 
     @Database.commit_after_this
