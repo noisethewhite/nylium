@@ -15,10 +15,9 @@ class AuthChallenge(Row):
 
     challenge: Mapped[bytes] = mapped_column(LargeBinary, primary_key=True)
     kind: Mapped[str] = mapped_column(Text, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     user_uuid: Mapped[UUID | None] = mapped_column(
         ForeignKey("auth_users.uuid", ondelete="CASCADE"),
         nullable=True,
         default=None,
-        kw_only=True,
     )
-    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
