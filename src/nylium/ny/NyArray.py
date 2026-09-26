@@ -18,8 +18,6 @@ from uuid import UUID, uuid4
 from nylium.database import Database
 from nylium.data.tables import files
 from nylium.data.tables import Instances, instances
-from nylium.data.tables import ArrayValues
-from nylium.data.tables import InstanceLinks
 from nylium.ny.NyEnum import NyEnum
 from nylium.ny.NyEmbedded import NyEmbedded
 from nylium.ny.NyFile import NyFile
@@ -39,7 +37,7 @@ class NyArray:
     @classmethod
     @Database.use_same_session
     def read(cls, array_uuid: ArrayUUID, elem_type: str) -> list[StoredValue]:
-        return [cls._unwrap(uuid, elem_type) for uuid in ArrayValues.element_uuids_of(array_uuid)]
+        return [cls._unwrap(uuid, elem_type) for uuid in ArrayUUID.of(array_uuid).element_uuids_of()]
 
     @classmethod
     @Database.commit_after_this
@@ -52,7 +50,7 @@ class NyArray:
     ) -> None:
         if values is None:
             # None unsets the prop: destroy the array instance (and its boxes)
-            link = InstanceLinks.link_for(owner_uuid, prop.uuid)
+            link = ObjectUUID.of(owner_uuid).link_for(prop.uuid)
             if link is not None:
                 cls.destroy(ArrayUUID.of(link.uuid))
             return
@@ -64,7 +62,7 @@ class NyArray:
     def destroy(cls, array_uuid: ArrayUUID) -> None:
         """Delete the array instance and every box it owns, recursively."""
         cls._destroy_boxes(array_uuid)
-        InstanceLinks.delete_links_to(array_uuid)
+        ObjectUUID.of(array_uuid).delete_links_to()
         Instances.delete_row(array_uuid)
 
     # --- internals ---
@@ -81,17 +79,17 @@ class NyArray:
     ) -> None:
         cls._destroy_boxes(array_uuid)
         for index, item in enumerate(values):
-            ArrayValues.add_element(
-                array_uuid, index, cls._box(elem_type, item, array_uuid, owner_uuid, prop, index)
+            ArrayUUID.of(
+                array_uuid).add_element(index, cls._box(elem_type, item, array_uuid, owner_uuid, prop, index)
             )
 
     @classmethod
     @Database.commit_after_this
     def _destroy_boxes(cls, array_uuid: ArrayUUID) -> None:
-        box_uuids = ArrayValues.element_uuids_of(array_uuid)
+        box_uuids = ArrayUUID.of(array_uuid).element_uuids_of()
         # detach pointer rows first: FK array_values.value_uuid -> instances
         # forbids deleting a box that is still referenced
-        ArrayValues.delete_elements_of(array_uuid)
+        ArrayUUID.of(array_uuid).delete_elements_of()
         for box_uuid in box_uuids:
             cls._destroy_box(ObjectUUID.of(box_uuid))
 
@@ -123,11 +121,11 @@ class NyArray:
     def _ensure_array_instance(
         cls, owner_uuid: ObjectUUID, prop: NyProp, elem_type: str
     ) -> ArrayUUID:
-        link = InstanceLinks.link_for(owner_uuid, prop.uuid)
+        link = ObjectUUID.of(owner_uuid).link_for(prop.uuid)
         if link is not None:
             return ArrayUUID.of(link.uuid)
         array_uuid = cls._create_array_instance(NyType.array_name(elem_type))
-        InstanceLinks.add_link(array_uuid, prop.uuid, owner_uuid)
+        ObjectUUID.of(owner_uuid).add_link(prop.uuid, array_uuid)
         return array_uuid
 
     @classmethod

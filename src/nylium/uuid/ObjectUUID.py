@@ -163,3 +163,42 @@ class ObjectUUID(UUID):
             )
             for r in rows
         ]
+
+    @Database.use_same_session
+    def delete_memberships(self) -> None:
+        """Drop every array-membership row pointing at this element uuid."""
+        c = get_mapper(ArrayValue).columns
+        _ = Database.execute(sqla.delete(ArrayValue).where(c.value_uuid == self))
+
+    @Database.use_same_session
+    def link_for(self, prop_uuid: UUID) -> InstanceLink | None:
+        """The link row held by (this owner, prop), or None."""
+        c = get_mapper(InstanceLink).columns
+        return Database.scalar(
+            sqla.select(InstanceLink).where(c.inst_uuid == self, c.prop_uuid == prop_uuid)
+        )
+
+    @Database.use_same_session
+    def merge_link(self, prop_uuid: UUID, target_uuid: UUID) -> None:
+        """Insert-or-replace the link row for (this owner, prop) pointing at
+        the given target uuid (ADR-0028)."""
+        _ = Database.merge(
+            InstanceLink(uuid=target_uuid, prop_uuid=prop_uuid, inst_uuid=self)
+        )
+
+    @Database.use_same_session
+    def add_link(self, prop_uuid: UUID, target_uuid: UUID) -> None:
+        """Insert a brand-new link row and flush (plain insert, ADR-0028)."""
+        Database.add(InstanceLink(uuid=target_uuid, prop_uuid=prop_uuid, inst_uuid=self))
+        Database.flush()
+
+    @Database.use_same_session
+    def delete_links_to(self) -> None:
+        """Delete every link row whose target is this instance uuid."""
+        c = get_mapper(InstanceLink).columns
+        _ = Database.execute(sqla.delete(InstanceLink).where(c.uuid == self))
+
+    @classmethod
+    def delete_link(cls, row: InstanceLink) -> None:
+        """Delete the given link row (already fetched by the caller)."""
+        Database.delete(row)

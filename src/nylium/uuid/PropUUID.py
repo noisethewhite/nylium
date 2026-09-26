@@ -1,6 +1,7 @@
 """PropUUID — typed identifier for a ``Prop`` row (``props``)."""
 from __future__ import annotations
 
+from decimal import Decimal
 from typing import Protocol
 from uuid import UUID
 
@@ -143,3 +144,29 @@ class PropUUID(UUID):
         )
         rows: list[UUID] = list(Database.scalars(stmt).all())
         return [ObjectUUID.of(u) for u in rows]
+
+    @Database.use_same_session
+    def linked_uuids(self) -> list[UUID]:
+        """Uuids of every instance linked through this prop, across all owners."""
+        c = get_mapper(InstanceLink).columns
+        return list(Database.scalars(sqla.select(c.uuid).where(c.prop_uuid == self)).all())
+
+    @Database.use_same_session
+    def read_with_unit(self, inst_uuid: UUID) -> tuple[Decimal, str | None] | None:
+        """Stored (canonical magnitude, entered unit part name) pair, or None."""
+        row = Database.get(NumericValue, (inst_uuid, self))
+        if row is None:
+            return None
+        return row.value, row.unit
+
+    @Database.use_same_session
+    def write_with_unit(self, inst_uuid: UUID, value: Decimal, unit: str | None) -> None:
+        """Upsert one numeric cell including the entered unit part name."""
+        row = Database.get(NumericValue, (inst_uuid, self))
+        if row is None:
+            Database.add(
+                NumericValue(inst_uuid=inst_uuid, prop_uuid=self, value=value, unit=unit)
+            )
+            return
+        row.value = value
+        row.unit = unit

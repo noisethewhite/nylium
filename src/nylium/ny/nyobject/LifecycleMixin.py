@@ -13,8 +13,6 @@ from nylium.database import Database
 from nylium.uuid import ObjectUUID
 from nylium.uuid.objects import ArrayUUID
 from nylium.data.tables import Instances, instances
-from nylium.data.tables import ArrayValues
-from nylium.data.tables import InstanceLinks
 from nylium.ny.NyArray import NyArray
 from nylium.ny.NyEmbedded import NyEmbedded
 from nylium.ny.NyType import NyType
@@ -119,8 +117,8 @@ class LifecycleMixin:
             NyArray.destroy(array_uuid)
         for child_uuid in self._owned_embedded_uuids():
             NyEmbedded.destroy(child_uuid)
-        InstanceLinks.delete_links_to(self._uuid)
-        ArrayValues.delete_memberships(self._uuid)
+        ObjectUUID.of(self._uuid).delete_links_to()
+        ObjectUUID.of(self._uuid).delete_memberships()
         Instances.delete_row(self._uuid)
 
     def _owned_embedded_uuids(self) -> list[ObjectUUID]:

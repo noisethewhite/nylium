@@ -1,12 +1,11 @@
 from __future__ import annotations
-from nylium.data.tables import ArrayValues
 from typing import ClassVar
 from nylium.database import Database
 from nylium.system.Environment import Environment
 from nylium.ny.NyType import NyType
 from pathlib import Path
 from nylium.data.tables import TypeStyles
-from nylium.uuid import FileUUID
+from nylium.uuid import FileUUID, ObjectUUID
 from nylium.data.tables import files
 import logging
 
@@ -137,4 +136,4 @@ class NyFile:
         pointed at it (ADR-0008) — mirrors NyObject.delete's cleanup of array
         links, so no dangling files.uuid survives in an array."""
 
-        ArrayValues.delete_memberships(uuid)
+        ObjectUUID.of(uuid).delete_memberships()

@@ -12,7 +12,6 @@ from uuid import UUID
 
 from nylium.database import Database
 from nylium.data.tables import Instances, instances
-from nylium.data.tables import InstanceLinks
 from nylium.ny.NyArray import NyArray
 from nylium.ny.NyEmbedded import NyEmbedded
 from nylium.ny.NyEnum import NyEnum
@@ -143,7 +142,7 @@ class AttrsMixin(PersistenceMixin):
         elif not prop.is_trait_bound and prop.value_type().is_embedded:
             NyEmbedded.destroy(ObjectUUID.of(link.uuid))  # the child dies with the prop
         else:
-            InstanceLinks.delete_row(link)
+            ObjectUUID.delete_link(link)
         self._touch()
 
     @Database.commit_after_this

@@ -22,14 +22,13 @@ from uuid import uuid4
 from nylium.database import Database
 
 from nylium.data.tables import instances
-from nylium.data.tables import ArrayValues
-from nylium.data.tables import InstanceLinks
 from nylium.data.tables import StringValues
 from nylium.ny.NyProp import NyProp
 from nylium.ny.NyType import NyType
 from nylium.ny.NyTypeMeta import StoredValue, NyTypeMeta
 from nylium.Constants import Constants
 from nylium.uuid import ObjectUUID, PropUUID, TypeUUID
+from nylium.uuid.objects import ArrayUUID
 
 
 class NyEmbedded:
@@ -44,7 +43,7 @@ class NyEmbedded:
         """Create-or-update the child from a props draft; None deletes it.
         The draft maps prop key -> value, exactly like an object write.
         Caller-supplied `name` values are ignored — names are generated."""
-        link = InstanceLinks.link_for(owner_uuid, prop.uuid)
+        link = ObjectUUID.of(owner_uuid).link_for(prop.uuid)
         if draft is None:
             if link is not None:
                 cls._destroy_child(ObjectUUID.of(link.uuid))
@@ -77,7 +76,7 @@ class NyEmbedded:
         instances orphan. For an Array<Embedded> prop the link rows point
         at the array instances; deleting one cascades (via its own
         lifecycle) to the composed elements."""
-        child_uuids = InstanceLinks.linked_uuids_of(prop_uuid)
+        child_uuids = PropUUID.of(prop_uuid).linked_uuids()
         for child_uuid in child_uuids:
             cls._destroy_child(ObjectUUID.of(child_uuid))
 
@@ -100,7 +99,7 @@ class NyEmbedded:
                 continue
             value_type = prop.value_type()
             if value_type.is_embedded:
-                link = InstanceLinks.link_for(object_uuid, prop.uuid)
+                link = ObjectUUID.of(object_uuid).link_for(prop.uuid)
                 if link is None:
                     continue
                 cls._write_generated_name(ObjectUUID.of(link.uuid), cls.generated_name(object_uuid, prop))
@@ -111,10 +110,10 @@ class NyEmbedded:
             # instance, not the parent — regenerate each in index order.
             if cls.array_element_type(value_type) is None:
                 continue
-            array_link = InstanceLinks.link_for(object_uuid, prop.uuid)
+            array_link = ObjectUUID.of(object_uuid).link_for(prop.uuid)
             if array_link is None:
                 continue
-            for index, element_uuid in enumerate(ArrayValues.element_uuids_of(array_link.uuid)):
+            for index, element_uuid in enumerate(ArrayUUID.of(array_link.uuid).element_uuids_of()):
                 cls._write_generated_name(
                     ObjectUUID.of(element_uuid), cls.array_element_name(object_uuid, prop, index)
                 )
@@ -207,7 +206,7 @@ class NyEmbedded:
             owner_object_uuid=owner_uuid,
             owner_prop_uuid=prop.uuid,
         )
-        InstanceLinks.add_link(child_uuid, prop.uuid, owner_uuid)
+        ObjectUUID.of(owner_uuid).add_link(prop.uuid, child_uuid)
         return child_uuid
 
     @classmethod
