@@ -2,7 +2,7 @@
 
 The scalar values share one shape — ``inst_uuid`` + ``prop_uuid`` compose
 the primary key, and a single ``value`` column holds the typed payload —
-so they collapse onto the ``ScalarValueRow`` base and only declare their
+so they collapse onto the ``_ScalarValueRow`` base and only declare their
 own ``__tablename__`` + ``value`` column. The three structural rows
 (``ArrayValue`` — an array element, ``FileValue`` — a file reference,
 ``InstanceLink`` — an object reference) keep their own keys because they
@@ -23,7 +23,7 @@ from nylium.database.registry import reg
 
 
 @reg.mapped_as_dataclass
-class ScalarValueRow(Row):
+class _ScalarValueRow(Row):
     """Abstract base for scalar ``(instance, prop)`` value rows."""
 
     __abstract__: ClassVar[bool] = True
@@ -37,43 +37,43 @@ class ScalarValueRow(Row):
 
 
 @reg.mapped_as_dataclass
-class BooleanValue(ScalarValueRow):
+class BooleanValue(_ScalarValueRow):
     __tablename__: ClassVar[str] = "boolean_values"
     value: Mapped[bool] = mapped_column(nullable=False)
 
 
 @reg.mapped_as_dataclass
-class DateValue(ScalarValueRow):
+class DateValue(_ScalarValueRow):
     __tablename__: ClassVar[str] = "date_values"
     value: Mapped[date] = mapped_column(Date, nullable=False)
 
 
 @reg.mapped_as_dataclass
-class DatetimeValue(ScalarValueRow):
+class DatetimeValue(_ScalarValueRow):
     __tablename__: ClassVar[str] = "datetime_values"
     value: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
 @reg.mapped_as_dataclass
-class IntegerValue(ScalarValueRow):
+class IntegerValue(_ScalarValueRow):
     __tablename__: ClassVar[str] = "integer_values"
     value: Mapped[int] = mapped_column(Integer, nullable=False)
 
 
 @reg.mapped_as_dataclass
-class MonthDayTimeValue(ScalarValueRow):
+class MonthDayTimeValue(_ScalarValueRow):
     __tablename__: ClassVar[str] = "monthdaytime_values"
     value: Mapped[str] = mapped_column(Text, nullable=False)
 
 
 @reg.mapped_as_dataclass
-class MonthDayValue(ScalarValueRow):
+class MonthDayValue(_ScalarValueRow):
     __tablename__: ClassVar[str] = "monthday_values"
     value: Mapped[str] = mapped_column(Text, nullable=False)
 
 
 @reg.mapped_as_dataclass
-class NumericValue(ScalarValueRow):
+class NumericValue(_ScalarValueRow):
     __tablename__: ClassVar[str] = "numeric_values"
     value: Mapped[Decimal] = mapped_column(nullable=False)
     # unit part name as entered (for `Numeric<Unit>` props); NULL means
@@ -82,13 +82,13 @@ class NumericValue(ScalarValueRow):
 
 
 @reg.mapped_as_dataclass
-class StringValue(ScalarValueRow):
+class StringValue(_ScalarValueRow):
     __tablename__: ClassVar[str] = "string_values"
     value: Mapped[str] = mapped_column(Text, nullable=False)
 
 
 @reg.mapped_as_dataclass
-class TimeValue(ScalarValueRow):
+class TimeValue(_ScalarValueRow):
     __tablename__: ClassVar[str] = "time_values"
     value: Mapped[time] = mapped_column(Time, nullable=False)
 
