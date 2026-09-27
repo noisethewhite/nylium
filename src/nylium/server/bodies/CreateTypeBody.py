@@ -6,14 +6,12 @@ from nylium.data.views.TypeView import TypeView
 from pydantic.dataclasses import dataclass
 from dataclasses import field
 import sys
-from nylium.server.bodies.shared import CREATED, api_route, resolve_route_hints
+from nylium.server.NyliumApp import NyliumApp
+from nylium.server.bodies.shared import resolve_route_hints
 from nylium.Constants import Constants
-
-
 @dataclass(config=Constants.Pydantic.CONFIG)
 class CreateTypeBody:
     """props maps prop key -> value type name, like Api.create_type."""
-
     name: str
     # ADR-0019+: optional — backend falls back to a naive `f"{name}s"`,
     # the frontend pre-fills it with a smarter guess as the user types
@@ -27,9 +25,8 @@ class CreateTypeBody:
     color: str = NyColor.DEFAULT
     # ADR-0004: composition type — instances exist only as prop values
     embedded: bool = False
-
     @classmethod
-    @api_route("/types", "POST", status_code=CREATED)
+    @NyliumApp.api_route("/types", "POST", status_code=NyliumApp.CREATED)
     def route(cls, body: "CreateTypeBody") -> TypeView:
         return ApiShared.type_view(
             Api.create_type(
@@ -43,6 +40,4 @@ class CreateTypeBody:
                 body.collects,
             )
         )
-
-
 resolve_route_hints(sys.modules[__name__])

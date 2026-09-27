@@ -5,21 +5,18 @@ from nylium.data.views.TraitView import TraitView
 from uuid import UUID
 from pydantic.dataclasses import dataclass
 import sys
-from nylium.server.bodies.shared import api_route, resolve_route_hints
+from nylium.server.NyliumApp import NyliumApp
+from nylium.server.bodies.shared import resolve_route_hints
 from nylium.Constants import Constants
-
-
 @dataclass(config=Constants.Pydantic.CONFIG)
 class SyncTraitBody:
     """PUT semantics: identity + the full prop draft (renames/retypes by
     uuid, creates without, deletes whatever the draft omits)."""
-
     name: str | None = None
     color: str | None = None
     props: list[SyncTraitPropItem] | None = None
-
     @classmethod
-    @api_route("/traits/{name}", "PUT")
+    @NyliumApp.api_route("/traits/{name}", "PUT")
     def route(cls, name: str, body: "SyncTraitBody") -> TraitView:
         items: list[tuple[UUID | None, str, str, str | None]] | None = (
             None
@@ -27,6 +24,4 @@ class SyncTraitBody:
             else [(item.uuid, item.key, item.value_type, None) for item in body.props]
         )
         return TraitView.from_row(Api.sync_trait(name, body.name, body.color, items))
-
-
 resolve_route_hints(sys.modules[__name__])

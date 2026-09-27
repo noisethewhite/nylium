@@ -6,24 +6,21 @@ from nylium.data.views.FunctionView import FunctionView
 from pydantic.dataclasses import dataclass
 from dataclasses import field
 import sys
-from nylium.server.bodies.shared import CREATED, api_route, resolve_route_hints
+from nylium.server.NyliumApp import NyliumApp
+from nylium.server.bodies.shared import resolve_route_hints
 from nylium.Constants import Constants
-
-
 @dataclass(config=Constants.Pydantic.CONFIG)
 class CreateFunctionBody:
     """A Function<T,R> instance (ADR-0029): parameterization + the full
     action DAG in one draft. No input link — the function reads the sibling
     props of the object it is bound into."""
-
     input_type: str
     output_type: str
     name: str
     nodes: list[FunctionNodeInput] = field(default_factory=list)
     edges: list[FunctionEdgeInput] = field(default_factory=list)
-
     @classmethod
-    @api_route("/functions", "POST", status_code=CREATED)
+    @NyliumApp.api_route("/functions", "POST", status_code=NyliumApp.CREATED)
     def route(cls, body: "CreateFunctionBody") -> FunctionView:
         return Api.create_function(
             body.input_type,
@@ -35,6 +32,4 @@ class CreateFunctionBody:
                 for e in body.edges
             ],
         )
-
-
 resolve_route_hints(sys.modules[__name__])

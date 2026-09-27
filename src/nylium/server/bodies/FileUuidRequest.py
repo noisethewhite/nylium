@@ -5,40 +5,34 @@ from fastapi.responses import FileResponse
 from nylium.data.views.FileView import FileView
 from nylium.server.errors.NotFoundError import NotFoundError
 from nylium.ny.NyFile import NyFile
-from nylium.server.bodies.shared import NO_CONTENT, PATH_PARAMS, api_route
+from nylium.server.NyliumApp import NyliumApp
+from nylium.server.bodies.shared import PATH_PARAMS
 from fastapi.responses import Response
 from uuid import UUID
 from dataclasses import dataclass as plain_dataclass
 import sys
 from nylium.server.bodies.shared import resolve_route_hints
 from nylium.uuid import FileUUID
-
-
 @plain_dataclass
 class FileUuidRequest:
     """Path-bound input of the single-file routes."""
-
     file_uuid: UUID
-
     @classmethod
-    @api_route("/files/{file_uuid}", "GET")
+    @NyliumApp.api_route("/files/{file_uuid}", "GET")
     def route_get(cls, request: Annotated["FileUuidRequest", PATH_PARAMS]) -> FileView:
         file = Api.get_file(request.file_uuid)
         if file is None:
             raise NotFoundError(f"no file {request.file_uuid}")
         return FileView.from_row(file)
-
     @classmethod
-    @api_route("/files/{file_uuid}", "DELETE", status_code=NO_CONTENT)
+    @NyliumApp.api_route("/files/{file_uuid}", "DELETE", status_code=NyliumApp.NO_CONTENT)
     def route_delete(cls, request: Annotated["FileUuidRequest", PATH_PARAMS]) -> Response:
         if not Api.delete_file(request.file_uuid):
             raise NotFoundError(f"no file {request.file_uuid}")
         return Response(status_code=204)
-
     @classmethod
-    @api_route("/files/{file_uuid}/download", "GET")
+    @NyliumApp.api_route("/files/{file_uuid}/download", "GET")
     def route_download(cls, request: Annotated["FileUuidRequest", PATH_PARAMS]) -> FileResponse:
-
         file = Api.get_file(request.file_uuid)
         if file is None:
             raise NotFoundError(f"no file {request.file_uuid}")
@@ -46,6 +40,4 @@ class FileUuidRequest:
         if not path.is_file():
             raise NotFoundError(f"blob for file {request.file_uuid} is missing")
         return FileResponse(path, media_type=file.mime, filename=file.name)
-
-
 resolve_route_hints(sys.modules[__name__])

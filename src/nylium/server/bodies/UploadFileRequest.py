@@ -2,22 +2,19 @@ from __future__ import annotations
 from typing import Annotated
 from nylium.api.Api import Api
 from nylium.data.views.FileView import FileView
-from nylium.server.bodies.shared import CREATED, PATH_PARAMS, api_route
+from nylium.server.NyliumApp import NyliumApp
+from nylium.server.bodies.shared import PATH_PARAMS
 from fastapi import UploadFile
 from dataclasses import dataclass as plain_dataclass
 import sys
 from nylium.server.bodies.shared import resolve_route_hints
-
-
 @plain_dataclass
 class UploadFileRequest:
     """Query-bound input of the multipart upload route. The UploadFile
     itself is a transport-level parameter next to the dataclass."""
-
     type_name: str
-
     @classmethod
-    @api_route("/files", "POST", status_code=CREATED)
+    @NyliumApp.api_route("/files", "POST", status_code=NyliumApp.CREATED)
     def route(
         cls, request: Annotated["UploadFileRequest", PATH_PARAMS], file: UploadFile
     ) -> FileView:
@@ -32,6 +29,4 @@ class UploadFileRequest:
                 data,
             )
         )
-
-
 resolve_route_hints(sys.modules[__name__])

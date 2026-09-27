@@ -5,19 +5,16 @@ from nylium.server.bodies.SyncPropItem import SyncPropItem
 from nylium.data.views.TypeView import TypeView
 from pydantic.dataclasses import dataclass
 import sys
-from nylium.server.bodies.shared import api_route, resolve_route_hints
+from nylium.server.NyliumApp import NyliumApp
+from nylium.server.bodies.shared import resolve_route_hints
 from nylium.Constants import Constants
-
-
 @dataclass(config=Constants.Pydantic.CONFIG)
 class SyncPropsBody:
     """The full prop draft — renames/retypes by uuid, creates without,
     deletes whatever the draft omits."""
-
     props: list[SyncPropItem]
-
     @classmethod
-    @api_route("/types/{name}/props", "PUT")
+    @NyliumApp.api_route("/types/{name}/props", "PUT")
     def route(cls, name: str, body: "SyncPropsBody") -> TypeView:
         return ApiShared.type_view(
             Api.sync_props(
@@ -26,6 +23,4 @@ class SyncPropsBody:
                 {item.key: item.collect for item in body.props if item.collect is not None},
             )
         )
-
-
 resolve_route_hints(sys.modules[__name__])

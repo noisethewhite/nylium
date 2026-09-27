@@ -7,22 +7,19 @@ from nylium.server.bodies.UnitSecondaryInput import UnitSecondaryInput
 from pydantic.dataclasses import dataclass
 from dataclasses import field
 import sys
-from nylium.server.bodies.shared import CREATED, api_route, resolve_route_hints
+from nylium.server.NyliumApp import NyliumApp
+from nylium.server.bodies.shared import resolve_route_hints
 from nylium.Constants import Constants
-
-
 @dataclass(config=Constants.Pydantic.CONFIG)
 class CreateUnitBody:
     """A unit type: name, its base part, and optional secondary parts."""
-
     name: str
     base: str
     secondaries: list[UnitSecondaryInput] = field(default_factory=list)
     icon: str = "straighten"
     color: str = NyColor.DEFAULT
-
     @classmethod
-    @api_route("/units", "POST", status_code=CREATED)
+    @NyliumApp.api_route("/units", "POST", status_code=NyliumApp.CREATED)
     def route(cls, body: "CreateUnitBody") -> TypeView:
         return ApiShared.type_view(
             Api.create_unit(
@@ -36,6 +33,4 @@ class CreateUnitBody:
                 body.color,
             )
         )
-
-
 resolve_route_hints(sys.modules[__name__])

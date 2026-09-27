@@ -4,20 +4,15 @@ from nylium.api.ApiShared import ApiShared
 from nylium.data.views.TypeView import TypeView
 from pydantic.dataclasses import dataclass
 import sys
-from nylium.server.bodies.shared import api_route, resolve_route_hints
+from nylium.server.NyliumApp import NyliumApp
+from nylium.server.bodies.shared import resolve_route_hints
 from nylium.Constants import Constants
-
-
 @dataclass(config=Constants.Pydantic.CONFIG)
 class TraitAttachBody:
     """Attach/detach a trait to/from a type."""
-
     trait: str
-
     @classmethod
-    @api_route("/types/{name}/traits", "POST")
+    @NyliumApp.api_route("/types/{name}/traits", "POST")
     def route(cls, name: str, body: "TraitAttachBody") -> TypeView:
         return ApiShared.type_view(Api.attach_trait(name, body.trait))
-
-
 resolve_route_hints(sys.modules[__name__])
