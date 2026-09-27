@@ -111,15 +111,15 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
   }
 
   openType(name: string): void {
-    this.activate({ kind: "type", name, preview: true });
+    this.activate({ kind: "type", name, preview: false });
   }
 
   openTrait(name: string): void {
-    this.activate({ kind: "trait", name, preview: true });
+    this.activate({ kind: "trait", name, preview: false });
   }
 
   openObject(uuid: string): void {
-    this.activate({ kind: "object", uuid, preview: true });
+    this.activate({ kind: "object", uuid, preview: false });
   }
 
   openCreateType(): void {
@@ -139,7 +139,7 @@ export class WorkspaceStore extends Observable<WorkspaceState> {
   }
 
   openFunction(uuid: string): void {
-    this.activate({ kind: "function", uuid, preview: true });
+    this.activate({ kind: "function", uuid, preview: false });
   }
 
   openCalendar(): void {

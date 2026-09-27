@@ -134,14 +134,20 @@ export function Sidebar(props: {
     <aside
       className="sidebar"
       onClickCapture={(event) => {
-        // Any tap on a nav row is a navigation: tell the host so the
-        // mobile drawer can close. Capture phase so row-level handlers
-        // cannot swallow it.
+        // Only a real destination pick closes the mobile drawer.
+        // Section headers (expand/collapse) and row delete buttons are
+        // not navigation, so a tap on them must leave the sidebar open.
         const target = event.target;
+        if (!(target instanceof Element)) {
+          return;
+        }
         if (
-          target instanceof Element &&
-          target.closest("nav.sidebar-scroll button") !== null
+          target.closest(".sidebar-section-header") !== null ||
+          target.closest(".type-row-delete") !== null
         ) {
+          return;
+        }
+        if (target.closest("nav.sidebar-scroll button") !== null) {
           props.onNavigate();
         }
       }}
@@ -370,6 +376,11 @@ export function Sidebar(props: {
                   >
                     {view.name}
                   </span>
+                  {view.embedded && (
+                    <span className="embedded-badge" title="Embedded type">
+                      E
+                    </span>
+                  )}
                   <span className="dim type-level">Level {levelOf(view.name)}</span>
                 </>
               }

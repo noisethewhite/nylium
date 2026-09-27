@@ -48,11 +48,22 @@
   background: var(--bg-hover);
 }
 
-/* embedded types: outline the name itself, not the whole row */
+/* embedded types: italic name + an "E" badge (no pill outline) */
 .type-name-embedded {
-  padding: 0 var(--space-2);
+  font-style: italic;
+}
+
+/* Embedded marker: a small "E" badge next to an embedded type name,
+   styled like the explicit marker. */
+.embedded-badge {
+  flex-shrink: 0;
+  font-size: var(--font-size-2xs);
+  font-style: normal;
+  line-height: 1;
+  padding: 1px 4px;
+  border-radius: var(--radius-xs);
   border: 1px solid var(--separator);
-  border-radius: var(--radius-pill);
+  color: var(--fg-dim);
 }
 
 .type-row-selected {
