@@ -5,7 +5,7 @@ from nylium.data.views.TraitView import TraitView
 from pydantic.dataclasses import dataclass
 from dataclasses import field
 import sys
-from nylium.server.bodies.shared import resolve_route_hints
+from nylium.server.bodies.shared import CREATED, api_route, resolve_route_hints
 from nylium.Constants import Constants
 
 
@@ -19,6 +19,7 @@ class CreateTraitBody:
     color: str = NyColor.DEFAULT
 
     @classmethod
+    @api_route("/traits", "POST", status_code=CREATED)
     def route(cls, body: "CreateTraitBody") -> TraitView:
         return TraitView.from_row(Api.create_trait(body.name, body.color, body.props))
 

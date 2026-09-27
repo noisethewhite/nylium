@@ -5,7 +5,7 @@ from nylium.server.bodies.SyncUnitPartItem import SyncUnitPartItem
 from nylium.data.views.TypeView import TypeView
 from pydantic.dataclasses import dataclass
 import sys
-from nylium.server.bodies.shared import resolve_route_hints
+from nylium.server.bodies.shared import api_route, resolve_route_hints
 from nylium.Constants import Constants
 
 
@@ -18,6 +18,7 @@ class SyncUnitPartsBody:
     parts: list[SyncUnitPartItem]
 
     @classmethod
+    @api_route("/units/{name}/parts", "PUT")
     def route(cls, name: str, body: "SyncUnitPartsBody") -> TypeView:
         return ApiShared.type_view(
             Api.sync_unit_parts(

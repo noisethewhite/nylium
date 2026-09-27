@@ -5,7 +5,7 @@ from fastapi.responses import FileResponse
 from nylium.data.views.FileView import FileView
 from nylium.server.errors.NotFoundError import NotFoundError
 from nylium.ny.NyFile import NyFile
-from nylium.server.bodies.shared import PATH_PARAMS
+from nylium.server.bodies.shared import NO_CONTENT, PATH_PARAMS, api_route
 from fastapi.responses import Response
 from uuid import UUID
 from dataclasses import dataclass as plain_dataclass
@@ -21,6 +21,7 @@ class FileUuidRequest:
     file_uuid: UUID
 
     @classmethod
+    @api_route("/files/{file_uuid}", "GET")
     def route_get(cls, request: Annotated["FileUuidRequest", PATH_PARAMS]) -> FileView:
         file = Api.get_file(request.file_uuid)
         if file is None:
@@ -28,12 +29,14 @@ class FileUuidRequest:
         return FileView.from_row(file)
 
     @classmethod
+    @api_route("/files/{file_uuid}", "DELETE", status_code=NO_CONTENT)
     def route_delete(cls, request: Annotated["FileUuidRequest", PATH_PARAMS]) -> Response:
         if not Api.delete_file(request.file_uuid):
             raise NotFoundError(f"no file {request.file_uuid}")
         return Response(status_code=204)
 
     @classmethod
+    @api_route("/files/{file_uuid}/download", "GET")
     def route_download(cls, request: Annotated["FileUuidRequest", PATH_PARAMS]) -> FileResponse:
 
         file = Api.get_file(request.file_uuid)

@@ -7,7 +7,7 @@ from nylium.server.bodies.UnitSecondaryInput import UnitSecondaryInput
 from pydantic.dataclasses import dataclass
 from dataclasses import field
 import sys
-from nylium.server.bodies.shared import resolve_route_hints
+from nylium.server.bodies.shared import CREATED, api_route, resolve_route_hints
 from nylium.Constants import Constants
 
 
@@ -22,6 +22,7 @@ class CreateUnitBody:
     color: str = NyColor.DEFAULT
 
     @classmethod
+    @api_route("/units", "POST", status_code=CREATED)
     def route(cls, body: "CreateUnitBody") -> TypeView:
         return ApiShared.type_view(
             Api.create_unit(

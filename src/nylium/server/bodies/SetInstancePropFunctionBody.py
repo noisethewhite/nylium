@@ -4,7 +4,7 @@ from nylium.ny.nyobject import ObjectView
 from uuid import UUID
 from pydantic.dataclasses import dataclass
 import sys
-from nylium.server.bodies.shared import resolve_route_hints
+from nylium.server.bodies.shared import api_route, resolve_route_hints
 from nylium.Constants import Constants
 from nylium.uuid import ObjectUUID
 
@@ -17,6 +17,7 @@ class SetInstancePropFunctionBody:
     function_uuid: UUID | None = None
 
     @classmethod
+    @api_route("/objects/{object_uuid}/props/{prop_key}/function", "PUT")
     def route(
         cls, object_uuid: UUID, prop_key: str, body: "SetInstancePropFunctionBody"
     ) -> ObjectView:

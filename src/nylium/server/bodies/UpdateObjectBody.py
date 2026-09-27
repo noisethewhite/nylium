@@ -8,7 +8,7 @@ from uuid import UUID
 from pydantic.dataclasses import dataclass
 from dataclasses import field
 import sys
-from nylium.server.bodies.shared import resolve_route_hints
+from nylium.server.bodies.shared import api_route, resolve_route_hints
 from nylium.Constants import Constants
 
 
@@ -19,6 +19,7 @@ class UpdateObjectBody:
     props: dict[str, PropValue] = field(default_factory=dict)
 
     @classmethod
+    @api_route("/objects/{object_uuid}", "PATCH")
     def route(cls, object_uuid: UUID, body: "UpdateObjectBody") -> ObjectView:
         view = Api.get_object(object_uuid)
         if view is None:

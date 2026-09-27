@@ -3,7 +3,7 @@ from typing import Annotated
 from nylium.api.Api import Api
 from nylium.api.ApiShared import ApiShared
 from nylium.server.errors.NotFoundError import NotFoundError
-from nylium.server.bodies.shared import PATH_PARAMS
+from nylium.server.bodies.shared import NO_CONTENT, PATH_PARAMS, api_route
 from fastapi.responses import Response
 from nylium.data.views.TypeView import TypeView
 from dataclasses import dataclass as plain_dataclass
@@ -18,6 +18,7 @@ class TypeNameRequest:
     name: str
 
     @classmethod
+    @api_route("/types/{name}", "GET")
     def route_get(cls, request: Annotated["TypeNameRequest", PATH_PARAMS]) -> TypeView:
         type_ = Api.get_type(request.name)
         if type_ is None:
@@ -25,6 +26,7 @@ class TypeNameRequest:
         return ApiShared.type_view(type_)
 
     @classmethod
+    @api_route("/types/{name}", "DELETE", status_code=NO_CONTENT)
     def route_delete(cls, request: Annotated["TypeNameRequest", PATH_PARAMS]) -> Response:
         if not Api.delete_type(request.name):
             raise NotFoundError(f"no type {request.name!r}")

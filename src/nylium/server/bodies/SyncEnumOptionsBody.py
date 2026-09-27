@@ -5,7 +5,7 @@ from nylium.server.bodies.SyncEnumOptionItem import SyncEnumOptionItem
 from nylium.data.views.TypeView import TypeView
 from pydantic.dataclasses import dataclass
 import sys
-from nylium.server.bodies.shared import resolve_route_hints
+from nylium.server.bodies.shared import api_route, resolve_route_hints
 from nylium.Constants import Constants
 
 
@@ -18,6 +18,7 @@ class SyncEnumOptionsBody:
     options: list[SyncEnumOptionItem]
 
     @classmethod
+    @api_route("/enums/{name}/options", "PUT")
     def route(cls, name: str, body: "SyncEnumOptionsBody") -> TypeView:
         return ApiShared.type_view(
             Api.sync_enum_options(

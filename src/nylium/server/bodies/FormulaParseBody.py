@@ -2,7 +2,7 @@ from __future__ import annotations
 from nylium.ny.nyformula import Formula
 from pydantic.dataclasses import dataclass
 import sys
-from nylium.server.bodies.shared import resolve_route_hints
+from nylium.server.bodies.shared import api_route, resolve_route_hints
 from nylium.Constants import Constants
 
 
@@ -13,6 +13,7 @@ class FormulaParseBody:
     formula: str
 
     @classmethod
+    @api_route("/formulas/parse", "POST")
     def route(cls, body: "FormulaParseBody") -> dict[str, object]:
         return {"ast": Formula.to_dict(body.formula)}
 

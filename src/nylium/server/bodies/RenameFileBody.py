@@ -5,7 +5,7 @@ from nylium.server.errors.NotFoundError import NotFoundError
 from uuid import UUID
 from pydantic.dataclasses import dataclass
 import sys
-from nylium.server.bodies.shared import resolve_route_hints
+from nylium.server.bodies.shared import api_route, resolve_route_hints
 from nylium.Constants import Constants
 
 
@@ -17,6 +17,7 @@ class RenameFileBody:
     name: str
 
     @classmethod
+    @api_route("/files/{file_uuid}", "PATCH")
     def route(cls, file_uuid: UUID, body: "RenameFileBody") -> FileView:
         if Api.get_file(file_uuid) is None:
             raise NotFoundError(f"no file {file_uuid}")

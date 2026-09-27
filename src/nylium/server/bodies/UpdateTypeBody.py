@@ -4,7 +4,7 @@ from nylium.api.ApiShared import ApiShared
 from nylium.data.views.TypeView import TypeView
 from pydantic.dataclasses import dataclass
 import sys
-from nylium.server.bodies.shared import resolve_route_hints
+from nylium.server.bodies.shared import api_route, resolve_route_hints
 from nylium.Constants import Constants
 
 
@@ -18,6 +18,7 @@ class UpdateTypeBody:
     color: str | None = None
 
     @classmethod
+    @api_route("/types/{name}", "PATCH")
     def route(cls, name: str, body: "UpdateTypeBody") -> TypeView:
         return ApiShared.type_view(
             Api.rename_type(name, body.name, body.plural_name, body.icon, body.color)

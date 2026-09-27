@@ -3,7 +3,7 @@ from nylium.ny.nyformula import Formula
 from pydantic.dataclasses import dataclass
 from dataclasses import field
 import sys
-from nylium.server.bodies.shared import resolve_route_hints
+from nylium.server.bodies.shared import api_route, resolve_route_hints
 from nylium.Constants import Constants
 
 
@@ -14,6 +14,7 @@ class FormulaRenderBody:
     ast: dict[str, object] = field(default_factory=dict)
 
     @classmethod
+    @api_route("/formulas/render", "POST")
     def route(cls, body: "FormulaRenderBody") -> dict[str, str]:
         return {"formula": Formula.from_dict(body.ast)}
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import Depends, FastAPI, status
+from fastapi import Depends, FastAPI
 from sqlalchemy import text
 from sqlalchemy.engine import Connection
 
@@ -15,6 +15,7 @@ from nylium.database.registry import reg
 from nylium.ny.NyFile import NyFile
 from nylium.ny.NyScalar import NyScalar
 import nylium.server.bodies as bodies
+from nylium.server.bodies.shared import collect_route_specs
 from nylium.server.errors import errors
 from nylium.server.migrations import migrations
 from nylium.server.StaticSpa import StaticSpa
@@ -119,9 +120,9 @@ class NyliumApp:
     @classmethod
     def _mount_api(cls, app: FastAPI) -> None:
         prefix = cls.API_PREFIX
-        created = status.HTTP_201_CREATED
-        no_content = status.HTTP_204_NO_CONTENT
         guard = [Depends(require_user)]
+        # auth + API tokens live in namespace modules, not bodies — mount
+        # them explicitly; everything else self-declares via @api_route.
         app.add_api_route(
             f"{prefix}/auth/register/start", auth_routes.register_start,
             methods=["POST"],
@@ -155,156 +156,10 @@ class NyliumApp:
             f"{prefix}/auth/tokens/{{token_uuid}}", token_routes.revoke,
             methods=["DELETE"],
         )
-        app.add_api_route(
-            f"{prefix}/types", bodies.ListTypesRequest.route, methods=["GET"],
-            dependencies=guard,
-        )
-        app.add_api_route(
-            f"{prefix}/types", bodies.CreateTypeBody.route, methods=["POST"],
-            status_code=created, dependencies=guard,
-        )
-        app.add_api_route(
-            f"{prefix}/enums", bodies.CreateEnumBody.route, methods=["POST"],
-            status_code=created, dependencies=guard,
-        )
-        app.add_api_route(
-            f"{prefix}/enums/{{name}}/options", bodies.SyncEnumOptionsBody.route,
-            methods=["PUT"], dependencies=guard,
-        )
-        app.add_api_route(
-            f"{prefix}/units", bodies.CreateUnitBody.route, methods=["POST"],
-            status_code=created, dependencies=guard,
-        )
-        app.add_api_route(
-            f"{prefix}/units/{{name}}/parts", bodies.SyncUnitPartsBody.route,
-            methods=["PUT"], dependencies=guard,
-        )
-        app.add_api_route(
-            f"{prefix}/types/{{name}}", bodies.TypeNameRequest.route_get, methods=["GET"],
-            dependencies=guard,
-        )
-        app.add_api_route(
-            f"{prefix}/types/{{name}}", bodies.TypeNameRequest.route_delete, methods=["DELETE"],
-            status_code=no_content, dependencies=guard,
-        )
-        app.add_api_route(
-            f"{prefix}/types/{{name}}/props-order", bodies.ReorderPropsBody.route,
-            methods=["PATCH"], dependencies=guard,
-        )
-        app.add_api_route(
-            f"{prefix}/types/{{name}}/props", bodies.SyncPropsBody.route,
-            methods=["PUT"], dependencies=guard,
-        )
-        app.add_api_route(
-            f"{prefix}/types/{{name}}", bodies.UpdateTypeBody.route, methods=["PATCH"],
-            dependencies=guard,
-        )
-        # --- traits (ADR-0013) ---
-        app.add_api_route(
-            f"{prefix}/traits", bodies.ListTraitsRequest.route, methods=["GET"],
-            dependencies=guard,
-        )
-        app.add_api_route(
-            f"{prefix}/traits", bodies.CreateTraitBody.route, methods=["POST"],
-            status_code=created, dependencies=guard,
-        )
-        app.add_api_route(
-            f"{prefix}/traits/{{name}}", bodies.TraitNameRequest.route_get, methods=["GET"],
-            dependencies=guard,
-        )
-        app.add_api_route(
-            f"{prefix}/traits/{{name}}", bodies.SyncTraitBody.route, methods=["PUT"],
-            dependencies=guard,
-        )
-        app.add_api_route(
-            f"{prefix}/traits/{{name}}", bodies.TraitNameRequest.route_delete, methods=["DELETE"],
-            status_code=no_content, dependencies=guard,
-        )
-        app.add_api_route(
-            f"{prefix}/types/{{name}}/traits", bodies.TraitAttachBody.route,
-            methods=["POST"], dependencies=guard,
-        )
-        app.add_api_route(
-            f"{prefix}/types/{{name}}/traits/{{trait}}", bodies.DetachTraitRequest.route,
-            methods=["DELETE"], dependencies=guard,
-        )
-        app.add_api_route(
-            f"{prefix}/objects", bodies.ListObjectsRequest.route, methods=["GET"], dependencies=guard,
-        )
-        app.add_api_route(
-            f"{prefix}/objects", bodies.CreateObjectBody.route, methods=["POST"],
-            status_code=created, dependencies=guard,
-        )
-        app.add_api_route(
-            f"{prefix}/objects/{{object_uuid}}", bodies.ObjectUuidRequest.route_get, methods=["GET"], dependencies=guard,
-        )
-        app.add_api_route(
-            f"{prefix}/objects/{{object_uuid}}", bodies.UpdateObjectBody.route, methods=["PATCH"], dependencies=guard,
-        )
-        app.add_api_route(
-            f"{prefix}/objects/{{object_uuid}}", bodies.ObjectUuidRequest.route_delete, methods=["DELETE"],
-            status_code=no_content, dependencies=guard,
-        )
-        app.add_api_route(
-            f"{prefix}/objects/{{object_uuid}}/export", bodies.ObjectUuidRequest.route_export,
-            methods=["GET"], dependencies=guard,
-        )
-        app.add_api_route(
-            f"{prefix}/storage", bodies.StorageRequest.route, methods=["GET"],
-            dependencies=guard,
-        )
-        app.add_api_route(
-            f"{prefix}/files", bodies.UploadFileRequest.route, methods=["POST"],
-            status_code=created, dependencies=guard,
-        )
-        app.add_api_route(
-            f"{prefix}/files", bodies.ListFilesRequest.route, methods=["GET"],
-            dependencies=guard,
-        )
-        app.add_api_route(
-            f"{prefix}/files/{{file_uuid}}", bodies.FileUuidRequest.route_get, methods=["GET"],
-            dependencies=guard,
-        )
-        app.add_api_route(
-            f"{prefix}/files/{{file_uuid}}", bodies.RenameFileBody.route, methods=["PATCH"],
-            dependencies=guard,
-        )
-        app.add_api_route(
-            f"{prefix}/files/{{file_uuid}}", bodies.FileUuidRequest.route_delete, methods=["DELETE"],
-            status_code=no_content, dependencies=guard,
-        )
-        app.add_api_route(
-            f"{prefix}/files/{{file_uuid}}/download", bodies.FileUuidRequest.route_download, methods=["GET"],
-            dependencies=guard,
-        )
-        app.add_api_route(
-            f"{prefix}/functions", bodies.ListFunctionsRequest.route, methods=["GET"], dependencies=guard,
-        )
-        app.add_api_route(
-            f"{prefix}/functions", bodies.CreateFunctionBody.route, methods=["POST"],
-            status_code=created, dependencies=guard,
-        )
-        app.add_api_route(
-            f"{prefix}/functions/{{function_uuid}}", bodies.FunctionUuidRequest.route_get, methods=["GET"], dependencies=guard,
-        )
-        app.add_api_route(
-            f"{prefix}/functions/{{function_uuid}}", bodies.UpdateFunctionBody.route, methods=["PUT"], dependencies=guard,
-        )
-        app.add_api_route(
-            f"{prefix}/functions/{{function_uuid}}", bodies.FunctionUuidRequest.route_delete, methods=["DELETE"],
-            status_code=no_content, dependencies=guard,
-        )
-        app.add_api_route(
-            f"{prefix}/objects/{{object_uuid}}/props/{{prop_key}}/function",
-            bodies.SetInstancePropFunctionBody.route,
-            methods=["PUT"], dependencies=guard,
-        )
-        # --- formula AST (ADR-0026) ---
-        app.add_api_route(
-            f"{prefix}/formulas/parse", bodies.FormulaParseBody.route,
-            methods=["POST"], dependencies=guard,
-        )
-        app.add_api_route(
-            f"{prefix}/formulas/render", bodies.FormulaRenderBody.route,
-            methods=["POST"], dependencies=guard,
-        )
+        for spec in collect_route_specs(bodies):
+            if spec.handler is None:
+                continue
+            app.add_api_route(
+                f"{prefix}{spec.path}", spec.handler, methods=[spec.method],
+                status_code=spec.status_code, dependencies=guard,
+            )
