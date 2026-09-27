@@ -2,7 +2,7 @@
 import pytest
 
 from nylium.ny.nyformula import Formula
-from nylium.server.ValidationError import ValidationError
+from nylium.server.errors.ValidationError import ValidationError
 
 
 def test_number_round_trip():

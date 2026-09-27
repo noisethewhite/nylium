@@ -21,11 +21,11 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic_core import ErrorDetails
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from nylium.server.ApiError import ApiError
-from nylium.server.ConflictError import ConflictError
-from nylium.server.NotFoundError import NotFoundError
-from nylium.server.UnauthorizedError import UnauthorizedError
-from nylium.server.ValidationError import ValidationError
+from nylium.server.errors.ApiError import ApiError
+from nylium.server.errors.ConflictError import ConflictError
+from nylium.server.errors.NotFoundError import NotFoundError
+from nylium.server.errors.UnauthorizedError import UnauthorizedError
+from nylium.server.errors.ValidationError import ValidationError
 
 _logger = logging.getLogger(__name__)
 

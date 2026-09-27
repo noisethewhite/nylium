@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import Annotated
 from nylium.api.Api import Api
 from nylium.data.views.FunctionView import FunctionView
-from nylium.server.NotFoundError import NotFoundError
+from nylium.server.errors.NotFoundError import NotFoundError
 from nylium.server.bodies.shared import PATH_PARAMS
 from fastapi.responses import Response
 from uuid import UUID

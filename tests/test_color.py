@@ -8,7 +8,7 @@ from nylium.api import Api, ScalarValueView
 from nylium.ny import NyScalar
 from nylium.ny.NyColor import NyColor
 from nylium.server import NyliumApp
-from nylium.server.ValidationError import ValidationError
+from nylium.server.errors.ValidationError import ValidationError
 from sqlalchemy import text
 from nylium.database import Database
 from nylium.uuid import TypeUUID

@@ -22,7 +22,7 @@ from nylium.ny.NyColor import NyColor
 from nylium.ny.NyScalar import NyScalar
 from nylium.ny.NyString import NyString
 from nylium.ny.NyType import NyType
-from nylium.server.ValidationError import ValidationError
+from nylium.server.errors.ValidationError import ValidationError
 from nylium.uuid import TraitUUID, TypeUUID
 
 

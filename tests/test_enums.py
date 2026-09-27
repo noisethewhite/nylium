@@ -7,7 +7,7 @@ import pytest
 
 from nylium.api import Api, ArrayValueView, ScalarValueView
 from nylium.data.rows import Type
-from nylium.server.ValidationError import ValidationError
+from nylium.server.errors.ValidationError import ValidationError
 from nylium.uuid import TypeUUID
 
 

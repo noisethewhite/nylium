@@ -11,7 +11,7 @@ import pytest
 from nylium.api import Api, ScalarValueView
 from nylium.api.ApiShared import PropInput
 from nylium.data.types.Quantity import Quantity
-from nylium.server.ValidationError import ValidationError
+from nylium.server.errors.ValidationError import ValidationError
 
 
 def _fee_kind():

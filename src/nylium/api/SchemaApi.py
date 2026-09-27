@@ -21,7 +21,7 @@ from nylium.ny.nyformula import Formula
 from nylium.ny.NyProp import NyProp
 from nylium.ny.NyString import NyString
 from nylium.ny.NyType import NyType
-from nylium.server.ValidationError import ValidationError
+from nylium.server.errors.ValidationError import ValidationError
 from nylium.uuid import ObjectUUID, PropUUID
 
 

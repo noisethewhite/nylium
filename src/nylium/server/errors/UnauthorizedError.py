@@ -1,5 +1,5 @@
 from __future__ import annotations
-from nylium.server.ApiError import ApiError
+from nylium.server.errors.ApiError import ApiError
 from typing import ClassVar
 
 

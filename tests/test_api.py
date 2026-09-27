@@ -15,7 +15,7 @@ from nylium.api import (
 )
 from nylium.data.rows import Type
 from nylium.ny import NyInteger, NyObject, NyString
-from nylium.server.ValidationError import ValidationError
+from nylium.server.errors.ValidationError import ValidationError
 from nylium.uuid import TypeUUID
 from nylium.uuid import PropUUID
 

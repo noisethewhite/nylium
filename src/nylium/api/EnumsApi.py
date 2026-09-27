@@ -9,7 +9,7 @@ from nylium.data.tables import type_style
 from nylium.data.rows import Type
 from nylium.ny.NyColor import NyColor
 from nylium.ny.NyType import NyType
-from nylium.server.ValidationError import ValidationError
+from nylium.server.errors.ValidationError import ValidationError
 from nylium.uuid import TypeUUID
 
 

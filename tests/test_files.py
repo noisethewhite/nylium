@@ -8,7 +8,7 @@ import pytest
 
 from nylium.api import Api
 from nylium.ny.NyFile import NyFile
-from nylium.server.ValidationError import ValidationError
+from nylium.server.errors.ValidationError import ValidationError
 from uuid import uuid4
 from nylium.ny.nyobject import ArrayValueView, ObjectRefView, RefValueView
 from nylium.uuid import TypeUUID

@@ -3,7 +3,7 @@ the Any<Trait> bound form. Api-level; HTTP shape lives in test_http.py."""
 import pytest
 
 from nylium.api import Api, ObjectRefView, RefValueView, ScalarValueView
-from nylium.server.ValidationError import ValidationError
+from nylium.server.errors.ValidationError import ValidationError
 from nylium.data.views.PropView import PropView
 from nylium.data.views.TraitView import TraitView
 from nylium.uuid import TraitUUID

@@ -28,7 +28,7 @@ from nylium.ny.NyInteger import NyInteger
 from nylium.ny.NyNumeric import NyNumeric
 from nylium.ny.NyString import NyString
 from nylium.ny.NyType import NyType
-from nylium.server.ValidationError import ValidationError
+from nylium.server.errors.ValidationError import ValidationError
 from nylium.Constants import Constants
 
 

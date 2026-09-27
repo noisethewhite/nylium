@@ -21,7 +21,7 @@ from nylium.ny.NyType import NyType
 from nylium.ny.NyTypeMeta import StoredValue
 from nylium.data.views.TypeView import TypeView
 from nylium.uuid import TypeUUID
-from nylium.server.ValidationError import ValidationError
+from nylium.server.errors.ValidationError import ValidationError
 from nylium.Constants import Constants
 from nylium.uuid import FileUUID
 from nylium.uuid import PropUUID

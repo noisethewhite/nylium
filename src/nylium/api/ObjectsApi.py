@@ -17,7 +17,7 @@ from nylium.ny.NyProp import NyProp
 from nylium.ny.NyType import NyType
 from nylium.ny.NyTypeMeta import NyTypeMeta
 from nylium.api.MarkdownRenderer import MarkdownRenderer
-from nylium.server.ValidationError import ValidationError
+from nylium.server.errors.ValidationError import ValidationError
 from nylium.data.tables import InstanceFunctionLinks
 from nylium.Constants import Constants
 

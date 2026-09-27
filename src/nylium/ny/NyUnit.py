@@ -6,7 +6,7 @@ from nylium.ny.NyProp import NyProp
 from nylium.ny.NyType import NyType
 from nylium.data.types.Quantity import Quantity
 from nylium.uuid import ObjectUUID, PropUUID
-from nylium.server.ValidationError import ValidationError
+from nylium.server.errors.ValidationError import ValidationError
 from nylium.data.tables import unit_parts
 
 

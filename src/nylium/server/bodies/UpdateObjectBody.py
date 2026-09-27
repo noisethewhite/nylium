@@ -1,6 +1,6 @@
 from __future__ import annotations
 from nylium.api.Api import Api
-from nylium.server.NotFoundError import NotFoundError
+from nylium.server.errors.NotFoundError import NotFoundError
 from nylium.ny.nyobject import ObjectView
 from nylium.server.PropCodec import PropCodec
 from nylium.ny.nyobject import PropValue

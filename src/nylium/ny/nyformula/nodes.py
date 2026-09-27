@@ -8,7 +8,7 @@ nodes → parsing → formula → evaluation/rewriting.
 from __future__ import annotations
 
 from typing import NoReturn, TypeAlias
-from nylium.server.ValidationError import ValidationError
+from nylium.server.errors.ValidationError import ValidationError
 from nylium.ny.nyformula.BinOp import BinOp
 from nylium.ny.nyformula.Call import Call
 from nylium.ny.nyformula.If import If
