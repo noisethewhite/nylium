@@ -5,8 +5,7 @@ from nylium.data.views.TraitView import TraitView
 from pydantic.dataclasses import dataclass
 from dataclasses import field
 import sys
-from nylium.server.NyliumApp import NyliumApp
-from nylium.server.bodies.shared import resolve_route_hints
+from nylium.server.bodies.shared import CREATED, api_route, resolve_route_hints
 from nylium.Constants import Constants
 @dataclass(config=Constants.Pydantic.CONFIG)
 class CreateTraitBody:
@@ -16,7 +15,7 @@ class CreateTraitBody:
     props: dict[str, str] = field(default_factory=dict)
     color: str = NyColor.DEFAULT
     @classmethod
-    @NyliumApp.api_route("/traits", "POST", status_code=NyliumApp.CREATED)
+    @api_route("/traits", "POST", status_code=CREATED)
     def route(cls, body: "CreateTraitBody") -> TraitView:
         return TraitView.from_row(Api.create_trait(body.name, body.color, body.props))
 resolve_route_hints(sys.modules[__name__])

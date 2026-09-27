@@ -3,8 +3,7 @@ from typing import Annotated
 from nylium.api.Api import Api
 from nylium.data.views.FunctionView import FunctionView
 from nylium.server.errors.NotFoundError import NotFoundError
-from nylium.server.NyliumApp import NyliumApp
-from nylium.server.bodies.shared import PATH_PARAMS
+from nylium.server.bodies.shared import NO_CONTENT, PATH_PARAMS, api_route
 from fastapi.responses import Response
 from uuid import UUID
 from dataclasses import dataclass as plain_dataclass
@@ -15,14 +14,14 @@ class FunctionUuidRequest:
     """Path-bound input of the single-function routes."""
     function_uuid: UUID
     @classmethod
-    @NyliumApp.api_route("/functions/{function_uuid}", "GET")
+    @api_route("/functions/{function_uuid}", "GET")
     def route_get(cls, request: Annotated["FunctionUuidRequest", PATH_PARAMS]) -> FunctionView:
         view = Api.get_function(request.function_uuid)
         if view is None:
             raise NotFoundError(f"no function {request.function_uuid}")
         return view
     @classmethod
-    @NyliumApp.api_route("/functions/{function_uuid}", "DELETE", status_code=NyliumApp.NO_CONTENT)
+    @api_route("/functions/{function_uuid}", "DELETE", status_code=NO_CONTENT)
     def route_delete(cls, request: Annotated["FunctionUuidRequest", PATH_PARAMS]) -> Response:
         if not Api.delete_function(request.function_uuid):
             raise NotFoundError(f"no function {request.function_uuid}")

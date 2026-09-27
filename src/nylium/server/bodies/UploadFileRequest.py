@@ -2,8 +2,7 @@ from __future__ import annotations
 from typing import Annotated
 from nylium.api.Api import Api
 from nylium.data.views.FileView import FileView
-from nylium.server.NyliumApp import NyliumApp
-from nylium.server.bodies.shared import PATH_PARAMS
+from nylium.server.bodies.shared import CREATED, PATH_PARAMS, api_route
 from fastapi import UploadFile
 from dataclasses import dataclass as plain_dataclass
 import sys
@@ -14,7 +13,7 @@ class UploadFileRequest:
     itself is a transport-level parameter next to the dataclass."""
     type_name: str
     @classmethod
-    @NyliumApp.api_route("/files", "POST", status_code=NyliumApp.CREATED)
+    @api_route("/files", "POST", status_code=CREATED)
     def route(
         cls, request: Annotated["UploadFileRequest", PATH_PARAMS], file: UploadFile
     ) -> FileView:

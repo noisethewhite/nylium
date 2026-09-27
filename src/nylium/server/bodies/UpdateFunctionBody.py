@@ -7,8 +7,7 @@ from uuid import UUID
 from pydantic.dataclasses import dataclass
 from dataclasses import field
 import sys
-from nylium.server.NyliumApp import NyliumApp
-from nylium.server.bodies.shared import resolve_route_hints
+from nylium.server.bodies.shared import api_route, resolve_route_hints
 from nylium.Constants import Constants
 @dataclass(config=Constants.Pydantic.CONFIG)
 class UpdateFunctionBody:
@@ -18,7 +17,7 @@ class UpdateFunctionBody:
     nodes: list[FunctionNodeInput] = field(default_factory=list)
     edges: list[FunctionEdgeInput] = field(default_factory=list)
     @classmethod
-    @NyliumApp.api_route("/functions/{function_uuid}", "PUT")
+    @api_route("/functions/{function_uuid}", "PUT")
     def route(cls, function_uuid: UUID, body: "UpdateFunctionBody") -> FunctionView:
         return Api.update_function(
             function_uuid,

@@ -12,7 +12,7 @@ from nylium.auth.ceremonies import ceremonies
 from nylium.auth.guard import require_user
 from nylium.auth.sessions import sessions
 from nylium.data.rows import AuthUser
-from nylium.server.NyliumApp import NyliumApp
+from nylium.server.bodies.shared import api_route
 from nylium.system.Environment import Environment
 from nylium.uuid import UserUUID
 
@@ -22,7 +22,7 @@ class auth_routes:
     never instantiated)."""
 
     @classmethod
-    @NyliumApp.api_route("/auth/register/start", "POST", guarded=False)
+    @api_route("/auth/register/start", "POST", guarded=False)
     async def register_start(cls, request: Request) -> JSONResponse:
         body = await cls._body(request)
         name = body.get("name")
@@ -35,24 +35,24 @@ class auth_routes:
         return JSONResponse(json.loads(options))
 
     @classmethod
-    @NyliumApp.api_route("/auth/register/finish", "POST", guarded=False)
+    @api_route("/auth/register/finish", "POST", guarded=False)
     async def register_finish(cls, request: Request) -> JSONResponse:
         token = ceremonies.register_finish((await request.body()).decode())
         return cls._with_session(JSONResponse({"ok": True}), token)
 
     @classmethod
-    @NyliumApp.api_route("/auth/login/start", "POST", guarded=False)
+    @api_route("/auth/login/start", "POST", guarded=False)
     async def login_start(cls) -> JSONResponse:
         return JSONResponse(json.loads(ceremonies.login_start()))
 
     @classmethod
-    @NyliumApp.api_route("/auth/login/finish", "POST", guarded=False)
+    @api_route("/auth/login/finish", "POST", guarded=False)
     async def login_finish(cls, request: Request) -> JSONResponse:
         token = ceremonies.login_finish((await request.body()).decode())
         return cls._with_session(JSONResponse({"ok": True}), token)
 
     @classmethod
-    @NyliumApp.api_route("/auth/logout", "POST", guarded=False)
+    @api_route("/auth/logout", "POST", guarded=False)
     async def logout(cls, request: Request) -> JSONResponse:
         sessions.revoke(request.cookies.get(sessions.COOKIE_NAME))
         response = JSONResponse({"ok": True})
@@ -60,7 +60,7 @@ class auth_routes:
         return response
 
     @classmethod
-    @NyliumApp.api_route("/auth/me", "GET")
+    @api_route("/auth/me", "GET")
     async def me(
         cls, user: Annotated[AuthUser, Depends(require_user)]
     ) -> JSONResponse:

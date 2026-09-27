@@ -6,8 +6,7 @@ from nylium.data.views.TypeView import TypeView
 from pydantic.dataclasses import dataclass
 from dataclasses import field
 import sys
-from nylium.server.NyliumApp import NyliumApp
-from nylium.server.bodies.shared import resolve_route_hints
+from nylium.server.bodies.shared import CREATED, api_route, resolve_route_hints
 from nylium.Constants import Constants
 @dataclass(config=Constants.Pydantic.CONFIG)
 class CreateTypeBody:
@@ -26,7 +25,7 @@ class CreateTypeBody:
     # ADR-0004: composition type — instances exist only as prop values
     embedded: bool = False
     @classmethod
-    @NyliumApp.api_route("/types", "POST", status_code=NyliumApp.CREATED)
+    @api_route("/types", "POST", status_code=CREATED)
     def route(cls, body: "CreateTypeBody") -> TypeView:
         return ApiShared.type_view(
             Api.create_type(

@@ -20,7 +20,7 @@ from nylium.auth.tokens import tokens
 from nylium.data.tables import api_tokens
 from nylium.data.rows import ApiToken
 from nylium.data.rows import AuthUser
-from nylium.server.NyliumApp import NyliumApp
+from nylium.server.bodies.shared import api_route
 from nylium.server.errors.ValidationError import ValidationError
 from nylium.uuid import UserUUID
 
@@ -41,7 +41,7 @@ class token_routes:
     never instantiated)."""
 
     @classmethod
-    @NyliumApp.api_route("/auth/tokens", "POST", guarded=False)
+    @api_route("/auth/tokens", "POST", guarded=False)
     async def create(
         cls, request: Request, user: Annotated[AuthUser, Depends(require_cookie_user)]
     ) -> JSONResponse:
@@ -66,7 +66,7 @@ class token_routes:
         )
 
     @classmethod
-    @NyliumApp.api_route("/auth/tokens", "GET", guarded=False)
+    @api_route("/auth/tokens", "GET", guarded=False)
     def list(cls, user: Annotated[AuthUser, Depends(require_cookie_user)]) -> JSONResponse:
         return JSONResponse(
             [
@@ -78,7 +78,7 @@ class token_routes:
         )
 
     @classmethod
-    @NyliumApp.api_route("/auth/tokens/{token_uuid}", "DELETE", guarded=False)
+    @api_route("/auth/tokens/{token_uuid}", "DELETE", guarded=False)
     def revoke(
         cls, token_uuid: TokenUUID, user: Annotated[AuthUser, Depends(require_cookie_user)]
     ) -> JSONResponse:

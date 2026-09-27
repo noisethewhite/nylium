@@ -2,8 +2,7 @@ from __future__ import annotations
 from typing import Annotated
 from nylium.api.Api import Api
 from nylium.data.views.FileView import FileView
-from nylium.server.NyliumApp import NyliumApp
-from nylium.server.bodies.shared import PATH_PARAMS
+from nylium.server.bodies.shared import PATH_PARAMS, api_route
 from dataclasses import dataclass as plain_dataclass
 import sys
 from nylium.server.bodies.shared import resolve_route_hints
@@ -11,7 +10,7 @@ from nylium.server.bodies.shared import resolve_route_hints
 class ListFilesRequest:
     """No-input request of GET /files."""
     @classmethod
-    @NyliumApp.api_route("/files", "GET")
+    @api_route("/files", "GET")
     def route(cls, _request: Annotated["ListFilesRequest", PATH_PARAMS]) -> list[FileView]:
         return [FileView.from_row(file) for file in Api.list_files()]
 resolve_route_hints(sys.modules[__name__])

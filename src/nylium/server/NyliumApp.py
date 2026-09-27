@@ -1,33 +1,27 @@
 """FastAPI application factory over the nylium Api facade."""
 from __future__ import annotations
 
-import importlib
-import typing
-from dataclasses import replace
 from pathlib import Path
-from types import ModuleType
-from typing import TYPE_CHECKING
 
-from fastapi import Depends, FastAPI, status
+from fastapi import Depends, FastAPI
 from sqlalchemy import text
 from sqlalchemy.engine import Connection
 
+import nylium.server.bodies as bodies
 from nylium.auth.guard import require_user
+from nylium.auth.routes import auth_routes
+from nylium.auth.token_routes import token_routes
 from nylium.database import Database
 from nylium.database.registry import reg
 from nylium.ny.NyFile import NyFile
 from nylium.ny.NyScalar import NyScalar
+from nylium.server.bodies.shared import collect_route_specs
 from nylium.server.errors import errors
 from nylium.server.migrations import migrations
-from nylium.server.RouteSpec import RouteSpec
 from nylium.server.StaticSpa import StaticSpa
 from nylium.system.Environment import Environment
 from typing import ClassVar
 from nylium.ny.NyColor import NyColor
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-    from collections.abc import Mapping
 
 
 class NyliumApp:
@@ -35,8 +29,6 @@ class NyliumApp:
 
     TITLE: ClassVar[str] = "nylium"
     API_PREFIX: ClassVar[str] = "/api"
-    CREATED: ClassVar[int] = status.HTTP_201_CREATED
-    NO_CONTENT: ClassVar[int] = status.HTTP_204_NO_CONTENT
 
     @classmethod
     def create(cls) -> FastAPI:
@@ -126,78 +118,10 @@ class NyliumApp:
         return Path(str(Environment.web_dist))
 
     @classmethod
-    def api_route(
-        cls,
-        path: str,
-        method: str,
-        *,
-        status_code: int | None = None,
-        guarded: bool = True,
-    ) -> Callable[[Callable[..., object]], Callable[..., object]]:
-        """Stamp a route classmethod with its mount metadata, so _mount_api
-        mounts every route from the declarations instead of a central
-        add_api_route list. Sits UNDER @classmethod (sees the raw function).
-
-        ``guarded=False`` marks the session-only / unauthenticated routes
-        (auth ceremonies, token management) that skip the bearer guard —
-        they carry their own auth dependency in the signature."""
-
-        def decorator(fn: Callable[..., object]) -> Callable[..., object]:
-            setattr(fn, "__route_spec__", RouteSpec(path, method, status_code, guarded))
-            return fn
-
-        return decorator
-
-    @classmethod
-    def _route_specs(cls, *owners: object) -> list[RouteSpec]:
-        """Gather every api_route-stamped classmethod, with the handler
-        bound to its owning class. Owners: a package (scans its __all__)
-        or a namespace class directly."""
-        specs: list[RouteSpec] = []
-        for owner in owners:
-            if isinstance(owner, ModuleType):
-                candidates: list[object] = [
-                    typing.cast("object", getattr(owner, export))
-                    for export in typing.cast("list[str]", owner.__all__)
-                ]
-            else:
-                candidates = [owner]
-            for candidate in candidates:
-                if not isinstance(candidate, type):
-                    continue
-                attrs = typing.cast("Mapping[str, object]", vars(candidate))
-                for attr_name, member in attrs.items():
-                    fn = getattr(member, "__func__", member)
-                    spec = getattr(fn, "__route_spec__", None)
-                    if not isinstance(spec, RouteSpec):
-                        continue
-                    handler = typing.cast(
-                        "Callable[..., object]", getattr(candidate, attr_name)
-                    )
-                    specs.append(replace(spec, handler=handler))
-        return specs
-
-    @classmethod
     def _mount_api(cls, app: FastAPI) -> None:
-        # Dynamic loading (not import statements, on purpose): bodies and
-        # the auth namespaces stamp their routes via NyliumApp.api_route at
-        # class-creation time, so they import this module — a static import
-        # back would close the cycle in every static analyzer.
-        bodies = importlib.import_module("nylium.server.bodies")
-        auth_ns = typing.cast(
-            "object",
-            getattr(importlib.import_module("nylium.auth.routes"), "auth_routes"),
-        )
-        token_ns = typing.cast(
-            "object",
-            getattr(
-                importlib.import_module("nylium.auth.token_routes"), "token_routes"
-            ),
-        )
-
         prefix = cls.API_PREFIX
         guard = [Depends(require_user)]
-        for spec in cls._route_specs(bodies, auth_ns, token_ns):
+        for spec in collect_route_specs(bodies, auth_routes, token_routes):
             if spec.handler is None:
                 continue
             app.add_api_route(

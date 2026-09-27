@@ -32,41 +32,54 @@ class RouteSpec:
     path: str
     method: str
     status_code: int | None = None
+    guarded: bool = True
     handler: Callable[..., object] | None = None
 
 
 def api_route(
-    path: str, method: str, *, status_code: int | None = None
+    path: str, method: str, *, status_code: int | None = None, guarded: bool = True
 ) -> Callable[[Callable[..., object]], Callable[..., object]]:
     """Stamp a route classmethod with its mount metadata, so NyliumApp can
     mount every bodies route from the declarations instead of a central
-    add_api_route list. Sits UNDER @classmethod (sees the raw function)."""
+    add_api_route list. Sits UNDER @classmethod (sees the raw function).
+
+    ``guarded=False`` marks the session-only / unauthenticated routes
+    (auth ceremonies, token management) that skip the bearer guard —
+    they carry their own auth dependency in the signature."""
 
     def decorator(fn: Callable[..., object]) -> Callable[..., object]:
-        setattr(fn, "__route_spec__", RouteSpec(path, method, status_code))
+        setattr(fn, "__route_spec__", RouteSpec(path, method, status_code, guarded))
         return fn
 
     return decorator
 
 
-def collect_route_specs(package: ModuleType) -> list[RouteSpec]:
-    """Gather every api_route-stamped classmethod across the package's
-    exports, with the handler bound to its owning class."""
+def collect_route_specs(*owners: object) -> list[RouteSpec]:
+    """Gather every api_route-stamped classmethod, with the handler bound
+    to its owning class. Owners: a package (scans its __all__) or a
+    namespace class directly (auth_routes, token_routes)."""
     specs: list[RouteSpec] = []
-    for export in typing.cast("list[str]", package.__all__):
-        owner = typing.cast("object", getattr(package, export))
-        if not isinstance(owner, type):
-            continue
-        attrs = typing.cast("Mapping[str, object]", vars(owner))
-        for attr_name, member in attrs.items():
-            fn = getattr(member, "__func__", member)
-            spec = getattr(fn, "__route_spec__", None)
-            if not isinstance(spec, RouteSpec):
+    for owner in owners:
+        if isinstance(owner, ModuleType):
+            candidates: list[object] = [
+                typing.cast("object", getattr(owner, export))
+                for export in typing.cast("list[str]", owner.__all__)
+            ]
+        else:
+            candidates = [owner]
+        for candidate in candidates:
+            if not isinstance(candidate, type):
                 continue
-            handler = typing.cast(
-                "Callable[..., object]", getattr(owner, attr_name)
-            )
-            specs.append(replace(spec, handler=handler))
+            attrs = typing.cast("Mapping[str, object]", vars(candidate))
+            for attr_name, member in attrs.items():
+                fn = getattr(member, "__func__", member)
+                spec = getattr(fn, "__route_spec__", None)
+                if not isinstance(spec, RouteSpec):
+                    continue
+                handler = typing.cast(
+                    "Callable[..., object]", getattr(candidate, attr_name)
+                )
+                specs.append(replace(spec, handler=handler))
     return specs
 
 

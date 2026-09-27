@@ -5,8 +5,7 @@ from nylium.server.bodies.SyncPropItem import SyncPropItem
 from nylium.data.views.TypeView import TypeView
 from pydantic.dataclasses import dataclass
 import sys
-from nylium.server.NyliumApp import NyliumApp
-from nylium.server.bodies.shared import resolve_route_hints
+from nylium.server.bodies.shared import api_route, resolve_route_hints
 from nylium.Constants import Constants
 @dataclass(config=Constants.Pydantic.CONFIG)
 class SyncPropsBody:
@@ -14,7 +13,7 @@ class SyncPropsBody:
     deletes whatever the draft omits."""
     props: list[SyncPropItem]
     @classmethod
-    @NyliumApp.api_route("/types/{name}/props", "PUT")
+    @api_route("/types/{name}/props", "PUT")
     def route(cls, name: str, body: "SyncPropsBody") -> TypeView:
         return ApiShared.type_view(
             Api.sync_props(

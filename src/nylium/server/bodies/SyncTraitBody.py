@@ -5,8 +5,7 @@ from nylium.data.views.TraitView import TraitView
 from uuid import UUID
 from pydantic.dataclasses import dataclass
 import sys
-from nylium.server.NyliumApp import NyliumApp
-from nylium.server.bodies.shared import resolve_route_hints
+from nylium.server.bodies.shared import api_route, resolve_route_hints
 from nylium.Constants import Constants
 @dataclass(config=Constants.Pydantic.CONFIG)
 class SyncTraitBody:
@@ -16,7 +15,7 @@ class SyncTraitBody:
     color: str | None = None
     props: list[SyncTraitPropItem] | None = None
     @classmethod
-    @NyliumApp.api_route("/traits/{name}", "PUT")
+    @api_route("/traits/{name}", "PUT")
     def route(cls, name: str, body: "SyncTraitBody") -> TraitView:
         items: list[tuple[UUID | None, str, str, str | None]] | None = (
             None
