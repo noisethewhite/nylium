@@ -8,7 +8,7 @@ import sqlalchemy as sqla
 from sqlalchemy.orm import aliased
 
 from nylium.database import Database
-from nylium.database.Row import get_mapper
+from nylium.database import get_mapper
 from nylium.data.rows import ArrayValue, Instance, InstanceLink, Prop, StringValue, Type, TypeStyle
 from nylium.data.tables import instances
 from nylium.uuid.NyRef import NyRef

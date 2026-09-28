@@ -3,8 +3,8 @@ from typing import ClassVar
 from uuid import UUID
 import sqlalchemy as sqla
 from nylium.database import Database
-from nylium.database.Row import get_mapper
-from nylium.system.Environment import Environment
+from nylium.database import get_mapper
+from nylium.system import Environment
 from nylium.ny.NyType import NyType
 from pathlib import Path
 from nylium.data.rows import FileValue

@@ -25,7 +25,7 @@ from typing import ClassVar, Generic, TypeVar, cast, override
 
 import sqlalchemy as sqla
 
-from nylium.database import Database
+from nylium.database.Database import Database
 from nylium.database.Row import Row as Row, get_mapper
 from nylium.database.SessionContext import SessionContext
 

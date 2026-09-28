@@ -16,12 +16,12 @@ from nylium.database import Database
 from nylium.data.tables import instances
 from nylium.data.tables import props
 from nylium.data.rows import Type
-from nylium.ny.NyEmbedded import NyEmbedded
+from nylium.ny import NyEmbedded
 from nylium.ny.nyformula import Formula
-from nylium.ny.NyProp import NyProp
-from nylium.ny.NyString import NyString
-from nylium.ny.NyType import NyType
-from nylium.server.errors.ValidationError import ValidationError
+from nylium.ny import NyProp
+from nylium.ny import NyString
+from nylium.ny import NyType
+from nylium.server.errors import ValidationError
 from nylium.uuid import ObjectRef, PropRef
 
 

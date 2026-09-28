@@ -12,21 +12,21 @@ from pydantic.dataclasses import dataclass
 from nylium.database import Database
 from nylium.data.tables import Instances, instances
 from nylium.uuid import ObjectRef, PropRef, TypeRef
-from nylium.ny.nyobject.NyObject import NyObject
-from nylium.ny.NyType import NyType
-from nylium.ny.NyObjectProtocol import NyObjectProtocol
-from nylium.ny.NyTypeMeta import StoredValue
-from nylium.data.types.MonthDay import MonthDay
-from nylium.data.types.MonthDayTime import MonthDayTime
-from nylium.data.types.Quantity import Quantity, magnitude
-from nylium.ny.NyEnum import NyEnum
-from nylium.ny.NyFile import NyFile
+from nylium.ny.nyobject import NyObject
+from nylium.ny import NyType
+from nylium.ny import NyObjectProtocol
+from nylium.ny import StoredValue
+from nylium.data.types import MonthDay
+from nylium.data.types import MonthDayTime
+from nylium.data.types import Quantity, magnitude
+from nylium.ny import NyEnum
+from nylium.ny import NyFile
 from nylium.ny.nyformula import Formula
-from nylium.ny.nyfunction.NyFunction import NyFunction
-from nylium.ny.NyProp import NyProp
-from nylium.ny.NyInteger import NyInteger
-from nylium.ny.NyScalar import NyScalar
-from nylium.ny.NyScalar import ScalarPayload
+from nylium.ny.nyfunction import NyFunction
+from nylium.ny import NyProp
+from nylium.ny import NyInteger
+from nylium.ny import NyScalar
+from nylium.ny import ScalarPayload
 from nylium.data.views.TagView import TagView
 from nylium.data.views.ArrayValueView import ArrayValueView
 from nylium.data.views.EmbeddedValueView import EmbeddedValueView

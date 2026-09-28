@@ -5,8 +5,8 @@ from typing import ClassVar, TypeAlias
 from uuid import UUID, uuid4
 from sqlalchemy import CheckConstraint, ForeignKey, Integer, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
-from nylium.database.Table import Row
-from nylium.database.registry import reg
+from nylium.database import Row
+from nylium.database import reg
 
 SchemaItem: TypeAlias = (
     "tuple[UUID | None, str, UUID | None, UUID | None, str | None, str | None]"

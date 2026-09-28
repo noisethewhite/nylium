@@ -10,8 +10,8 @@ from __future__ import annotations
 import re
 from collections.abc import Callable
 
-from nylium.ny.nyobject import ObjectView
-from nylium.ny.nyobject import (
+from nylium.data.views import ObjectView
+from nylium.data.views import (
     ArrayValueView,
     EmbeddedValueView,
     ObjectRefView,

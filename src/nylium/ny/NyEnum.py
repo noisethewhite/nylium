@@ -4,7 +4,7 @@ from nylium.ny.NyProp import NyProp
 from nylium.ny.NyType import NyType
 from nylium.data.tables import StringValues
 from nylium.uuid import ObjectRef
-from nylium.server.errors.ValidationError import ValidationError
+from nylium.server.errors import ValidationError
 from typing import cast
 from nylium.data.tables import enum_options
 

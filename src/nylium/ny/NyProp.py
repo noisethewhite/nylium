@@ -6,7 +6,7 @@ from nylium.data.tables import Props
 from nylium.data.rows import SchemaItem
 from nylium.data.tables import Traits
 from nylium.data.tables import TypeTraits
-from nylium.database.Row import get_mapper
+from nylium.database import get_mapper
 from nylium.uuid import ObjectRef, PropRef, TraitRef, TypeRef
 from nylium.ny.NyType import NyType
 

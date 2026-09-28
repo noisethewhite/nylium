@@ -6,18 +6,18 @@ from typing import cast
 from uuid import UUID
 
 from nylium.api.ApiShared import ApiShared, PropInput
-from nylium.ny.nyobject import ObjectView
-from nylium.ny.nyobject import ObjectRefView
+from nylium.data.views import ObjectView
+from nylium.data.views import ObjectRefView
 from nylium.database import Database
 from nylium.uuid import ObjectRef, TypeRef
 from nylium.data.tables import instances
-from nylium.ny.NyEmbedded import NyEmbedded
+from nylium.ny import NyEmbedded
 from nylium.ny.nyobject import NyObject
-from nylium.ny.NyProp import NyProp
-from nylium.ny.NyType import NyType
-from nylium.ny.NyTypeMeta import NyTypeMeta
+from nylium.ny import NyProp
+from nylium.ny import NyType
+from nylium.ny import NyTypeMeta
 from nylium.api.MarkdownRenderer import MarkdownRenderer
-from nylium.server.errors.ValidationError import ValidationError
+from nylium.server.errors import ValidationError
 from nylium.data.tables import InstanceFunctionLinks
 from nylium.Constants import Constants
 

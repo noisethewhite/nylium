@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import NoReturn, TypeAlias
 
 from nylium.ny.NyType import NyType
-from nylium.server.errors.ValidationError import ValidationError
+from nylium.server.errors import ValidationError
 from nylium.Constants import Constants
 
 # The closed set of node operations. The `kind` string is validated

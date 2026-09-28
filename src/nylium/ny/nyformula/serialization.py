@@ -18,7 +18,7 @@ from nylium.ny.nyformula.Neg import Neg
 from nylium.ny.nyformula.Number import Number
 from nylium.ny.nyformula.Ref import Ref
 from nylium.ny.nyformula.nodes import Expr
-from nylium.server.errors.ValidationError import ValidationError
+from nylium.server.errors import ValidationError
 
 # The wire shape of a formula AST node (ADR-0026). Values are `str` for
 # literals/ops/keys, `list` for a Call path, or a nested `AstNode`.

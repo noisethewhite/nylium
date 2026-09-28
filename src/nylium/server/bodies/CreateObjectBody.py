@@ -1,8 +1,8 @@
 from __future__ import annotations
-from nylium.api.Api import Api
-from nylium.ny.nyobject import ObjectView
+from nylium.api import Api
+from nylium.data.views import ObjectView
 from nylium.server.PropCodec import PropCodec
-from nylium.ny.nyobject import PropValue
+from nylium.data.views import PropValue
 from pydantic.dataclasses import dataclass
 from dataclasses import field
 import sys

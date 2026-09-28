@@ -20,8 +20,8 @@ from nylium.auth.tokens import tokens
 from nylium.data.tables import api_tokens
 from nylium.data.rows import ApiToken
 from nylium.data.rows import AuthUser
-from nylium.server.bodies.shared import api_route
-from nylium.server.errors.ValidationError import ValidationError
+from nylium.server.bodies import api_route
+from nylium.server.errors import ValidationError
 from nylium.uuid import UserRef
 
 

@@ -1,5 +1,5 @@
 from __future__ import annotations
-from nylium.data.types.MonthDayTime import MonthDayTime
+from nylium.data.types import MonthDayTime
 from nylium.data.rows import MonthDayTimeValue
 from nylium.data.tables import MonthDayTimeValues
 from nylium.ny.NyScalar import NyScalar

@@ -4,7 +4,7 @@ from __future__ import annotations
 import argparse
 from typing import cast
 
-from nylium.server.serve import serve
+from nylium.server import serve
 from nylium.Constants import Constants
 
 

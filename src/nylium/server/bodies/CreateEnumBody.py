@@ -1,8 +1,8 @@
 from __future__ import annotations
-from nylium.api.Api import Api
-from nylium.api.ApiShared import ApiShared
-from nylium.ny.NyColor import NyColor
-from nylium.data.views.TypeView import TypeView
+from nylium.api import Api
+from nylium.api import ApiShared
+from nylium.ny import NyColor
+from nylium.data.views import TypeView
 from pydantic.dataclasses import dataclass
 from dataclasses import field
 import sys

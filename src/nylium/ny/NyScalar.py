@@ -10,8 +10,8 @@ from typing import cast
 from datetime import date, datetime, time
 from decimal import Decimal
 
-from nylium.data.types.MonthDay import MonthDay
-from nylium.data.types.MonthDayTime import MonthDayTime
+from nylium.data.types import MonthDay
+from nylium.data.types import MonthDayTime
 from nylium.data.rows import BooleanValue
 from nylium.data.rows import DateValue
 from nylium.data.rows import DatetimeValue

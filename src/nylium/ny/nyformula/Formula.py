@@ -23,12 +23,12 @@ from nylium.ny.nyformula.nodes import Expr
 from nylium.ny.nyformula.Parser import Parser, tokenize
 from nylium.ny.nyformula.rewriting import render, rewrite_ast
 from nylium.ny.nyformula.serialization import ast_to_dict, dict_to_ast
-from nylium.data.types.Quantity import Quantity
+from nylium.data.types import Quantity
 from nylium.ny.NyInteger import NyInteger
 from nylium.ny.NyNumeric import NyNumeric
 from nylium.ny.NyString import NyString
 from nylium.ny.NyType import NyType
-from nylium.server.errors.ValidationError import ValidationError
+from nylium.server.errors import ValidationError
 from nylium.Constants import Constants
 
 

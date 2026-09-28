@@ -30,17 +30,32 @@ from nylium.ny.nyformula.Number import Number
 from nylium.ny.nyformula.Ref import Ref
 from nylium.ny.nyformula.nodes import Expr
 from nylium.Constants import Constants
+from nylium.ny.nyformula.If import If
+from nylium.ny.nyformula.Parser import Parser, tokenize
+from nylium.ny.nyformula.evaluation import evaluate_ast
+from nylium.ny.nyformula.nodes import error
+from nylium.ny.nyformula.rewriting import rewrite_ast, render
+from nylium.ny.nyformula.serialization import dict_to_ast, ast_to_dict
 
 FUNCTIONS = Constants.Formulas.FUNCTIONS
 
 __all__ = [
-    "FUNCTIONS",
     "ArrayRows",
     "BinOp",
     "Call",
     "Expr",
+    "FUNCTIONS",
     "Formula",
+    "If",
     "Neg",
     "Number",
+    "Parser",
     "Ref",
+    "ast_to_dict",
+    "dict_to_ast",
+    "error",
+    "evaluate_ast",
+    "render",
+    "rewrite_ast",
+    "tokenize",
 ]

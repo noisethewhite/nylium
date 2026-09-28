@@ -1,8 +1,8 @@
 from __future__ import annotations
-from nylium.api.Api import Api
-from nylium.api.ApiShared import ApiShared
+from nylium.api import Api
+from nylium.api import ApiShared
 from nylium.server.bodies.SyncEnumOptionItem import SyncEnumOptionItem
-from nylium.data.views.TypeView import TypeView
+from nylium.data.views import TypeView
 from pydantic.dataclasses import dataclass
 import sys
 from nylium.server.bodies.shared import api_route, resolve_route_hints

@@ -8,20 +8,20 @@ from sqlalchemy import text
 from sqlalchemy.engine import Connection
 
 import nylium.server.bodies as bodies
-from nylium.auth.guard import require_user
-from nylium.auth.routes import auth_routes
-from nylium.auth.token_routes import token_routes
+from nylium.auth import require_user
+from nylium.auth import auth_routes
+from nylium.auth import token_routes
 from nylium.database import Database
-from nylium.database.registry import reg
-from nylium.ny.NyFile import NyFile
-from nylium.ny.NyScalar import NyScalar
-from nylium.server.bodies.shared import collect_route_specs
+from nylium.database import reg
+from nylium.ny import NyFile
+from nylium.ny import NyScalar
+from nylium.server.bodies import collect_route_specs
 from nylium.server.errors import errors
 from nylium.server.migrations import migrations
 from nylium.server.StaticSpa import StaticSpa
-from nylium.system.Environment import Environment
+from nylium.system import Environment
 from typing import ClassVar
-from nylium.ny.NyColor import NyColor
+from nylium.ny import NyColor
 
 
 class NyliumApp:

@@ -16,8 +16,8 @@ from uuid import UUID
 import sqlalchemy as sqla
 
 from nylium.database import Database
-from nylium.database.Row import Row, get_mapper
-from nylium.database.Table import Table
+from nylium.database import Row, get_mapper
+from nylium.database import Table
 from nylium.data.rows import (
     ArrayValue,
     BooleanValue,

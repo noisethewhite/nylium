@@ -22,7 +22,7 @@ from nylium.database import Database
 from nylium.data.tables import instances
 from nylium.data.tables import Traits
 from nylium.data.tables import TypeTraits
-from nylium.data.types.Quantity import Quantity
+from nylium.data.types import Quantity
 from nylium.ny.NyProp import NyProp
 from nylium.ny.NyScalar import NyScalar
 from nylium.ny.NyScalar import ScalarPayload

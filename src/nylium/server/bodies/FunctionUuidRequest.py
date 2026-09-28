@@ -1,8 +1,8 @@
 from __future__ import annotations
 from typing import Annotated
-from nylium.api.Api import Api
-from nylium.data.views.FunctionView import FunctionView
-from nylium.server.errors.NotFoundError import NotFoundError
+from nylium.api import Api
+from nylium.data.views import FunctionView
+from nylium.server.errors import NotFoundError
 from nylium.server.bodies.shared import NO_CONTENT, PATH_PARAMS, api_route
 from fastapi.responses import Response
 from uuid import UUID

@@ -7,8 +7,8 @@ from nylium.api.ApiShared import ApiShared
 from nylium.database import Database
 from nylium.data.rows import File
 from nylium.data.tables import files
-from nylium.ny.NyFile import NyFile
-from nylium.server.errors.ValidationError import ValidationError
+from nylium.ny import NyFile
+from nylium.server.errors import ValidationError
 import shutil
 from nylium.uuid import FileRef
 

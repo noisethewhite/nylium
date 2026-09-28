@@ -1,5 +1,5 @@
 from __future__ import annotations
-from nylium.ny.NyScalar import ScalarPayload
+from nylium.ny import ScalarPayload
 from pydantic.dataclasses import dataclass
 from nylium.Constants import Constants
 

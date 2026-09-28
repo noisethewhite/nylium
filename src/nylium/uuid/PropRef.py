@@ -15,8 +15,8 @@ from sqlalchemy.orm import Mapped
 
 from nylium.Constants import Constants
 from nylium.database import Database
-from nylium.database.Row import get_mapper
-from nylium.database.Table import Row
+from nylium.database import get_mapper
+from nylium.database import Row
 from nylium.data.rows import (
     BooleanValue,
     DateValue,

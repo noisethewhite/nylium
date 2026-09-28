@@ -9,7 +9,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from decimal import Decimal, InvalidOperation
 
-from nylium.data.types.Quantity import Quantity, magnitude
+from nylium.data.types import Quantity, magnitude
 from nylium.ny.nyformula.BinOp import BinOp
 from nylium.ny.nyformula.If import If
 from nylium.ny.nyformula.Neg import Neg

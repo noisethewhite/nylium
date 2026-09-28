@@ -4,9 +4,9 @@ from decimal import Decimal
 from nylium.data.tables import NumericValues
 from nylium.ny.NyProp import NyProp
 from nylium.ny.NyType import NyType
-from nylium.data.types.Quantity import Quantity
+from nylium.data.types import Quantity
 from nylium.uuid import ObjectRef, PropRef
-from nylium.server.errors.ValidationError import ValidationError
+from nylium.server.errors import ValidationError
 from nylium.data.tables import unit_parts
 
 

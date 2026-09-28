@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import ClassVar
 from uuid import UUID
-from nylium.database.Table import Row, Table
+from nylium.database import Row, Table
 from nylium.data.rows import EnumOption
 
 class EnumOptions(Table[UUID, EnumOption]):

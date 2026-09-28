@@ -15,7 +15,7 @@ from uuid import UUID
 from pydantic_core import core_schema
 
 if TYPE_CHECKING:
-    from nylium.database.Table import Row
+    from nylium.database import Row
 
 
 class NyRef(ABC):

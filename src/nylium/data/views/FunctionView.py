@@ -3,9 +3,9 @@ from nylium.database import Database
 from nylium.data.views.FunctionEdgeView import FunctionEdgeView
 from nylium.data.views.FunctionNodeView import FunctionNodeView
 from nylium.Constants import Constants
-from nylium.ny.nyfunction.NyFunction import NyFunction
-from nylium.ny.nyobject.NyObject import NyObject
-from nylium.ny.NyType import NyType
+from nylium.ny.nyfunction import NyFunction
+from nylium.ny.nyobject import NyObject
+from nylium.ny import NyType
 from typing import Self
 from uuid import UUID
 from typing import cast

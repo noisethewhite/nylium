@@ -1,8 +1,8 @@
 from __future__ import annotations
-from nylium.api.Api import Api
+from nylium.api import Api
 from nylium.server.bodies.FunctionEdgeInput import FunctionEdgeInput
 from nylium.server.bodies.FunctionNodeInput import FunctionNodeInput
-from nylium.data.views.FunctionView import FunctionView
+from nylium.data.views import FunctionView
 from pydantic.dataclasses import dataclass
 from dataclasses import field
 import sys

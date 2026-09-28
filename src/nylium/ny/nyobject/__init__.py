@@ -21,29 +21,22 @@ lifecycle (construction/retrieval/delete), facade (UI rendering,
 dunders), attrs (__getattr__/__setattr__ dispatch) over persistence
 (raw *values-table reads/writes).
 
-The wire DTOs live in ``nylium.data.views`` (values, tags, objectview);
-this package imports them after NyObject to keep mid-package-init order.
+Wire DTOs live in ``nylium.data.views`` (ADR-0011); this package does
+NOT re-export them — call sites import them from ``nylium.data.views``,
+which breaks the ny<->views import cycle cleanly.
 """
 from __future__ import annotations
 
 from nylium.ny.nyobject.NyObject import NyObject
-from nylium.data.views.ArrayValueView import ArrayValueView
-from nylium.data.views.EmbeddedValueView import EmbeddedValueView
-from nylium.data.views.ObjectRefView import ObjectRefView
-from nylium.data.views.RefValueView import RefValueView
-from nylium.data.views.ScalarValueView import ScalarValueView
-from nylium.data.views.values import PropValue
-from nylium.data.views.TagView import TagView
-from nylium.data.views.ObjectView import ObjectView
+from nylium.ny.nyobject.AttrsMixin import AttrsMixin
+from nylium.ny.nyobject.FacadeMixin import FacadeMixin
+from nylium.ny.nyobject.LifecycleMixin import LifecycleMixin
+from nylium.ny.nyobject.PersistenceMixin import PersistenceMixin
 
 __all__ = [
-    "ArrayValueView",
-    "EmbeddedValueView",
-    "ObjectRefView",
-    "ObjectView",
-    "PropValue",
-    "RefValueView",
-    "ScalarValueView",
-    "TagView",
+    "AttrsMixin",
+    "FacadeMixin",
+    "LifecycleMixin",
     "NyObject",
+    "PersistenceMixin",
 ]

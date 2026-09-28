@@ -8,8 +8,8 @@ from uuid import UUID, uuid4
 import sqlalchemy as sqla
 
 from nylium.database import Database
-from nylium.database.Row import get_mapper
-from nylium.database.Table import Row
+from nylium.database import get_mapper
+from nylium.database import Row
 from nylium.data.rows import EnumOption, NumericValue, Prop, StringValue, Type, UnitPart
 from nylium.data.tables import (
     enum_options,

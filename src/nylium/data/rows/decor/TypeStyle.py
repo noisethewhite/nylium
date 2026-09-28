@@ -5,8 +5,8 @@ from typing import ClassVar
 from uuid import UUID
 from sqlalchemy import ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column
-from nylium.database.Table import Row
-from nylium.database.registry import reg
+from nylium.database import Row
+from nylium.database import reg
 
 @reg.mapped_as_dataclass
 class TypeStyle(Row):

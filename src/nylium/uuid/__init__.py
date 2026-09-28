@@ -20,6 +20,7 @@ from nylium.uuid.TypeDecorRef import TypeDecorRef
 from nylium.uuid.TypeRef import TypeRef
 from nylium.uuid.UnitPartRef import UnitPartRef
 from nylium.uuid.UserRef import UserRef
+from nylium.uuid.NyRef import NyRef
 
 __all__ = [
     "CredentialRef",
@@ -27,6 +28,7 @@ __all__ = [
     "FileRef",
     "FunctionEdgeRef",
     "FunctionRef",
+    "NyRef",
     "ObjectRef",
     "PropRef",
     "TokenRef",

@@ -10,7 +10,7 @@ from nylium.api import Api
 from nylium.ny.NyFile import NyFile
 from nylium.server.errors.ValidationError import ValidationError
 from uuid import uuid4
-from nylium.ny.nyobject import ArrayValueView, ObjectRefView, RefValueView
+from nylium.data.views import ArrayValueView, ObjectRefView, RefValueView
 from nylium.uuid import TypeRef
 from nylium.uuid import FileRef
 

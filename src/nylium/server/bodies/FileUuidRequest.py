@@ -1,10 +1,10 @@
 from __future__ import annotations
 from typing import Annotated
-from nylium.api.Api import Api
+from nylium.api import Api
 from fastapi.responses import FileResponse
-from nylium.data.views.FileView import FileView
-from nylium.server.errors.NotFoundError import NotFoundError
-from nylium.ny.NyFile import NyFile
+from nylium.data.views import FileView
+from nylium.server.errors import NotFoundError
+from nylium.ny import NyFile
 from nylium.server.bodies.shared import NO_CONTENT, PATH_PARAMS, api_route
 from fastapi.responses import Response
 from uuid import UUID

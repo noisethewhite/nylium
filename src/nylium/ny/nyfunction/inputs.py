@@ -19,7 +19,7 @@ from nylium.uuid import ObjectRef
 from nylium.database import Database
 from nylium.data.tables import instances
 from nylium.data.tables import InstanceFunctionLinks
-from nylium.ny.nyobject.NyObject import NyObject
+from nylium.ny.nyobject import NyObject
 from nylium.ny.NyProp import NyProp
 from nylium.ny.NyScalar import ScalarPayload
 from nylium.ny.NyType import NyType
