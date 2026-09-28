@@ -60,7 +60,7 @@ class NyliumApp:
         order inside each group is the execution order.
         """
         with Database.engine.begin() as connection:
-            for statement in migrations.group("schema"):
+            for statement in migrations.group("sql/schema"):
                 _ = connection.execute(text(statement))
             cls._migrate_type_colors(connection)
             cls._migrate_file_kinds(connection)
@@ -74,14 +74,14 @@ class NyliumApp:
         from the old columns if still present, then drop them. Runs last
         so _migrate_type_colors and the ADR-0005 color default have
         already normalized types.color."""
-        for statement in migrations.group("decor"):
+        for statement in migrations.group("sql/decor"):
             _ = connection.execute(text(statement))
 
     @classmethod
     def _migrate_file_kinds(cls, connection: Connection) -> None:
         """ADR-0006 follow-up: File/Document/Image are a dedicated kind, not
         object. Idempotent — re-running re-sets the same value."""
-        _ = connection.execute(text(migrations.statement("file_kinds.sql")))
+        _ = connection.execute(text(migrations.statement("sql/file_kinds.sql")))
 
     @classmethod
     def _migrate_files_to_first_class(cls, connection: Connection) -> None:
@@ -94,7 +94,7 @@ class NyliumApp:
         files.uuid's ON DELETE CASCADE would wipe the rows we just migrated.
         The numeric file prefixes encode exactly that order (ADR-0016).
         """
-        for statement in migrations.group("files_first_class"):
+        for statement in migrations.group("sql/files_first_class"):
             _ = connection.execute(text(statement))
 
     @classmethod
@@ -105,11 +105,11 @@ class NyliumApp:
         a no-op once types.color has moved to type_style (ADR-0014)."""
 
         has_column = connection.execute(
-            text(migrations.statement("type_colors/001_has_column.sql"))
+            text(migrations.statement("sql/type_colors/001_has_column.sql"))
         ).first()
         if has_column is None:
             return
-        update = text(migrations.statement("type_colors/002_update_color.sql"))
+        update = text(migrations.statement("sql/type_colors/002_update_color.sql"))
         for name, hex_value in NyColor.LEGACY_PALETTE.items():
             _ = connection.execute(update, {"hex": hex_value, "name": name})
 
