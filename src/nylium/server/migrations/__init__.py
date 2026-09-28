@@ -1,9 +1,10 @@
 """Boot-migration SQL resources (ADR-0016).
 
-The statements live in this package as `.sql` files — one statement per
-file, grouped in subdirectories (`schema/`, `decor/`, …). SQL is a
-foreign language and stays out of Python string literals; filename order
-(numeric prefixes) is the single source of truth for execution order.
+The statements live in the top-level `nylium/sql/` resource directory —
+one statement per file, grouped in subdirectories (`schema/`, `decor/`,
+…). SQL is a foreign language and stays out of Python string literals;
+filename order (numeric prefixes) is the single source of truth for
+execution order.
 """
 from __future__ import annotations
 
@@ -15,7 +16,7 @@ class migrations:
     """Namespace-only owner (snake_case by doctrine: groups behavior,
     never instantiated)."""
 
-    PACKAGE: ClassVar[str] = "nylium.server.migrations"
+    PACKAGE: ClassVar[str] = "nylium"
 
     @classmethod
     def statement(cls, name: str) -> str:
