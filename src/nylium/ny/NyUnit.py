@@ -82,7 +82,7 @@ class NyUnit:
         cls, inst_uuid: ObjectUUID, prop: NyProp, quantity: Quantity | None
     ) -> None:
         if quantity is None:
-            _ = NumericValues.clear(inst_uuid.uuid, prop.uuid)
+            _ = NumericValues.clear(inst_uuid.uuid, prop.uuid.uuid)
             return
         PropUUID.of(prop.uuid).write_with_unit(inst_uuid.uuid, quantity.value, quantity.unit)
 

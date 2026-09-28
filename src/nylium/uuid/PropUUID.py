@@ -1,11 +1,14 @@
-"""PropUUID — typed identifier for a ``Prop`` row (``props``)."""
+"""PropUUID — typed reference to a ``Prop`` row (``props``).
+
+A ``props`` uuid carrying its own table lookup, wire-facing value spec,
+owner-trait projection, and value purging / range collection across the
+prop-keyed value tables.
+"""
 from __future__ import annotations
 
 from decimal import Decimal
-from typing import Protocol
+from typing import Protocol, override
 from uuid import UUID
-
-from pydantic_core import core_schema
 
 import sqlalchemy as sqla
 from sqlalchemy.orm import Mapped
@@ -28,6 +31,7 @@ from nylium.data.rows import (
     TimeValue,
 )
 from nylium.data.tables import props, trait_style, traits, types
+from nylium.uuid.NyRef import NyRef
 from nylium.uuid.ObjectUUID import ObjectUUID
 
 
@@ -52,20 +56,13 @@ _PROP_KEYED_VALUE_TABLES: tuple[type[_PropKeyedValues], ...] = (
 )
 
 
-class PropUUID(UUID):
+class PropUUID(NyRef):
     """A ``props`` uuid carrying its own table lookup and value purging."""
 
-    @classmethod
-    def of(cls, value: UUID) -> "PropUUID":
-        return cls(str(value))
-
-    @classmethod
-    def __get_pydantic_core_schema__(cls, _source: object, _handler: object) -> core_schema.CoreSchema:
-        return core_schema.uuid_schema()
-
+    @override
     def get(self) -> Prop | None:
         """The ``Prop`` row this uuid points at, or ``None`` if it is gone."""
-        return props.get(self)
+        return props.get(self._uuid)
 
     def value_type_name(self) -> str:
         """The wire-facing value spec: the concrete type's name, or
@@ -102,7 +99,7 @@ class PropUUID(UUID):
         """Wipe every stored value of this prop across all value tables."""
         for table in _PROP_KEYED_VALUE_TABLES:
             tc = get_mapper(table).columns
-            _ = Database.execute(sqla.delete(table).where(tc.prop_uuid == self))
+            _ = Database.execute(sqla.delete(table).where(tc.prop_uuid == self._uuid))
         Database.flush()
 
     @Database.use_same_session
@@ -115,7 +112,7 @@ class PropUUID(UUID):
             tc = get_mapper(table).columns
             _ = Database.execute(
                 sqla.delete(table).where(
-                    tc.prop_uuid == self,
+                    tc.prop_uuid == self._uuid,
                     tc.inst_uuid.in_([u.uuid for u in inst_uuids]),
                 )
             )
@@ -138,7 +135,7 @@ class PropUUID(UUID):
             table = NumericValue
         c = get_mapper(table).columns
         stmt = sqla.select(c.inst_uuid).where(
-            c.prop_uuid == self,
+            c.prop_uuid == self._uuid,
             c.value >= lo,
             c.value <= hi,
         )
@@ -149,12 +146,14 @@ class PropUUID(UUID):
     def linked_uuids(self) -> list[UUID]:
         """Uuids of every instance linked through this prop, across all owners."""
         c = get_mapper(InstanceLink).columns
-        return list(Database.scalars(sqla.select(c.uuid).where(c.prop_uuid == self)).all())
+        return list(
+            Database.scalars(sqla.select(c.uuid).where(c.prop_uuid == self._uuid)).all()
+        )
 
     @Database.use_same_session
     def read_with_unit(self, inst_uuid: UUID) -> tuple[Decimal, str | None] | None:
         """Stored (canonical magnitude, entered unit part name) pair, or None."""
-        row = Database.get(NumericValue, (inst_uuid, self))
+        row = Database.get(NumericValue, (inst_uuid, self._uuid))
         if row is None:
             return None
         return row.value, row.unit
@@ -162,10 +161,10 @@ class PropUUID(UUID):
     @Database.use_same_session
     def write_with_unit(self, inst_uuid: UUID, value: Decimal, unit: str | None) -> None:
         """Upsert one numeric cell including the entered unit part name."""
-        row = Database.get(NumericValue, (inst_uuid, self))
+        row = Database.get(NumericValue, (inst_uuid, self._uuid))
         if row is None:
             Database.add(
-                NumericValue(inst_uuid=inst_uuid, prop_uuid=self, value=value, unit=unit)
+                NumericValue(inst_uuid=inst_uuid, prop_uuid=self._uuid, value=value, unit=unit)
             )
             return
         row.value = value

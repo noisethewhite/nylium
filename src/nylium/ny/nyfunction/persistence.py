@@ -78,7 +78,7 @@ def assert_no_dependency_cycle(inst_uuid: ObjectUUID) -> None:
             target_prop = prop_uuid_by_key.get(key)
             if target_prop is None:
                 continue
-            target_fn = bindings.get(target_prop)
+            target_fn = bindings.get(target_prop.uuid)
             if target_fn is not None and target_fn != fn_uuid:
                 deps[fn_uuid].add(target_fn)
     _assert_acyclic(deps)

@@ -27,10 +27,10 @@ class PersistenceMixin:
     _uuid: ObjectUUID
 
     def _link(self, prop: NyProp) -> InstanceLink | None:
-        return self._uuid.link_for(prop.uuid)
+        return self._uuid.link_for(prop.uuid.uuid)
 
     def _file_ref(self, prop: NyProp) -> UUID | None:
-        ref = NyFile.ref_for(self._uuid.uuid, prop.uuid)
+        ref = NyFile.ref_for(self._uuid.uuid, prop.uuid.uuid)
         return ref.uuid if ref is not None else None
 
     def _write_scalar(
@@ -39,12 +39,12 @@ class PersistenceMixin:
         # clearing a scalar removes the row — a NULL row violates the
         # table's NOT NULL constraint and reads back as None anyway
         if value is None:
-            _ = scalar.SCALAR.clear(self._uuid.uuid, prop.uuid)
+            _ = scalar.SCALAR.clear(self._uuid.uuid, prop.uuid.uuid)
             return
-        scalar.SCALAR.write(self._uuid.uuid, prop.uuid, scalar.to_storage(value))
+        scalar.SCALAR.write(self._uuid.uuid, prop.uuid.uuid, scalar.to_storage(value))
 
     def _write_link(self, prop: NyProp, value: NyObjectProtocol) -> None:
-        self._uuid.merge_link(prop.uuid, value.uuid.uuid)
+        self._uuid.merge_link(prop.uuid.uuid, value.uuid.uuid)
 
     def _write_file_ref(self, prop: NyProp, value: UUID | None) -> None:
-        NyFile.write_ref(self._uuid.uuid, prop.uuid, value)
+        NyFile.write_ref(self._uuid.uuid, prop.uuid.uuid, value)

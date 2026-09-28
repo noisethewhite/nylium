@@ -34,12 +34,12 @@ class NyEnum:
     @classmethod
     @Database.use_same_session
     def read(cls, inst_uuid: ObjectUUID, prop: NyProp) -> str | None:
-        return cast(str | None, StringValues.read(inst_uuid.uuid, prop.uuid))
+        return cast(str | None, StringValues.read(inst_uuid.uuid, prop.uuid.uuid))
 
     @classmethod
     @Database.use_same_session
     def write(cls, inst_uuid: ObjectUUID, prop: NyProp, value: str | None) -> None:
         if value is None:
-            _ = StringValues.clear(inst_uuid.uuid, prop.uuid)
+            _ = StringValues.clear(inst_uuid.uuid, prop.uuid.uuid)
             return
-        StringValues.write(inst_uuid.uuid, prop.uuid, value)
+        StringValues.write(inst_uuid.uuid, prop.uuid.uuid, value)

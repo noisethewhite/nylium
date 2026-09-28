@@ -50,7 +50,7 @@ class NyArray:
     ) -> None:
         if values is None:
             # None unsets the prop: destroy the array instance (and its boxes)
-            link = ObjectUUID.of(owner_uuid).link_for(prop.uuid)
+            link = ObjectUUID.of(owner_uuid).link_for(prop.uuid.uuid)
             if link is not None:
                 cls.destroy(ArrayUUID.of(link.uuid))
             return
@@ -121,11 +121,11 @@ class NyArray:
     def _ensure_array_instance(
         cls, owner_uuid: ObjectUUID, prop: NyProp, elem_type: str
     ) -> ArrayUUID:
-        link = ObjectUUID.of(owner_uuid).link_for(prop.uuid)
+        link = ObjectUUID.of(owner_uuid).link_for(prop.uuid.uuid)
         if link is not None:
             return ArrayUUID.of(link.uuid)
         array_uuid = cls._create_array_instance(NyType.array_name(elem_type))
-        ObjectUUID.of(owner_uuid).add_link(prop.uuid, array_uuid.uuid)
+        ObjectUUID.of(owner_uuid).add_link(prop.uuid.uuid, array_uuid.uuid)
         return array_uuid
 
     @classmethod
@@ -159,7 +159,7 @@ class NyArray:
         value_prop = NyProp.by_key(owner, Constants.Props.VALUE_PROP_KEY)
         if value_prop is None:
             raise RuntimeError(f"scalar type {type_name} lost its 'value' prop")
-        stored = scalar.SCALAR.read(uuid, value_prop.uuid)
+        stored = scalar.SCALAR.read(uuid, value_prop.uuid.uuid)
         return None if stored is None else scalar.from_storage(stored)
 
     @classmethod
@@ -224,7 +224,7 @@ class NyArray:
             raise RuntimeError(f"scalar type {type_name} lost its 'value' prop")
         scalar.SCALAR.write(
             box_uuid,
-            value_prop.uuid,
+            value_prop.uuid.uuid,
             scalar.to_storage(cast(ScalarPayload, value)),
         )
         return box_uuid

@@ -43,7 +43,7 @@ class NyEmbedded:
         """Create-or-update the child from a props draft; None deletes it.
         The draft maps prop key -> value, exactly like an object write.
         Caller-supplied `name` values are ignored — names are generated."""
-        link = ObjectUUID.of(owner_uuid).link_for(prop.uuid)
+        link = ObjectUUID.of(owner_uuid).link_for(prop.uuid.uuid)
         if draft is None:
             if link is not None:
                 cls._destroy_child(ObjectUUID.of(link.uuid))
@@ -99,7 +99,7 @@ class NyEmbedded:
                 continue
             value_type = prop.value_type()
             if value_type.is_embedded:
-                link = ObjectUUID.of(object_uuid).link_for(prop.uuid)
+                link = ObjectUUID.of(object_uuid).link_for(prop.uuid.uuid)
                 if link is None:
                     continue
                 cls._write_generated_name(ObjectUUID.of(link.uuid), cls.generated_name(object_uuid, prop))
@@ -110,7 +110,7 @@ class NyEmbedded:
             # instance, not the parent — regenerate each in index order.
             if cls.array_element_type(value_type) is None:
                 continue
-            array_link = ObjectUUID.of(object_uuid).link_for(prop.uuid)
+            array_link = ObjectUUID.of(object_uuid).link_for(prop.uuid.uuid)
             if array_link is None:
                 continue
             for index, element_uuid in enumerate(ArrayUUID.of(array_link.uuid).element_uuids_of()):
@@ -133,7 +133,7 @@ class NyEmbedded:
                 name_prop = NyProp.by_key(owner, Constants.Props.NAME_PROP_KEY)
                 if name_prop is not None:
                     base = cast(
-                        str | None, StringValues.read(owner_uuid.uuid, name_prop.uuid)
+                        str | None, StringValues.read(owner_uuid.uuid, name_prop.uuid.uuid)
                     )
             if not base:
                 base = inst.name
@@ -204,9 +204,9 @@ class NyEmbedded:
                 short_uuid=str(child_uuid.uuid)[:Constants.Objects.SHORT_UUID_LENGTH],
             ),
             owner_object_uuid=owner_uuid.uuid,
-            owner_prop_uuid=prop.uuid,
+            owner_prop_uuid=prop.uuid.uuid,
         )
-        ObjectUUID.of(owner_uuid).add_link(prop.uuid, child_uuid.uuid)
+        ObjectUUID.of(owner_uuid).add_link(prop.uuid.uuid, child_uuid.uuid)
         return child_uuid
 
     @classmethod

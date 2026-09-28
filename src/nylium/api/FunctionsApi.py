@@ -178,9 +178,9 @@ class FunctionsApi(_FunctionsBase):
                 f"prop {prop_key!r} is a collect prop — it cannot run a function"
             )
         if function_uuid is None:
-            InstanceFunctionLinks.delete_function_link(inst_uuid.uuid, prop.uuid)
+            InstanceFunctionLinks.delete_function_link(inst_uuid.uuid, prop.uuid.uuid)
         else:
-            InstanceFunctionLinks.merge_function_link(inst_uuid.uuid, prop.uuid, function_uuid.uuid)
+            InstanceFunctionLinks.merge_function_link(inst_uuid.uuid, prop.uuid.uuid, function_uuid.uuid)
         Database.flush()  # publish the pending link before the cycle check reads it
         NyFunction.assert_no_dependency_cycle(ObjectUUID.of(inst_uuid))
         view = ObjectView.from_uuid(inst_uuid.uuid)
@@ -254,7 +254,7 @@ class FunctionsApi(_FunctionsBase):
                 rewritten = Formula.rewrite(prop.formula, {}, member_renames)
                 Formula.validate(rewritten, dependent_schema, resolve_member_type, cls._is_string_like)
                 if rewritten != prop.formula:
-                    updates.append((prop.uuid, rewritten))
+                    updates.append((prop.uuid.uuid, rewritten))
         return updates
 
     @classmethod

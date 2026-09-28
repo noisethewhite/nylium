@@ -85,7 +85,7 @@ class SchemaApi(_SchemaBase):
             if (
                 name_prop is not None
                 and (first_uuid, first_key, first_type)
-                != (name_prop.uuid, Constants.Props.NAME_PROP_KEY, NyString.TYPE_NAME)
+                != (name_prop.uuid.uuid, Constants.Props.NAME_PROP_KEY, NyString.TYPE_NAME)
             ):
                 raise ValidationError(
                     f"the {Constants.Props.NAME_PROP_KEY!r} prop must stay first, keyed {Constants.Props.NAME_PROP_KEY!r}, typed {NyString.TYPE_NAME!r}"
@@ -170,7 +170,7 @@ class SchemaApi(_SchemaBase):
                 and NyEmbedded.array_element_type(old_value_type) is None
             ):
                 continue
-            draft = kept.get(prop.uuid)
+            draft = kept.get(prop.uuid.uuid)
             if draft is None or draft[1] != old_value_type.uuid.uuid:
                 NyEmbedded.destroy_children_of_prop(prop.uuid)
             elif draft[0] != prop.key:

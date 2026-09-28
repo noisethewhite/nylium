@@ -89,8 +89,8 @@ class ObjectView:
         bound = dict(InstanceFunctionLinks.function_links_of_instance(uuid))
         effective = list(NyProp.effective_for(owner))
         props = {
-            prop.key: cls._eval_function(uuid, bound[prop.uuid])
-            if prop.uuid in bound
+            prop.key: cls._eval_function(uuid, bound[prop.uuid.uuid])
+            if prop.uuid.uuid in bound
             else cls._eval_formula(wrapper, owner, prop)
             if prop.formula is not None
             else cls._render_collect(wrapper, prop)
@@ -102,9 +102,9 @@ class ObjectView:
             for prop in effective
         }
         function_bindings = {
-            prop.key: bound[prop.uuid]
+            prop.key: bound[prop.uuid.uuid]
             for prop in effective
-            if prop.uuid in bound
+            if prop.uuid.uuid in bound
         }
         return cls(
             uuid=uuid,

@@ -50,7 +50,7 @@ class AttrsMixin(PersistenceMixin):
         prop, value_type = self._prop_and_type(key)
         scalar = NyScalar.by_type_name(value_type)
         if scalar is not None:
-            stored = scalar.SCALAR.read(self._uuid.uuid, prop.uuid)
+            stored = scalar.SCALAR.read(self._uuid.uuid, prop.uuid.uuid)
             return None if stored is None else scalar.from_storage(stored)
         if NyType.unit_param_of(value_type) is not None:
             return NyUnit.read(self._uuid, prop, value_type)
@@ -119,7 +119,7 @@ class AttrsMixin(PersistenceMixin):
         prop, value_type = self._prop_and_type(key)
         scalar = NyScalar.by_type_name(value_type)
         if scalar is not None:
-            if scalar.SCALAR.clear(self._uuid.uuid, prop.uuid):
+            if scalar.SCALAR.clear(self._uuid.uuid, prop.uuid.uuid):
                 self._touch()
             return
         if NyType.unit_param_of(value_type) is not None:

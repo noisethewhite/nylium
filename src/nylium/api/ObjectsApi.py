@@ -118,7 +118,7 @@ class ObjectsApi(ApiShared):
                 bound_keys = {
                     p.key
                     for p in NyProp.effective_for(owner_type)
-                    if p.uuid in bound_prop_uuids
+                    if p.uuid.uuid in bound_prop_uuids
                 }
                 for key in normalized:
                     if key in bound_keys:
