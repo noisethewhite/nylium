@@ -12,11 +12,11 @@ from nylium.database import Database
 from nylium.ny.NyProp import NyProp
 from nylium.ny.NyType import NyType
 from nylium.ny.NyTypeMeta import StoredValue, NyTypeMeta
-from nylium.uuid import ObjectUUID
+from nylium.uuid import ObjectRef
 
 
 class FacadeMixin:
-    _uuid: ObjectUUID
+    _uuid: ObjectRef
 
     @classmethod
     @Database.use_same_session

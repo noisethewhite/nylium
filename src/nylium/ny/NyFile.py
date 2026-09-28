@@ -9,7 +9,7 @@ from nylium.ny.NyType import NyType
 from pathlib import Path
 from nylium.data.rows import FileValue
 from nylium.data.tables import TypeStyles
-from nylium.uuid import FileUUID, ObjectUUID
+from nylium.uuid import FileRef, ObjectRef
 from nylium.data.tables import files
 import logging
 
@@ -62,7 +62,7 @@ class NyFile:
         return path
 
     @classmethod
-    def blob_path(cls, uuid: FileUUID) -> Path:
+    def blob_path(cls, uuid: FileRef) -> Path:
         return cls.storage_dir() / str(uuid)
 
     @classmethod
@@ -101,7 +101,7 @@ class NyFile:
                 blob.unlink()
 
     @classmethod
-    def delete_blob(cls, uuid: FileUUID) -> None:
+    def delete_blob(cls, uuid: FileRef) -> None:
         """Best-effort disk cleanup for a deleted instance. The DB row
         cascades with the instance; the blob cannot."""
         path = cls.blob_path(uuid)
@@ -110,7 +110,7 @@ class NyFile:
 
     @classmethod
     @Database.use_same_session
-    def reset_icons_referencing(cls, image_uuid: FileUUID) -> None:
+    def reset_icons_referencing(cls, image_uuid: FileRef) -> None:
         """Deleting an Image used as an icon is allowed (ADR-0006): every
         type pointing at it falls back to the default glyph."""
 
@@ -119,13 +119,13 @@ class NyFile:
 
     @classmethod
     @Database.use_same_session
-    def ref_for(cls, inst_uuid: UUID, prop_uuid: UUID) -> FileUUID | None:
+    def ref_for(cls, inst_uuid: UUID, prop_uuid: UUID) -> FileRef | None:
         """The file uuid referenced by (owner instance, prop), or None."""
         c = get_mapper(FileValue).columns
         raw: UUID | None = Database.scalar(
             sqla.select(c.file_uuid).where(c.inst_uuid == inst_uuid, c.prop_uuid == prop_uuid)
         )
-        return None if raw is None else FileUUID.of(raw)
+        return None if raw is None else FileRef.of(raw)
 
     @classmethod
     @Database.use_same_session
@@ -146,26 +146,26 @@ class NyFile:
         row.file_uuid = file_uuid
 
     @classmethod
-    def parse_icon_image(cls, icon: str) -> FileUUID | None:
+    def parse_icon_image(cls, icon: str) -> FileRef | None:
         """types.icon either names a Material glyph or `img:<uuid>` of an
         Image instance. Returns the uuid for the latter, None otherwise."""
         if not icon.startswith(cls.ICON_IMAGE_PREFIX):
             return None
         try:
-            return FileUUID(icon[len(cls.ICON_IMAGE_PREFIX) :])
+            return FileRef(icon[len(cls.ICON_IMAGE_PREFIX) :])
         except ValueError:
             return None
 
     @classmethod
     @Database.use_same_session
-    def image_file_exists(cls, uuid: FileUUID) -> bool:
+    def image_file_exists(cls, uuid: FileRef) -> bool:
         return files.type_name_of(uuid.uuid) == cls.TYPE_IMAGE
 
     @classmethod
     @Database.use_same_session
-    def clear_array_refs(cls, uuid: FileUUID) -> None:
+    def clear_array_refs(cls, uuid: FileRef) -> None:
         """Deleting a file also drops Array<File/Document/Image> members that
         pointed at it (ADR-0008) — mirrors NyObject.delete's cleanup of array
         links, so no dangling files.uuid survives in an array."""
 
-        ObjectUUID.of(uuid.uuid).delete_memberships()
+        ObjectRef.of(uuid.uuid).delete_memberships()

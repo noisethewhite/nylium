@@ -1,4 +1,4 @@
-"""TraitDecorUUID — typed reference to a ``TraitStyle`` row (``trait_style``)."""
+"""TraitDecorRef — typed reference to a ``TraitStyle`` row (``trait_style``)."""
 from __future__ import annotations
 
 from typing import override
@@ -8,7 +8,7 @@ from nylium.data.tables import trait_style
 from nylium.uuid.NyRef import NyRef
 
 
-class TraitDecorUUID(NyRef):
+class TraitDecorRef(NyRef):
     """A ``trait_style`` reference carrying its own table lookup."""
 
     @override

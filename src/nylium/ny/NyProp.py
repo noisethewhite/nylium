@@ -7,7 +7,7 @@ from nylium.data.rows import SchemaItem
 from nylium.data.tables import Traits
 from nylium.data.tables import TypeTraits
 from nylium.database.Row import get_mapper
-from nylium.uuid import ObjectUUID, PropUUID, TraitUUID, TypeUUID
+from nylium.uuid import ObjectRef, PropRef, TraitRef, TypeRef
 from nylium.ny.NyType import NyType
 
 
@@ -17,15 +17,15 @@ class NyProp:
     def __init__(self, row: Prop):
         # snapshot for reads (session-independent); writes re-fetch their
         # rows inside the tables layer (ADR-0019)
-        self._uuid: PropUUID = PropUUID.of(row.uuid)
+        self._uuid: PropRef = PropRef.of(row.uuid)
         self._key: str = row.key
-        self._value_type_uuid: TypeUUID | None = None if row.value_type_uuid is None else TypeUUID.of(row.value_type_uuid)
-        self._value_trait_uuid: TraitUUID | None = None if row.value_trait_uuid is None else TraitUUID.of(row.value_trait_uuid)
+        self._value_type_uuid: TypeRef | None = None if row.value_type_uuid is None else TypeRef.of(row.value_type_uuid)
+        self._value_trait_uuid: TraitRef | None = None if row.value_trait_uuid is None else TraitRef.of(row.value_trait_uuid)
         self._formula: str | None = row.formula
         self._collect: str | None = row.collect
 
     @property
-    def uuid(self) -> PropUUID:
+    def uuid(self) -> PropRef:
         return self._uuid
 
     @property
@@ -100,30 +100,30 @@ class NyProp:
         new prop in the same sync."""
         retyped = Props.sync_owned(get_mapper(Prop).columns.owner_type_uuid, "owner_type_uuid", owner.uuid.uuid, items)
         for prop_uuid in retyped:
-            PropUUID.of(prop_uuid).purge_values()
+            PropRef.of(prop_uuid).purge_values()
 
     @classmethod
     @Database.commit_after_this
-    def sync_trait_schema(cls, trait_uuid: TraitUUID, items: list[SchemaItem]) -> None:
+    def sync_trait_schema(cls, trait_uuid: TraitRef, items: list[SchemaItem]) -> None:
         """Same full-draft semantics as sync_schema, but the owner is a
         trait (ADR-0013). Retype purges values exactly like type-owned
         props."""
         retyped = Props.sync_owned(get_mapper(Prop).columns.owner_trait_uuid, "owner_trait_uuid", trait_uuid.uuid, items)
         for prop_uuid in retyped:
-            PropUUID.of(prop_uuid).purge_values()
+            PropRef.of(prop_uuid).purge_values()
 
     @classmethod
-    def purge_values_for_instances(cls, prop_uuid: PropUUID, inst_uuids: list[ObjectUUID]) -> None:
+    def purge_values_for_instances(cls, prop_uuid: PropRef, inst_uuids: list[ObjectRef]) -> None:
         """ADR-0013 detach: wipe this prop's values, but only on the given
         instances (the trait's other types keep theirs)."""
-        PropUUID.of(prop_uuid).purge_values_for_instances(inst_uuids)
+        PropRef.of(prop_uuid).purge_values_for_instances(inst_uuids)
 
     @classmethod
     @Database.commit_after_this
     def ensure(
         cls, owner: "NyType", key: str, value_type: "NyType | None",
         position: int = 0, formula: str | None = None,
-        value_trait_uuid: TraitUUID | None = None,
+        value_trait_uuid: TraitRef | None = None,
         collect: str | None = None,
     ) -> "NyProp":
         value_type_uuid = None if value_type is None else value_type.uuid.uuid

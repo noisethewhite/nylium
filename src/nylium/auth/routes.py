@@ -14,7 +14,7 @@ from nylium.auth.sessions import sessions
 from nylium.data.rows import AuthUser
 from nylium.server.bodies.shared import api_route
 from nylium.system.Environment import Environment
-from nylium.uuid import UserUUID
+from nylium.uuid import UserRef
 
 
 class auth_routes:
@@ -30,7 +30,7 @@ class auth_routes:
             raise PermissionError("malformed request")
         current = sessions.user_for(request.cookies.get(sessions.COOKIE_NAME))
         options = ceremonies.register_start(
-            name, UserUUID.of(current.uuid) if current is not None else None
+            name, UserRef.of(current.uuid) if current is not None else None
         )
         return JSONResponse(json.loads(options))
 

@@ -11,14 +11,14 @@ from nylium.server import NyliumApp
 from nylium.server.errors.ValidationError import ValidationError
 from sqlalchemy import text
 from nylium.database import Database
-from nylium.uuid import TypeUUID
+from nylium.uuid import TypeRef
 
 
 def test_color_is_a_registered_builtin():
     _ = Api.create_type("T", {"name": "String"}, "Ts")  # seeds builtins
     view = Api.get_type("Color")
     assert view is not None
-    assert (TypeUUID.of(view.uuid).icon(), TypeUUID.of(view.uuid).color()) == ("palette", NyColor.DEFAULT)
+    assert (TypeRef.of(view.uuid).icon(), TypeRef.of(view.uuid).color()) == ("palette", NyColor.DEFAULT)
 
 
 @pytest.mark.parametrize(
@@ -92,10 +92,10 @@ def test_legacy_named_colors_migrate_to_hex():
 
     migrated = Api.get_type("Old")
     assert migrated is not None
-    assert TypeUUID.of(migrated.uuid).color() == NyColor.LEGACY_PALETTE["red"]
+    assert TypeRef.of(migrated.uuid).color() == NyColor.LEGACY_PALETTE["red"]
 
     # idempotent — a second run leaves hex values alone
     NyliumApp._migrate_schema()
     again = Api.get_type("Old")
     assert again is not None
-    assert TypeUUID.of(again.uuid).color() == NyColor.LEGACY_PALETTE["red"]
+    assert TypeRef.of(again.uuid).color() == NyColor.LEGACY_PALETTE["red"]

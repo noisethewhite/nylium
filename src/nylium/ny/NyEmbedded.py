@@ -27,8 +27,8 @@ from nylium.ny.NyProp import NyProp
 from nylium.ny.NyType import NyType
 from nylium.ny.NyTypeMeta import StoredValue, NyTypeMeta
 from nylium.Constants import Constants
-from nylium.uuid import ObjectUUID, PropUUID, TypeUUID
-from nylium.uuid.objects import ArrayUUID
+from nylium.uuid import ObjectRef, PropRef, TypeRef
+from nylium.uuid.objects import ArrayRef
 
 
 class NyEmbedded:
@@ -36,17 +36,17 @@ class NyEmbedded:
     @Database.commit_after_this
     def write(
         cls,
-        owner_uuid: ObjectUUID,
+        owner_uuid: ObjectRef,
         prop: NyProp,
         draft: StoredValue,
     ) -> None:
         """Create-or-update the child from a props draft; None deletes it.
         The draft maps prop key -> value, exactly like an object write.
         Caller-supplied `name` values are ignored — names are generated."""
-        link = ObjectUUID.of(owner_uuid).link_for(prop.uuid.uuid)
+        link = ObjectRef.of(owner_uuid).link_for(prop.uuid.uuid)
         if draft is None:
             if link is not None:
-                cls._destroy_child(ObjectUUID.of(link.uuid))
+                cls._destroy_child(ObjectRef.of(link.uuid))
             return
         if not isinstance(draft, dict):
             raise TypeError(
@@ -55,34 +55,34 @@ class NyEmbedded:
         if link is None:
             child_uuid = cls._create_child(owner_uuid, prop)
         else:
-            child_uuid = ObjectUUID.of(link.uuid)
+            child_uuid = ObjectRef.of(link.uuid)
         cls._fill_child(child_uuid, cast(dict[str, StoredValue], draft))
         # name last: the parent's name prop may have been written in the
         # same request, and the generated name depends on it
         cls._write_generated_name(child_uuid, cls.generated_name(owner_uuid, prop))
 
     @classmethod
-    def destroy(cls, child_uuid: ObjectUUID) -> None:
+    def destroy(cls, child_uuid: ObjectRef) -> None:
         """Delete the child instance; NyObject.delete cascades to its own
         embedded children and removes the parent's link row."""
         cls._destroy_child(child_uuid)
 
     @classmethod
     @Database.commit_after_this
-    def destroy_children_of_prop(cls, prop_uuid: PropUUID) -> None:
+    def destroy_children_of_prop(cls, prop_uuid: PropRef) -> None:
         """Every child held through this prop, across all instances.
         Called from Api.sync_props before an embedded prop is deleted or
         retyped — otherwise the link rows cascade away and the child
         instances orphan. For an Array<Embedded> prop the link rows point
         at the array instances; deleting one cascades (via its own
         lifecycle) to the composed elements."""
-        child_uuids = PropUUID.of(prop_uuid).linked_uuids()
+        child_uuids = PropRef.of(prop_uuid).linked_uuids()
         for child_uuid in child_uuids:
-            cls._destroy_child(ObjectUUID.of(child_uuid))
+            cls._destroy_child(ObjectRef.of(child_uuid))
 
     @classmethod
     @Database.commit_after_this
-    def regenerate_names(cls, object_uuid: ObjectUUID) -> None:
+    def regenerate_names(cls, object_uuid: ObjectRef) -> None:
         """Rewrite generated names of this object's embedded children
         (composition links and Array<Embedded> elements), then recurse —
         grandchild names embed the child name. The instance graph is a
@@ -91,7 +91,7 @@ class NyEmbedded:
         inst = instances.get(object_uuid.uuid)
         if inst is None:
             return
-        owner = NyType.by_uuid(TypeUUID.of(inst.type_uuid))
+        owner = NyType.by_uuid(TypeRef.of(inst.type_uuid))
         if owner is None:
             return
         for prop in NyProp.effective_for(owner):
@@ -99,36 +99,36 @@ class NyEmbedded:
                 continue
             value_type = prop.value_type()
             if value_type.is_embedded:
-                link = ObjectUUID.of(object_uuid).link_for(prop.uuid.uuid)
+                link = ObjectRef.of(object_uuid).link_for(prop.uuid.uuid)
                 if link is None:
                     continue
-                cls._write_generated_name(ObjectUUID.of(link.uuid), cls.generated_name(object_uuid, prop))
-                cls.regenerate_names(ObjectUUID.of(link.uuid))
+                cls._write_generated_name(ObjectRef.of(link.uuid), cls.generated_name(object_uuid, prop))
+                cls.regenerate_names(ObjectRef.of(link.uuid))
                 continue
             # ADR-0021: Array<Embedded> elements are named
             # "<parent> → <prop key> #<index>" and owned by the array
             # instance, not the parent — regenerate each in index order.
             if cls.array_element_type(value_type) is None:
                 continue
-            array_link = ObjectUUID.of(object_uuid).link_for(prop.uuid.uuid)
+            array_link = ObjectRef.of(object_uuid).link_for(prop.uuid.uuid)
             if array_link is None:
                 continue
-            for index, element_uuid in enumerate(ArrayUUID.of(array_link.uuid).element_uuids_of()):
+            for index, element_uuid in enumerate(ArrayRef.of(array_link.uuid).element_uuids_of()):
                 cls._write_generated_name(
-                    ObjectUUID.of(element_uuid), cls.array_element_name(object_uuid, prop, index)
+                    ObjectRef.of(element_uuid), cls.array_element_name(object_uuid, prop, index)
                 )
-                cls.regenerate_names(ObjectUUID.of(element_uuid))
+                cls.regenerate_names(ObjectRef.of(element_uuid))
 
     @classmethod
     @Database.use_same_session
-    def generated_name(cls, owner_uuid: ObjectUUID, prop: NyProp) -> str:
+    def generated_name(cls, owner_uuid: ObjectRef, prop: NyProp) -> str:
         """"<parent display name> → <prop key>". Falls back to the
         registry name (Type:shortuuid) while the parent's name prop is
         still unset — a later name write regenerates it."""
         base: str | None = None
         inst = instances.get(owner_uuid.uuid)
         if inst is not None:
-            owner = NyType.by_uuid(TypeUUID.of(inst.type_uuid))
+            owner = NyType.by_uuid(TypeRef.of(inst.type_uuid))
             if owner is not None:
                 name_prop = NyProp.by_key(owner, Constants.Props.NAME_PROP_KEY)
                 if name_prop is not None:
@@ -154,7 +154,7 @@ class NyEmbedded:
         return None
 
     @classmethod
-    def array_element_name(cls, owner_uuid: ObjectUUID, prop: NyProp, index: int) -> str:
+    def array_element_name(cls, owner_uuid: ObjectRef, prop: NyProp, index: int) -> str:
         """ADR-0021: '<parent> → <prop key> #<index>' (1-based)."""
         return f"{cls.generated_name(owner_uuid, prop)} #{index + 1}"
 
@@ -163,18 +163,18 @@ class NyEmbedded:
     def create_array_element(
         cls,
         embedded: NyType,
-        array_uuid: ObjectUUID,
-        owner_uuid: ObjectUUID,
+        array_uuid: ObjectRef,
+        owner_uuid: ObjectRef,
         prop: NyProp,
         index: int,
         draft: dict[str, StoredValue],
-    ) -> ObjectUUID:
+    ) -> ObjectRef:
         """ADR-0021: create one embedded child of an Array<Embedded> prop.
 
         The child is owned by the array instance (owner_object_uuid =
         array_uuid), filled from its inline props draft, and named
         ``<parent> → <prop key> #<index>`` (1-based)."""
-        child_uuid = ObjectUUID.of(uuid4())
+        child_uuid = ObjectRef.of(uuid4())
         instances.create(
             child_uuid.uuid,
             embedded.uuid.uuid,
@@ -193,9 +193,9 @@ class NyEmbedded:
 
     @classmethod
     @Database.commit_after_this
-    def _create_child(cls, owner_uuid: ObjectUUID, prop: NyProp) -> ObjectUUID:
+    def _create_child(cls, owner_uuid: ObjectRef, prop: NyProp) -> ObjectRef:
         child_type = prop.value_type()
-        child_uuid = ObjectUUID.of(uuid4())
+        child_uuid = ObjectRef.of(uuid4())
         instances.create(
             child_uuid.uuid,
             child_type.uuid.uuid,
@@ -206,11 +206,11 @@ class NyEmbedded:
             owner_object_uuid=owner_uuid.uuid,
             owner_prop_uuid=prop.uuid.uuid,
         )
-        ObjectUUID.of(owner_uuid).add_link(prop.uuid.uuid, child_uuid.uuid)
+        ObjectRef.of(owner_uuid).add_link(prop.uuid.uuid, child_uuid.uuid)
         return child_uuid
 
     @classmethod
-    def _fill_child(cls, child_uuid: ObjectUUID, props: dict[str, StoredValue]) -> None:
+    def _fill_child(cls, child_uuid: ObjectRef, props: dict[str, StoredValue]) -> None:
         child = NyTypeMeta.root().wrap(child_uuid.uuid)
         for key, value in props.items():
             if key == Constants.Props.NAME_PROP_KEY:
@@ -218,14 +218,14 @@ class NyEmbedded:
             setattr(child, key, value)
 
     @classmethod
-    def _write_generated_name(cls, child_uuid: ObjectUUID, name: str) -> None:
+    def _write_generated_name(cls, child_uuid: ObjectRef, name: str) -> None:
         child = NyTypeMeta.root().wrap(child_uuid.uuid)
         inst = instances.get(child_uuid.uuid)
-        owner = NyType.by_uuid(TypeUUID.of(inst.type_uuid)) if inst is not None else None
+        owner = NyType.by_uuid(TypeRef.of(inst.type_uuid)) if inst is not None else None
         if owner is None or NyProp.by_key(owner, Constants.Props.NAME_PROP_KEY) is None:
             return  # name-less embedded type (ADR-0027) keeps its registry name
         setattr(child, Constants.Props.NAME_PROP_KEY, name)
 
     @classmethod
-    def _destroy_child(cls, child_uuid: ObjectUUID) -> None:
+    def _destroy_child(cls, child_uuid: ObjectRef) -> None:
         NyTypeMeta.root().wrap(child_uuid.uuid).delete()

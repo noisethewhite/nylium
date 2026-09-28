@@ -22,7 +22,7 @@ from nylium.data.rows import ApiToken
 from nylium.data.rows import AuthUser
 from nylium.server.bodies.shared import api_route
 from nylium.server.errors.ValidationError import ValidationError
-from nylium.uuid import UserUUID
+from nylium.uuid import UserRef
 
 
 def _token_view(row: ApiToken) -> dict[str, object]:
@@ -54,7 +54,7 @@ class token_routes:
             raise ValidationError("token scope must be 'read' or 'read-write'")
         final_name = name.strip()
         final_scope = cast(str, scope)
-        uuid, raw = tokens.issue(UserUUID.of(user.uuid), final_name, final_scope)
+        uuid, raw = tokens.issue(UserRef.of(user.uuid), final_name, final_scope)
         return JSONResponse(
             {
                 "uuid": str(uuid),

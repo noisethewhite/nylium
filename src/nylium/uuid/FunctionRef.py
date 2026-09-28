@@ -1,4 +1,4 @@
-"""FunctionUUID — typed reference to a ``FunctionNode`` row (``function_nodes``)."""
+"""FunctionRef — typed reference to a ``FunctionNode`` row (``function_nodes``)."""
 from __future__ import annotations
 
 from typing import override
@@ -8,7 +8,7 @@ from nylium.data.tables import function_nodes
 from nylium.uuid.NyRef import NyRef
 
 
-class FunctionUUID(NyRef):
+class FunctionRef(NyRef):
     """A ``function_nodes`` reference carrying its own table lookup."""
 
     @override

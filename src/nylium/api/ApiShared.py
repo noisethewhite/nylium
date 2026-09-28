@@ -20,11 +20,11 @@ from nylium.ny.NyScalar import NyScalar
 from nylium.ny.NyType import NyType
 from nylium.ny.NyTypeMeta import StoredValue
 from nylium.data.views.TypeView import TypeView
-from nylium.uuid import TypeUUID
+from nylium.uuid import TypeRef
 from nylium.server.errors.ValidationError import ValidationError
 from nylium.Constants import Constants
-from nylium.uuid import FileUUID
-from nylium.uuid import PropUUID
+from nylium.uuid import FileRef
+from nylium.uuid import PropRef
 
 # What callers may hand in for a prop: stored values, plus links as
 # UUID/ObjectRefView (resolved to NyObject here), plus a props draft for
@@ -47,10 +47,10 @@ class ApiShared:
         owner = types.get(owner_type_uuid)
         if owner is None:
             raise KeyError(f"type <gone> has no prop {key!r}")
-        prop = next((p for p in TypeUUID.of(owner_type_uuid).effective_props() if p.key == key), None)
+        prop = next((p for p in TypeRef.of(owner_type_uuid).effective_props() if p.key == key), None)
         if prop is None:
             raise KeyError(f"type {owner.name!r} has no prop {key!r}")
-        return PropUUID.of(prop.uuid).value_type_name()
+        return PropRef.of(prop.uuid).value_type_name()
 
     @classmethod
     def _is_builtin_type(cls, owner: NyType) -> bool:
@@ -101,8 +101,8 @@ class ApiShared:
             if row.name not in object_names:
                 continue
             deps: list[str | None] = []
-            for prop in TypeUUID.of(row.uuid).effective_props():
-                value_type = PropUUID.of(prop.uuid).value_type_name()
+            for prop in TypeRef.of(row.uuid).effective_props():
+                value_type = PropRef.of(prop.uuid).value_type_name()
                 if NyType.is_any_name(value_type):
                     deps.append(cls._ANY_LINK)
                 elif NyType.is_array_name(value_type):
@@ -221,7 +221,7 @@ class ApiShared:
             raise KeyError(f"no type {type_name!r}")
         # ADR-0013: the effective schema — attached traits' props are
         # writable through the object editor like the type's own
-        owner_props = TypeUUID.of(owner_type_row.uuid).effective_props()
+        owner_props = TypeRef.of(owner_type_row.uuid).effective_props()
         formula_readonly = {p.key for p in owner_props if p.formula is not None}
         collect_readonly = {p.key for p in owner_props if p.collect is not None}
         result: dict[str, StoredValue] = {}
@@ -340,7 +340,7 @@ class ApiShared:
         image_uuid = NyFile.parse_icon_image(icon)
         if image_uuid is None:
             return
-        if not NyFile.image_file_exists(FileUUID.of(image_uuid)):
+        if not NyFile.image_file_exists(FileRef.of(image_uuid)):
             raise ValidationError(
                 f"icon {icon!r} does not reference a live Image instance"
             )

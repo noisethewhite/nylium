@@ -1,5 +1,5 @@
 from __future__ import annotations
-from nylium.uuid import FunctionUUID
+from nylium.uuid import FunctionRef
 from pydantic.dataclasses import dataclass
 from nylium.Constants import Constants
 
@@ -8,7 +8,7 @@ from nylium.Constants import Constants
 class FunctionNodeView:
     """One node of a function's action DAG (ADR-0007)."""
 
-    uuid: FunctionUUID
+    uuid: FunctionRef
     kind: str
     position: int
     config: dict[str, object]

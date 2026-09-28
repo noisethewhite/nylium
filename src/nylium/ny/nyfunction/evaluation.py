@@ -8,7 +8,7 @@ from collections.abc import Iterable, Mapping
 from decimal import Decimal, InvalidOperation
 from typing import cast
 from uuid import UUID
-from nylium.uuid import ObjectUUID
+from nylium.uuid import ObjectRef
 
 from nylium.database import Database
 from nylium.data.rows import FunctionEdge
@@ -24,7 +24,7 @@ from nylium.Constants import Constants
 
 @Database.use_same_session
 def evaluate(
-    function_uuid: ObjectUUID, input_values: Mapping[str, object]
+    function_uuid: ObjectRef, input_values: Mapping[str, object]
 ) -> ScalarPayload | None:
     """Fold the function's DAG over a materialized input object (a plain
     prop-key -> value mapping). Returns the sink's value, or None on a

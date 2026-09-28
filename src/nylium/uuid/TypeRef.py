@@ -1,4 +1,4 @@
-"""TypeUUID — typed reference to a ``Type`` row (``types``)."""
+"""TypeRef — typed reference to a ``Type`` row (``types``)."""
 from __future__ import annotations
 
 from decimal import Decimal
@@ -23,7 +23,7 @@ from nylium.data.tables import (
 from nylium.uuid.NyRef import NyRef
 
 
-class TypeUUID(NyRef):
+class TypeRef(NyRef):
     """A ``types`` reference carrying its own table lookup and schema navigation."""
 
     @override
@@ -162,7 +162,7 @@ class TypeUUID(NyRef):
 
     @classmethod
     @Database.use_same_session
-    def parameterized_numeric(cls, unit_type_name: str) -> "TypeUUID | None":
+    def parameterized_numeric(cls, unit_type_name: str) -> "TypeRef | None":
         """The uuid of the ``Numeric<Unit>`` parameterized type row."""
         t_c = get_mapper(Type).columns
         raw: UUID | None = Database.scalar(

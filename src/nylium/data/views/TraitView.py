@@ -9,7 +9,7 @@ from nylium.Constants import Constants
 from pydantic.dataclasses import dataclass
 
 from nylium.data.rows import Trait
-from nylium.uuid import TraitUUID
+from nylium.uuid import TraitRef
 from nylium.data.views.PropView import PropView
 
 
@@ -28,7 +28,7 @@ class TraitView:
     def from_row(cls, trait: Trait) -> Self:
         return cls(
             name=trait.name,
-            color=TraitUUID.of(trait.uuid).color(),
-            props=[PropView.from_row(prop) for prop in TraitUUID.of(trait.uuid).props()],
-            attached=list(TraitUUID.of(trait.uuid).attached_names()),
+            color=TraitRef.of(trait.uuid).color(),
+            props=[PropView.from_row(prop) for prop in TraitRef.of(trait.uuid).props()],
+            attached=list(TraitRef.of(trait.uuid).attached_names()),
         )

@@ -1,4 +1,4 @@
-"""ObjectUUID — typed reference to an ``Instance`` row (``instances``)."""
+"""ObjectRef — typed reference to an ``Instance`` row (``instances``)."""
 from __future__ import annotations
 
 from typing import cast, override
@@ -14,7 +14,7 @@ from nylium.data.tables import instances
 from nylium.uuid.NyRef import NyRef
 
 
-class ObjectUUID(NyRef):
+class ObjectRef(NyRef):
     """An ``instances`` uuid carrying its own table lookup and reverse
     projections (backlinks, array membership, tag chips)."""
 
@@ -25,7 +25,7 @@ class ObjectUUID(NyRef):
 
     @classmethod
     @Database.use_same_session
-    def instances_of_kind(cls, kind: str) -> list[ObjectUUID]:
+    def instances_of_kind(cls, kind: str) -> list[ObjectRef]:
         """Every instance uuid whose type has the given kind."""
         i_c = get_mapper(Instance).columns
         t_c = get_mapper(Type).columns
@@ -39,7 +39,7 @@ class ObjectUUID(NyRef):
         return [cls.of(u) for u in rows]
 
     @Database.use_same_session
-    def array_link_uuids(self) -> list[ObjectUUID]:
+    def array_link_uuids(self) -> list[ObjectRef]:
         """Uuids of array-instance links held by this owner object."""
         iv_c = get_mapper(InstanceLink).columns
         p_c = get_mapper(Prop).columns
@@ -56,10 +56,10 @@ class ObjectUUID(NyRef):
             )
         )
         rows: list[UUID] = list(Database.scalars(stmt).all())
-        return [ObjectUUID.of(u) for u in rows]
+        return [ObjectRef.of(u) for u in rows]
 
     @Database.use_same_session
-    def backlink_refs(self) -> list[tuple[ObjectUUID, str]]:
+    def backlink_refs(self) -> list[tuple[ObjectRef, str]]:
         """(owner uuid, owner type name) for every instance that points at
         this object — directly through a link prop or through membership in
         one of its arrays. Owners deduplicated, direct links first."""
@@ -86,10 +86,10 @@ class ObjectUUID(NyRef):
             .where(av_c.value_uuid == self._uuid)
         ).all()
 
-        seen: set[ObjectUUID] = set()
-        refs: list[tuple[ObjectUUID, str]] = []
+        seen: set[ObjectRef] = set()
+        refs: list[tuple[ObjectRef, str]] = []
         for r in [*direct, *via_arrays]:
-            owner_uuid = ObjectUUID.of(cast(UUID, r[0]))
+            owner_uuid = ObjectRef.of(cast(UUID, r[0]))
             if owner_uuid in seen:
                 continue
             seen.add(owner_uuid)
@@ -100,7 +100,7 @@ class ObjectUUID(NyRef):
     @Database.use_same_session
     def array_tag_rows(
         self, array_type_name: str, name_prop_key: str
-    ) -> list[tuple[ObjectUUID, str, str, str | None, str]]:
+    ) -> list[tuple[ObjectRef, str, str, str | None, str]]:
         """ADR-0005 reverse projection: every array that holds this object as
         a member of an ``Array<array_type_name>`` prop, with enough info to
         paint a tag chip — (owner uuid, prop key, registry name, display
@@ -147,7 +147,7 @@ class ObjectUUID(NyRef):
         ).all()
         return [
             (
-                ObjectUUID.of(cast(UUID, r[0])),
+                ObjectRef.of(cast(UUID, r[0])),
                 cast(str, r[1]),
                 cast(str, r[2]),
                 cast("str | None", r[3]),

@@ -1,4 +1,4 @@
-"""CredentialUUID — typed reference to a ``AuthCredential`` row (``auth_credentials``)."""
+"""CredentialRef — typed reference to a ``AuthCredential`` row (``auth_credentials``)."""
 from __future__ import annotations
 
 from typing import override
@@ -8,7 +8,7 @@ from nylium.data.tables import auth_credentials
 from nylium.uuid.NyRef import NyRef
 
 
-class CredentialUUID(NyRef):
+class CredentialRef(NyRef):
     """A ``auth_credentials`` reference carrying its own table lookup."""
 
     @override

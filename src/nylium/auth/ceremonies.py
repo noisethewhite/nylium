@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 from typing import ClassVar, cast
-from nylium.uuid import UserUUID
+from nylium.uuid import UserRef
 
 from webauthn import (
     generate_authentication_options,
@@ -34,7 +34,7 @@ class ceremonies:
 
     @classmethod
     def register_start(
-        cls, user_name: str | None, current_user_uuid: UserUUID | None
+        cls, user_name: str | None, current_user_uuid: UserRef | None
     ) -> str:
         """Open while zero credentials exist (first passkey = owner);
         afterwards requires a live session — adding keys = being logged in."""
@@ -85,7 +85,7 @@ class ceremonies:
             verification.sign_count,
             transports=cls._transports(payload),
         )
-        return sessions.issue(UserUUID.of(user_uuid))
+        return sessions.issue(UserRef.of(user_uuid))
 
     # --- login ---
 
@@ -123,22 +123,22 @@ class ceremonies:
             raise PermissionError("passkey rejected") from exc
         credential.sign_count = verification.new_sign_count
         credential.last_used_at = datetime.now(timezone.utc)
-        return sessions.issue(UserUUID.of(credential.user_uuid))
+        return sessions.issue(UserRef.of(credential.user_uuid))
 
     # --- internals ---
 
     @classmethod
     def _register_subject(
-        cls, user_name: str | None, current_user_uuid: UserUUID | None
-    ) -> UserUUID:
+        cls, user_name: str | None, current_user_uuid: UserRef | None
+    ) -> UserRef:
         if len(auth_credentials) == 0:
             if not user_name:
                 raise TypeError("user name required for the first passkey")
             # Retry after an aborted ceremony reuses the orphaned user row.
             existing = next(auth_users.where(name=user_name), None)
             if existing is not None:
-                return UserUUID.of(existing.uuid)
-            return UserUUID.of(auth_users.create(user_name).uuid)
+                return UserRef.of(existing.uuid)
+            return UserRef.of(auth_users.create(user_name).uuid)
         if current_user_uuid is None:
             raise PermissionError("registration requires a session")
         return current_user_uuid

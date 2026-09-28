@@ -1,4 +1,4 @@
-"""TokenUUID — typed reference to a ``ApiToken`` row (``api_tokens``)."""
+"""TokenRef — typed reference to a ``ApiToken`` row (``api_tokens``)."""
 from __future__ import annotations
 
 from typing import override
@@ -8,7 +8,7 @@ from nylium.data.tables import api_tokens
 from nylium.uuid.NyRef import NyRef
 
 
-class TokenUUID(NyRef):
+class TokenRef(NyRef):
     """A ``api_tokens`` reference carrying its own table lookup."""
 
     @override

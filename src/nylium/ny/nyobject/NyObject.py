@@ -8,10 +8,10 @@ from nylium.ny.NyTypeMeta import NyTypeMeta
 from nylium.ny.nyobject.AttrsMixin import AttrsMixin
 from nylium.ny.nyobject.FacadeMixin import FacadeMixin
 from nylium.ny.nyobject.LifecycleMixin import LifecycleMixin
-from nylium.uuid import ObjectUUID
+from nylium.uuid import ObjectRef
 
 
 class NyObject(LifecycleMixin, FacadeMixin, AttrsMixin, metaclass=NyTypeMeta):
     __abstract__: ClassVar[bool] = True
 
-    _uuid: ObjectUUID
+    _uuid: ObjectRef

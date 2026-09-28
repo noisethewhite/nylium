@@ -1,4 +1,4 @@
-"""UserUUID — typed reference to an ``AuthUser`` row (``auth_users``)."""
+"""UserRef — typed reference to an ``AuthUser`` row (``auth_users``)."""
 from __future__ import annotations
 
 from typing import override
@@ -8,7 +8,7 @@ from nylium.data.tables import auth_users
 from nylium.uuid.NyRef import NyRef
 
 
-class UserUUID(NyRef):
+class UserRef(NyRef):
     """An ``auth_users`` reference carrying its own table lookup."""
 
     @override

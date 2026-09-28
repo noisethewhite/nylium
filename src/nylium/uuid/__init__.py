@@ -6,34 +6,34 @@ value tables (``boolean_values``, ``string_values``, …) and array/element
 boxes are NOT represented here: they hold no uuid of their own, so they
 stay plain ``UUID`` references into ``instances``.
 """
-from nylium.uuid.CredentialUUID import CredentialUUID
-from nylium.uuid.EnumOptionUUID import EnumOptionUUID
-from nylium.uuid.FileUUID import FileUUID
-from nylium.uuid.FunctionEdgeUUID import FunctionEdgeUUID
-from nylium.uuid.FunctionUUID import FunctionUUID
-from nylium.uuid.ObjectUUID import ObjectUUID
-from nylium.uuid.PropUUID import PropUUID
-from nylium.uuid.TokenUUID import TokenUUID
-from nylium.uuid.TraitDecorUUID import TraitDecorUUID
-from nylium.uuid.TraitUUID import TraitUUID
-from nylium.uuid.TypeDecorUUID import TypeDecorUUID
-from nylium.uuid.TypeUUID import TypeUUID
-from nylium.uuid.UnitPartUUID import UnitPartUUID
-from nylium.uuid.UserUUID import UserUUID
+from nylium.uuid.CredentialRef import CredentialRef
+from nylium.uuid.EnumOptionRef import EnumOptionRef
+from nylium.uuid.FileRef import FileRef
+from nylium.uuid.FunctionEdgeRef import FunctionEdgeRef
+from nylium.uuid.FunctionRef import FunctionRef
+from nylium.uuid.ObjectRef import ObjectRef
+from nylium.uuid.PropRef import PropRef
+from nylium.uuid.TokenRef import TokenRef
+from nylium.uuid.TraitDecorRef import TraitDecorRef
+from nylium.uuid.TraitRef import TraitRef
+from nylium.uuid.TypeDecorRef import TypeDecorRef
+from nylium.uuid.TypeRef import TypeRef
+from nylium.uuid.UnitPartRef import UnitPartRef
+from nylium.uuid.UserRef import UserRef
 
 __all__ = [
-    "CredentialUUID",
-    "EnumOptionUUID",
-    "FileUUID",
-    "FunctionEdgeUUID",
-    "FunctionUUID",
-    "ObjectUUID",
-    "PropUUID",
-    "TokenUUID",
-    "TraitDecorUUID",
-    "TraitUUID",
-    "TypeDecorUUID",
-    "TypeUUID",
-    "UnitPartUUID",
-    "UserUUID",
+    "CredentialRef",
+    "EnumOptionRef",
+    "FileRef",
+    "FunctionEdgeRef",
+    "FunctionRef",
+    "ObjectRef",
+    "PropRef",
+    "TokenRef",
+    "TraitDecorRef",
+    "TraitRef",
+    "TypeDecorRef",
+    "TypeRef",
+    "UnitPartRef",
+    "UserRef",
 ]

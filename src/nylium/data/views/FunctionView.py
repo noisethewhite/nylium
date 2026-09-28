@@ -11,7 +11,7 @@ from uuid import UUID
 from typing import cast
 from pydantic.dataclasses import dataclass
 from nylium.data.tables import instances
-from nylium.uuid import FunctionUUID, ObjectUUID, TypeUUID
+from nylium.uuid import FunctionRef, ObjectRef, TypeRef
 
 
 @dataclass(config=Constants.Pydantic.CONFIG)
@@ -20,7 +20,7 @@ class FunctionView:
     full action DAG (nodes + edges). ADR-0029: no input link — the input is
     the sibling props of the object the function is bound into."""
 
-    uuid: ObjectUUID
+    uuid: ObjectRef
     name: str
     type_name: str
     input_type: str
@@ -35,7 +35,7 @@ class FunctionView:
         type_uuid = None if inst is None else inst.type_uuid
         if type_uuid is None:
             return None
-        owner = NyType.by_uuid(TypeUUID.of(type_uuid))
+        owner = NyType.by_uuid(TypeRef.of(type_uuid))
         if owner is None or not owner.is_function:
             return None
         params = NyType.function_params(owner.name)
@@ -48,28 +48,28 @@ class FunctionView:
             inst = instances.get(uuid)
             name = "" if inst is None else inst.name
         return cls(
-            uuid=ObjectUUID.of(uuid),
+            uuid=ObjectRef.of(uuid),
             name=name,
             type_name=owner.name,
             input_type=input_type,
             output_type=output_type,
             nodes=[
                 FunctionNodeView(
-                    uuid=FunctionUUID.of(node.uuid),
+                    uuid=FunctionRef.of(node.uuid),
                     kind=node.kind,
                     position=node.position,
                     config=node.config,
                 )
-                for node in NyFunction.nodes(ObjectUUID.of(uuid))
+                for node in NyFunction.nodes(ObjectRef.of(uuid))
             ],
             edges=[
                 FunctionEdgeView(
-                    uuid=FunctionUUID.of(edge.uuid),
-                    from_node_uuid=FunctionUUID.of(edge.from_node_uuid),
+                    uuid=FunctionRef.of(edge.uuid),
+                    from_node_uuid=FunctionRef.of(edge.from_node_uuid),
                     from_port=edge.from_port,
-                    to_node_uuid=FunctionUUID.of(edge.to_node_uuid),
+                    to_node_uuid=FunctionRef.of(edge.to_node_uuid),
                     to_port=edge.to_port,
                 )
-                for edge in NyFunction.edges(ObjectUUID.of(uuid))
+                for edge in NyFunction.edges(ObjectRef.of(uuid))
             ],
         )

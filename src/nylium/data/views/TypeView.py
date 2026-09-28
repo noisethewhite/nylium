@@ -16,7 +16,7 @@ from nylium.Constants import Constants
 from pydantic.dataclasses import dataclass
 
 from nylium.data.rows import Type
-from nylium.uuid import TypeUUID
+from nylium.uuid import TypeRef
 from nylium.data.views.EnumOptionView import EnumOptionView
 from nylium.data.views.PropView import PropView
 from nylium.data.views.UnitPartView import UnitPartView
@@ -46,17 +46,17 @@ class TypeView:
         # type_views compute it once per request over the graph).
         return cls(
             name=type_.name,
-            plural_name=TypeUUID.of(type_.uuid).plural_name(),
-            icon=TypeUUID.of(type_.uuid).icon(),
-            color=TypeUUID.of(type_.uuid).color(),
+            plural_name=TypeRef.of(type_.uuid).plural_name(),
+            icon=TypeRef.of(type_.uuid).icon(),
+            color=TypeRef.of(type_.uuid).color(),
             kind=type_.kind,
             embedded=type_.embedded,
             level=level,
-            traits=TypeUUID.of(type_.uuid).trait_names(),
+            traits=TypeRef.of(type_.uuid).trait_names(),
             enum_options=[
                 EnumOptionView.from_row(option)
-                for option in TypeUUID.of(type_.uuid).enum_options()
+                for option in TypeRef.of(type_.uuid).enum_options()
             ],
-            unit_parts=[UnitPartView.from_row(part) for part in TypeUUID.of(type_.uuid).unit_parts()],
-            props=[PropView.from_row(prop) for prop in TypeUUID.of(type_.uuid).effective_props()],
+            unit_parts=[UnitPartView.from_row(part) for part in TypeRef.of(type_.uuid).unit_parts()],
+            props=[PropView.from_row(prop) for prop in TypeRef.of(type_.uuid).effective_props()],
         )

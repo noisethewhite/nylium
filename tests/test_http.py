@@ -19,8 +19,8 @@ import secrets
 from nylium.auth.sessions import sessions
 from nylium.data.tables import auth_credentials
 from nylium.data.tables import auth_users
-from nylium.uuid import FileUUID
-from nylium.uuid import UserUUID
+from nylium.uuid import FileRef
+from nylium.uuid import UserRef
 from uuid import uuid4
 
 
@@ -380,7 +380,7 @@ def test_unexpected_error_is_500_json(
     user = auth_users.create("boom-owner")
     auth_credentials.create(user.uuid, secrets.token_bytes(32), b"pk", 0, "")
     client = TestClient(NyliumApp.create(), raise_server_exceptions=False)
-    client.cookies.set(sessions.COOKIE_NAME, sessions.issue(UserUUID.of(user.uuid)))
+    client.cookies.set(sessions.COOKIE_NAME, sessions.issue(UserRef.of(user.uuid)))
     monkeypatch.setattr(Api, "get_type", boom)
     response = client.get("/api/types/Anything")
     assert response.status_code == 500
@@ -848,7 +848,7 @@ def test_files_over_http(auth_client: TestClient) -> None:
     # delete cascades: row gone, blob gone
     deleted = auth_client.delete(f"/api/files/{obj['uuid']}")
     assert deleted.status_code == 204, deleted.text
-    assert not NyFile.blob_path(FileUUID.of(obj["uuid"])).exists()
+    assert not NyFile.blob_path(FileRef.of(obj["uuid"])).exists()
     assert auth_client.get(f"/api/files/{obj['uuid']}").status_code == 404
 
     # unknown uuid is a 404, not a 500

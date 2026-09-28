@@ -14,7 +14,7 @@ overflowing the interpreter."""
 from __future__ import annotations
 
 from typing import cast
-from nylium.uuid import ObjectUUID
+from nylium.uuid import ObjectRef
 
 from nylium.database import Database
 from nylium.data.tables import instances
@@ -24,18 +24,18 @@ from nylium.ny.NyProp import NyProp
 from nylium.ny.NyScalar import ScalarPayload
 from nylium.ny.NyType import NyType
 from nylium.ny.nyfunction.evaluation import evaluate
-from nylium.uuid import TypeUUID
+from nylium.uuid import TypeRef
 
 
 @Database.use_same_session
-def evaluate_for(inst_uuid: ObjectUUID, function_uuid: ObjectUUID) -> ScalarPayload | None:
+def evaluate_for(inst_uuid: ObjectRef, function_uuid: ObjectRef) -> ScalarPayload | None:
     """Fold the function over the owner's sibling props — the read-time
     entry point for rendering a function-backed prop (ADR-0029)."""
     return _evaluate_for(inst_uuid, function_uuid, frozenset())
 
 
 def _evaluate_for(
-    inst_uuid: ObjectUUID, function_uuid: ObjectUUID, visiting: frozenset[ObjectUUID]
+    inst_uuid: ObjectRef, function_uuid: ObjectRef, visiting: frozenset[ObjectRef]
 ) -> ScalarPayload | None:
     if function_uuid in visiting:
         return None
@@ -43,26 +43,26 @@ def _evaluate_for(
 
 
 @Database.use_same_session
-def materialize_owner(inst_uuid: ObjectUUID) -> dict[str, object]:
+def materialize_owner(inst_uuid: ObjectRef) -> dict[str, object]:
     """Project the owner object's sibling props to a prop-key -> value
     mapping. A function-backed sibling is resolved recursively."""
     return _materialize_owner(inst_uuid, frozenset())
 
 
-def _materialize_owner(inst_uuid: ObjectUUID, visiting: frozenset[ObjectUUID]) -> dict[str, object]:
+def _materialize_owner(inst_uuid: ObjectRef, visiting: frozenset[ObjectRef]) -> dict[str, object]:
     wrapper = NyObject.wrap(inst_uuid.uuid)
     inst = instances.get(inst_uuid.uuid)
     type_uuid = None if inst is None else inst.type_uuid
     if type_uuid is None:
         return {}
-    owner = NyType.by_uuid(TypeUUID.of(type_uuid))
+    owner = NyType.by_uuid(TypeRef.of(type_uuid))
     if owner is None:
         return {}
     result: dict[str, object] = {}
     for prop in NyProp.effective_for(owner):
         bound = InstanceFunctionLinks.function_uuid_for(inst_uuid.uuid, prop.uuid.uuid)
         if bound is not None:
-            result[prop.key] = _evaluate_for(inst_uuid, ObjectUUID.of(bound), visiting)
+            result[prop.key] = _evaluate_for(inst_uuid, ObjectRef.of(bound), visiting)
         else:
             result[prop.key] = cast(object, getattr(wrapper, prop.key))
     return result

@@ -9,7 +9,7 @@ from nylium.api.ApiShared import ApiShared, PropInput
 from nylium.ny.nyobject import ObjectView
 from nylium.ny.nyobject import ObjectRefView
 from nylium.database import Database
-from nylium.uuid import ObjectUUID, TypeUUID
+from nylium.uuid import ObjectRef, TypeRef
 from nylium.data.tables import instances
 from nylium.ny.NyEmbedded import NyEmbedded
 from nylium.ny.nyobject import NyObject
@@ -60,7 +60,7 @@ class ObjectsApi(ApiShared):
 
         def ref_label(ref: ObjectRefView) -> str:
             inst = instances.get(ref.uuid)
-            owner = NyType.by_uuid(TypeUUID.of(inst.type_uuid)) if inst is not None else None
+            owner = NyType.by_uuid(TypeRef.of(inst.type_uuid)) if inst is not None else None
             if owner is not None and NyProp.by_key(owner, Constants.Props.NAME_PROP_KEY) is not None:
                 wrapper = NyObject.wrap(ref.uuid)
                 label = cast(str | None, getattr(wrapper, Constants.Props.NAME_PROP_KEY))
@@ -89,10 +89,10 @@ class ObjectsApi(ApiShared):
             ctor = cast(Callable[..., NyObject], klass)
             instance_uuid = ctor(**normalized).uuid
         else:
-            instance_uuid = ObjectUUID.of(NyObject.create_db_only(type_name, normalized))
+            instance_uuid = ObjectRef.of(NyObject.create_db_only(type_name, normalized))
         # heal generated names: an embedded prop written before the name
         # prop in the same request computed a fallback-based child name
-        NyEmbedded.regenerate_names(ObjectUUID.of(instance_uuid))
+        NyEmbedded.regenerate_names(ObjectRef.of(instance_uuid))
         view = cls.get_object(instance_uuid.uuid)
         if view is None:
             raise RuntimeError(f"created {type_name} instance {instance_uuid} vanished")
@@ -107,7 +107,7 @@ class ObjectsApi(ApiShared):
                 "embedded objects are edited through their owner — write the embedded prop on the parent instead"
             )
         wrapper = NyObject.wrap(uuid)
-        type_name = TypeUUID.of(instances[uuid].type_uuid).name_of()
+        type_name = TypeRef.of(instances[uuid].type_uuid).name_of()
         normalized = cls._normalize_props(type_name, props)
         # ADR-0029: function-bound props are instance-level read-only.
 
@@ -129,7 +129,7 @@ class ObjectsApi(ApiShared):
             setattr(wrapper, key, value)
         # a renamed parent (or a reordered draft) invalidates the
         # generated names of its embedded children
-        NyEmbedded.regenerate_names(ObjectUUID.of(uuid))
+        NyEmbedded.regenerate_names(ObjectRef.of(uuid))
         view = cls.get_object(uuid)
         if view is None:
             raise RuntimeError(f"updated instance {uuid} vanished")

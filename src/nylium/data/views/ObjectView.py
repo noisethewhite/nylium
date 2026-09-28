@@ -11,7 +11,7 @@ from pydantic.dataclasses import dataclass
 
 from nylium.database import Database
 from nylium.data.tables import Instances, instances
-from nylium.uuid import ObjectUUID, PropUUID, TypeUUID
+from nylium.uuid import ObjectRef, PropRef, TypeRef
 from nylium.ny.nyobject.NyObject import NyObject
 from nylium.ny.NyType import NyType
 from nylium.ny.NyObjectProtocol import NyObjectProtocol
@@ -79,7 +79,7 @@ class ObjectView:
         type_uuid = None if inst is None else inst.type_uuid
         if type_uuid is None:
             return None
-        owner = NyType.by_uuid(TypeUUID.of(type_uuid))
+        owner = NyType.by_uuid(TypeRef.of(type_uuid))
         if owner is None:
             raise RuntimeError(f"instance {uuid} has dangling type")
         wrapper = NyObject.wrap(uuid)
@@ -123,7 +123,7 @@ class ObjectView:
         query per direction, no N+1."""
         return [
             ObjectRefView(uuid=owner_uuid.uuid, type_name=type_name)
-            for owner_uuid, type_name in ObjectUUID.of(uuid).backlink_refs()
+            for owner_uuid, type_name in ObjectRef.of(uuid).backlink_refs()
         ]
 
     @classmethod
@@ -133,7 +133,7 @@ class ObjectView:
         ``Array<type_name>`` prop whose stored array contains this object
         becomes one tag ``<owner display name> → <prop key>``. One query,
         no N+1."""
-        rows = ObjectUUID.of(uuid).array_tag_rows(NyType.array_name(type_name), Constants.Props.NAME_PROP_KEY)
+        rows = ObjectRef.of(uuid).array_tag_rows(NyType.array_name(type_name), Constants.Props.NAME_PROP_KEY)
         tags: list[TagView] = []
         for owner_uuid, prop_key, registry_name, display_name, color in rows:
             display_name = display_name or registry_name
@@ -154,7 +154,7 @@ class ObjectView:
     def _eval_function(cls, inst_uuid: UUID, function_uuid: UUID) -> ScalarValueView:
         """ADR-0029 read-time evaluation: fold the function's DAG over the
         owner's sibling props. A div-by-zero / missing input renders empty."""
-        value = NyFunction.evaluate_for(ObjectUUID.of(inst_uuid), ObjectUUID.of(function_uuid))
+        value = NyFunction.evaluate_for(ObjectRef.of(inst_uuid), ObjectRef.of(function_uuid))
         return ScalarValueView(value=value)
 
     @classmethod
@@ -245,7 +245,7 @@ class ObjectView:
 
     @classmethod
     @Database.use_same_session
-    def _collect_uuids(cls, wrapper: NyObjectProtocol, prop: NyProp) -> list[ObjectUUID]:
+    def _collect_uuids(cls, wrapper: NyObjectProtocol, prop: NyProp) -> list[ObjectRef]:
         """ADR-0025: the derived member uuids of a collect prop — one reverse
         range query over the target type's member prop, bounded by the owner's
         from/to siblings. Missing bounds / dangling member yield an empty set."""
@@ -260,7 +260,7 @@ class ObjectView:
         hi = magnitude(cast(StoredValue, getattr(wrapper, "to")))
         if member_prop is None or lo is None or hi is None:
             return []
-        return PropUUID.of(member_prop.uuid).collect_range(member_prop.value_spec_name(), lo, hi)
+        return PropRef.of(member_prop.uuid).collect_range(member_prop.value_spec_name(), lo, hi)
 
     @classmethod
     @Database.use_same_session
@@ -329,5 +329,5 @@ class ObjectView:
         if not isinstance(value, NyObject):
             raise TypeError(f"link prop rendered a {type(value).__name__}")
         return RefValueView(
-            ref=ObjectRefView(uuid=value.uuid.uuid, type_name=TypeUUID.of(instances[value.uuid.uuid].type_uuid).name_of())
+            ref=ObjectRefView(uuid=value.uuid.uuid, type_name=TypeRef.of(instances[value.uuid.uuid].type_uuid).name_of())
         )

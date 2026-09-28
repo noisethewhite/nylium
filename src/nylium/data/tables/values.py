@@ -4,8 +4,8 @@ Scalar value tables share one store shape — ``read``/``write``/``clear``
 on ``ScalarValuesTable`` — and the concrete stores only pin their
 ``__row__``. The structural stores (``ArrayValues``, ``FileValues``,
 ``InstanceLinks``) used to carry their own query methods; those moved to
-the typed uuid handles (``ArrayUUID`` / ``FileUUID`` / ``ObjectUUID`` /
-``PropUUID``), so every store here is a pure row container.
+the typed uuid handles (``ArrayRef`` / ``FileRef`` / ``ObjectRef`` /
+``PropRef``), so every store here is a pure row container.
 """
 from __future__ import annotations
 

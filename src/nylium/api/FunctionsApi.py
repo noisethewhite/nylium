@@ -33,7 +33,7 @@ from nylium.ny.NyString import NyString
 from nylium.ny.NyType import NyType
 from nylium.server.errors.ValidationError import ValidationError
 from nylium.data.tables import instances
-from nylium.uuid import ObjectUUID, TypeUUID
+from nylium.uuid import ObjectRef, TypeRef
 
 
 class FunctionsApi(_FunctionsBase):
@@ -78,7 +78,7 @@ class FunctionsApi(_FunctionsBase):
         owner = NyFunction.ensure_type(input_type, output_type)
         props_draft: dict[str, PropInput] = {Constants.Props.NAME_PROP_KEY: name}
         view = cls.create_object(owner.name, props_draft)
-        NyFunction.sync_graph(ObjectUUID.of(view.uuid), nodes, edges)
+        NyFunction.sync_graph(ObjectRef.of(view.uuid), nodes, edges)
         result = FunctionView.from_uuid(view.uuid)
         if result is None:
             raise RuntimeError(f"created function {view.uuid} vanished")
@@ -111,9 +111,9 @@ class FunctionsApi(_FunctionsBase):
             existing.output_type,
         )
         _ = cls.update_object(uuid, {Constants.Props.NAME_PROP_KEY: name})
-        NyFunction.sync_graph(ObjectUUID.of(uuid), nodes, edges)
+        NyFunction.sync_graph(ObjectRef.of(uuid), nodes, edges)
         for owner_uuid in InstanceFunctionLinks.instance_uuids_bound_to(uuid):
-            NyFunction.assert_no_dependency_cycle(ObjectUUID.of(owner_uuid))
+            NyFunction.assert_no_dependency_cycle(ObjectRef.of(owner_uuid))
         result = FunctionView.from_uuid(uuid)
         if result is None:
             raise RuntimeError(f"updated function {uuid} vanished")
@@ -132,7 +132,7 @@ class FunctionsApi(_FunctionsBase):
     @classmethod
     @Database.commit_after_this
     def set_instance_prop_function(
-        cls, inst_uuid: ObjectUUID, prop_key: str, function_uuid: ObjectUUID | None
+        cls, inst_uuid: ObjectRef, prop_key: str, function_uuid: ObjectRef | None
     ) -> ObjectView:
         """ADR-0029: bind a Function<T,R> to a specific prop of a specific
         object (None unbinds). The function's output type must equal the
@@ -143,7 +143,7 @@ class FunctionsApi(_FunctionsBase):
         inst = instances.get(inst_uuid.uuid)
         if inst is None:
             raise ValidationError(f"no object {inst_uuid}")
-        owner = NyType.by_uuid(TypeUUID.of(inst.type_uuid))
+        owner = NyType.by_uuid(TypeRef.of(inst.type_uuid))
         if owner is None:
             raise ValidationError(f"object {inst_uuid} has no type")
         prop = NyProp.by_key(owner, prop_key)
@@ -182,7 +182,7 @@ class FunctionsApi(_FunctionsBase):
         else:
             InstanceFunctionLinks.merge_function_link(inst_uuid.uuid, prop.uuid.uuid, function_uuid.uuid)
         Database.flush()  # publish the pending link before the cycle check reads it
-        NyFunction.assert_no_dependency_cycle(ObjectUUID.of(inst_uuid))
+        NyFunction.assert_no_dependency_cycle(ObjectRef.of(inst_uuid))
         view = ObjectView.from_uuid(inst_uuid.uuid)
         if view is None:
             raise RuntimeError(f"object {inst_uuid} vanished after function bind")
@@ -239,7 +239,7 @@ class FunctionsApi(_FunctionsBase):
                 continue  # self-referencing arrays were rewritten locally
             by_owner.setdefault(dependent_uuid, []).append(array_key)
         for dependent_uuid, array_keys in by_owner.items():
-            dependent = NyType.by_uuid(TypeUUID.of(dependent_uuid))
+            dependent = NyType.by_uuid(TypeRef.of(dependent_uuid))
             if dependent is None:
                 continue
             dependent_props = NyProp.all_for(dependent)

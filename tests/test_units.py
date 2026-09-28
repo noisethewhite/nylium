@@ -10,7 +10,7 @@ from nylium.api import Api, ScalarValueView
 from nylium.data.rows import Type
 from nylium.data.types.Quantity import Quantity
 from nylium.server.errors.ValidationError import ValidationError
-from nylium.uuid import TypeUUID
+from nylium.uuid import TypeRef
 
 
 def temperature_unit() -> Type:
@@ -32,7 +32,7 @@ def oven_type() -> Type:
 
 
 def _part_uuids(view: Type) -> dict[str, UUID]:
-    return {p.name: p.uuid for p in TypeUUID.of(view.uuid).unit_parts()}
+    return {p.name: p.uuid for p in TypeRef.of(view.uuid).unit_parts()}
 
 
 # list invariance: unit-part drafts mixing (uuid, ...) and (None, ...)
@@ -43,8 +43,8 @@ PartDraft = list[tuple[UUID | None, str, Decimal, Decimal, bool]]
 def test_create_unit_view():
     view = temperature_unit()
     assert view.kind == "unit"
-    assert TypeUUID.of(view.uuid).effective_props() == []
-    assert [(p.name, p.multiplier, p.offset, p.is_base) for p in TypeUUID.of(view.uuid).unit_parts()] == [
+    assert TypeRef.of(view.uuid).effective_props() == []
+    assert [(p.name, p.multiplier, p.offset, p.is_base) for p in TypeRef.of(view.uuid).unit_parts()] == [
         ("°C", Decimal(1), Decimal(0), True),
         ("°F", Decimal("1.8"), Decimal(32), False),
     ]
@@ -108,7 +108,7 @@ def test_sync_parts_rename_propagates():
         (uuids["°F"], "fahrenheit", Decimal("1.8"), Decimal(32), False),
     ]
     synced = Api.sync_unit_parts("Temperature", draft)
-    assert [p.name for p in TypeUUID.of(synced.uuid).unit_parts()] == ["°C", "fahrenheit"]
+    assert [p.name for p in TypeRef.of(synced.uuid).unit_parts()] == ["°C", "fahrenheit"]
     reloaded = Api.get_object(oven.uuid)
     assert reloaded is not None
     assert reloaded.props["temp"] == ScalarValueView(value=Decimal(32), unit="fahrenheit")

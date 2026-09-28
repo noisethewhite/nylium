@@ -11,7 +11,7 @@ from uuid import UUID
 from dataclasses import dataclass as plain_dataclass
 import sys
 from nylium.server.bodies.shared import resolve_route_hints
-from nylium.uuid import FileUUID
+from nylium.uuid import FileRef
 @plain_dataclass
 class FileUuidRequest:
     """Path-bound input of the single-file routes."""
@@ -35,7 +35,7 @@ class FileUuidRequest:
         file = Api.get_file(request.file_uuid)
         if file is None:
             raise NotFoundError(f"no file {request.file_uuid}")
-        path = NyFile.blob_path(FileUUID.of(request.file_uuid))
+        path = NyFile.blob_path(FileRef.of(request.file_uuid))
         if not path.is_file():
             raise NotFoundError(f"blob for file {request.file_uuid} is missing")
         return FileResponse(path, media_type=file.mime, filename=file.name)

@@ -7,8 +7,8 @@ from uuid import UUID
 
 from nylium.api import Api, TagView
 from nylium.ny.NyColor import NyColor
-from nylium.uuid import TypeUUID
-from nylium.uuid import PropUUID
+from nylium.uuid import TypeRef
+from nylium.uuid import PropRef
 
 
 def book_type():
@@ -151,10 +151,10 @@ def test_renaming_prop_key_renames_tag():
         (
             prop.uuid,
             "items" if prop.key == "books" else prop.key,
-            PropUUID.of(prop.uuid).value_type_name(),
+            PropRef.of(prop.uuid).value_type_name(),
             prop.formula,
         )
-        for prop in TypeUUID.of(view.uuid).effective_props()
+        for prop in TypeRef.of(view.uuid).effective_props()
     ]
     _ = Api.sync_props("Shelf", items)
 

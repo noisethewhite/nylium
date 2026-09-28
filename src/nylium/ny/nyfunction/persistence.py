@@ -24,12 +24,12 @@ from nylium.ny.NyProp import NyProp
 from nylium.ny.NyType import NyType
 from nylium.ny.nyfunction.constants import fail
 from nylium.Constants import Constants
-from nylium.uuid import ObjectUUID, TypeUUID
+from nylium.uuid import ObjectRef, TypeRef
 
 
 @Database.commit_after_this
 def sync_graph(
-    function_uuid: ObjectUUID,
+    function_uuid: ObjectRef,
     nodes: Sequence[tuple[UUID | None, str, int, Mapping[str, object]]],
     edges: Sequence[tuple[UUID, int, UUID, int]],
 ) -> None:
@@ -40,21 +40,21 @@ def sync_graph(
 
 
 @Database.use_same_session
-def _function_instance_uuids() -> list[ObjectUUID]:
+def _function_instance_uuids() -> list[ObjectRef]:
     """Every function instance uuid (instances whose type kind is
     'function')."""
-    return [ObjectUUID.of(u) for u in ObjectUUID.instances_of_kind(NyType.KIND_FUNCTION)]
+    return [ObjectRef.of(u) for u in ObjectRef.instances_of_kind(NyType.KIND_FUNCTION)]
 
 
 @Database.use_same_session
-def assert_no_dependency_cycle(inst_uuid: ObjectUUID) -> None:
+def assert_no_dependency_cycle(inst_uuid: ObjectRef) -> None:
     """ADR-0029 local cycle check: within one owner, build the function
     dependency graph and refuse a back-edge. Function A (bound to prop P)
     depends on function B when A's DAG reads (via `get_prop`) a sibling
     prop that B computes on the same owner. A cycle would recurse forever
     at read time. Run on bind and on function DAG save."""
     # prop_uuid -> function_uuid bound on this owner
-    bindings = {prop_uuid: ObjectUUID.of(fn_uuid) for prop_uuid, fn_uuid in InstanceFunctionLinks.function_links_of_instance(inst_uuid.uuid)}
+    bindings = {prop_uuid: ObjectRef.of(fn_uuid) for prop_uuid, fn_uuid in InstanceFunctionLinks.function_links_of_instance(inst_uuid.uuid)}
     if not bindings:
         return
     # prop key -> prop_uuid on the owner (to map get_prop keys back)
@@ -62,12 +62,12 @@ def assert_no_dependency_cycle(inst_uuid: ObjectUUID) -> None:
     type_uuid = None if inst is None else inst.type_uuid
     if type_uuid is None:
         return
-    owner = NyType.by_uuid(TypeUUID.of(type_uuid))
+    owner = NyType.by_uuid(TypeRef.of(type_uuid))
     if owner is None:
         return
     prop_uuid_by_key = {prop.key: prop.uuid for prop in NyProp.effective_for(owner)}
 
-    deps: dict[ObjectUUID, set[ObjectUUID]] = {fn_uuid: set() for fn_uuid in bindings.values()}
+    deps: dict[ObjectRef, set[ObjectRef]] = {fn_uuid: set() for fn_uuid in bindings.values()}
     for fn_uuid in bindings.values():
         for node in FunctionNodes.nodes_of(fn_uuid.uuid):
             if node.kind != Constants.Functions.NODE_GET_PROP:
@@ -84,12 +84,12 @@ def assert_no_dependency_cycle(inst_uuid: ObjectUUID) -> None:
     _assert_acyclic(deps)
 
 
-def _assert_acyclic(deps: Mapping[ObjectUUID, set[ObjectUUID]]) -> None:
+def _assert_acyclic(deps: Mapping[ObjectRef, set[ObjectRef]]) -> None:
     """White/gray/black DFS — a gray re-entry is a back-edge (cycle)."""
     WHITE, GRAY, BLACK = 0, 1, 2
-    color: dict[ObjectUUID, int] = {u: WHITE for u in deps}
+    color: dict[ObjectRef, int] = {u: WHITE for u in deps}
 
-    def visit(u: ObjectUUID) -> None:
+    def visit(u: ObjectRef) -> None:
         color[u] = GRAY
         for v in deps.get(u, ()):
             if color.get(v, WHITE) == GRAY:
@@ -107,15 +107,15 @@ def _assert_acyclic(deps: Mapping[ObjectUUID, set[ObjectUUID]]) -> None:
 
 
 @Database.use_same_session
-def nodes(function_uuid: ObjectUUID) -> list[FunctionNode]:
+def nodes(function_uuid: ObjectRef) -> list[FunctionNode]:
     return FunctionNodes.nodes_of(function_uuid.uuid)
 
 
 @Database.use_same_session
-def edges(function_uuid: ObjectUUID) -> list[FunctionEdge]:
+def edges(function_uuid: ObjectRef) -> list[FunctionEdge]:
     return FunctionEdges.edges_of(function_uuid.uuid)
 
 
 @Database.use_same_session
-def instance_uuids() -> list[ObjectUUID]:
+def instance_uuids() -> list[ObjectRef]:
     return _function_instance_uuids()

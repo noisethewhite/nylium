@@ -23,7 +23,7 @@ from nylium.ny.NyScalar import NyScalar
 from nylium.ny.NyString import NyString
 from nylium.ny.NyType import NyType
 from nylium.server.errors.ValidationError import ValidationError
-from nylium.uuid import TraitUUID, TypeUUID
+from nylium.uuid import TraitRef, TypeRef
 
 
 class TypesApi(_TypesBase):
@@ -112,10 +112,10 @@ class TypesApi(_TypesBase):
             _ = NyProp.ensure(
                 owner,
                 key,
-                None if value_type_uuid is None else NyType.by_uuid(TypeUUID.of(value_type_uuid)),
+                None if value_type_uuid is None else NyType.by_uuid(TypeRef.of(value_type_uuid)),
                 position,
                 formulas.get(key),
-                value_trait_uuid=None if value_trait_uuid is None else TraitUUID.of(value_trait_uuid),
+                value_trait_uuid=None if value_trait_uuid is None else TraitRef.of(value_trait_uuid),
                 collect=collects.get(key),
             )
         decor = type_style[owner.uuid.uuid]

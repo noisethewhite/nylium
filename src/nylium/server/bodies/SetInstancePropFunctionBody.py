@@ -6,7 +6,7 @@ from pydantic.dataclasses import dataclass
 import sys
 from nylium.server.bodies.shared import api_route, resolve_route_hints
 from nylium.Constants import Constants
-from nylium.uuid import ObjectUUID
+from nylium.uuid import ObjectRef
 @dataclass(config=Constants.Pydantic.CONFIG)
 class SetInstancePropFunctionBody:
     """ADR-0029: bind a Function<T,R> to a prop of a specific object (None
@@ -17,5 +17,5 @@ class SetInstancePropFunctionBody:
     def route(
         cls, object_uuid: UUID, prop_key: str, body: "SetInstancePropFunctionBody"
     ) -> ObjectView:
-        return Api.set_instance_prop_function(ObjectUUID.of(object_uuid), prop_key, None if body.function_uuid is None else ObjectUUID.of(body.function_uuid))
+        return Api.set_instance_prop_function(ObjectRef.of(object_uuid), prop_key, None if body.function_uuid is None else ObjectRef.of(body.function_uuid))
 resolve_route_hints(sys.modules[__name__])

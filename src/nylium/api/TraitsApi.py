@@ -14,7 +14,7 @@ from nylium.data.tables import trait_style
 from nylium.data.rows import SchemaItem
 from nylium.data.rows import Type
 from nylium.data.tables import types
-from nylium.uuid import ObjectUUID, PropUUID, TraitUUID
+from nylium.uuid import ObjectRef, PropRef, TraitRef
 from nylium.ny.NyProp import NyProp
 from nylium.ny.NyScalar import NyScalar
 from nylium.ny.NyType import NyType
@@ -64,7 +64,7 @@ class TraitsApi(ApiShared):
             for key, spec in specs.items()
         ]
         trait = traits.create(final_name, color)
-        NyProp.sync_trait_schema(TraitUUID.of(trait.uuid), resolved)
+        NyProp.sync_trait_schema(TraitRef.of(trait.uuid), resolved)
         return cls._trait_result(final_name)
 
     @classmethod
@@ -96,7 +96,7 @@ class TraitsApi(ApiShared):
         collision = next(traits.where(name=final_name), None)
         if collision is not None and collision.uuid != row.uuid:
             raise ValueError(f"trait {final_name!r} already exists")
-        final_color = TraitUUID.of(row.uuid).color() if color is None else color
+        final_color = TraitRef.of(row.uuid).color() if color is None else color
         if color is not None:
             cls._check_color(color)
         if items is not None:
@@ -124,7 +124,7 @@ class TraitsApi(ApiShared):
                 (uuid, key, *cls._resolve_value_spec(spec), None, None)
                 for uuid, key, spec, _ in items
             ]
-            NyProp.sync_trait_schema(TraitUUID.of(row.uuid), resolved)
+            NyProp.sync_trait_schema(TraitRef.of(row.uuid), resolved)
         row.name = final_name
         trait_style[row.uuid].color = final_color
         return cls._trait_result(final_name)
@@ -183,7 +183,7 @@ class TraitsApi(ApiShared):
         if any(link.trait_uuid == trait.uuid for link in links):
             raise ValueError(f"trait {trait_name!r} is already attached to {type_name!r}")
         taken = {p.key for p in NyProp.effective_for(owner)}
-        collisions = sorted({p.key for p in TraitUUID.of(trait.uuid).props()} & taken)
+        collisions = sorted({p.key for p in TraitRef.of(trait.uuid).props()} & taken)
         if collisions:
             raise ValidationError(
                 f"prop keys {collisions!r} of trait {trait_name!r} collide with {type_name!r}"
@@ -215,6 +215,6 @@ class TraitsApi(ApiShared):
             raise KeyError(f"trait {trait_name!r} is not attached to {type_name!r}")
         inst_uuids = [i.uuid for i in instances.where(type_uuid=owner.uuid.uuid)]
         for p in props.where(owner_trait_uuid=trait.uuid):
-            NyProp.purge_values_for_instances(PropUUID.of(p.uuid), [ObjectUUID.of(i) for i in inst_uuids])
+            NyProp.purge_values_for_instances(PropRef.of(p.uuid), [ObjectRef.of(i) for i in inst_uuids])
         type_traits.detach(owner.uuid.uuid, trait.uuid)
         return cls._type_result(type_name)

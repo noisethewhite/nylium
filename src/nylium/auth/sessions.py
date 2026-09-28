@@ -4,7 +4,7 @@ from __future__ import annotations
 import hashlib
 import secrets
 from datetime import datetime, timedelta, timezone
-from nylium.uuid import UserUUID
+from nylium.uuid import UserRef
 
 from nylium.data.tables import auth_sessions
 from nylium.data.tables import auth_users
@@ -20,7 +20,7 @@ class sessions:
     TTL: ClassVar[timedelta] = timedelta(days=30)
 
     @classmethod
-    def issue(cls, user_uuid: UserUUID) -> str:
+    def issue(cls, user_uuid: UserRef) -> str:
         """Create a session, return the raw token for the cookie."""
         auth_sessions.purge_expired()
         token = secrets.token_urlsafe(32)
@@ -28,7 +28,7 @@ class sessions:
         return token
 
     @classmethod
-    def user_uuid_for(cls, token: str | None) -> UserUUID | None:
+    def user_uuid_for(cls, token: str | None) -> UserRef | None:
         """Resolve a cookie token to a live user, sliding the expiry."""
         if not token:
             return None
@@ -39,7 +39,7 @@ class sessions:
             auth_sessions.delete(row.token_hash)
             return None
         row.expires_at = cls._deadline()
-        return UserUUID.of(row.user_uuid)
+        return UserRef.of(row.user_uuid)
 
     @classmethod
     def user_for(cls, token: str | None) -> AuthUser | None:

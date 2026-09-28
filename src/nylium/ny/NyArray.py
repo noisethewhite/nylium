@@ -28,41 +28,41 @@ from nylium.Constants import Constants
 from nylium.ny.NyType import NyType
 from nylium.ny.NyObjectProtocol import NyObjectProtocol
 from nylium.ny.NyTypeMeta import StoredValue, NyTypeMeta
-from nylium.uuid import ObjectUUID, TypeUUID
-from nylium.uuid.objects import ArrayUUID
+from nylium.uuid import ObjectRef, TypeRef
+from nylium.uuid.objects import ArrayRef
 
 
 
 class NyArray:
     @classmethod
     @Database.use_same_session
-    def read(cls, array_uuid: ArrayUUID, elem_type: str) -> list[StoredValue]:
-        return [cls._unwrap(uuid, elem_type) for uuid in ArrayUUID.of(array_uuid).element_uuids_of()]
+    def read(cls, array_uuid: ArrayRef, elem_type: str) -> list[StoredValue]:
+        return [cls._unwrap(uuid, elem_type) for uuid in ArrayRef.of(array_uuid).element_uuids_of()]
 
     @classmethod
     @Database.commit_after_this
     def write(
         cls,
-        owner_uuid: ObjectUUID,
+        owner_uuid: ObjectRef,
         prop: NyProp,
         elem_type: str,
         values: list[StoredValue] | None,
     ) -> None:
         if values is None:
             # None unsets the prop: destroy the array instance (and its boxes)
-            link = ObjectUUID.of(owner_uuid).link_for(prop.uuid.uuid)
+            link = ObjectRef.of(owner_uuid).link_for(prop.uuid.uuid)
             if link is not None:
-                cls.destroy(ArrayUUID.of(link.uuid))
+                cls.destroy(ArrayRef.of(link.uuid))
             return
         array_uuid = cls._ensure_array_instance(owner_uuid, prop, elem_type)
         cls._fill(array_uuid, elem_type, values, owner_uuid, prop)
 
     @classmethod
     @Database.commit_after_this
-    def destroy(cls, array_uuid: ArrayUUID) -> None:
+    def destroy(cls, array_uuid: ArrayRef) -> None:
         """Delete the array instance and every box it owns, recursively."""
         cls._destroy_boxes(array_uuid)
-        ObjectUUID.of(array_uuid).delete_links_to()
+        ObjectRef.of(array_uuid).delete_links_to()
         Instances.delete_row(array_uuid.uuid)
 
     # --- internals ---
@@ -71,42 +71,42 @@ class NyArray:
     @Database.commit_after_this
     def _fill(
         cls,
-        array_uuid: ArrayUUID,
+        array_uuid: ArrayRef,
         elem_type: str,
         values: list[StoredValue],
-        owner_uuid: ObjectUUID,
+        owner_uuid: ObjectRef,
         prop: NyProp,
     ) -> None:
         cls._destroy_boxes(array_uuid)
         for index, item in enumerate(values):
-            ArrayUUID.of(
+            ArrayRef.of(
                 array_uuid).add_element(index, cls._box(elem_type, item, array_uuid, owner_uuid, prop, index)
             )
 
     @classmethod
     @Database.commit_after_this
-    def _destroy_boxes(cls, array_uuid: ArrayUUID) -> None:
-        box_uuids = ArrayUUID.of(array_uuid).element_uuids_of()
+    def _destroy_boxes(cls, array_uuid: ArrayRef) -> None:
+        box_uuids = ArrayRef.of(array_uuid).element_uuids_of()
         # detach pointer rows first: FK array_values.value_uuid -> instances
         # forbids deleting a box that is still referenced
-        ArrayUUID.of(array_uuid).delete_elements_of()
+        ArrayRef.of(array_uuid).delete_elements_of()
         for box_uuid in box_uuids:
-            cls._destroy_box(ObjectUUID.of(box_uuid))
+            cls._destroy_box(ObjectRef.of(box_uuid))
 
     @classmethod
     @Database.commit_after_this
-    def _destroy_box(cls, box_uuid: ObjectUUID) -> None:
+    def _destroy_box(cls, box_uuid: ObjectRef) -> None:
         inst = instances.get(box_uuid.uuid)
         if inst is None:
             return
-        owner = NyType.by_uuid(TypeUUID.of(inst.type_uuid))
+        owner = NyType.by_uuid(TypeRef.of(inst.type_uuid))
         if owner is None:
             raise RuntimeError(f"instance {box_uuid} has dangling type")
         if NyScalar.is_scalar(owner.name):
             Instances.delete_row(box_uuid.uuid)  # its scalar values cascade on inst_uuid
             return
         if NyType.is_array_name(owner.name):
-            cls.destroy(ArrayUUID.of(box_uuid))
+            cls.destroy(ArrayRef.of(box_uuid))
             return
         if owner.is_embedded:
             # ADR-0021: an Array<Embedded> element is a composition child —
@@ -119,28 +119,28 @@ class NyArray:
     @classmethod
     @Database.commit_after_this
     def _ensure_array_instance(
-        cls, owner_uuid: ObjectUUID, prop: NyProp, elem_type: str
-    ) -> ArrayUUID:
-        link = ObjectUUID.of(owner_uuid).link_for(prop.uuid.uuid)
+        cls, owner_uuid: ObjectRef, prop: NyProp, elem_type: str
+    ) -> ArrayRef:
+        link = ObjectRef.of(owner_uuid).link_for(prop.uuid.uuid)
         if link is not None:
-            return ArrayUUID.of(link.uuid)
+            return ArrayRef.of(link.uuid)
         array_uuid = cls._create_array_instance(NyType.array_name(elem_type))
-        ObjectUUID.of(owner_uuid).add_link(prop.uuid.uuid, array_uuid.uuid)
+        ObjectRef.of(owner_uuid).add_link(prop.uuid.uuid, array_uuid.uuid)
         return array_uuid
 
     @classmethod
     @Database.commit_after_this
-    def _create_array_instance(cls, array_type_name: str) -> ArrayUUID:
+    def _create_array_instance(cls, array_type_name: str) -> ArrayRef:
         array_uuid = uuid4()
         array_type = NyType.ensure(array_type_name)
         instances.create(array_uuid, array_type.uuid.uuid, Constants.Types.ARRAY_INSTANCE_NAME)
-        return ArrayUUID.of(array_uuid)
+        return ArrayRef.of(array_uuid)
 
     @classmethod
     @Database.use_same_session
     def _unwrap(cls, uuid: UUID, type_name: str) -> StoredValue:
         if NyType.is_array_name(type_name):
-            return cls.read(ArrayUUID.of(uuid), NyType.element_name(type_name))
+            return cls.read(ArrayRef.of(uuid), NyType.element_name(type_name))
         if NyFile.is_file_type(type_name):
             # ADR-0008: a file element is a files.uuid, not a box instance
             return uuid
@@ -153,7 +153,7 @@ class NyArray:
         inst = instances.get(uuid)
         if inst is None:
             raise KeyError(f"no instance {uuid}")
-        owner = NyType.by_uuid(TypeUUID.of(inst.type_uuid))
+        owner = NyType.by_uuid(TypeRef.of(inst.type_uuid))
         if owner is None:
             raise RuntimeError(f"instance {uuid} has dangling type")
         value_prop = NyProp.by_key(owner, Constants.Props.VALUE_PROP_KEY)
@@ -168,8 +168,8 @@ class NyArray:
         cls,
         type_name: str,
         value: StoredValue,
-        array_uuid: ArrayUUID,
-        owner_uuid: ObjectUUID,
+        array_uuid: ArrayRef,
+        owner_uuid: ObjectRef,
         prop: NyProp,
         index: int,
     ) -> UUID:
@@ -235,11 +235,11 @@ class NyArray:
         cls,
         embedded: NyType,
         draft: StoredValue,
-        array_uuid: ArrayUUID,
-        owner_uuid: ObjectUUID,
+        array_uuid: ArrayRef,
+        owner_uuid: ObjectRef,
         prop: NyProp,
         index: int,
-    ) -> ObjectUUID:
+    ) -> ObjectRef:
         if not isinstance(draft, dict):
             raise TypeError(
                 f"{embedded.name} element takes a props dict, got {type(draft).__name__}"

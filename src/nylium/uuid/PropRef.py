@@ -1,4 +1,4 @@
-"""PropUUID — typed reference to a ``Prop`` row (``props``).
+"""PropRef — typed reference to a ``Prop`` row (``props``).
 
 A ``props`` uuid carrying its own table lookup, wire-facing value spec,
 owner-trait projection, and value purging / range collection across the
@@ -32,7 +32,7 @@ from nylium.data.rows import (
 )
 from nylium.data.tables import props, trait_style, traits, types
 from nylium.uuid.NyRef import NyRef
-from nylium.uuid.ObjectUUID import ObjectUUID
+from nylium.uuid.ObjectRef import ObjectRef
 
 
 class _PropKeyedValues(Protocol):
@@ -56,7 +56,7 @@ _PROP_KEYED_VALUE_TABLES: tuple[type[_PropKeyedValues], ...] = (
 )
 
 
-class PropUUID(NyRef):
+class PropRef(NyRef):
     """A ``props`` uuid carrying its own table lookup and value purging."""
 
     @override
@@ -103,7 +103,7 @@ class PropUUID(NyRef):
         Database.flush()
 
     @Database.use_same_session
-    def purge_values_for_instances(self, inst_uuids: list[ObjectUUID]) -> None:
+    def purge_values_for_instances(self, inst_uuids: list[ObjectRef]) -> None:
         """ADR-0013 detach: wipe this prop's values, but only on the given
         instances (the trait's other types keep theirs)."""
         if not inst_uuids:
@@ -119,7 +119,7 @@ class PropUUID(NyRef):
         Database.flush()
 
     @Database.use_same_session
-    def collect_range(self, spec_name: str, lo: object, hi: object) -> list[ObjectUUID]:
+    def collect_range(self, spec_name: str, lo: object, hi: object) -> list[ObjectRef]:
         """Every instance whose value of this prop falls within [lo, hi].
 
         ``spec_name`` is the member prop's value spec (ordered scalar); it
@@ -140,7 +140,7 @@ class PropUUID(NyRef):
             c.value <= hi,
         )
         rows: list[UUID] = list(Database.scalars(stmt).all())
-        return [ObjectUUID.of(u) for u in rows]
+        return [ObjectRef.of(u) for u in rows]
 
     @Database.use_same_session
     def linked_uuids(self) -> list[UUID]:

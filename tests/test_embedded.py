@@ -10,8 +10,8 @@ import pytest
 from nylium.api import Api, ArrayValueView, EmbeddedValueView, ScalarValueView
 from nylium.data.rows import Type
 from nylium.server.errors.ValidationError import ValidationError
-from nylium.uuid import TypeUUID
-from nylium.uuid import PropUUID
+from nylium.uuid import TypeRef
+from nylium.uuid import PropRef
 
 
 def contact_details_type() -> Type:
@@ -36,7 +36,7 @@ def test_create_embedded_type_view():
     view = contact_details_type()
     assert view.embedded is True
     assert view.kind == "object"
-    assert [prop.key for prop in TypeUUID.of(view.uuid).effective_props()] == ["name", "email", "phone"]
+    assert [prop.key for prop in TypeRef.of(view.uuid).effective_props()] == ["name", "email", "phone"]
     # a regular type is not embedded
     assert person_type().embedded is False
 
@@ -283,10 +283,10 @@ def test_sync_props_delete_destroys_children():
     )
     contact = person.props["contact"]
     assert isinstance(contact, EmbeddedValueView) and contact.uuid is not None
-    name_prop = next(prop for prop in TypeUUID.of(view.uuid).effective_props() if prop.key == "name")
+    name_prop = next(prop for prop in TypeRef.of(view.uuid).effective_props() if prop.key == "name")
     # drop the contact prop from the schema entirely
     synced = Api.sync_props("Person", [(name_prop.uuid, "name", "String", None)])
-    assert [prop.key for prop in TypeUUID.of(synced.uuid).effective_props()] == ["name"]
+    assert [prop.key for prop in TypeRef.of(synced.uuid).effective_props()] == ["name"]
     assert Api.get_object(contact.uuid) is None
 
 
@@ -298,8 +298,8 @@ def test_sync_props_rename_regenerates_names():
     contact = person.props["contact"]
     assert isinstance(contact, EmbeddedValueView) and contact.uuid is not None
     items = [
-        (prop.uuid, prop.key, PropUUID.of(prop.uuid).value_type_name(), prop.formula)
-        for prop in TypeUUID.of(view.uuid).effective_props()
+        (prop.uuid, prop.key, PropRef.of(prop.uuid).value_type_name(), prop.formula)
+        for prop in TypeRef.of(view.uuid).effective_props()
     ]
     items = [
         (uuid, "details" if key == "contact" else key, vt, formula)
@@ -348,10 +348,10 @@ def test_sync_props_delete_destroys_array_children():
         if isinstance(item, EmbeddedValueView) and item.uuid is not None
     ]
     assert len(member_uuids) == 2
-    name_prop = next(prop for prop in TypeUUID.of(view.uuid).effective_props() if prop.key == "name")
+    name_prop = next(prop for prop in TypeRef.of(view.uuid).effective_props() if prop.key == "name")
     # drop the members prop from the schema entirely
     synced = Api.sync_props("Team", [(name_prop.uuid, "name", "String", None)])
-    assert [prop.key for prop in TypeUUID.of(synced.uuid).effective_props()] == ["name"]
+    assert [prop.key for prop in TypeRef.of(synced.uuid).effective_props()] == ["name"]
     for uuid in member_uuids:
         assert Api.get_object(uuid) is None
 
@@ -371,8 +371,8 @@ def test_sync_props_rename_regenerates_array_names():
     ]
     assert len(member_uuids) == 2
     items = [
-        (prop.uuid, prop.key, PropUUID.of(prop.uuid).value_type_name(), prop.formula)
-        for prop in TypeUUID.of(view.uuid).effective_props()
+        (prop.uuid, prop.key, PropRef.of(prop.uuid).value_type_name(), prop.formula)
+        for prop in TypeRef.of(view.uuid).effective_props()
     ]
     items = [
         (uuid, "crew" if key == "members" else key, vt, formula)
@@ -430,7 +430,7 @@ def test_embedded_type_may_omit_name():
     # reference, not a generated title.
     view = Api.create_type("Item", {"sku": "String", "qty": "Numeric"}, "Items", embedded=True)
     assert view.embedded is True
-    assert [prop.key for prop in TypeUUID.of(view.uuid).effective_props()] == ["sku", "qty"]
+    assert [prop.key for prop in TypeRef.of(view.uuid).effective_props()] == ["sku", "qty"]
 
 
 def test_name_less_embedded_array():

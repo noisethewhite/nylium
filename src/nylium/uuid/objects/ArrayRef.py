@@ -1,4 +1,4 @@
-"""ArrayUUID — an ObjectUUID that only accepts ``Array<...>`` instances."""
+"""ArrayRef — an ObjectRef that only accepts ``Array<...>`` instances."""
 from __future__ import annotations
 
 from typing import Self, override
@@ -11,10 +11,10 @@ from nylium.database.Row import get_mapper
 from nylium.data.rows import ArrayValue
 from nylium.data.tables import instances, types
 from nylium.uuid.NyRef import NyRef
-from nylium.uuid.ObjectUUID import ObjectUUID
+from nylium.uuid.ObjectRef import ObjectRef
 
 
-class ArrayUUID(ObjectUUID):
+class ArrayRef(ObjectRef):
     """An instance uuid whose instance is an ``Array<...>``."""
 
     @classmethod

@@ -1,6 +1,6 @@
-"""Typed object references: ``ObjectUUID`` subclasses that verify the
+"""Typed object references: ``ObjectRef`` subclasses that verify the
 instance's type on construction."""
-from nylium.uuid.objects.ArrayUUID import ArrayUUID
+from nylium.uuid.objects.ArrayRef import ArrayRef
 
 
-__all__ = ["ArrayUUID"]
+__all__ = ["ArrayRef"]

@@ -12,7 +12,7 @@ from nylium.data.rows import Type
 from nylium.ny.NyColor import NyColor
 from nylium.ny.NyType import NyType
 from nylium.server.errors.ValidationError import ValidationError
-from nylium.uuid import TypeUUID
+from nylium.uuid import TypeRef
 
 
 class UnitsApi(ApiShared):
@@ -46,7 +46,7 @@ class UnitsApi(ApiShared):
             *[(None, n, m, o, False) for n, m, o in (secondaries or [])],
         ]
         cls._validate_unit_draft(items)
-        TypeUUID.of(owner.uuid).sync_unit_parts(final_name, items)
+        TypeRef.of(owner.uuid).sync_unit_parts(final_name, items)
         decor = type_style[owner.uuid.uuid]
         decor.icon = icon
         decor.color = color
@@ -77,12 +77,12 @@ class UnitsApi(ApiShared):
         if (
             old_base is not None
             and new_base_uuid != old_base.uuid
-            and TypeUUID.unit_part_usage(owner.name) > 0
+            and TypeRef.unit_part_usage(owner.name) > 0
         ):
             raise ValidationError(
                 f"unit {name!r} still has values; its base part cannot change"
             )
-        TypeUUID.of(owner.uuid).sync_unit_parts(owner.name, items)
+        TypeRef.of(owner.uuid).sync_unit_parts(owner.name, items)
         return cls._type_result(name)
 
     @classmethod

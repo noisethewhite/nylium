@@ -1,4 +1,4 @@
-"""FileUUID — typed reference to a ``File`` row (``files``)."""
+"""FileRef — typed reference to a ``File`` row (``files``)."""
 from __future__ import annotations
 
 from typing import override
@@ -8,7 +8,7 @@ from nylium.data.tables import files
 from nylium.uuid.NyRef import NyRef
 
 
-class FileUUID(NyRef):
+class FileRef(NyRef):
     """A ``files`` reference carrying its own table lookup."""
 
     @override

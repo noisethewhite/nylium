@@ -1,4 +1,4 @@
-"""EnumOptionUUID — typed reference to a ``EnumOption`` row (``enum_options``)."""
+"""EnumOptionRef — typed reference to a ``EnumOption`` row (``enum_options``)."""
 from __future__ import annotations
 
 from typing import override
@@ -8,7 +8,7 @@ from nylium.data.tables import enum_options
 from nylium.uuid.NyRef import NyRef
 
 
-class EnumOptionUUID(NyRef):
+class EnumOptionRef(NyRef):
     """A ``enum_options`` reference carrying its own table lookup."""
 
     @override

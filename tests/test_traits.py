@@ -6,9 +6,9 @@ from nylium.api import Api, ObjectRefView, RefValueView, ScalarValueView
 from nylium.server.errors.ValidationError import ValidationError
 from nylium.data.views.PropView import PropView
 from nylium.data.views.TraitView import TraitView
-from nylium.uuid import TraitUUID
-from nylium.uuid import TypeUUID
-from nylium.uuid import PropUUID
+from nylium.uuid import TraitRef
+from nylium.uuid import TypeRef
+from nylium.uuid import PropRef
 
 
 def stamped_trait(color: str = "#3a7d5c"):
@@ -26,8 +26,8 @@ def task_type() -> None:
 def test_create_trait_view():
     view = stamped_trait()
     assert view.name == "Stamped"
-    assert TraitUUID.of(view.uuid).color() == "#3a7d5c"
-    assert [prop.key for prop in TraitUUID.of(view.uuid).props()] == ["created_note", "priority"]
+    assert TraitRef.of(view.uuid).color() == "#3a7d5c"
+    assert [prop.key for prop in TraitRef.of(view.uuid).props()] == ["created_note", "priority"]
     assert TraitView.from_row(view).attached == []
 
 
@@ -46,20 +46,20 @@ def test_attach_makes_props_effective():
     _ = stamped_trait()
     task_type()
     view = Api.attach_trait("Task", "Stamped")
-    assert TypeUUID.of(view.uuid).trait_names() == ["Stamped"]
-    assert [prop.key for prop in TypeUUID.of(view.uuid).effective_props()] == [
+    assert TypeRef.of(view.uuid).trait_names() == ["Stamped"]
+    assert [prop.key for prop in TypeRef.of(view.uuid).effective_props()] == [
         "name",
         "title",
         "created_note",
         "priority",
     ]
     origin = {
-        prop.key: PropView.from_row(prop).trait for prop in TypeUUID.of(view.uuid).effective_props()
+        prop.key: PropView.from_row(prop).trait for prop in TypeRef.of(view.uuid).effective_props()
     }
     assert origin["title"] is None
     assert origin["created_note"] == "Stamped"
     colors = {
-        prop.key: PropView.from_row(prop).trait_color for prop in TypeUUID.of(view.uuid).effective_props()
+        prop.key: PropView.from_row(prop).trait_color for prop in TypeRef.of(view.uuid).effective_props()
     }
     assert colors["priority"] == "#3a7d5c"
 
@@ -93,7 +93,7 @@ def test_detach_removes_props_and_purges_values():
         "Task", {"name": "t1", "created_note": "hello", "priority": 3}
     )
     view = Api.detach_trait("Task", "Stamped")
-    assert [prop.key for prop in TypeUUID.of(view.uuid).effective_props()] == ["name", "title"]
+    assert [prop.key for prop in TypeRef.of(view.uuid).effective_props()] == ["name", "title"]
     reloaded = Api.get_object(task.uuid)
     assert reloaded is not None
     assert set(reloaded.props) == {"name", "title"}
@@ -123,7 +123,7 @@ def test_sync_trait_props_propagates_to_types():
     trait = stamped_trait()
     task_type()
     _ = Api.attach_trait("Task", "Stamped")
-    note_uuid = next(p.uuid for p in TraitUUID.of(trait.uuid).props() if p.key == "created_note")
+    note_uuid = next(p.uuid for p in TraitRef.of(trait.uuid).props() if p.key == "created_note")
     synced = Api.sync_trait(
         "Stamped",
         items=[
@@ -131,10 +131,10 @@ def test_sync_trait_props_propagates_to_types():
             (None, "weight", "Numeric", None),
         ],
     )
-    assert [prop.key for prop in TraitUUID.of(synced.uuid).props()] == ["author_note", "weight"]
+    assert [prop.key for prop in TraitRef.of(synced.uuid).props()] == ["author_note", "weight"]
     task_view = Api.get_type("Task")
     assert task_view is not None
-    assert [prop.key for prop in TypeUUID.of(task_view.uuid).effective_props()] == [
+    assert [prop.key for prop in TypeRef.of(task_view.uuid).effective_props()] == [
         "name",
         "title",
         "author_note",
@@ -146,7 +146,7 @@ def test_sync_trait_rename_and_color():
     _ = stamped_trait()
     synced = Api.sync_trait("Stamped", new_name="Labelled", color="#0000ff")
     assert synced.name == "Labelled"
-    assert TraitUUID.of(synced.uuid).color() == "#0000ff"
+    assert TraitRef.of(synced.uuid).color() == "#0000ff"
     assert Api.get_trait("Stamped") is None
 
 
@@ -176,7 +176,7 @@ def test_delete_bound_trait_refused():
     task_type()
     task_view = Api.get_type("Task")
     assert task_view is not None
-    name_uuid = next(p.uuid for p in TypeUUID.of(task_view.uuid).effective_props() if p.key == "name")
+    name_uuid = next(p.uuid for p in TypeRef.of(task_view.uuid).effective_props() if p.key == "name")
     _ = Api.sync_props(
         "Task",
         [(name_uuid, "name", "String", None), (None, "related", "Any<Stamped>", None)],
@@ -209,13 +209,13 @@ def test_any_trait_wire_name_roundtrip():
     task_type()
     task_view = Api.get_type("Task")
     assert task_view is not None
-    name_uuid = next(p.uuid for p in TypeUUID.of(task_view.uuid).effective_props() if p.key == "name")
+    name_uuid = next(p.uuid for p in TypeRef.of(task_view.uuid).effective_props() if p.key == "name")
     view = Api.sync_props(
         "Task",
         [(name_uuid, "name", "String", None), (None, "related", "Any<Stamped>", None)],
     )
     spec = {
-        prop.key: PropUUID.of(prop.uuid).value_type_name() for prop in TypeUUID.of(view.uuid).effective_props()
+        prop.key: PropRef.of(prop.uuid).value_type_name() for prop in TypeRef.of(view.uuid).effective_props()
     }
     assert spec["related"] == "Any<Stamped>"
 

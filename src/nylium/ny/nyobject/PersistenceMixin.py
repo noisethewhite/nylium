@@ -18,13 +18,13 @@ from nylium.ny.NyScalar import NyScalar
 from nylium.ny.NyScalar import ScalarPayload
 from nylium.ny.NyObjectProtocol import NyObjectProtocol
 from nylium.data.rows import InstanceLink
-from nylium.uuid import ObjectUUID
+from nylium.uuid import ObjectRef
 
 
 class PersistenceMixin:
     """Read and write prop values for an instance; uuid bookkeeping is upstream."""
 
-    _uuid: ObjectUUID
+    _uuid: ObjectRef
 
     def _link(self, prop: NyProp) -> InstanceLink | None:
         return self._uuid.link_for(prop.uuid.uuid)

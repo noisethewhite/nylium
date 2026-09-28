@@ -10,7 +10,7 @@ from __future__ import annotations
 import hashlib
 import secrets
 from datetime import datetime, timezone
-from nylium.uuid import TokenUUID, UserUUID
+from nylium.uuid import TokenRef, UserRef
 
 from nylium.data.tables import api_tokens
 from nylium.data.rows import ApiToken
@@ -25,11 +25,11 @@ class tokens:
     READ_WRITE: ClassVar[str] = "read-write"
 
     @classmethod
-    def issue(cls, user_uuid: UserUUID, name: str, scope: str) -> tuple[TokenUUID, str]:
+    def issue(cls, user_uuid: UserRef, name: str, scope: str) -> tuple[TokenRef, str]:
         """Create a token, returning (uuid, raw) — raw is shown once."""
         raw = secrets.token_urlsafe(32)
         row = api_tokens.create(user_uuid.uuid, name, cls.hash_token(raw), scope)
-        return TokenUUID.of(row.uuid), raw
+        return TokenRef.of(row.uuid), raw
 
     @classmethod
     def resolve(cls, raw: str) -> "ApiToken | None":
