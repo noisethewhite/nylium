@@ -1,25 +1,17 @@
-"""TokenUUID — typed identifier for a ``ApiToken`` row (``api_tokens``)."""
+"""TokenUUID — typed reference to a ``ApiToken`` row (``api_tokens``)."""
 from __future__ import annotations
 
-from uuid import UUID
-
-from pydantic_core import core_schema
+from typing import override
 
 from nylium.data.rows import ApiToken
 from nylium.data.tables import api_tokens
+from nylium.uuid.NyRef import NyRef
 
 
-class TokenUUID(UUID):
-    """A ``api_tokens`` uuid carrying its own table lookup."""
+class TokenUUID(NyRef):
+    """A ``api_tokens`` reference carrying its own table lookup."""
 
-    @classmethod
-    def of(cls, value: UUID) -> "TokenUUID":
-        return cls(str(value))
-
-    @classmethod
-    def __get_pydantic_core_schema__(cls, _source: object, _handler: object) -> core_schema.CoreSchema:
-        return core_schema.uuid_schema()
-
+    @override
     def get(self) -> ApiToken | None:
-        """The ``ApiToken`` row this uuid points at, or ``None`` if it is gone."""
-        return api_tokens.get(self)
+        """The ``ApiToken`` row this reference points at, or ``None`` if it is gone."""
+        return api_tokens.get(self._uuid)

@@ -28,7 +28,7 @@ class tokens:
     def issue(cls, user_uuid: UserUUID, name: str, scope: str) -> tuple[TokenUUID, str]:
         """Create a token, returning (uuid, raw) — raw is shown once."""
         raw = secrets.token_urlsafe(32)
-        row = api_tokens.create(user_uuid, name, cls.hash_token(raw), scope)
+        row = api_tokens.create(user_uuid.uuid, name, cls.hash_token(raw), scope)
         return TokenUUID.of(row.uuid), raw
 
     @classmethod

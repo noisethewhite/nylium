@@ -1,9 +1,13 @@
 from __future__ import annotations
 from typing import ClassVar
+from uuid import UUID
+import sqlalchemy as sqla
 from nylium.database import Database
+from nylium.database.Row import get_mapper
 from nylium.system.Environment import Environment
 from nylium.ny.NyType import NyType
 from pathlib import Path
+from nylium.data.rows import FileValue
 from nylium.data.tables import TypeStyles
 from nylium.uuid import FileUUID, ObjectUUID
 from nylium.data.tables import files
@@ -114,6 +118,34 @@ class NyFile:
         TypeStyles.reset_icons_referencing(marker, cls.DEFAULT_GLYPH)
 
     @classmethod
+    @Database.use_same_session
+    def ref_for(cls, inst_uuid: UUID, prop_uuid: UUID) -> FileUUID | None:
+        """The file uuid referenced by (owner instance, prop), or None."""
+        c = get_mapper(FileValue).columns
+        raw: UUID | None = Database.scalar(
+            sqla.select(c.file_uuid).where(c.inst_uuid == inst_uuid, c.prop_uuid == prop_uuid)
+        )
+        return None if raw is None else FileUUID.of(raw)
+
+    @classmethod
+    @Database.use_same_session
+    def write_ref(cls, inst_uuid: UUID, prop_uuid: UUID, file_uuid: UUID | None) -> None:
+        """Set/clear the file reference of (owner instance, prop)."""
+        c = get_mapper(FileValue).columns
+        if file_uuid is None:
+            _ = Database.execute(
+                sqla.delete(FileValue).where(c.inst_uuid == inst_uuid, c.prop_uuid == prop_uuid)
+            )
+            return
+        row = Database.get(FileValue, (inst_uuid, prop_uuid))
+        if row is None:
+            Database.add(
+                FileValue(inst_uuid=inst_uuid, prop_uuid=prop_uuid, file_uuid=file_uuid)
+            )
+            return
+        row.file_uuid = file_uuid
+
+    @classmethod
     def parse_icon_image(cls, icon: str) -> FileUUID | None:
         """types.icon either names a Material glyph or `img:<uuid>` of an
         Image instance. Returns the uuid for the latter, None otherwise."""
@@ -127,7 +159,7 @@ class NyFile:
     @classmethod
     @Database.use_same_session
     def image_file_exists(cls, uuid: FileUUID) -> bool:
-        return files.type_name_of(uuid) == cls.TYPE_IMAGE
+        return files.type_name_of(uuid.uuid) == cls.TYPE_IMAGE
 
     @classmethod
     @Database.use_same_session
@@ -136,4 +168,4 @@ class NyFile:
         pointed at it (ADR-0008) — mirrors NyObject.delete's cleanup of array
         links, so no dangling files.uuid survives in an array."""
 
-        ObjectUUID.of(uuid).delete_memberships()
+        ObjectUUID.of(uuid.uuid).delete_memberships()

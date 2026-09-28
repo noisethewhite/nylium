@@ -36,7 +36,7 @@ def sync_graph(
     """Replace the function's DAG. `nodes` items are
     (uuid | None, kind, position, config); None uuid creates. `edges`
     items are (from_node_uuid, from_port, to_node_uuid, to_port)."""
-    FunctionNodes.sync_graph(function_uuid, nodes, edges)
+    FunctionNodes.sync_graph(function_uuid.uuid, nodes, edges)
 
 
 @Database.use_same_session
@@ -54,11 +54,11 @@ def assert_no_dependency_cycle(inst_uuid: ObjectUUID) -> None:
     prop that B computes on the same owner. A cycle would recurse forever
     at read time. Run on bind and on function DAG save."""
     # prop_uuid -> function_uuid bound on this owner
-    bindings = {prop_uuid: ObjectUUID.of(fn_uuid) for prop_uuid, fn_uuid in InstanceFunctionLinks.function_links_of_instance(inst_uuid)}
+    bindings = {prop_uuid: ObjectUUID.of(fn_uuid) for prop_uuid, fn_uuid in InstanceFunctionLinks.function_links_of_instance(inst_uuid.uuid)}
     if not bindings:
         return
     # prop key -> prop_uuid on the owner (to map get_prop keys back)
-    inst = instances.get(inst_uuid)
+    inst = instances.get(inst_uuid.uuid)
     type_uuid = None if inst is None else inst.type_uuid
     if type_uuid is None:
         return
@@ -69,7 +69,7 @@ def assert_no_dependency_cycle(inst_uuid: ObjectUUID) -> None:
 
     deps: dict[ObjectUUID, set[ObjectUUID]] = {fn_uuid: set() for fn_uuid in bindings.values()}
     for fn_uuid in bindings.values():
-        for node in FunctionNodes.nodes_of(fn_uuid):
+        for node in FunctionNodes.nodes_of(fn_uuid.uuid):
             if node.kind != Constants.Functions.NODE_GET_PROP:
                 continue
             key = node.config.get("key")
@@ -108,12 +108,12 @@ def _assert_acyclic(deps: Mapping[ObjectUUID, set[ObjectUUID]]) -> None:
 
 @Database.use_same_session
 def nodes(function_uuid: ObjectUUID) -> list[FunctionNode]:
-    return FunctionNodes.nodes_of(function_uuid)
+    return FunctionNodes.nodes_of(function_uuid.uuid)
 
 
 @Database.use_same_session
 def edges(function_uuid: ObjectUUID) -> list[FunctionEdge]:
-    return FunctionEdges.edges_of(function_uuid)
+    return FunctionEdges.edges_of(function_uuid.uuid)
 
 
 @Database.use_same_session

@@ -1,11 +1,11 @@
-"""TypeUUID — typed identifier for a ``Type`` row (``types``)."""
+"""TypeUUID — typed reference to a ``Type`` row (``types``)."""
 from __future__ import annotations
 
 from decimal import Decimal
+from typing import override
 from uuid import UUID, uuid4
 
 import sqlalchemy as sqla
-from pydantic_core import core_schema
 
 from nylium.database import Database
 from nylium.database.Row import get_mapper
@@ -20,60 +20,54 @@ from nylium.data.tables import (
     types,
     unit_parts,
 )
+from nylium.uuid.NyRef import NyRef
 
 
-class TypeUUID(UUID):
-    """A ``types`` uuid carrying its own table lookup and schema navigation."""
+class TypeUUID(NyRef):
+    """A ``types`` reference carrying its own table lookup and schema navigation."""
 
-    @classmethod
-    def of(cls, value: UUID) -> "TypeUUID":
-        return cls(str(value))
-
-    @classmethod
-    def __get_pydantic_core_schema__(cls, _source: object, _handler: object) -> core_schema.CoreSchema:
-        return core_schema.uuid_schema()
-
+    @override
     def get(self) -> Type | None:
-        """The ``Type`` row this uuid points at, or ``None`` if it is gone."""
-        return types.get(self)
+        """The ``Type`` row this reference points at, or ``None`` if it is gone."""
+        return types.get(self._uuid)
 
     def effective_props(self) -> list[Prop]:
         """The effective schema (ADR-0013): own props, then each attached
         trait's props in attach order."""
-        result = sorted(props.where(owner_type_uuid=self), key=lambda p: p.position)
-        for trait_uuid in type_traits.attached_trait_uuids(self):
+        result = sorted(props.where(owner_type_uuid=self._uuid), key=lambda p: p.position)
+        for trait_uuid in type_traits.attached_trait_uuids(self._uuid):
             result.extend(
                 sorted(props.where(owner_trait_uuid=trait_uuid), key=lambda p: p.position)
             )
         return result
 
     def plural_name(self) -> str:
-        return type_style[self].plural_name
+        return type_style[self._uuid].plural_name
 
     def icon(self) -> str:
-        return type_style[self].icon
+        return type_style[self._uuid].icon
 
     def color(self) -> str:
-        return type_style[self].color
+        return type_style[self._uuid].color
 
     def trait_names(self) -> list[str]:
         """Names of traits attached to this type, in attach order."""
         result: list[str] = []
-        for link in sorted(type_traits.where(type_uuid=self), key=lambda link: link.position):
+        for link in sorted(type_traits.where(type_uuid=self._uuid), key=lambda link: link.position):
             trait = traits.get(link.trait_uuid)
             if trait is not None:
                 result.append(trait.name)
         return result
 
     def enum_options(self) -> list[EnumOption]:
-        return sorted(enum_options.where(type_uuid=self), key=lambda o: o.position)
+        return sorted(enum_options.where(type_uuid=self._uuid), key=lambda o: o.position)
 
     def unit_parts(self) -> list[UnitPart]:
-        return sorted(unit_parts.where(type_uuid=self), key=lambda p: p.position)
+        return sorted(unit_parts.where(type_uuid=self._uuid), key=lambda p: p.position)
 
     def name_of(self) -> str:
         """The type's name, or ``<dangling>`` if the type row is gone."""
-        t = types.get(self)
+        t = types.get(self._uuid)
         return "<dangling>" if t is None else t.name
 
     # --- shared draft helpers (enum + unit share the same shape) ---
@@ -127,7 +121,7 @@ class TypeUUID(UUID):
     @Database.use_same_session
     def _enum_option_usage(self, value: str) -> int:
         return self._usage_count(
-            StringValue, self, condition=get_mapper(StringValue).columns.value == value
+            StringValue, self._uuid, condition=get_mapper(StringValue).columns.value == value
         )
 
     @Database.commit_after_this
@@ -138,7 +132,7 @@ class TypeUUID(UUID):
         c = get_mapper(EnumOption).columns
         existing = {
             row.uuid: row
-            for row in Database.scalars(sqla.select(EnumOption).where(c.type_uuid == self))
+            for row in Database.scalars(sqla.select(EnumOption).where(c.type_uuid == self._uuid))
         }
         kept = {uuid for uuid, _ in items if uuid is not None}
         for stale_uuid, stale_row in existing.items():
@@ -152,13 +146,13 @@ class TypeUUID(UUID):
         for position, (option_uuid, value) in enumerate(items):
             if option_uuid is None or option_uuid not in existing:
                 Database.add(
-                    EnumOption(uuid=uuid4(), type_uuid=self, value=value, position=position)
+                    EnumOption(uuid=uuid4(), type_uuid=self._uuid, value=value, position=position)
                 )
                 continue
             row = existing[option_uuid]
             if row.value != value:
                 self._rename_propagate(
-                    StringValue, self, get_mapper(StringValue).columns.value, row.value, value
+                    StringValue, self._uuid, get_mapper(StringValue).columns.value, row.value, value
                 )
                 row.value = value
             row.position = position
@@ -184,7 +178,7 @@ class TypeUUID(UUID):
         if parameterized is None:
             return 0
         condition = None if part_name is None else get_mapper(NumericValue).columns.unit == part_name
-        return cls._usage_count(NumericValue, parameterized, condition=condition)
+        return cls._usage_count(NumericValue, parameterized.uuid, condition=condition)
 
     @Database.commit_after_this
     def sync_unit_parts(
@@ -197,7 +191,7 @@ class TypeUUID(UUID):
         parts are deleted unless still in use."""
         c = get_mapper(UnitPart).columns
         existing = sorted(
-            Database.scalars(sqla.select(UnitPart).where(c.type_uuid == self)),
+            Database.scalars(sqla.select(UnitPart).where(c.type_uuid == self._uuid)),
             key=lambda p: p.position,
         )
         by_uuid = {part.uuid: part for part in existing}
@@ -207,7 +201,7 @@ class TypeUUID(UUID):
             if part is None:
                 row = UnitPart(
                     uuid=uuid4(),
-                    type_uuid=self,
+                    type_uuid=self._uuid,
                     name=name,
                     multiplier=multiplier,
                     offset=offset,
@@ -222,7 +216,7 @@ class TypeUUID(UUID):
                     parameterized = self.parameterized_numeric(unit_type_name)
                     if parameterized is not None:
                         self._rename_propagate(
-                            NumericValue, parameterized, get_mapper(NumericValue).columns.unit, part.name, name
+                            NumericValue, parameterized.uuid, get_mapper(NumericValue).columns.unit, part.name, name
                         )
                     part.name = name
                 part.multiplier = multiplier

@@ -1,10 +1,8 @@
-"""ObjectUUID — typed identifier for an ``Instance`` row (``instances``)."""
+"""ObjectUUID — typed reference to an ``Instance`` row (``instances``)."""
 from __future__ import annotations
 
-from typing import cast
+from typing import cast, override
 from uuid import UUID
-
-from pydantic_core import core_schema
 
 import sqlalchemy as sqla
 from sqlalchemy.orm import aliased
@@ -13,23 +11,17 @@ from nylium.database import Database
 from nylium.database.Row import get_mapper
 from nylium.data.rows import ArrayValue, Instance, InstanceLink, Prop, StringValue, Type, TypeStyle
 from nylium.data.tables import instances
+from nylium.uuid.NyRef import NyRef
 
 
-class ObjectUUID(UUID):
+class ObjectUUID(NyRef):
     """An ``instances`` uuid carrying its own table lookup and reverse
     projections (backlinks, array membership, tag chips)."""
 
-    @classmethod
-    def of(cls, value: UUID) -> "ObjectUUID":
-        return cls(str(value))
-
-    @classmethod
-    def __get_pydantic_core_schema__(cls, _source: object, _handler: object) -> core_schema.CoreSchema:
-        return core_schema.uuid_schema()
-
+    @override
     def get(self) -> Instance | None:
         """The ``Instance`` row this uuid points at, or ``None`` if it is gone."""
-        return instances.get(self)
+        return instances.get(self._uuid)
 
     @classmethod
     @Database.use_same_session
@@ -57,7 +49,7 @@ class ObjectUUID(UUID):
             .join(Prop, iv_c.prop_uuid == p_c.uuid)
             .join(Type, p_c.value_type_uuid == t_c.uuid)
             .where(
-                iv_c.inst_uuid == self,
+                iv_c.inst_uuid == self._uuid,
                 # mirrors NyType.ARRAY_TYPE_PREFIX (objects layer imports tables,
                 # so the constant cannot flow the other way)
                 t_c.name.like("Array<%"),
@@ -80,7 +72,7 @@ class ObjectUUID(UUID):
             sqla.select(iv_c.inst_uuid, direct_types.name)
             .join(Instance, iv_c.inst_uuid == i_c.uuid)
             .join(direct_types, i_c.type_uuid == direct_types.uuid)
-            .where(iv_c.uuid == self)
+            .where(iv_c.uuid == self._uuid)
         ).all()
 
         box_link = aliased(InstanceLink)
@@ -91,7 +83,7 @@ class ObjectUUID(UUID):
             .join(box_link, av_c.inst_uuid == box_link.uuid)
             .join(Instance, box_link.inst_uuid == i_c.uuid)
             .join(array_types, i_c.type_uuid == array_types.uuid)
-            .where(av_c.value_uuid == self)
+            .where(av_c.value_uuid == self._uuid)
         ).all()
 
         seen: set[ObjectUUID] = set()
@@ -147,7 +139,7 @@ class ObjectUUID(UUID):
                 isouter=True,
             )
             .where(
-                av_c.value_uuid == self,
+                av_c.value_uuid == self._uuid,
                 t_c.name == array_type_name,
                 name_prop.key == name_prop_key,
             )
@@ -168,14 +160,14 @@ class ObjectUUID(UUID):
     def delete_memberships(self) -> None:
         """Drop every array-membership row pointing at this element uuid."""
         c = get_mapper(ArrayValue).columns
-        _ = Database.execute(sqla.delete(ArrayValue).where(c.value_uuid == self))
+        _ = Database.execute(sqla.delete(ArrayValue).where(c.value_uuid == self._uuid))
 
     @Database.use_same_session
     def link_for(self, prop_uuid: UUID) -> InstanceLink | None:
         """The link row held by (this owner, prop), or None."""
         c = get_mapper(InstanceLink).columns
         return Database.scalar(
-            sqla.select(InstanceLink).where(c.inst_uuid == self, c.prop_uuid == prop_uuid)
+            sqla.select(InstanceLink).where(c.inst_uuid == self._uuid, c.prop_uuid == prop_uuid)
         )
 
     @Database.use_same_session
@@ -183,20 +175,20 @@ class ObjectUUID(UUID):
         """Insert-or-replace the link row for (this owner, prop) pointing at
         the given target uuid (ADR-0028)."""
         _ = Database.merge(
-            InstanceLink(uuid=target_uuid, prop_uuid=prop_uuid, inst_uuid=self)
+            InstanceLink(uuid=target_uuid, prop_uuid=prop_uuid, inst_uuid=self._uuid)
         )
 
     @Database.use_same_session
     def add_link(self, prop_uuid: UUID, target_uuid: UUID) -> None:
         """Insert a brand-new link row and flush (plain insert, ADR-0028)."""
-        Database.add(InstanceLink(uuid=target_uuid, prop_uuid=prop_uuid, inst_uuid=self))
+        Database.add(InstanceLink(uuid=target_uuid, prop_uuid=prop_uuid, inst_uuid=self._uuid))
         Database.flush()
 
     @Database.use_same_session
     def delete_links_to(self) -> None:
         """Delete every link row whose target is this instance uuid."""
         c = get_mapper(InstanceLink).columns
-        _ = Database.execute(sqla.delete(InstanceLink).where(c.uuid == self))
+        _ = Database.execute(sqla.delete(InstanceLink).where(c.uuid == self._uuid))
 
     @classmethod
     def delete_link(cls, row: InstanceLink) -> None:

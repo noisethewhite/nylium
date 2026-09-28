@@ -116,7 +116,7 @@ class PropUUID(UUID):
             _ = Database.execute(
                 sqla.delete(table).where(
                     tc.prop_uuid == self,
-                    tc.inst_uuid.in_(inst_uuids),
+                    tc.inst_uuid.in_([u.uuid for u in inst_uuids]),
                 )
             )
         Database.flush()

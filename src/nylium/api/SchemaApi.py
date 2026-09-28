@@ -150,7 +150,7 @@ class SchemaApi(_SchemaBase):
         # props — rewrite their stored formulas to the new member keys, or
         # refuse the whole sync when a referenced member dies
         formula_updates = cls._rewrite_dependent_formulas(
-            type_name, owner.uuid, owner_props, renames
+            type_name, owner.uuid.uuid, owner_props, renames
         )
         # embedded children die with their prop: deleting or retyping an
         # embedded prop would cascade the link rows away and orphan the
@@ -171,7 +171,7 @@ class SchemaApi(_SchemaBase):
             ):
                 continue
             draft = kept.get(prop.uuid)
-            if draft is None or draft[1] != old_value_type.uuid:
+            if draft is None or draft[1] != old_value_type.uuid.uuid:
                 NyEmbedded.destroy_children_of_prop(prop.uuid)
             elif draft[0] != prop.key:
                 embedded_renamed = True
@@ -181,6 +181,6 @@ class SchemaApi(_SchemaBase):
         if embedded_renamed:
             # a renamed embedded prop key invalidates every generated
             # child name of every instance of this type
-            for instance_uuid in [i.uuid for i in instances.where(type_uuid=owner.uuid)]:
+            for instance_uuid in [i.uuid for i in instances.where(type_uuid=owner.uuid.uuid)]:
                 NyEmbedded.regenerate_names(ObjectUUID.of(instance_uuid))
         return cls._type_result(type_name)

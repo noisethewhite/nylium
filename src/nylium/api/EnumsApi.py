@@ -35,7 +35,7 @@ class EnumsApi(ApiShared):
         cls._check_icon(icon)
         owner = NyType.ensure(final_name, kind=NyType.KIND_ENUM)
         TypeUUID.of(owner.uuid).sync_enum_options([(None, v) for v in (options or [])])
-        decor = type_style[owner.uuid]
+        decor = type_style[owner.uuid.uuid]
         decor.icon = icon
         decor.color = color
         return cls._type_result(final_name)

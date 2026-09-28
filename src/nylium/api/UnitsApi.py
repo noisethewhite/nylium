@@ -47,7 +47,7 @@ class UnitsApi(ApiShared):
         ]
         cls._validate_unit_draft(items)
         TypeUUID.of(owner.uuid).sync_unit_parts(final_name, items)
-        decor = type_style[owner.uuid]
+        decor = type_style[owner.uuid.uuid]
         decor.icon = icon
         decor.color = color
         return cls._type_result(final_name)
@@ -71,7 +71,7 @@ class UnitsApi(ApiShared):
             raise ValidationError(f"type {name!r} is not a unit")
         cls._validate_unit_draft(items)
         old_base = next(
-            (p for p in unit_parts.where(type_uuid=owner.uuid) if p.is_base), None
+            (p for p in unit_parts.where(type_uuid=owner.uuid.uuid) if p.is_base), None
         )
         new_base_uuid = next(uuid for uuid, _, _, _, is_base in items if is_base)
         if (

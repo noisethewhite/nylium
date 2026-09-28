@@ -63,7 +63,7 @@ class NyArray:
         """Delete the array instance and every box it owns, recursively."""
         cls._destroy_boxes(array_uuid)
         ObjectUUID.of(array_uuid).delete_links_to()
-        Instances.delete_row(array_uuid)
+        Instances.delete_row(array_uuid.uuid)
 
     # --- internals ---
 
@@ -96,14 +96,14 @@ class NyArray:
     @classmethod
     @Database.commit_after_this
     def _destroy_box(cls, box_uuid: ObjectUUID) -> None:
-        inst = instances.get(box_uuid)
+        inst = instances.get(box_uuid.uuid)
         if inst is None:
             return
         owner = NyType.by_uuid(TypeUUID.of(inst.type_uuid))
         if owner is None:
             raise RuntimeError(f"instance {box_uuid} has dangling type")
         if NyScalar.is_scalar(owner.name):
-            Instances.delete_row(box_uuid)  # its scalar values cascade on inst_uuid
+            Instances.delete_row(box_uuid.uuid)  # its scalar values cascade on inst_uuid
             return
         if NyType.is_array_name(owner.name):
             cls.destroy(ArrayUUID.of(box_uuid))
@@ -112,7 +112,7 @@ class NyArray:
             # ADR-0021: an Array<Embedded> element is a composition child —
             # its lifecycle is owned by the array, so a rewrite/delete of
             # the array deletes it (recursively, via the object's cascade).
-            NyTypeMeta.root().wrap(box_uuid).delete()
+            NyTypeMeta.root().wrap(box_uuid.uuid).delete()
             return
         # user-type instance referenced from the array: not a box, keep it
 
@@ -125,7 +125,7 @@ class NyArray:
         if link is not None:
             return ArrayUUID.of(link.uuid)
         array_uuid = cls._create_array_instance(NyType.array_name(elem_type))
-        ObjectUUID.of(owner_uuid).add_link(prop.uuid, array_uuid)
+        ObjectUUID.of(owner_uuid).add_link(prop.uuid, array_uuid.uuid)
         return array_uuid
 
     @classmethod
@@ -133,7 +133,7 @@ class NyArray:
     def _create_array_instance(cls, array_type_name: str) -> ArrayUUID:
         array_uuid = uuid4()
         array_type = NyType.ensure(array_type_name)
-        instances.create(array_uuid, array_type.uuid, Constants.Types.ARRAY_INSTANCE_NAME)
+        instances.create(array_uuid, array_type.uuid.uuid, Constants.Types.ARRAY_INSTANCE_NAME)
         return ArrayUUID.of(array_uuid)
 
     @classmethod
@@ -186,7 +186,7 @@ class NyArray:
                 owner_uuid,
                 prop,
             )
-            return nested_array_uuid
+            return nested_array_uuid.uuid
         scalar = NyScalar.by_type_name(type_name)
         if scalar is None:
             if NyFile.is_file_type(type_name):
@@ -212,13 +212,13 @@ class NyArray:
                     # inline props draft and named <parent> → <prop> #<index>
                     return cls._box_embedded(
                         embedded, value, array_uuid, owner_uuid, prop, index
-                    )
+                    ).uuid
                 NyTypeMeta.check_link(type_name, value)
-                return cast(NyObjectProtocol, value).uuid
+                return cast(NyObjectProtocol, value).uuid.uuid
         NyScalar.validate(scalar.TYPE_NAME, cast(ScalarPayload | None, value))
         box_uuid = uuid4()
         owner = NyType.ensure(scalar.TYPE_NAME)
-        instances.create(box_uuid, owner.uuid, str(value))
+        instances.create(box_uuid, owner.uuid.uuid, str(value))
         value_prop = NyProp.by_key(owner, Constants.Props.VALUE_PROP_KEY)
         if value_prop is None:
             raise RuntimeError(f"scalar type {type_name} lost its 'value' prop")

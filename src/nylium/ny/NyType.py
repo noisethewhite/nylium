@@ -163,7 +163,7 @@ class NyType:
     @classmethod
     @Database.use_same_session
     def by_uuid(cls, uuid: TypeUUID) -> "NyType | None":
-        row = types.get(uuid)
+        row = types.get(uuid.uuid)
         return None if row is None else cls(row)
 
     @classmethod
@@ -191,7 +191,7 @@ class NyType:
                 )
             # builtins re-ensure on every boot: keep their icon canonical
             if icon is not None and existing.icon != icon:
-                type_style[existing.uuid].icon = icon
+                type_style[existing.uuid.uuid].icon = icon
             return existing
         row = types.create(name, plural_name or f"{name}s", icon=icon, kind=kind, embedded=embedded)
         return cls(row)

@@ -207,7 +207,7 @@ class ApiShared:
             raise ValidationError(
                 f"{name!r}: {NyType.ANY_PREFIX}…> is only allowed as a top-level prop type"
             )
-        return cls._ensure_value_type(name).uuid, None
+        return cls._ensure_value_type(name).uuid.uuid, None
 
     @classmethod
     @Database.use_same_session
@@ -314,7 +314,7 @@ class ApiShared:
                     )
             return {
                 key: cls._normalize_value(
-                    item, cls._prop_value_type_name(resolved.uuid, key)
+                    item, cls._prop_value_type_name(resolved.uuid.uuid, key)
                 )
                 for key, item in value.items()
             }

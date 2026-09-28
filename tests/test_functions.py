@@ -75,7 +75,7 @@ def test_create_function_get_prop():
 def test_list_and_get_function():
     fn = passthrough()
     assert fn.uuid in [f.uuid for f in Api.list_functions()]
-    got = Api.get_function(fn.uuid)
+    got = Api.get_function(fn.uuid.uuid)
     assert got is not None
     assert got.name == "total"
 
@@ -146,7 +146,7 @@ def test_empty_graph_rejected():
 def test_eval_get_prop():
     inv = invoice("42")
     fn = passthrough()
-    assert NyFunction.evaluate_for(ObjectUUID.of(inv.uuid), ObjectUUID.of(fn.uuid)) == Decimal("42")
+    assert NyFunction.evaluate_for(ObjectUUID.of(inv.uuid), ObjectUUID.of(fn.uuid.uuid)) == Decimal("42")
 
 
 def test_eval_mul():
@@ -161,7 +161,7 @@ def test_eval_mul():
         ],
         [edge(a, 0, c, 0), edge(b, 0, c, 1)],
     )
-    assert NyFunction.evaluate_for(ObjectUUID.of(inv.uuid), ObjectUUID.of(fn.uuid)) == Decimal("500")
+    assert NyFunction.evaluate_for(ObjectUUID.of(inv.uuid), ObjectUUID.of(fn.uuid.uuid)) == Decimal("500")
 
 
 def test_eval_div_respects_port_order():
@@ -181,7 +181,7 @@ def test_eval_div_respects_port_order():
         ],
         [edge(a, 0, c, 0), edge(b, 0, c, 1)],
     )
-    assert NyFunction.evaluate_for(ObjectUUID.of(inv.uuid), ObjectUUID.of(fn.uuid)) == Decimal("25")
+    assert NyFunction.evaluate_for(ObjectUUID.of(inv.uuid), ObjectUUID.of(fn.uuid.uuid)) == Decimal("25")
 
 
 def test_eval_sum_array():
@@ -195,7 +195,7 @@ def test_eval_sum_array():
         ],
         [edge(a, 0, b, 0)],
     )
-    assert NyFunction.evaluate_for(ObjectUUID.of(inv.uuid), ObjectUUID.of(fn.uuid)) == Decimal("60")
+    assert NyFunction.evaluate_for(ObjectUUID.of(inv.uuid), ObjectUUID.of(fn.uuid.uuid)) == Decimal("60")
 
 
 def test_eval_map_over_object_array():
@@ -219,7 +219,7 @@ def test_eval_map_over_object_array():
         ],
         [edge(a, 0, b, 0), edge(b, 0, c, 0)],
     )
-    assert NyFunction.evaluate_for(ObjectUUID.of(rep.uuid), ObjectUUID.of(fn.uuid)) == Decimal("30")
+    assert NyFunction.evaluate_for(ObjectUUID.of(rep.uuid), ObjectUUID.of(fn.uuid.uuid)) == Decimal("30")
 
 
 def test_map_over_scalar_array_rejected():
@@ -249,7 +249,7 @@ def test_eval_div_by_zero_renders_none():
         ],
         [edge(a, 0, c, 0), edge(b, 0, c, 1)],
     )
-    assert NyFunction.evaluate_for(ObjectUUID.of(inv.uuid), ObjectUUID.of(fn.uuid)) is None
+    assert NyFunction.evaluate_for(ObjectUUID.of(inv.uuid), ObjectUUID.of(fn.uuid.uuid)) is None
 
 
 # --- update / delete ---
@@ -260,7 +260,7 @@ def test_update_function_replaces_graph():
     fn = passthrough()
     a, b, c = uuid4(), uuid4(), uuid4()
     updated = Api.update_function(
-        fn.uuid, "doubled",
+        fn.uuid.uuid, "doubled",
         [
             node(a, "get_prop", 0, {"key": "total"}),
             node(b, "const", 1, {"value": 2}),
@@ -270,14 +270,14 @@ def test_update_function_replaces_graph():
     )
     assert updated.name == "doubled"
     assert len(updated.nodes) == 3
-    assert NyFunction.evaluate_for(ObjectUUID.of(inv.uuid), ObjectUUID.of(fn.uuid)) == Decimal("14")
+    assert NyFunction.evaluate_for(ObjectUUID.of(inv.uuid), ObjectUUID.of(fn.uuid.uuid)) == Decimal("14")
 
 
 def test_delete_function():
     fn = passthrough()
-    assert Api.delete_function(fn.uuid) is True
-    assert Api.delete_function(fn.uuid) is False
-    assert Api.get_function(fn.uuid) is None
+    assert Api.delete_function(fn.uuid.uuid) is True
+    assert Api.delete_function(fn.uuid.uuid) is False
+    assert Api.get_function(fn.uuid.uuid) is None
 
 
 # --- instance-level prop binding (ADR-0029) ---
@@ -295,7 +295,7 @@ def test_set_instance_prop_function_binds_and_reads():
         ],
         [edge(a, 0, c, 0), edge(b, 0, c, 1)],
     )
-    view = Api.set_instance_prop_function(ObjectUUID.of(inv.uuid), "taxed", ObjectUUID.of(fn.uuid))
+    view = Api.set_instance_prop_function(ObjectUUID.of(inv.uuid), "taxed", ObjectUUID.of(fn.uuid.uuid))
     assert view.props["taxed"] == ScalarValueView(value=Decimal("30"))
 
 
@@ -336,7 +336,7 @@ def test_function_chain_recomputes_across_bindings():
 def test_set_instance_prop_function_unbinds():
     inv = invoice("10", "3")
     fn = passthrough()
-    _ = Api.set_instance_prop_function(ObjectUUID.of(inv.uuid), "taxed", ObjectUUID.of(fn.uuid))
+    _ = Api.set_instance_prop_function(ObjectUUID.of(inv.uuid), "taxed", ObjectUUID.of(fn.uuid.uuid))
     view = Api.set_instance_prop_function(ObjectUUID.of(inv.uuid), "taxed", None)
     assert view.props["taxed"] == ScalarValueView(value=None)
 
@@ -349,7 +349,7 @@ def test_set_instance_prop_function_output_type_mismatch_rejected():
         [],
     )
     with pytest.raises(ValidationError):
-        Api.set_instance_prop_function(ObjectUUID.of(inv.uuid), "taxed", ObjectUUID.of(fn.uuid))
+        Api.set_instance_prop_function(ObjectUUID.of(inv.uuid), "taxed", ObjectUUID.of(fn.uuid.uuid))
 
 
 def test_set_instance_prop_function_formula_conflict_rejected():
@@ -373,7 +373,7 @@ def test_set_instance_prop_function_formula_conflict_rejected():
     )
     rep = Api.create_object("Report", {"name": "r"})
     with pytest.raises(ValidationError):
-        Api.set_instance_prop_function(ObjectUUID.of(rep.uuid), "amount", ObjectUUID.of(fn.uuid))
+        Api.set_instance_prop_function(ObjectUUID.of(rep.uuid), "amount", ObjectUUID.of(fn.uuid.uuid))
 
 
 def test_set_instance_prop_function_input_type_mismatch_rejected():
@@ -386,7 +386,7 @@ def test_set_instance_prop_function_input_type_mismatch_rejected():
     fn = passthrough()
     rep = Api.create_object("Report", {"name": "r"})
     with pytest.raises(ValidationError):
-        Api.set_instance_prop_function(ObjectUUID.of(rep.uuid), "amount", ObjectUUID.of(fn.uuid))
+        Api.set_instance_prop_function(ObjectUUID.of(rep.uuid), "amount", ObjectUUID.of(fn.uuid.uuid))
 
 
 # --- write guard ---
@@ -395,7 +395,7 @@ def test_set_instance_prop_function_input_type_mismatch_rejected():
 def test_write_guard_function_prop():
     inv = invoice("10", "3")
     fn = passthrough()
-    _ = Api.set_instance_prop_function(ObjectUUID.of(inv.uuid), "taxed", ObjectUUID.of(fn.uuid))
+    _ = Api.set_instance_prop_function(ObjectUUID.of(inv.uuid), "taxed", ObjectUUID.of(fn.uuid.uuid))
     with pytest.raises(ValidationError):
         Api.update_object(inv.uuid, {"taxed": Decimal("5")})
     # plain props still write fine alongside a computed sibling

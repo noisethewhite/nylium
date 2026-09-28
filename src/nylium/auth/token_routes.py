@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 from typing import Annotated, cast
-from nylium.uuid import TokenUUID
+from uuid import UUID
 
 from fastapi import Depends, Request
 from fastapi.responses import JSONResponse
@@ -80,7 +80,7 @@ class token_routes:
     @classmethod
     @api_route("/auth/tokens/{token_uuid}", "DELETE", guarded=False)
     def revoke(
-        cls, token_uuid: TokenUUID, user: Annotated[AuthUser, Depends(require_cookie_user)]
+        cls, token_uuid: UUID, user: Annotated[AuthUser, Depends(require_cookie_user)]
     ) -> JSONResponse:
         row = api_tokens.get(token_uuid)
         if row is None or row.user_uuid != user.uuid:

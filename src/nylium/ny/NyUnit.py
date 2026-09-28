@@ -35,7 +35,7 @@ class NyUnit:
         if value.unit is None:
             return Quantity(value=value.value, unit=None)
         part = next(
-            (p for p in unit_parts.where(type_uuid=owner.uuid) if p.name == value.unit),
+            (p for p in unit_parts.where(type_uuid=owner.uuid.uuid) if p.name == value.unit),
             None,
         )
         if part is None:
@@ -52,7 +52,7 @@ class NyUnit:
     def read(
         cls, inst_uuid: ObjectUUID, prop: NyProp, type_name: str
     ) -> Quantity | None:
-        stored = PropUUID.of(prop.uuid).read_with_unit(inst_uuid)
+        stored = PropUUID.of(prop.uuid).read_with_unit(inst_uuid.uuid)
         if stored is None:
             return None
         canonical, entered_unit = stored
@@ -62,7 +62,7 @@ class NyUnit:
         part = next(
             (
                 p
-                for p in unit_parts.where(type_uuid=owner.uuid)
+                for p in unit_parts.where(type_uuid=owner.uuid.uuid)
                 if p.name == entered_unit
             ),
             None,
@@ -82,9 +82,9 @@ class NyUnit:
         cls, inst_uuid: ObjectUUID, prop: NyProp, quantity: Quantity | None
     ) -> None:
         if quantity is None:
-            _ = NumericValues.clear(inst_uuid, prop.uuid)
+            _ = NumericValues.clear(inst_uuid.uuid, prop.uuid)
             return
-        PropUUID.of(prop.uuid).write_with_unit(inst_uuid, quantity.value, quantity.unit)
+        PropUUID.of(prop.uuid).write_with_unit(inst_uuid.uuid, quantity.value, quantity.unit)
 
     # --- internals ---
 

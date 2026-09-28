@@ -118,7 +118,7 @@ class TypesApi(_TypesBase):
                 value_trait_uuid=None if value_trait_uuid is None else TraitUUID.of(value_trait_uuid),
                 collect=collects.get(key),
             )
-        decor = type_style[owner.uuid]
+        decor = type_style[owner.uuid.uuid]
         decor.icon = icon
         decor.color = color
         return cls._type_result(name)
@@ -146,7 +146,7 @@ class TypesApi(_TypesBase):
             raise ValidationError("type name must not be empty")
         cls._check_reserved_name(final_name, "type name")
         collision_row = next(types.where(name=final_name), None)
-        if collision_row is not None and collision_row.uuid != owner.uuid:
+        if collision_row is not None and collision_row.uuid != owner.uuid.uuid:
             raise ValueError(f"type {final_name!r} already exists")
         final_plural = owner.plural_name if plural_name is None else plural_name
         if icon is not None:
@@ -155,9 +155,9 @@ class TypesApi(_TypesBase):
         if color is not None:
             cls._check_color(color)
         final_color = owner.color if color is None else color
-        row = types[owner.uuid]
+        row = types[owner.uuid.uuid]
         row.name = final_name
-        decor = type_style[owner.uuid]
+        decor = type_style[owner.uuid.uuid]
         decor.plural_name = final_plural
         decor.icon = final_icon
         decor.color = final_color
@@ -185,7 +185,7 @@ class TypesApi(_TypesBase):
             return False
         if cls._is_builtin_type(owner):
             raise ValidationError(f"type {name!r} is builtin and cannot be deleted")
-        instance_count = sum(1 for _ in instances.where(type_uuid=owner.uuid))
+        instance_count = sum(1 for _ in instances.where(type_uuid=owner.uuid.uuid))
         if instance_count:
             raise ValueError(
                 f"type {name!r} still has {instance_count} instances"
@@ -205,5 +205,5 @@ class TypesApi(_TypesBase):
                         f"unit {name!r} still parameterizes {refs} props"
                     )
                 types.delete(parameterized_row.uuid)
-        types.delete(owner.uuid)
+        types.delete(owner.uuid.uuid)
         return True

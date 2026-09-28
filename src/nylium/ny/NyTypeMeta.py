@@ -13,6 +13,7 @@ NyObject conforms structurally; nothing here imports it.
 """
 from __future__ import annotations
 
+from abc import ABCMeta
 from collections.abc import Callable
 from typing import ClassVar, TypeAlias, cast, get_args, get_origin
 from uuid import UUID
@@ -51,7 +52,7 @@ StoredValue: TypeAlias = (
 )
 
 
-class NyTypeMeta(type):
+class NyTypeMeta(ABCMeta):
     _python_classes: ClassVar[dict[str, type[NyObjectProtocol]]] = {}
     _root: ClassVar[type[NyObjectProtocol] | None] = None
 
@@ -101,7 +102,7 @@ class NyTypeMeta(type):
                     f"{expected_name} prop takes {expected_name}, got {type(value).__name__}"
                 )
             return
-        inst = instances.get(value.uuid)
+        inst = instances.get(value.uuid.uuid)
         actual = None if inst is None else NyType.by_uuid(TypeUUID.of(inst.type_uuid))
         if actual is None or actual.name != expected_name:
             raise TypeError(
@@ -123,7 +124,7 @@ class NyTypeMeta(type):
             raise TypeError(
                 f"Any<{trait_name}> prop takes a NyObject, got {type(value).__name__}"
             )
-        inst = instances.get(value.uuid)
+        inst = instances.get(value.uuid.uuid)
         actual = None if inst is None else NyType.by_uuid(TypeUUID.of(inst.type_uuid))
         if actual is None:
             raise TypeError(
@@ -134,7 +135,7 @@ class NyTypeMeta(type):
                 f"Any<{trait_name}> target {actual.name!r} is embedded (ADR-0004) — link it from its owner only"
             )
         trait_uuid = Traits.uuid_by_name(trait_name)
-        if not TypeTraits.is_attached(actual.uuid, trait_uuid):
+        if not TypeTraits.is_attached(actual.uuid.uuid, trait_uuid):
             raise TypeError(
                 f"Any<{trait_name}> prop takes an object with trait {trait_name!r}, got {actual.name!r}"
             )

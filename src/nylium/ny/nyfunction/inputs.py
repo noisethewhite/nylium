@@ -50,8 +50,8 @@ def materialize_owner(inst_uuid: ObjectUUID) -> dict[str, object]:
 
 
 def _materialize_owner(inst_uuid: ObjectUUID, visiting: frozenset[ObjectUUID]) -> dict[str, object]:
-    wrapper = NyObject.wrap(inst_uuid)
-    inst = instances.get(inst_uuid)
+    wrapper = NyObject.wrap(inst_uuid.uuid)
+    inst = instances.get(inst_uuid.uuid)
     type_uuid = None if inst is None else inst.type_uuid
     if type_uuid is None:
         return {}
@@ -60,7 +60,7 @@ def _materialize_owner(inst_uuid: ObjectUUID, visiting: frozenset[ObjectUUID]) -
         return {}
     result: dict[str, object] = {}
     for prop in NyProp.effective_for(owner):
-        bound = InstanceFunctionLinks.function_uuid_for(inst_uuid, prop.uuid)
+        bound = InstanceFunctionLinks.function_uuid_for(inst_uuid.uuid, prop.uuid)
         if bound is not None:
             result[prop.key] = _evaluate_for(inst_uuid, ObjectUUID.of(bound), visiting)
         else:

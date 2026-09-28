@@ -40,7 +40,7 @@ class FunctionsApi(_FunctionsBase):
     @classmethod
     @Database.use_same_session
     def list_functions(cls) -> list[FunctionView]:
-        views = [FunctionView.from_uuid(uuid) for uuid in NyFunction.instance_uuids()]
+        views = [FunctionView.from_uuid(uuid.uuid) for uuid in NyFunction.instance_uuids()]
         return [view for view in views if view is not None]
 
     @classmethod
@@ -140,7 +140,7 @@ class FunctionsApi(_FunctionsBase):
         function-backed. Refuses a per-owner cross-function cycle."""
 
 
-        inst = instances.get(inst_uuid)
+        inst = instances.get(inst_uuid.uuid)
         if inst is None:
             raise ValidationError(f"no object {inst_uuid}")
         owner = NyType.by_uuid(TypeUUID.of(inst.type_uuid))
@@ -156,7 +156,7 @@ class FunctionsApi(_FunctionsBase):
                 f"prop {prop_key!r} is {NyType.ANY_PREFIX}…>-bound and cannot run a function"
             )
         if function_uuid is not None:
-            fn = FunctionView.from_uuid(function_uuid)
+            fn = FunctionView.from_uuid(function_uuid.uuid)
             if fn is None:
                 raise ValidationError(f"{function_uuid} is not a function instance")
             if fn.input_type != owner.name:
@@ -178,12 +178,12 @@ class FunctionsApi(_FunctionsBase):
                 f"prop {prop_key!r} is a collect prop — it cannot run a function"
             )
         if function_uuid is None:
-            InstanceFunctionLinks.delete_function_link(inst_uuid, prop.uuid)
+            InstanceFunctionLinks.delete_function_link(inst_uuid.uuid, prop.uuid)
         else:
-            InstanceFunctionLinks.merge_function_link(inst_uuid, prop.uuid, function_uuid)
+            InstanceFunctionLinks.merge_function_link(inst_uuid.uuid, prop.uuid, function_uuid.uuid)
         Database.flush()  # publish the pending link before the cycle check reads it
         NyFunction.assert_no_dependency_cycle(ObjectUUID.of(inst_uuid))
-        view = ObjectView.from_uuid(inst_uuid)
+        view = ObjectView.from_uuid(inst_uuid.uuid)
         if view is None:
             raise RuntimeError(f"object {inst_uuid} vanished after function bind")
         return view

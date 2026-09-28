@@ -122,7 +122,7 @@ class ObjectView:
         pointing at this object through a link prop or an array. One
         query per direction, no N+1."""
         return [
-            ObjectRefView(uuid=owner_uuid, type_name=type_name)
+            ObjectRefView(uuid=owner_uuid.uuid, type_name=type_name)
             for owner_uuid, type_name in ObjectUUID.of(uuid).backlink_refs()
         ]
 
@@ -139,7 +139,7 @@ class ObjectView:
             display_name = display_name or registry_name
             tags.append(
                 TagView(
-                    owner_uuid=owner_uuid,
+                    owner_uuid=owner_uuid.uuid,
                     owner_name=display_name,
                     prop_key=prop_key,
                     name=f"{display_name} {Constants.Embedded.NAME_SEPARATOR} {prop_key}",
@@ -202,17 +202,17 @@ class ObjectView:
                 else {}
             )
             members = (
-                [NyObject.wrap(u) for u in cls._collect_uuids(wrapper, array_prop)]
+                [NyObject.wrap(u.uuid) for u in cls._collect_uuids(wrapper, array_prop)]
                 if array_prop is not None and array_prop.collect is not None
                 else cast(list[NyObjectProtocol] | None, getattr(wrapper, array_key)) or []
             )
             existing: set[UUID] = (
-                Instances.existing_uuids([member.uuid for member in members]) if members else set()
+                Instances.existing_uuids([member.uuid.uuid for member in members]) if members else set()
             )
             wanted = {member for key, member in refs if key == array_key and member}
             rows: list[dict[str, Decimal | Quantity | None]] = []
             for member in members:
-                if member.uuid not in existing:
+                if member.uuid.uuid not in existing:
                     rows.append({})
                     continue
                 row: dict[str, Decimal | Quantity | None] = {}
@@ -270,7 +270,7 @@ class ObjectView:
         element_name = NyType.element_name(prop.value_type().name)
         return ArrayValueView(
             items=[
-                RefValueView(ref=ObjectRefView(uuid=u, type_name=element_name))
+                RefValueView(ref=ObjectRefView(uuid=u.uuid, type_name=element_name))
                 for u in cls._collect_uuids(wrapper, prop)
             ]
         )
@@ -320,7 +320,7 @@ class ObjectView:
                 return EmbeddedValueView(uuid=None, type_name=type_name, props={})
             if not isinstance(value, NyObject):
                 raise TypeError(f"embedded prop rendered a {type(value).__name__}")
-            child = ObjectView.from_uuid(value.uuid)
+            child = ObjectView.from_uuid(value.uuid.uuid)
             if child is None:
                 raise RuntimeError(f"embedded child {value.uuid} vanished")
             return EmbeddedValueView(uuid=child.uuid, type_name=type_name, props=child.props)
@@ -329,5 +329,5 @@ class ObjectView:
         if not isinstance(value, NyObject):
             raise TypeError(f"link prop rendered a {type(value).__name__}")
         return RefValueView(
-            ref=ObjectRefView(uuid=value.uuid, type_name=TypeUUID.of(instances[value.uuid].type_uuid).name_of())
+            ref=ObjectRefView(uuid=value.uuid.uuid, type_name=TypeUUID.of(instances[value.uuid.uuid].type_uuid).name_of())
         )

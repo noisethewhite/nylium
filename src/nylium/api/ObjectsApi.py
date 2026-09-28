@@ -35,7 +35,7 @@ class ObjectsApi(ApiShared):
             return []
         views = [
             ObjectView.from_uuid(uuid)
-            for uuid in [i.uuid for i in instances.where(type_uuid=owner.uuid)]
+            for uuid in [i.uuid for i in instances.where(type_uuid=owner.uuid.uuid)]
         ]
         return [view for view in views if view is not None]
 
@@ -89,11 +89,11 @@ class ObjectsApi(ApiShared):
             ctor = cast(Callable[..., NyObject], klass)
             instance_uuid = ctor(**normalized).uuid
         else:
-            instance_uuid = NyObject.create_db_only(type_name, normalized)
+            instance_uuid = ObjectUUID.of(NyObject.create_db_only(type_name, normalized))
         # heal generated names: an embedded prop written before the name
         # prop in the same request computed a fallback-based child name
         NyEmbedded.regenerate_names(ObjectUUID.of(instance_uuid))
-        view = cls.get_object(instance_uuid)
+        view = cls.get_object(instance_uuid.uuid)
         if view is None:
             raise RuntimeError(f"created {type_name} instance {instance_uuid} vanished")
         return view

@@ -27,19 +27,19 @@ class NyEnum:
         owner = NyType.by_name(type_name)
         if owner is None or not owner.is_enum:
             raise KeyError(f"no enum {type_name!r}")
-        if value not in [o.value for o in enum_options.where(type_uuid=owner.uuid)]:
+        if value not in [o.value for o in enum_options.where(type_uuid=owner.uuid.uuid)]:
             raise ValidationError(f"{value!r} is not an option of enum {type_name}")
         return value
 
     @classmethod
     @Database.use_same_session
     def read(cls, inst_uuid: ObjectUUID, prop: NyProp) -> str | None:
-        return cast(str | None, StringValues.read(inst_uuid, prop.uuid))
+        return cast(str | None, StringValues.read(inst_uuid.uuid, prop.uuid))
 
     @classmethod
     @Database.use_same_session
     def write(cls, inst_uuid: ObjectUUID, prop: NyProp, value: str | None) -> None:
         if value is None:
-            _ = StringValues.clear(inst_uuid, prop.uuid)
+            _ = StringValues.clear(inst_uuid.uuid, prop.uuid)
             return
-        StringValues.write(inst_uuid, prop.uuid, value)
+        StringValues.write(inst_uuid.uuid, prop.uuid, value)

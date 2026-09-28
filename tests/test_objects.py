@@ -42,7 +42,7 @@ def test_round_trip():
     # DSL coercion: plain lists are boxed into elements on assignment
     oleg.tags = ["admin", "owner"]  # pyright: ignore[reportArgumentType]
 
-    back = Person.get(oleg.uuid)
+    back = Person.get(oleg.uuid.uuid)
     assert back is not None
     assert back.name == "Oleg" and back.age == 30
     assert back.friend is not None and back.friend.name == "Max"
@@ -93,7 +93,7 @@ def test_get_type_check():
 
     order = Order(title="candles")
     with pytest.raises(TypeError):
-        Person.get(order.uuid)
+        Person.get(order.uuid.uuid)
 
 
 def test_array_box_cascade_on_rewrite_and_delete():
@@ -113,11 +113,11 @@ def test_array_box_cascade_on_rewrite_and_delete():
 def test_modified_at_moves():
     person = person_class()(name="Max", age=26)
     with Session(Database.engine) as session:
-        row = session.get(Instance, person.uuid)
+        row = session.get(Instance, person.uuid.uuid)
         assert row is not None
         first = row.modified_at
     person.name = "Maxim"
     with Session(Database.engine) as session:
-        row = session.get(Instance, person.uuid)
+        row = session.get(Instance, person.uuid.uuid)
         assert row is not None
         assert row.modified_at > first

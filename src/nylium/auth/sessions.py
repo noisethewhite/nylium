@@ -24,7 +24,7 @@ class sessions:
         """Create a session, return the raw token for the cookie."""
         auth_sessions.purge_expired()
         token = secrets.token_urlsafe(32)
-        auth_sessions.create(user_uuid, cls._hash(token), cls._deadline())
+        auth_sessions.create(user_uuid.uuid, cls._hash(token), cls._deadline())
         return token
 
     @classmethod
@@ -46,7 +46,7 @@ class sessions:
         user_uuid = cls.user_uuid_for(token)
         if user_uuid is None:
             return None
-        return auth_users.get(user_uuid)
+        return auth_users.get(user_uuid.uuid)
 
     @classmethod
     def revoke(cls, token: str | None) -> None:

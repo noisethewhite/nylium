@@ -30,8 +30,8 @@ def evaluate(
     prop-key -> value mapping). Returns the sink's value, or None on a
     div-by-zero / missing input. No DB reads of the input — the caller
     hands the data in."""
-    nodes = FunctionNodes.nodes_of(function_uuid)
-    edges = FunctionEdges.edges_of(function_uuid)
+    nodes = FunctionNodes.nodes_of(function_uuid.uuid)
+    edges = FunctionEdges.edges_of(function_uuid.uuid)
     node_uuids = {u.uuid for u in nodes}
     kinds = {u.uuid: u.kind for u in nodes}
     configs = {u.uuid: cast(Mapping[str, object], u.config) for u in nodes}

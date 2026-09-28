@@ -40,8 +40,8 @@ class LifecycleMixin:
     def _register(self) -> None:
         owner = NyType.ensure(type(self).__name__)
         instances.create(
-            self._uuid,
-            owner.uuid,
+            self._uuid.uuid,
+            owner.uuid.uuid,
             Constants.Objects.INSTANCE_NAME_FORMAT.format(
                 type_name=type(self).__name__,
                 short_uuid=str(self._uuid)[:Constants.Objects.SHORT_UUID_LENGTH],
@@ -59,7 +59,7 @@ class LifecycleMixin:
         instance_uuid = uuid4()
         instances.create(
             instance_uuid,
-            owner.uuid,
+            owner.uuid.uuid,
             Constants.Objects.INSTANCE_NAME_FORMAT.format(
                 type_name=type_name,
                 short_uuid=str(instance_uuid)[:Constants.Objects.SHORT_UUID_LENGTH],
@@ -119,12 +119,12 @@ class LifecycleMixin:
             NyEmbedded.destroy(child_uuid)
         ObjectUUID.of(self._uuid).delete_links_to()
         ObjectUUID.of(self._uuid).delete_memberships()
-        Instances.delete_row(self._uuid)
+        Instances.delete_row(self._uuid.uuid)
 
     def _owned_embedded_uuids(self) -> list[ObjectUUID]:
         """Instance rows held through embedded-typed props — composition
         children (ADR-0004), found via the owner_* read-index."""
-        return [ObjectUUID.of(u) for u in Instances.owned_uuids(self._uuid)]
+        return [ObjectUUID.of(u) for u in Instances.owned_uuids(self._uuid.uuid)]
 
     def _owned_array_uuids(self) -> list[ArrayUUID]:
         """Uuids of array-instance links held by this object."""

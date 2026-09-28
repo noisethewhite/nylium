@@ -39,14 +39,14 @@ class ceremonies:
         """Open while zero credentials exist (first passkey = owner);
         afterwards requires a live session — adding keys = being logged in."""
         user_uuid = cls._register_subject(user_name, current_user_uuid)
-        user = auth_users.get(user_uuid)
+        user = auth_users.get(user_uuid.uuid)
         if user is None:
             raise PermissionError("registration requires a session")
-        known = [c.credential_id for c in auth_credentials.where(user_uuid=user_uuid)]
+        known = [c.credential_id for c in auth_credentials.where(user_uuid=user_uuid.uuid)]
         options = generate_registration_options(
             rp_id=str(Environment.rp_id),
             rp_name=cls.RP_NAME,
-            user_id=user_uuid.bytes,
+            user_id=user_uuid.uuid.bytes,
             user_name=user.name,
             exclude_credentials=[
                 PublicKeyCredentialDescriptor(id=credential_id)
@@ -56,7 +56,7 @@ class ceremonies:
         auth_challenges.issue(
             options.challenge,
             auth_challenges.REGISTER_KIND,
-            user_uuid,
+            user_uuid.uuid,
             cls.CHALLENGE_TTL_SECONDS,
         )
         return options_to_json(options)

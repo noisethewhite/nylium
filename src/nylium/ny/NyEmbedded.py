@@ -88,7 +88,7 @@ class NyEmbedded:
         grandchild names embed the child name. The instance graph is a
         tree (children are always created fresh), so the recursion
         terminates."""
-        inst = instances.get(object_uuid)
+        inst = instances.get(object_uuid.uuid)
         if inst is None:
             return
         owner = NyType.by_uuid(TypeUUID.of(inst.type_uuid))
@@ -126,14 +126,14 @@ class NyEmbedded:
         registry name (Type:shortuuid) while the parent's name prop is
         still unset — a later name write regenerates it."""
         base: str | None = None
-        inst = instances.get(owner_uuid)
+        inst = instances.get(owner_uuid.uuid)
         if inst is not None:
             owner = NyType.by_uuid(TypeUUID.of(inst.type_uuid))
             if owner is not None:
                 name_prop = NyProp.by_key(owner, Constants.Props.NAME_PROP_KEY)
                 if name_prop is not None:
                     base = cast(
-                        str | None, StringValues.read(owner_uuid, name_prop.uuid)
+                        str | None, StringValues.read(owner_uuid.uuid, name_prop.uuid)
                     )
             if not base:
                 base = inst.name
@@ -176,13 +176,13 @@ class NyEmbedded:
         ``<parent> → <prop key> #<index>`` (1-based)."""
         child_uuid = ObjectUUID.of(uuid4())
         instances.create(
-            child_uuid,
-            embedded.uuid,
+            child_uuid.uuid,
+            embedded.uuid.uuid,
             Constants.Objects.INSTANCE_NAME_FORMAT.format(
                 type_name=embedded.name,
-                short_uuid=str(child_uuid)[:Constants.Objects.SHORT_UUID_LENGTH],
+                short_uuid=str(child_uuid.uuid)[:Constants.Objects.SHORT_UUID_LENGTH],
             ),
-            owner_object_uuid=array_uuid,
+            owner_object_uuid=array_uuid.uuid,
             owner_prop_uuid=None,
         )
         cls._fill_child(child_uuid, draft)
@@ -197,21 +197,21 @@ class NyEmbedded:
         child_type = prop.value_type()
         child_uuid = ObjectUUID.of(uuid4())
         instances.create(
-            child_uuid,
-            child_type.uuid,
+            child_uuid.uuid,
+            child_type.uuid.uuid,
             Constants.Objects.INSTANCE_NAME_FORMAT.format(
                 type_name=child_type.name,
-                short_uuid=str(child_uuid)[:Constants.Objects.SHORT_UUID_LENGTH],
+                short_uuid=str(child_uuid.uuid)[:Constants.Objects.SHORT_UUID_LENGTH],
             ),
-            owner_object_uuid=owner_uuid,
+            owner_object_uuid=owner_uuid.uuid,
             owner_prop_uuid=prop.uuid,
         )
-        ObjectUUID.of(owner_uuid).add_link(prop.uuid, child_uuid)
+        ObjectUUID.of(owner_uuid).add_link(prop.uuid, child_uuid.uuid)
         return child_uuid
 
     @classmethod
     def _fill_child(cls, child_uuid: ObjectUUID, props: dict[str, StoredValue]) -> None:
-        child = NyTypeMeta.root().wrap(child_uuid)
+        child = NyTypeMeta.root().wrap(child_uuid.uuid)
         for key, value in props.items():
             if key == Constants.Props.NAME_PROP_KEY:
                 continue  # caller-supplied names are ignored — generated only
@@ -219,8 +219,8 @@ class NyEmbedded:
 
     @classmethod
     def _write_generated_name(cls, child_uuid: ObjectUUID, name: str) -> None:
-        child = NyTypeMeta.root().wrap(child_uuid)
-        inst = instances.get(child_uuid)
+        child = NyTypeMeta.root().wrap(child_uuid.uuid)
+        inst = instances.get(child_uuid.uuid)
         owner = NyType.by_uuid(TypeUUID.of(inst.type_uuid)) if inst is not None else None
         if owner is None or NyProp.by_key(owner, Constants.Props.NAME_PROP_KEY) is None:
             return  # name-less embedded type (ADR-0027) keeps its registry name
@@ -228,4 +228,4 @@ class NyEmbedded:
 
     @classmethod
     def _destroy_child(cls, child_uuid: ObjectUUID) -> None:
-        NyTypeMeta.root().wrap(child_uuid).delete()
+        NyTypeMeta.root().wrap(child_uuid.uuid).delete()

@@ -34,7 +34,7 @@ class AttrsMixin(PersistenceMixin):
 
     @Database.use_same_session
     def _prop_and_type(self, key: str) -> tuple[NyProp, str]:
-        inst = instances.get(self._uuid)
+        inst = instances.get(self._uuid.uuid)
         if inst is None:
             raise AttributeError(f"instance {self._uuid} does not exist")
         owner = NyType.by_uuid(TypeUUID.of(inst.type_uuid))
@@ -50,7 +50,7 @@ class AttrsMixin(PersistenceMixin):
         prop, value_type = self._prop_and_type(key)
         scalar = NyScalar.by_type_name(value_type)
         if scalar is not None:
-            stored = scalar.SCALAR.read(self._uuid, prop.uuid)
+            stored = scalar.SCALAR.read(self._uuid.uuid, prop.uuid)
             return None if stored is None else scalar.from_storage(stored)
         if NyType.unit_param_of(value_type) is not None:
             return NyUnit.read(self._uuid, prop, value_type)
@@ -119,7 +119,7 @@ class AttrsMixin(PersistenceMixin):
         prop, value_type = self._prop_and_type(key)
         scalar = NyScalar.by_type_name(value_type)
         if scalar is not None:
-            if scalar.SCALAR.clear(self._uuid, prop.uuid):
+            if scalar.SCALAR.clear(self._uuid.uuid, prop.uuid):
                 self._touch()
             return
         if NyType.unit_param_of(value_type) is not None:
@@ -147,4 +147,4 @@ class AttrsMixin(PersistenceMixin):
 
     @Database.commit_after_this
     def _touch(self) -> None:
-        Instances.touch(self._uuid)
+        Instances.touch(self._uuid.uuid)

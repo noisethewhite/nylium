@@ -179,7 +179,7 @@ class TraitsApi(ApiShared):
         trait = next(traits.where(name=trait_name), None)
         if trait is None:
             raise KeyError(f"no trait {trait_name!r}")
-        links = list(type_traits.where(type_uuid=owner.uuid))
+        links = list(type_traits.where(type_uuid=owner.uuid.uuid))
         if any(link.trait_uuid == trait.uuid for link in links):
             raise ValueError(f"trait {trait_name!r} is already attached to {type_name!r}")
         taken = {p.key for p in NyProp.effective_for(owner)}
@@ -189,7 +189,7 @@ class TraitsApi(ApiShared):
                 f"prop keys {collisions!r} of trait {trait_name!r} collide with {type_name!r}"
             )
         position = max((link.position for link in links), default=-1) + 1
-        _ = type_traits.attach(owner.uuid, trait.uuid, position)
+        _ = type_traits.attach(owner.uuid.uuid, trait.uuid, position)
         return cls._type_result(type_name)
 
     @classmethod
@@ -206,15 +206,15 @@ class TraitsApi(ApiShared):
         link = next(
             (
                 edge
-                for edge in type_traits.where(type_uuid=owner.uuid)
+                for edge in type_traits.where(type_uuid=owner.uuid.uuid)
                 if edge.trait_uuid == trait.uuid
             ),
             None,
         )
         if link is None:
             raise KeyError(f"trait {trait_name!r} is not attached to {type_name!r}")
-        inst_uuids = [i.uuid for i in instances.where(type_uuid=owner.uuid)]
+        inst_uuids = [i.uuid for i in instances.where(type_uuid=owner.uuid.uuid)]
         for p in props.where(owner_trait_uuid=trait.uuid):
             NyProp.purge_values_for_instances(PropUUID.of(p.uuid), [ObjectUUID.of(i) for i in inst_uuids])
-        type_traits.detach(owner.uuid, trait.uuid)
+        type_traits.detach(owner.uuid.uuid, trait.uuid)
         return cls._type_result(type_name)

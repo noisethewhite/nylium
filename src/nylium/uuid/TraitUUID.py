@@ -1,39 +1,31 @@
-"""TraitUUID — typed identifier for a ``Trait`` row (``traits``)."""
+"""TraitUUID — typed reference to a ``Trait`` row (``traits``)."""
 from __future__ import annotations
 
-from uuid import UUID
-
-from pydantic_core import core_schema
+from typing import override
 
 from nylium.data.rows import Prop, Trait
 from nylium.data.tables import props, trait_style, traits, type_traits, types
+from nylium.uuid.NyRef import NyRef
 
 
-class TraitUUID(UUID):
-    """A ``traits`` uuid carrying its own table lookup and navigation."""
+class TraitUUID(NyRef):
+    """A ``traits`` reference carrying its own table lookup and navigation."""
 
-    @classmethod
-    def of(cls, value: UUID) -> "TraitUUID":
-        return cls(str(value))
-
-    @classmethod
-    def __get_pydantic_core_schema__(cls, _source: object, _handler: object) -> core_schema.CoreSchema:
-        return core_schema.uuid_schema()
-
+    @override
     def get(self) -> Trait | None:
-        """The ``Trait`` row this uuid points at, or ``None`` if it is gone."""
-        return traits.get(self)
+        """The ``Trait`` row this reference points at, or ``None`` if it is gone."""
+        return traits.get(self._uuid)
 
     def color(self) -> str:
-        return trait_style[self].color
+        return trait_style[self._uuid].color
 
     def props(self) -> list[Prop]:
-        return sorted(props.where(owner_trait_uuid=self), key=lambda p: p.position)
+        return sorted(props.where(owner_trait_uuid=self._uuid), key=lambda p: p.position)
 
     def attached_names(self) -> list[str]:
         """Names of types this trait is attached to, in attach order."""
         result: list[str] = []
-        for link in sorted(type_traits.where(trait_uuid=self), key=lambda link: link.position):
+        for link in sorted(type_traits.where(trait_uuid=self._uuid), key=lambda link: link.position):
             owner = types.get(link.type_uuid)
             if owner is not None:
                 result.append(owner.name)
