@@ -31,7 +31,7 @@ from nylium.data.rows import (
     TimeValue,
 )
 from nylium.data.tables import props, trait_style, traits, types
-from nylium.uuid.NyRef import NyRef
+from nylium.abc import NyRef
 from nylium.uuid.ObjectRef import ObjectRef
 
 

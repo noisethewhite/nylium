@@ -9,13 +9,16 @@ lookup (``get()``) and their domain navigation.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, ClassVar, Self, override
+from typing import TYPE_CHECKING, ClassVar, Self, override, TypeVar
 from uuid import UUID
 
 from pydantic_core import core_schema
 
 if TYPE_CHECKING:
     from nylium.database import Row
+
+
+_T = TypeVar("_T")
 
 
 class NyRef(ABC):

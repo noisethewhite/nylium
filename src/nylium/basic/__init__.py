@@ -9,5 +9,5 @@ __all__ = [
     "EnvEnum",
     "LocalCtxVar",
     "NamedString",
-    "smartoverride",
+    "smartoverride"
 ]

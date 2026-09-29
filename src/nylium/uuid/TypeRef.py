@@ -20,7 +20,7 @@ from nylium.data.tables import (
     types,
     unit_parts,
 )
-from nylium.uuid.NyRef import NyRef
+from nylium.abc import NyRef
 
 
 class TypeRef(NyRef):

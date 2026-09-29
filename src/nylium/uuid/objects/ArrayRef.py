@@ -10,7 +10,7 @@ from nylium.database import Database
 from nylium.database import get_mapper
 from nylium.data.rows import ArrayValue
 from nylium.data.tables import instances, types
-from nylium.uuid.NyRef import NyRef
+from nylium.abc import NyRef
 from nylium.uuid.ObjectRef import ObjectRef
 
 

@@ -5,7 +5,7 @@ from typing import override
 
 from nylium.data.rows import Prop, Trait
 from nylium.data.tables import props, trait_style, traits, type_traits, types
-from nylium.uuid.NyRef import NyRef
+from nylium.abc import NyRef
 
 
 class TraitRef(NyRef):
